@@ -331,48 +331,48 @@ export default function Editor() {
       onDrop={handleDrop}
     >
       {/* File Explorer Sidebar */}
-      <div className={`shrink-0 transition-all duration-200 ${showFiles ? 'w-56' : 'w-0'} overflow-hidden border-r border-slate-800`}>
+      <div className={`shrink-0 transition-all duration-200 ${showFiles ? 'w-56' : 'w-0'} overflow-hidden border-r border-cream-200`}>
         <FileExplorer tree={tree} onFileClick={handleFileClick} />
       </div>
 
       {/* Main Editor Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Toolbar: File operations */}
-        <div className="flex items-center gap-2 px-4 py-2 border-b border-slate-800 bg-slate-950/80 shrink-0">
+        <div className="flex items-center gap-2 px-4 py-2 border-b border-cream-200 bg-cream-100/80 shrink-0">
           <button onClick={() => setShowFiles(!showFiles)}
-            className={`p-1.5 rounded-lg text-xs transition-colors ${showFiles ? 'bg-slate-800 text-slate-300' : 'text-slate-500 hover:text-slate-300'}`}
+            className={`p-1.5 rounded-lg text-xs transition-colors ${showFiles ? 'bg-cream-200 text-warm-600' : 'text-warm-400 hover:text-warm-600'}`}
             title="Toggle file explorer">
             <FolderTree className="w-4 h-4" />
           </button>
-          <div className="w-px h-5 bg-slate-800" />
+          <div className="w-px h-5 bg-cream-200" />
           <button onClick={handleNewFile}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors">
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-cream-200 text-warm-600 hover:bg-cream-300 transition-colors">
             <FilePlus className="w-3.5 h-3.5" /> 新建
           </button>
           <button onClick={handleSave} disabled={saving || (!dirty && !!currentFile)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-accent-orange text-white hover:bg-accent-orange/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
             {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} 保存
           </button>
           {currentFile && (
             <>
               <button onClick={() => setShowRenameDialog(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors">
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-cream-200 text-warm-600 hover:bg-cream-300 transition-colors">
                 <FileEdit className="w-3.5 h-3.5" /> 重命名
               </button>
               <button onClick={() => setShowDeleteConfirm(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-slate-800 text-rose-400 hover:bg-rose-500/20 transition-colors">
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-cream-200 text-rose-400 hover:bg-rose-500/20 transition-colors">
                 <Trash2 className="w-3.5 h-3.5" /> 删除
               </button>
             </>
           )}
-          <div className="w-px h-5 bg-slate-800" />
+          <div className="w-px h-5 bg-cream-200" />
           {/* Import */}
           <div className="relative">
             <input ref={fileInputRef} type="file" multiple
               accept={ingestStatus?.supportedFormats?.join(',') || '.pdf,.docx,.xlsx,.pptx,.html,.csv'}
               onChange={handleImport} className="hidden" />
             <button onClick={() => fileInputRef.current?.click()} disabled={importing}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-cyan-600 text-white hover:bg-cyan-500 disabled:opacity-40 transition-colors">
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-accent-sage text-white hover:bg-accent-sage/90 disabled:opacity-40 transition-colors">
               {importing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
               导入{importing && batchProgress ? ` (${batchProgress.done}/${batchProgress.total})` : ''}
             </button>
@@ -380,31 +380,31 @@ export default function Editor() {
 
           <div className="ml-auto flex items-center gap-2">
             {saveMsg && (
-              <div className={`text-xs px-2 py-1 rounded-lg ${saveMsg.startsWith('Error') || saveMsg.includes('error') ? 'text-rose-400 bg-rose-500/10' : 'text-emerald-400 bg-emerald-500/10'}`}>
+              <div className={`text-xs px-2 py-1 rounded-lg ${saveMsg.startsWith('Error') || saveMsg.includes('error') ? 'text-rose-400 bg-rose-500/10' : 'text-accent-sage bg-accent-sage/10'}`}>
                 {saveMsg}
               </div>
             )}
             {dirty && (
-              <div className="text-xs text-amber-400 flex items-center gap-1">
+              <div className="text-xs text-accent-amber flex items-center gap-1">
                 <AlertTriangle className="w-3 h-3" /> 未保存
               </div>
             )}
             <button onClick={() => setShowPreview(!showPreview)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors ${showPreview ? 'bg-slate-800 text-slate-300' : 'text-slate-500 hover:text-slate-300'}`}>
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors ${showPreview ? 'bg-cream-200 text-warm-600' : 'text-warm-400 hover:text-warm-600'}`}>
               <Eye className="w-3.5 h-3.5" /> 预览
             </button>
           </div>
         </div>
 
         {/* Formatting Toolbar */}
-        <div className="flex items-center gap-0.5 px-4 py-1.5 border-b border-slate-800 bg-slate-900/50 shrink-0">
+        <div className="flex items-center gap-0.5 px-4 py-1.5 border-b border-cream-200 bg-surface/50 shrink-0">
           <ToolBtn icon={Bold} label="粗体 (Ctrl+B)" onClick={fmt.bold} />
           <ToolBtn icon={Italic} label="斜体 (Ctrl+I)" onClick={fmt.italic} />
-          <div className="w-px h-4 bg-slate-700 mx-1" />
+          <div className="w-px h-4 bg-cream-300 mx-1" />
           <ToolBtn icon={Heading} label="H1 (Ctrl+1)" onClick={fmt.h1} />
           <ToolBtn icon={Heading} label="H2 (Ctrl+2)" onClick={fmt.h2} className="!text-[10px]" suffix="2" />
           <ToolBtn icon={Heading} label="H3 (Ctrl+3)" onClick={fmt.h3} className="!text-[9px]" suffix="3" />
-          <div className="w-px h-4 bg-slate-700 mx-1" />
+          <div className="w-px h-4 bg-cream-300 mx-1" />
           <ToolBtn icon={List} label="无序列表" onClick={fmt.list} />
           <ToolBtn icon={Code} label="代码块" onClick={fmt.code} />
           <ToolBtn icon={Link} label="链接" onClick={fmt.link} />
@@ -414,8 +414,8 @@ export default function Editor() {
 
         {/* Import status bar */}
         {ingestStatus && (
-          <div className="px-4 py-1 border-b border-slate-800 bg-slate-900/30 text-[10px] text-slate-500 flex items-center gap-2">
-            <div className={`w-1.5 h-1.5 rounded-full ${ingestStatus.installed ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+          <div className="px-4 py-1 border-b border-cream-200 bg-surface/30 text-[10px] text-warm-400 flex items-center gap-2">
+            <div className={`w-1.5 h-1.5 rounded-full ${ingestStatus.installed ? 'bg-accent-sage' : 'bg-accent-amber'}`} />
             markitdown: {ingestStatus.installed ? `已安装 (${ingestStatus.pythonVersion})` : '未安装 — 拖拽文件到此处导入'}
             {importError && <span className="text-rose-400 ml-2">{importError}</span>}
           </div>
@@ -425,18 +425,18 @@ export default function Editor() {
         <div className="flex-1 flex overflow-hidden relative">
           {/* Drag overlay */}
           {dragOver && (
-            <div className="absolute inset-0 z-40 bg-violet-500/10 border-2 border-dashed border-violet-500 rounded-lg flex items-center justify-center pointer-events-none">
-              <div className="text-lg font-semibold text-violet-400 bg-slate-900/90 px-6 py-3 rounded-xl">
+            <div className="absolute inset-0 z-40 bg-accent-orange/10 border-2 border-dashed border-accent-orange rounded-lg flex items-center justify-center pointer-events-none">
+              <div className="text-lg font-semibold text-accent-orange bg-cream-100/90 px-6 py-3 rounded-xl">
                 松开导入文档
               </div>
             </div>
           )}
 
           {/* Editor Panel with line numbers */}
-          <div className={`flex-1 flex flex-col overflow-hidden ${showPreview ? 'border-r border-slate-800' : ''}`}>
+          <div className={`flex-1 flex flex-col overflow-hidden ${showPreview ? 'border-r border-cream-200' : ''}`}>
             {currentFile && (
-              <div className="px-4 py-1.5 border-b border-slate-800 bg-slate-900/30 flex items-center gap-3 text-[11px] text-slate-500">
-                <span className="font-mono text-slate-400">{currentFile.path}</span>
+              <div className="px-4 py-1.5 border-b border-cream-200 bg-surface/30 flex items-center gap-3 text-[11px] text-warm-400">
+                <span className="font-mono text-warm-500">{currentFile.path}</span>
                 <span>{currentFile.wordCount} words</span>
                 <span>{currentFile.links.length} links</span>
                 <span>{new Date(currentFile.modified).toLocaleDateString('zh-CN')}</span>
@@ -444,24 +444,24 @@ export default function Editor() {
             )}
 
             {/* Frontmatter editor */}
-            <div className="border-b border-slate-800">
+            <div className="border-b border-cream-200">
               <button onClick={() => setShowFm(!showFm)}
-                className="w-full flex items-center gap-2 px-4 py-1.5 text-xs text-slate-400 hover:text-slate-200 transition-colors">
+                className="w-full flex items-center gap-2 px-4 py-1.5 text-xs text-warm-500 hover:text-warm-700 transition-colors">
                 {showFm ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                 Frontmatter
               </button>
               {showFm && (
                 <div className="px-4 pb-3 space-y-2">
                   <div className="flex items-center gap-2">
-                    <label className="text-[11px] text-slate-500 w-12 shrink-0">Title</label>
+                    <label className="text-[11px] text-warm-400 w-12 shrink-0">Title</label>
                     <input type="text" value={title} onChange={e => setTitle(e.target.value)}
-                      className="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 outline-none focus:border-violet-500" />
+                      className="flex-1 bg-cream-200 border border-cream-300 rounded px-2 py-1 text-xs text-warm-700 outline-none focus:border-accent-orange" />
                   </div>
                   <div className="flex items-center gap-2">
-                    <label className="text-[11px] text-slate-500 w-12 shrink-0">Tags</label>
+                    <label className="text-[11px] text-warm-400 w-12 shrink-0">Tags</label>
                     <input type="text" value={tags} onChange={e => setTags(e.target.value)}
                       placeholder="tag1, tag2, tag3"
-                      className="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 outline-none focus:border-violet-500" />
+                      className="flex-1 bg-cream-200 border border-cream-300 rounded px-2 py-1 text-xs text-warm-700 outline-none focus:border-accent-orange" />
                   </div>
                 </div>
               )}
@@ -470,10 +470,10 @@ export default function Editor() {
             {/* Textarea with line numbers */}
             <div className="flex-1 flex overflow-hidden">
               {/* Line numbers */}
-              <div className="w-10 shrink-0 bg-slate-900/50 border-r border-slate-800 overflow-hidden select-none">
+              <div className="w-10 shrink-0 bg-surface/50 border-r border-cream-200 overflow-hidden select-none">
                 <div className="py-3 pr-2 text-right">
                   {Array.from({ length: lineCount }, (_, i) => (
-                    <div key={i} className="text-[11px] leading-relaxed text-slate-600 font-mono" style={{ height: '1.625em' }}>
+                    <div key={i} className="text-[11px] leading-relaxed text-warm-400 font-mono" style={{ height: '1.625em' }}>
                       {i + 1}
                     </div>
                   ))}
@@ -485,7 +485,7 @@ export default function Editor() {
                 onChange={e => setContent(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={showNewDialog ? 'Enter content for new note...' : 'Select a file from the sidebar to edit, or create a new one...'}
-                className="flex-1 bg-transparent text-sm text-slate-200 py-3 px-4 resize-none outline-none font-mono leading-relaxed placeholder-slate-600"
+                className="flex-1 bg-transparent text-sm text-warm-700 py-3 px-4 resize-none outline-none font-mono leading-relaxed placeholder-warm-400"
                 spellCheck={false}
               />
             </div>
@@ -493,40 +493,40 @@ export default function Editor() {
 
           {/* Preview Panel — Professional Markdown Rendering */}
           {showPreview && (
-            <div className="w-[45%] overflow-auto p-5 bg-slate-950">
-              <div className="text-[10px] text-slate-600 uppercase tracking-wider mb-3">Preview</div>
+            <div className="w-[45%] overflow-auto p-5 bg-cream-100">
+              <div className="text-[10px] text-warm-400 uppercase tracking-wider mb-3">Preview</div>
               <div className="md-preview">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   rehypePlugins={[rehypeHighlight]}
                   components={{
-                    h1: ({ children }) => <h1 className="text-xl font-bold text-slate-100 mt-6 mb-3 pb-2 border-b border-slate-800">{children}</h1>,
-                    h2: ({ children }) => <h2 className="text-lg font-semibold text-slate-200 mt-5 mb-2">{children}</h2>,
-                    h3: ({ children }) => <h3 className="text-base font-semibold text-slate-200 mt-4 mb-2">{children}</h3>,
-                    p: ({ children }) => <p className="text-sm text-slate-300 leading-relaxed my-2">{children}</p>,
-                    strong: ({ children }) => <strong className="text-slate-100 font-semibold">{children}</strong>,
-                    em: ({ children }) => <em className="text-slate-300 italic">{children}</em>,
+                    h1: ({ children }) => <h1 className="text-xl font-bold text-warm-800 mt-6 mb-3 pb-2 border-b border-cream-200">{children}</h1>,
+                    h2: ({ children }) => <h2 className="text-lg font-semibold text-warm-700 mt-5 mb-2">{children}</h2>,
+                    h3: ({ children }) => <h3 className="text-base font-semibold text-warm-700 mt-4 mb-2">{children}</h3>,
+                    p: ({ children }) => <p className="text-sm text-warm-600 leading-relaxed my-2">{children}</p>,
+                    strong: ({ children }) => <strong className="text-warm-800 font-semibold">{children}</strong>,
+                    em: ({ children }) => <em className="text-warm-600 italic">{children}</em>,
                     code: ({ className, children, ...props }) => {
                       const isInline = !className
                       return isInline
-                        ? <code className="bg-slate-800 text-cyan-400 px-1.5 py-0.5 rounded text-xs font-mono">{children}</code>
+                        ? <code className="bg-cream-200 text-accent-sage px-1.5 py-0.5 rounded text-xs font-mono">{children}</code>
                         : <code className={className} {...props}>{children}</code>
                     },
-                    pre: ({ children }) => <pre className="bg-slate-900 border border-slate-800 rounded-lg p-4 my-3 overflow-x-auto text-xs">{children}</pre>,
-                    blockquote: ({ children }) => <blockquote className="border-l-2 border-violet-500 pl-3 text-slate-400 italic my-2">{children}</blockquote>,
+                    pre: ({ children }) => <pre className="bg-cream-100 border border-cream-200 rounded-lg p-4 my-3 overflow-x-auto text-xs">{children}</pre>,
+                    blockquote: ({ children }) => <blockquote className="border-l-2 border-accent-orange pl-3 text-warm-500 italic my-2">{children}</blockquote>,
                     ul: ({ children }) => <ul className="list-disc pl-5 my-2 space-y-1">{children}</ul>,
                     ol: ({ children }) => <ol className="list-decimal pl-5 my-2 space-y-1">{children}</ol>,
-                    li: ({ children }) => <li className="text-sm text-slate-300">{children}</li>,
-                    a: ({ href, children }) => <a href={href} className="text-violet-400 hover:text-violet-300 underline">{children}</a>,
-                    hr: () => <hr className="border-slate-700 my-4" />,
+                    li: ({ children }) => <li className="text-sm text-warm-600">{children}</li>,
+                    a: ({ href, children }) => <a href={href} className="text-accent-orange hover:text-accent-orange/80 underline">{children}</a>,
+                    hr: () => <hr className="border-cream-300 my-4" />,
                     table: ({ children }) => (
                       <div className="overflow-x-auto my-3">
-                        <table className="min-w-full border border-slate-700 rounded text-xs">{children}</table>
+                        <table className="min-w-full border border-cream-300 rounded text-xs">{children}</table>
                       </div>
                     ),
-                    thead: ({ children }) => <thead className="bg-slate-800">{children}</thead>,
-                    th: ({ children }) => <th className="px-3 py-2 text-left text-slate-300 font-semibold border-b border-slate-700">{children}</th>,
-                    td: ({ children }) => <td className="px-3 py-2 text-slate-400 border-b border-slate-800">{children}</td>,
+                    thead: ({ children }) => <thead className="bg-cream-200">{children}</thead>,
+                    th: ({ children }) => <th className="px-3 py-2 text-left text-warm-600 font-semibold border-b border-cream-300">{children}</th>,
+                    td: ({ children }) => <td className="px-3 py-2 text-warm-500 border-b border-cream-200">{children}</td>,
                     img: ({ src, alt }) => <img src={src} alt={alt} className="rounded-lg max-w-full my-3" />,
                   }}
                 >
@@ -541,29 +541,29 @@ export default function Editor() {
       {/* New File Dialog */}
       {showNewDialog && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-96 shadow-2xl">
+          <div className="bg-surface border border-cream-300 rounded-xl p-6 w-96 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-slate-200">新建笔记</h3>
-              <button onClick={() => setShowNewDialog(false)} className="p-1 rounded hover:bg-slate-800 text-slate-500"><X className="w-4 h-4" /></button>
+              <h3 className="text-sm font-semibold text-warm-700">新建笔记</h3>
+              <button onClick={() => setShowNewDialog(false)} className="p-1 rounded hover:bg-cream-200 text-warm-400"><X className="w-4 h-4" /></button>
             </div>
             <div className="space-y-3">
               <div>
-                <label className="text-[11px] text-slate-400 mb-1 block">文件名</label>
+                <label className="text-[11px] text-warm-500 mb-1 block">文件名</label>
                 <input type="text" value={newFileName}
                   onChange={e => { setNewFileName(e.target.value); setNewFilePath(e.target.value ? `${e.target.value}.md` : '') }}
                   placeholder="My New Note" autoFocus
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 outline-none focus:border-violet-500" />
+                  className="w-full bg-cream-200 border border-cream-300 rounded-lg px-3 py-2 text-sm text-warm-700 outline-none focus:border-accent-orange" />
               </div>
               <div>
-                <label className="text-[11px] text-slate-400 mb-1 block">路径</label>
+                <label className="text-[11px] text-warm-500 mb-1 block">路径</label>
                 <input type="text" value={newFilePath} onChange={e => setNewFilePath(e.target.value)}
                   placeholder="folder/note.md"
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 outline-none focus:border-violet-500" />
+                  className="w-full bg-cream-200 border border-cream-300 rounded-lg px-3 py-2 text-sm text-warm-700 outline-none focus:border-accent-orange" />
               </div>
               <div className="flex gap-2 pt-2">
-                <button onClick={() => setShowNewDialog(false)} className="flex-1 px-3 py-2 rounded-lg text-xs bg-slate-800 text-slate-300 hover:bg-slate-700">取消</button>
+                <button onClick={() => setShowNewDialog(false)} className="flex-1 px-3 py-2 rounded-lg text-xs bg-cream-200 text-warm-600 hover:bg-cream-300">取消</button>
                 <button onClick={handleSave} disabled={!newFilePath || saving}
-                  className="flex-1 px-3 py-2 rounded-lg text-xs bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-40">{saving ? 'Creating...' : 'Create'}</button>
+                  className="flex-1 px-3 py-2 rounded-lg text-xs bg-accent-orange text-white hover:bg-accent-orange/90 disabled:opacity-40">{saving ? 'Creating...' : 'Create'}</button>
               </div>
             </div>
           </div>
@@ -573,12 +573,12 @@ export default function Editor() {
       {/* Delete Confirm */}
       {showDeleteConfirm && currentFile && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-96 shadow-2xl">
+          <div className="bg-surface border border-cream-300 rounded-xl p-6 w-96 shadow-2xl">
             <h3 className="text-sm font-semibold text-rose-400 mb-3 flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> 确认删除</h3>
-            <p className="text-xs text-slate-400 mb-1">将把文件移入回收站：</p>
-            <p className="text-xs text-slate-200 font-mono bg-slate-800 rounded px-2 py-1.5 mb-4">{currentFile.path}</p>
+            <p className="text-xs text-warm-500 mb-1">将把文件移入回收站：</p>
+            <p className="text-xs text-warm-700 font-mono bg-cream-200 rounded px-2 py-1.5 mb-4">{currentFile.path}</p>
             <div className="flex gap-2">
-              <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 px-3 py-2 rounded-lg text-xs bg-slate-800 text-slate-300 hover:bg-slate-700">取消</button>
+              <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 px-3 py-2 rounded-lg text-xs bg-cream-200 text-warm-600 hover:bg-cream-300">取消</button>
               <button onClick={handleDelete} className="flex-1 px-3 py-2 rounded-lg text-xs bg-rose-600 text-white hover:bg-rose-500">删除</button>
             </div>
           </div>
@@ -588,19 +588,19 @@ export default function Editor() {
       {/* Rename Dialog */}
       {showRenameDialog && currentFile && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 w-96 shadow-2xl">
-            <h3 className="text-sm font-semibold text-slate-200 mb-4">重命名笔记</h3>
+          <div className="bg-surface border border-cream-300 rounded-xl p-6 w-96 shadow-2xl">
+            <h3 className="text-sm font-semibold text-warm-700 mb-4">重命名笔记</h3>
             <div className="space-y-3">
-              <div><label className="text-[11px] text-slate-400 mb-1 block">当前路径</label>
-                <div className="text-xs text-slate-500 font-mono bg-slate-800 rounded px-2 py-1.5">{currentFile.path}</div></div>
-              <div><label className="text-[11px] text-slate-400 mb-1 block">新路径</label>
+              <div><label className="text-[11px] text-warm-500 mb-1 block">当前路径</label>
+                <div className="text-xs text-warm-400 font-mono bg-cream-200 rounded px-2 py-1.5">{currentFile.path}</div></div>
+              <div><label className="text-[11px] text-warm-500 mb-1 block">新路径</label>
                 <input type="text" value={renamePath} onChange={e => setRenamePath(e.target.value)}
                   placeholder="new-folder/new-name.md" autoFocus
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 outline-none focus:border-violet-500" /></div>
-              <p className="text-[10px] text-slate-500">重命名后会自动更新所有 [[wikilinks]]。</p>
+                  className="w-full bg-cream-200 border border-cream-300 rounded-lg px-3 py-2 text-sm text-warm-700 outline-none focus:border-accent-orange" /></div>
+              <p className="text-[10px] text-warm-400">重命名后会自动更新所有 [[wikilinks]]。</p>
               <div className="flex gap-2 pt-2">
-                <button onClick={() => { setShowRenameDialog(false); setRenamePath('') }} className="flex-1 px-3 py-2 rounded-lg text-xs bg-slate-800 text-slate-300 hover:bg-slate-700">取消</button>
-                <button onClick={handleRename} disabled={!renamePath} className="flex-1 px-3 py-2 rounded-lg text-xs bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-40">重命名</button>
+                <button onClick={() => { setShowRenameDialog(false); setRenamePath('') }} className="flex-1 px-3 py-2 rounded-lg text-xs bg-cream-200 text-warm-600 hover:bg-cream-300">取消</button>
+                <button onClick={handleRename} disabled={!renamePath} className="flex-1 px-3 py-2 rounded-lg text-xs bg-accent-orange text-white hover:bg-accent-orange/90 disabled:opacity-40">重命名</button>
               </div>
             </div>
           </div>
@@ -617,9 +617,9 @@ function ToolBtn({ icon: Icon, label, onClick, className, suffix }: {
 }) {
   return (
     <button onClick={onClick} title={label}
-      className={`p-1.5 rounded text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors relative ${className || ''}`}>
+      className={`p-1.5 rounded text-warm-500 hover:text-warm-700 hover:bg-cream-200 transition-colors relative ${className || ''}`}>
       <Icon className="w-3.5 h-3.5" />
-      {suffix && <span className="absolute -bottom-0.5 -right-0.5 text-[8px] text-slate-500 font-bold">{suffix}</span>}
+      {suffix && <span className="absolute -bottom-0.5 -right-0.5 text-[8px] text-warm-400 font-bold">{suffix}</span>}
     </button>
   )
 }

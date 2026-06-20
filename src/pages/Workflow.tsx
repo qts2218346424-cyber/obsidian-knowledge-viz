@@ -35,23 +35,23 @@ const iconMap: Record<string, React.FC<{ className?: string }>> = {
 
 const statusStyles = {
   done: {
-    bg: 'bg-emerald-950/60', border: 'border-emerald-700/60',
-    iconBg: 'bg-emerald-900', iconColor: 'text-emerald-400',
-    labelColor: 'text-emerald-300',
-    badge: 'bg-emerald-900/60 text-emerald-400 border-emerald-700/40',
-    badgeText: '已完成', glow: 'shadow-emerald-500/10',
+    bg: 'bg-accent-sage/10', border: 'border-accent-sage/30',
+    iconBg: 'bg-accent-sage/15', iconColor: 'text-accent-sage',
+    labelColor: 'text-accent-sage',
+    badge: 'bg-accent-sage/10 text-accent-sage border-accent-sage/20',
+    badgeText: '已完成', glow: 'shadow-accent-sage/10',
   },
   active: {
-    bg: 'bg-violet-950/60', border: 'border-violet-600/60',
-    iconBg: 'bg-violet-900', iconColor: 'text-violet-400',
-    labelColor: 'text-violet-300',
-    badge: 'bg-violet-900/60 text-violet-300 border-violet-600/40',
-    badgeText: '进行中', glow: 'shadow-violet-500/20 shadow-lg',
+    bg: 'bg-accent-orange/10', border: 'border-accent-orange/30',
+    iconBg: 'bg-accent-orange/15', iconColor: 'text-accent-orange',
+    labelColor: 'text-accent-orange',
+    badge: 'bg-accent-orange/10 text-accent-orange border-accent-orange/30',
+    badgeText: '进行中', glow: 'shadow-accent-orange/20 shadow-lg',
   },
   pending: {
-    bg: 'bg-slate-900/60', border: 'border-slate-700/40',
-    iconBg: 'bg-slate-800', iconColor: 'text-slate-500',
-    labelColor: 'text-slate-500',
+    bg: 'bg-cream-200/50', border: 'border-cream-300/40',
+    iconBg: 'bg-cream-200', iconColor: 'text-warm-400',
+    labelColor: 'text-warm-400',
     badge: '', badgeText: '', glow: '',
   },
 }
@@ -62,31 +62,31 @@ function StepNode({ data }: { data: any }) {
 
   return (
     <div className={`px-4 py-3 rounded-xl border ${s.bg} ${s.border} ${s.glow} min-w-[200px] transition-all`}>
-      <Handle type="target" position={Position.Top} className="!bg-slate-600 !w-2 !h-2 !border-0" />
+      <Handle type="target" position={Position.Top} className="!bg-cream-300 !w-2 !h-2 !border-0" />
       <div className="flex items-center gap-3">
         <div className={`w-8 h-8 rounded-lg ${s.iconBg} flex items-center justify-center shrink-0`}>
           <IconComp className={`w-4 h-4 ${s.iconColor}`} />
         </div>
         <div>
           <div className={`text-sm font-medium ${s.labelColor}`}>{data.label}</div>
-          <div className="text-[11px] text-slate-500 mt-0.5">{data.desc}</div>
+          <div className="text-[11px] text-warm-400 mt-0.5">{data.desc}</div>
         </div>
       </div>
       {data.status === 'active' && (
         <div className={`inline-flex mt-2 px-2 py-0.5 rounded-md border text-[10px] ${s.badge}`}>
-          <div className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse mr-1.5 mt-1" />
+          <div className="w-1.5 h-1.5 rounded-full bg-accent-orange animate-pulse mr-1.5 mt-1" />
           {s.badgeText}
         </div>
       )}
       {data.status === 'done' && data.detail && (
-        <div className="mt-2 text-[10px] text-emerald-400/80">{data.detail}</div>
+        <div className="mt-2 text-[10px] text-accent-sage/80">{data.detail}</div>
       )}
       {data.status === 'done' && !data.detail && (
         <div className={`inline-flex mt-2 px-2 py-0.5 rounded-md border text-[10px] ${s.badge}`}>
           {s.badgeText}
         </div>
       )}
-      <Handle type="source" position={Position.Bottom} className="!bg-slate-600 !w-2 !h-2 !border-0" />
+      <Handle type="source" position={Position.Bottom} className="!bg-cream-300 !w-2 !h-2 !border-0" />
     </div>
   )
 }
@@ -128,7 +128,7 @@ function getLayoutedElements(steps: PipelineStep[]) {
       target: steps[i + 1].id,
       type: 'smoothstep',
       style: {
-        stroke: steps[i].status === 'done' ? '#10b981' : '#334155',
+        stroke: steps[i].status === 'done' ? '#7A9B6D' : '#D4B896',
         strokeWidth: steps[i].status === 'done' ? 2 : 1.5,
       },
       animated: steps[i + 1].status === 'active',
@@ -219,11 +219,11 @@ function IngestionPanel() {
   const { nodes, edges } = useMemo(() => getLayoutedElements(steps), [steps])
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden flex flex-col h-full">
-      <div className="px-5 py-4 border-b border-slate-800 flex items-center gap-3">
+    <div className="bg-surface border border-cream-200 rounded-xl overflow-hidden flex flex-col h-full">
+      <div className="px-5 py-4 border-b border-cream-200 flex items-center gap-3">
         <div className="flex-1">
-          <div className="text-sm font-semibold text-slate-200">文档摄取 Pipeline</div>
-          <div className="text-[11px] text-slate-500 mt-0.5">上传文档 → markitdown 转换 → AI 抽取 → 写入 Vault</div>
+          <div className="text-sm font-semibold text-warm-700">文档摄取 Pipeline</div>
+          <div className="text-[11px] text-warm-400 mt-0.5">上传文档 → markitdown 转换 → AI 抽取 → 写入 Vault</div>
         </div>
         <input
           ref={fileInputRef}
@@ -235,7 +235,7 @@ function IngestionPanel() {
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={running}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-40 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs bg-accent-orange text-white hover:bg-accent-orange/90 disabled:opacity-40 transition-colors"
         >
           {running ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
           {running ? '处理中...' : '选择文件'}
@@ -252,35 +252,35 @@ function IngestionPanel() {
           proOptions={{ hideAttribution: true }}
           nodesDraggable={true}
           nodesConnectable={false}
-          className="!bg-slate-950"
+          className="!bg-cream-100"
         >
-          <Background color="#1e293b" gap={20} />
-          <Controls className="!bg-slate-900 !border-slate-700 !rounded-lg" showInteractive={false} />
-          <MiniMap nodeColor="#334155" maskColor="rgba(2,6,23,0.8)" className="!bg-slate-900 !border-slate-800 !rounded-lg" />
+          <Background color="#E8D5BC" gap={20} />
+          <Controls className="!bg-surface !border-cream-300 !rounded-lg" showInteractive={false} />
+          <MiniMap nodeColor="#D4B896" maskColor="rgba(255,251,245,0.8)" className="!bg-surface !border-cream-200 !rounded-lg" />
         </ReactFlow>
       </div>
 
       {/* Result panel */}
       {result && (
-        <div className="px-5 py-3 border-t border-slate-800 bg-emerald-950/20">
-          <div className="flex items-center gap-2 text-xs text-emerald-400 mb-2">
+        <div className="px-5 py-3 border-t border-cream-200 bg-accent-sage/5">
+          <div className="flex items-center gap-2 text-xs text-accent-sage mb-2">
             <Check className="w-4 h-4" />
             摄取完成: {result.originalName} → {result.markdownPath}
           </div>
-          <div className="text-[11px] text-slate-400 space-x-4">
+          <div className="text-[11px] text-warm-500 space-x-4">
             <span>{result.wordCount} words</span>
             <span>{result.entities.length} entities</span>
             <span>{result.tags.length} tags</span>
             <span>{result.wikilinks} wikilinks</span>
           </div>
-          <div className="mt-2 text-[10px] text-slate-500 bg-slate-900 rounded p-2 max-h-24 overflow-auto">
+          <div className="mt-2 text-[10px] text-warm-400 bg-cream-200 rounded p-2 max-h-24 overflow-auto">
             {result.preview}
           </div>
         </div>
       )}
 
       {error && (
-        <div className="px-5 py-3 border-t border-slate-800 bg-rose-950/20 flex items-center gap-2 text-xs text-rose-400">
+        <div className="px-5 py-3 border-t border-cream-200 bg-rose-50/50 flex items-center gap-2 text-xs text-rose-400">
           <AlertTriangle className="w-4 h-4" />
           {error}
         </div>
@@ -365,16 +365,16 @@ function ResearchPanel() {
   const { nodes, edges } = useMemo(() => getLayoutedElements(steps), [steps])
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden flex flex-col h-full">
-      <div className="px-5 py-4 border-b border-slate-800 flex items-center gap-3">
+    <div className="bg-surface border border-cream-200 rounded-xl overflow-hidden flex flex-col h-full">
+      <div className="px-5 py-4 border-b border-cream-200 flex items-center gap-3">
         <div className="flex-1">
-          <div className="text-sm font-semibold text-slate-200">自动研究工作流</div>
-          <div className="text-[11px] text-slate-500 mt-0.5">发现知识缺口 → AI 生成结构化笔记</div>
+          <div className="text-sm font-semibold text-warm-700">自动研究工作流</div>
+          <div className="text-[11px] text-warm-400 mt-0.5">发现知识缺口 → AI 生成结构化笔记</div>
         </div>
         <button
           onClick={loadGaps}
           disabled={gapsLoading || running}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs bg-slate-800 text-slate-300 hover:bg-slate-700 disabled:opacity-40 transition-colors"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs bg-cream-200 text-warm-600 hover:bg-cream-300 disabled:opacity-40 transition-colors"
         >
           {gapsLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
           发现缺口
@@ -382,7 +382,7 @@ function ResearchPanel() {
         <button
           onClick={startResearch}
           disabled={running || (!selectedGap && !customTopic.trim())}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-40 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs bg-accent-orange text-white hover:bg-accent-orange/90 disabled:opacity-40 transition-colors"
         >
           {running ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
           {running ? '生成中...' : '开始研究'}
@@ -391,8 +391,8 @@ function ResearchPanel() {
 
       {/* Gap selector */}
       {gaps.length > 0 && !running && (
-        <div className="px-5 py-3 border-b border-slate-800 bg-slate-900/50">
-          <div className="text-[11px] text-slate-400 mb-2">选择知识缺口或输入自定义话题:</div>
+        <div className="px-5 py-3 border-b border-cream-200 bg-surface/50">
+          <div className="text-[11px] text-warm-500 mb-2">选择知识缺口或输入自定义话题:</div>
           <div className="flex flex-wrap gap-2">
             {gaps.map(g => (
               <button
@@ -400,11 +400,11 @@ function ResearchPanel() {
                 onClick={() => { setSelectedGap(g.topic); setCustomTopic('') }}
                 className={`px-2.5 py-1 rounded-lg text-xs border transition-colors ${
                   selectedGap === g.topic
-                    ? 'bg-violet-500/20 text-violet-300 border-violet-500/40'
-                    : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-600'
+                    ? 'bg-accent-orange/15 text-accent-orange border-accent-orange/30'
+                    : 'bg-cream-200 text-warm-500 border-cream-300 hover:border-warm-400'
                 }`}
               >
-                {g.topic} <span className="text-slate-500">({g.references})</span>
+                {g.topic} <span className="text-warm-400">({g.references})</span>
               </button>
             ))}
           </div>
@@ -414,7 +414,7 @@ function ResearchPanel() {
               value={customTopic}
               onChange={e => { setCustomTopic(e.target.value); setSelectedGap('') }}
               placeholder="或输入自定义研究话题..."
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-violet-500"
+              className="w-full bg-cream-200 border border-cream-300 rounded-lg px-3 py-1.5 text-xs text-warm-700 outline-none focus:border-accent-orange"
             />
           </div>
         </div>
@@ -430,31 +430,31 @@ function ResearchPanel() {
           proOptions={{ hideAttribution: true }}
           nodesDraggable={true}
           nodesConnectable={false}
-          className="!bg-slate-950"
+          className="!bg-cream-100"
         >
-          <Background color="#1e293b" gap={20} />
-          <Controls className="!bg-slate-900 !border-slate-700 !rounded-lg" showInteractive={false} />
-          <MiniMap nodeColor="#334155" maskColor="rgba(2,6,23,0.8)" className="!bg-slate-900 !border-slate-800 !rounded-lg" />
+          <Background color="#E8D5BC" gap={20} />
+          <Controls className="!bg-surface !border-cream-300 !rounded-lg" showInteractive={false} />
+          <MiniMap nodeColor="#D4B896" maskColor="rgba(255,251,245,0.8)" className="!bg-surface !border-cream-200 !rounded-lg" />
         </ReactFlow>
       </div>
 
       {result && (
-        <div className="px-5 py-3 border-t border-slate-800 bg-emerald-950/20">
-          <div className="flex items-center gap-2 text-xs text-emerald-400 mb-2">
+        <div className="px-5 py-3 border-t border-cream-200 bg-accent-sage/5">
+          <div className="flex items-center gap-2 text-xs text-accent-sage mb-2">
             <Check className="w-4 h-4" />
             研究完成: {result.topic}
           </div>
-          <div className="text-[11px] text-slate-400 mb-2">
+          <div className="text-[11px] text-warm-500 mb-2">
             路径: {result.path} | {result.wordCount} words
           </div>
-          <div className="text-[10px] text-slate-500 bg-slate-900 rounded p-2 max-h-24 overflow-auto">
+          <div className="text-[10px] text-warm-400 bg-cream-200 rounded p-2 max-h-24 overflow-auto">
             {result.preview}
           </div>
         </div>
       )}
 
       {error && (
-        <div className="px-5 py-3 border-t border-slate-800 bg-rose-950/20 flex items-center gap-2 text-xs text-rose-400">
+        <div className="px-5 py-3 border-t border-cream-200 bg-rose-50/50 flex items-center gap-2 text-xs text-rose-400">
           <AlertTriangle className="w-4 h-4" />
           {error}
         </div>
@@ -542,16 +542,16 @@ function LintPanel() {
   }
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden flex flex-col h-full">
-      <div className="px-5 py-4 border-b border-slate-800 flex items-center gap-3">
+    <div className="bg-surface border border-cream-200 rounded-xl overflow-hidden flex flex-col h-full">
+      <div className="px-5 py-4 border-b border-cream-200 flex items-center gap-3">
         <div className="flex-1">
-          <div className="text-sm font-semibold text-slate-200">Vault 健康检查</div>
-          <div className="text-[11px] text-slate-500 mt-0.5">扫描 → 检查 → 报告 → 自动修复</div>
+          <div className="text-sm font-semibold text-warm-700">Vault 健康检查</div>
+          <div className="text-[11px] text-warm-400 mt-0.5">扫描 → 检查 → 报告 → 自动修复</div>
         </div>
         <button
           onClick={runScan}
           disabled={running}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-40 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs bg-accent-orange text-white hover:bg-accent-orange/90 disabled:opacity-40 transition-colors"
         >
           {running ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
           {running ? '扫描中...' : '开始扫描'}
@@ -570,19 +570,19 @@ function LintPanel() {
             proOptions={{ hideAttribution: true }}
             nodesDraggable={true}
             nodesConnectable={false}
-            className="!bg-slate-950"
+            className="!bg-cream-100"
           >
-            <Background color="#1e293b" gap={20} />
-            <Controls className="!bg-slate-900 !border-slate-700 !rounded-lg" showInteractive={false} />
-            <MiniMap nodeColor="#334155" maskColor="rgba(2,6,23,0.8)" className="!bg-slate-900 !border-slate-800 !rounded-lg" />
+            <Background color="#E8D5BC" gap={20} />
+            <Controls className="!bg-surface !border-cream-300 !rounded-lg" showInteractive={false} />
+            <MiniMap nodeColor="#D4B896" maskColor="rgba(255,251,245,0.8)" className="!bg-surface !border-cream-200 !rounded-lg" />
           </ReactFlow>
         </div>
 
         {/* Issues sidebar */}
         {report && steps[2].status === 'done' && (
-          <div className="w-72 shrink-0 border-l border-slate-800 overflow-auto bg-slate-950/50">
-            <div className="px-3 py-2 text-xs font-medium text-slate-300 border-b border-slate-800">
-              健康评分: <span className={`font-bold ${report.overallScore >= 80 ? 'text-emerald-400' : report.overallScore >= 60 ? 'text-amber-400' : 'text-rose-400'}`}>{report.overallScore}</span>
+          <div className="w-72 shrink-0 border-l border-cream-200 overflow-auto bg-cream-100/50">
+            <div className="px-3 py-2 text-xs font-medium text-warm-600 border-b border-cream-200">
+              健康评分: <span className={`font-bold ${report.overallScore >= 80 ? 'text-accent-sage' : report.overallScore >= 60 ? 'text-accent-amber' : 'text-rose-400'}`}>{report.overallScore}</span>
             </div>
             <div className="p-2 space-y-2">
               {report.categories.map(cat => {
@@ -591,19 +591,19 @@ function LintPanel() {
                 const fixResult = fixResults[cat.name]
 
                 return (
-                  <div key={cat.name} className="bg-slate-900 border border-slate-800 rounded-lg p-2.5">
+                  <div key={cat.name} className="bg-surface border border-cream-200 rounded-lg p-2.5">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[11px] font-medium text-slate-300">{cat.label}</span>
-                      <span className="text-[10px] text-slate-500">{cat.score}/{cat.maxScore}</span>
+                      <span className="text-[11px] font-medium text-warm-600">{cat.label}</span>
+                      <span className="text-[10px] text-warm-400">{cat.score}/{cat.maxScore}</span>
                     </div>
                     {issueCount > 0 && (
-                      <div className="text-[10px] text-slate-500 mb-1.5">{issueCount} 个问题</div>
+                      <div className="text-[10px] text-warm-400 mb-1.5">{issueCount} 个问题</div>
                     )}
                     {isFixable && issueCount > 0 && !fixResult && (
                       <button
                         onClick={() => handleFix(cat.name)}
                         disabled={fixing === cat.name}
-                        className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded text-[10px] bg-violet-600/80 text-white hover:bg-violet-500 disabled:opacity-40 transition-colors"
+                        className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded text-[10px] bg-accent-orange text-white hover:bg-accent-orange/90 disabled:opacity-40 transition-colors"
                       >
                         {fixing === cat.name ? (
                           <Loader2 className="w-3 h-3 animate-spin" />
@@ -614,7 +614,7 @@ function LintPanel() {
                       </button>
                     )}
                     {fixResult && (
-                      <div className="text-[10px] text-emerald-400 flex items-center gap-1">
+                      <div className="text-[10px] text-accent-sage flex items-center gap-1">
                         <Check className="w-3 h-3" />
                         修复 {fixResult.fixed}, 跳过 {fixResult.skipped}
                       </div>
@@ -628,7 +628,7 @@ function LintPanel() {
       </div>
 
       {error && (
-        <div className="px-5 py-3 border-t border-slate-800 bg-rose-950/20 flex items-center gap-2 text-xs text-rose-400">
+        <div className="px-5 py-3 border-t border-cream-200 bg-rose-50/50 flex items-center gap-2 text-xs text-rose-400">
           <AlertTriangle className="w-4 h-4" />
           {error}
         </div>
@@ -656,8 +656,8 @@ export default function Workflow() {
             onClick={() => setActivePipeline(p.key)}
             className={`px-4 py-2 rounded-lg text-sm transition-all ${
               activePipeline === p.key
-                ? 'bg-slate-800 text-slate-100 border border-slate-700'
-                : 'bg-slate-900 text-slate-500 border border-slate-800 hover:text-slate-300 hover:border-slate-700'
+                ? 'bg-cream-200 text-warm-800 border border-cream-300'
+                : 'bg-surface text-warm-400 border border-cream-200 hover:text-warm-600 hover:border-cream-300'
             }`}
           >
             {p.label}

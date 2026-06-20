@@ -9,6 +9,9 @@ import matter from 'gray-matter'
 import { scanVault, getFile, getTree, createFile, updateFile, deleteFile, renameFile, type VaultNote } from './vault-parser.js'
 import { buildGraph } from './graph-builder.js'
 import { checkHealth } from './health-checker.js'
+import { runAgentLoop, type AgentEvent } from './agent.js'
+import chokidar from 'chokidar'
+import { generateQuizSummary } from './quiz-summary.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -25,11 +28,13 @@ let config: { vaultPath: string; port: number; ai?: { apiKey: string; baseURL: s
   vaultPath: '',
   port: 3001,
 }
+let loadedConfigPath = ''
 for (const cp of configPaths) {
   try {
     if (fs.existsSync(cp)) {
       const raw = fs.readFileSync(cp, 'utf-8')
       config = { ...config, ...JSON.parse(raw) }
+      loadedConfigPath = cp
       console.log(`Config loaded from: ${cp}`)
       break
     }
@@ -38,10 +43,16 @@ for (const cp of configPaths) {
   }
 }
 
-// Anthropic client
-const anthropic = config.ai
+// Anthropic client (mutable — can be re-initialized via settings)
+let anthropic: Anthropic | null = config.ai
   ? new Anthropic({ apiKey: config.ai.apiKey, baseURL: config.ai.baseURL })
   : null
+
+function reinitAnthropic() {
+  anthropic = config.ai
+    ? new Anthropic({ apiKey: config.ai.apiKey, baseURL: config.ai.baseURL })
+    : null
+}
 
 const app = express()
 app.use(cors())
@@ -315,6 +326,74 @@ app.post('/api/chat', async (req, res) => {
   }
 })
 
+// ===== Agent Chat (SSE streaming with tool use) =====
+
+app.post('/api/agent/chat', async (req, res) => {
+  const { message, history } = req.body as {
+    message: string
+    history?: { role: 'user' | 'assistant'; content: string }[]
+  }
+  if (!message) {
+    res.status(400).json({ error: 'Missing message' })
+    return
+  }
+
+  if (!anthropic) {
+    // Fallback: keyword-based response (same as old chat)
+    const notes = getNotes()
+    const relevant = findRelevantNotes(message, notes)
+    let reply: string
+    if (relevant.length > 0) {
+      reply = `根据你的问题，找到 ${relevant.length} 篇相关笔记：\n\n`
+      for (const n of relevant.slice(0, 3)) {
+        reply += `**${n.title}** (${n.path}) — ${n.content.substring(0, 100)}...\n\n`
+      }
+    } else {
+      reply = '未找到相关笔记。请尝试更具体的关键词。'
+    }
+    res.json({ reply, citedNotes: relevant.slice(0, 3).map(n => ({ title: n.title, path: n.path })), timestamp: new Date().toISOString() })
+    return
+  }
+
+  // SSE streaming mode
+  res.setHeader('Content-Type', 'text/event-stream')
+  res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('Connection', 'keep-alive')
+  res.flushHeaders()
+
+  const sendEvent = (event: AgentEvent) => {
+    res.write(`data: ${JSON.stringify(event)}\n\n`)
+  }
+
+  try {
+    // Build message history
+    const messages: { role: 'user' | 'assistant'; content: string }[] = []
+    if (history) {
+      for (const h of history.slice(-10)) {
+        if (h.role === 'user' || h.role === 'assistant') {
+          messages.push({ role: h.role, content: h.content })
+        }
+      }
+    }
+    messages.push({ role: 'user', content: message })
+
+    // Run agent loop
+    for await (const event of runAgentLoop(
+      anthropic,
+      config.ai?.model || 'mimo-v2.5-pro',
+      messages,
+      config.vaultPath,
+    )) {
+      sendEvent(event)
+      if (event.type === 'error') break
+    }
+  } catch (err: any) {
+    sendEvent({ type: 'error', content: err.message })
+  }
+
+  res.end()
+})
+
 // ===== File CRUD =====
 
 app.post('/api/vault/file', (req, res) => {
@@ -326,6 +405,7 @@ app.post('/api/vault/file', (req, res) => {
       res.status(400).json({ error: 'Missing path or content' }); return
     }
     const note = createFile(config.vaultPath, filePath, content, frontmatter)
+    markSelfWrite(filePath)
     invalidateCache()
     res.json(note)
   } catch (err: any) {
@@ -342,6 +422,7 @@ app.put('/api/vault/file', (req, res) => {
       res.status(400).json({ error: 'Missing path or content' }); return
     }
     const note = updateFile(config.vaultPath, filePath, content, frontmatter)
+    markSelfWrite(filePath)
     invalidateCache()
     res.json(note)
   } catch (err: any) {
@@ -915,10 +996,764 @@ app.get('/api/study/review-due', (_req, res) => {
   }
 })
 
+// ===== Settings =====
+
+app.get('/api/settings', (_req, res) => {
+  try {
+    const masked = { ...config }
+    if (masked.ai) {
+      masked.ai = {
+        ...masked.ai,
+        apiKey: masked.ai.apiKey
+          ? masked.ai.apiKey.substring(0, 8) + '...' + masked.ai.apiKey.substring(masked.ai.apiKey.length - 4)
+          : '',
+      }
+    }
+    res.json({ ...masked, configPath: loadedConfigPath })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.put('/api/settings', (req, res) => {
+  try {
+    const { vaultPath, port, ai } = req.body as {
+      vaultPath?: string; port?: number; ai?: { apiKey: string; baseURL: string; model?: string }
+    }
+    if (vaultPath !== undefined) config.vaultPath = vaultPath
+    if (port !== undefined) config.port = port
+    if (ai !== undefined) {
+      config.ai = ai
+      reinitAnthropic()
+    }
+    // Persist to config file
+    const savePath = loadedConfigPath || configPaths[0]
+    if (savePath) {
+      fs.writeFileSync(savePath, JSON.stringify(config, null, 2), 'utf-8')
+      console.log(`Settings saved to: ${savePath}`)
+    }
+    invalidateCache()
+    res.json({ ok: true, vaultPath: config.vaultPath, aiConfigured: !!config.ai })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ===== Vault Watcher & SSE (Bidirectional Sync) =====
+
+const sseClients: Set<express.Response> = new Set()
+const selfWriteTracker = new Set<string>()
+
+// Track files written by our app to avoid echo loops
+function markSelfWrite(relativePath: string) {
+  selfWriteTracker.add(relativePath)
+  setTimeout(() => selfWriteTracker.delete(relativePath), 5000)
+}
+
+// Initialize chokidar watcher
+let watcher: chokidar.FSWatcher | null = null
+
+function startWatcher() {
+  if (watcher) { watcher.close() }
+  if (!config.vaultPath || !fs.existsSync(config.vaultPath)) return
+
+  watcher = chokidar.watch(config.vaultPath, {
+    ignored: [
+      /(^|[/\\])\./,  // hidden files/dirs (.obsidian, .git, etc.)
+      /node_modules/,
+      /dist/,
+      /release/,
+    ],
+    ignoreInitial: true,
+    awaitWriteFinish: { stabilityThreshold: 300, pollInterval: 100 },
+  })
+
+  const emitEvent = (type: string, filePath: string) => {
+    const relative = path.relative(config.vaultPath, filePath).replace(/\\/g, '/')
+    if (selfWriteTracker.has(relative)) return
+    const payload = JSON.stringify({ type, path: relative, timestamp: new Date().toISOString() })
+    for (const client of sseClients) {
+      client.write(`data: ${payload}\n\n`)
+    }
+    invalidateCache()
+  }
+
+  watcher
+    .on('add', (fp) => emitEvent('file-added', fp))
+    .on('change', (fp) => emitEvent('file-changed', fp))
+    .on('unlink', (fp) => emitEvent('file-deleted', fp))
+
+  console.log(`Vault watcher started: ${config.vaultPath}`)
+}
+
+// Start watcher on boot
+startWatcher()
+
+app.get('/api/vault/events', (_req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream')
+  res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('Connection', 'keep-alive')
+  res.flushHeaders()
+
+  sseClients.add(res)
+  res.write(':keepalive\n\n')
+
+  const heartbeat = setInterval(() => {
+    res.write(':keepalive\n\n')
+  }, 30000)
+
+  _req.on('close', () => {
+    sseClients.delete(res)
+    clearInterval(heartbeat)
+  })
+})
+
+// ===== Daily Error Log (错题本) =====
+
+function getErrorLogDir() { return '错题本' }
+
+function parseErrorLog(content: string): { questions: any[]; meta: Record<string, any> } {
+  const { data: meta, content: body } = matter(content)
+  const questions: any[] = []
+  const blocks = body.split(/^## 错题 \d+/m).filter(Boolean)
+  for (const block of blocks) {
+    const q: Record<string, string> = {}
+    const fieldMap: Record<string, string> = {
+      '来源笔记': 'source', '题目': 'question', '你的回答': 'userAnswer',
+      '正确答案': 'correctAnswer', '解析': 'explanation',
+      '复习次数': 'reviewCount', '下次复习': 'nextReview',
+    }
+    for (const line of block.split('\n')) {
+      for (const [cn, en] of Object.entries(fieldMap)) {
+        const match = line.match(new RegExp(`\\*\\*${cn}\\*\\*[:：]\\s*(.+)`))
+        if (match) q[en] = match[1].trim()
+      }
+    }
+    if (q.question) questions.push(q)
+  }
+  return { questions, meta }
+}
+
+function buildErrorLog(date: string, questions: any[]): string {
+  let content = `---\ndate: ${date}\ntype: error-log\n---\n\n`
+  questions.forEach((q, i) => {
+    content += `## 错题 ${i + 1}\n`
+    content += `- **来源笔记**: ${q.source || ''}\n`
+    content += `- **题目**: ${q.question}\n`
+    content += `- **你的回答**: ${q.userAnswer || ''}\n`
+    content += `- **正确答案**: ${q.correctAnswer}\n`
+    content += `- **解析**: ${q.explanation || ''}\n`
+    content += `- **复习次数**: ${q.reviewCount || '0'}\n`
+    content += `- **下次复习**: ${q.nextReview || ''}\n\n`
+  })
+  return content
+}
+
+app.post('/api/study/error-log', async (req, res) => {
+  try {
+    const { notePath, question, userAnswer, correctAnswer, explanation } = req.body as {
+      notePath: string; question: string; userAnswer?: string; correctAnswer: string; explanation?: string
+    }
+    if (!question || !correctAnswer) {
+      res.status(400).json({ error: 'Missing question or correctAnswer' }); return
+    }
+
+    const today = new Date().toISOString().split('T')[0]
+    const logPath = `${getErrorLogDir()}/${today}.md`
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0]
+
+    const newQ = {
+      source: notePath || '', question, userAnswer: userAnswer || '',
+      correctAnswer, explanation: explanation || '', reviewCount: '0', nextReview: tomorrow,
+    }
+
+    let questions: any[] = []
+    try {
+      const existing = getFile(config.vaultPath, logPath)
+      if (existing) {
+        const parsed = parseErrorLog(existing.content)
+        questions = parsed.questions
+      }
+    } catch { /* no existing file */ }
+
+    questions.push(newQ)
+    const content = buildErrorLog(today, questions)
+    const fm = { date: today, type: 'error-log' }
+
+    try {
+      updateFile(config.vaultPath, logPath, content, fm)
+    } catch {
+      createFile(config.vaultPath, logPath, content, fm)
+    }
+    markSelfWrite(logPath)
+    invalidateCache()
+
+    res.json({ ok: true, path: logPath, totalQuestions: questions.length })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.get('/api/study/error-log', (req, res) => {
+  try {
+    const date = String(req.query.date || new Date().toISOString().split('T')[0])
+    const logPath = `${getErrorLogDir()}/${date}.md`
+    try {
+      const file = getFile(config.vaultPath, logPath)
+      if (file) {
+        const parsed = parseErrorLog(file.content)
+        res.json({ date, questions: parsed.questions, path: logPath })
+        return
+      }
+    } catch { /* file not found */ }
+    res.json({ date, questions: [], path: logPath })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.get('/api/study/daily-review', (_req, res) => {
+  try {
+    const today = new Date()
+    const todayStr = today.toISOString().split('T')[0]
+    const errorDir = path.resolve(config.vaultPath, getErrorLogDir())
+    const allQuestions: any[] = []
+
+    if (fs.existsSync(errorDir)) {
+      const files = fs.readdirSync(errorDir).filter(f => f.endsWith('.md'))
+      for (const file of files) {
+        try {
+          const fullPath = path.join(errorDir, file)
+          const raw = fs.readFileSync(fullPath, 'utf-8')
+          const parsed = parseErrorLog(raw)
+          for (const q of parsed.questions) {
+            q._sourceFile = file
+            allQuestions.push(q)
+          }
+        } catch { /* skip bad files */ }
+      }
+    }
+
+    // Filter questions due for review
+    const dueQuestions = allQuestions.filter(q => {
+      if (!q.nextReview) return true
+      return q.nextReview <= todayStr
+    })
+
+    // Stats
+    const totalQuestions = allQuestions.length
+    const masteredCount = allQuestions.filter(q => parseInt(q.reviewCount || '0') >= 3).length
+    const dueCount = dueQuestions.length
+
+    // Subject distribution
+    const subjectMap: Record<string, string[]> = {
+      '数据结构': ['数据结构', 'data-structure', 'ds', '算法', '链表', '树', '图', '排序'],
+      '计算机组成': ['计算机组成', '计组', 'computer-organization', 'co', 'cpu', '存储器'],
+      '计算机网络': ['计算机网络', '网络', 'network', 'tcp', 'ip', 'http', '路由'],
+      '操作系统': ['操作系统', 'os', 'operating-system', '进程', '线程', '内存'],
+    }
+    const subjectCounts: Record<string, number> = { '数据结构': 0, '计算机组成': 0, '计算机网络': 0, '操作系统': 0, '其他': 0 }
+    for (const q of allQuestions) {
+      const src = (q.source || '').toLowerCase()
+      let found = false
+      for (const [subj, keywords] of Object.entries(subjectMap)) {
+        if (keywords.some(k => src.includes(k))) { subjectCounts[subj]++; found = true; break }
+      }
+      if (!found) subjectCounts['其他']++
+    }
+
+    // Generate AI practice questions if available
+    let generatedQuestions: any[] = []
+
+    res.json({
+      date: todayStr,
+      dueQuestions: dueQuestions.slice(0, 30),
+      generatedQuestions,
+      stats: {
+        totalQuestions, masteredCount, dueCount,
+        subjectCounts,
+        streakDays: 0, // TODO: calculate streak
+      },
+    })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.post('/api/study/review-complete', (req, res) => {
+  try {
+    const { date, questionIndex, result } = req.body as {
+      date: string; questionIndex: number; result: 'mastered' | 'hard' | 'easy'
+    }
+    if (!date) { res.status(400).json({ error: 'Missing date' }); return }
+
+    const logPath = `${getErrorLogDir()}/${date}.md`
+    try {
+      const file = getFile(config.vaultPath, logPath)
+      if (!file) { res.status(404).json({ error: 'Log not found' }); return }
+
+      const parsed = parseErrorLog(file.content)
+      if (questionIndex >= 0 && questionIndex < parsed.questions.length) {
+        const q = parsed.questions[questionIndex]
+        const count = parseInt(q.reviewCount || '0') + 1
+        q.reviewCount = String(count)
+
+        // Spaced repetition: mastered=14d, easy=7d, hard=1d
+        const days = result === 'mastered' ? 14 : result === 'easy' ? 7 : 1
+        const next = new Date(Date.now() + days * 86400000).toISOString().split('T')[0]
+        q.nextReview = next
+
+        const content = buildErrorLog(date, parsed.questions)
+        updateFile(config.vaultPath, logPath, content, { date, type: 'error-log' })
+        markSelfWrite(logPath)
+        invalidateCache()
+      }
+
+      res.json({ ok: true })
+    } catch {
+      res.status(404).json({ error: 'Log not found' })
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ===== 考研英语词汇 (Graduate Exam English Vocabulary) =====
+
+interface VocabProgress {
+  status: 'known' | 'fuzzy' | 'unknown' | 'new'
+  nextReview: string
+  reviews: number
+  addedDate: string
+}
+
+// Load vocabulary pool from the data file
+function loadVocabPool(): Array<{ word: string; phonetic: string; definition: string; example: string; exampleCn: string; frequency: string; unit: number }> {
+  try {
+    // Try reading from src/data/vocabulary.ts (development)
+    const vocabFilePath = path.join(__dirname, '..', 'src', 'data', 'vocabulary.ts')
+    if (fs.existsSync(vocabFilePath)) {
+      const content = fs.readFileSync(vocabFilePath, 'utf-8')
+      // Extract the array from VOCAB_POOL export
+      const arrayMatch = content.match(/VOCAB_POOL.*?=\s*\[([\s\S]*)\]/)
+      if (arrayMatch) {
+        // Parse objects from the array content
+        const items: any[] = []
+        const objRegex = /\{[\s\S]*?word:\s*'([^']*)'[\s\S]*?phonetic:\s*'([^']*)'[\s\S]*?definition:\s*'([^']*)'[\s\S]*?example:\s*'([^']*)'[\s\S]*?exampleCn:\s*'([^']*)'[\s\S]*?frequency:\s*'([^']*)'[\s\S]*?unit:\s*(\d+)[\s\S]*?\}/g
+        let match
+        while ((match = objRegex.exec(arrayMatch[1])) !== null) {
+          items.push({
+            word: match[1], phonetic: match[2], definition: match[3],
+            example: match[4], exampleCn: match[5], frequency: match[6],
+            unit: parseInt(match[7]),
+          })
+        }
+        if (items.length > 0) return items
+      }
+    }
+  } catch { /* ignore */ }
+  // Fallback: small built-in pool
+  return [
+    { word: 'analyze', phonetic: '/ˈænəlaɪz/', definition: '分析', example: 'We need to analyze the data.', exampleCn: '我们需要分析数据。', frequency: '高频', unit: 1 },
+    { word: 'significant', phonetic: '/sɪɡˈnɪfɪkənt/', definition: '重要的；显著的', example: 'A significant difference.', exampleCn: '一个显著的差异。', frequency: '高频', unit: 1 },
+    { word: 'hypothesis', phonetic: '/haɪˈpɒθəsɪs/', definition: '假设', example: 'Test the hypothesis.', exampleCn: '验证假设。', frequency: '高频', unit: 1 },
+  ]
+}
+
+const VOCAB_POOL = loadVocabPool()
+
+// Read/write progress from vault
+function getVocabProgressPath() { return '单词本/progress.md' }
+
+function readVocabProgress(): Record<string, VocabProgress> {
+  try {
+    const file = getFile(config.vaultPath, getVocabProgressPath())
+    if (!file) return {}
+    const { content: body } = matter(file.content)
+    // Extract JSON from code block
+    const jsonMatch = body.match(/```json\s*([\s\S]*?)```/)
+    if (jsonMatch) return JSON.parse(jsonMatch[1])
+    // Try parsing the whole body as JSON
+    return JSON.parse(body.trim())
+  } catch { return {} }
+}
+
+function writeVocabProgress(progress: Record<string, VocabProgress>) {
+  const todayStr = new Date().toISOString().split('T')[0]
+  const content = `---\ntype: vocab-progress\nupdated: '${todayStr}'\n---\n\n\`\`\`json\n${JSON.stringify(progress, null, 2)}\n\`\`\`\n`
+  const vocabPath = getVocabProgressPath()
+  try { updateFile(config.vaultPath, vocabPath, content, { type: 'vocab-progress', updated: todayStr }) }
+  catch { createFile(config.vaultPath, vocabPath, content, { type: 'vocab-progress', updated: todayStr }) }
+  markSelfWrite(vocabPath)
+  invalidateCache()
+}
+
+app.get('/api/study/vocabulary', (_req, res) => {
+  try {
+    const progress = readVocabProgress()
+    const todayStr = new Date().toISOString().split('T')[0]
+    const learnedWords = Object.keys(progress)
+    const existingSet = new Set(learnedWords.map(w => w.toLowerCase()))
+
+    // Find words due for review
+    const dueWords = learnedWords.filter(w => {
+      const p = progress[w]
+      return !p.nextReview || p.nextReview <= todayStr
+    })
+
+    // Get due word details from pool
+    const dueRecords = dueWords.slice(0, 30).map(w => {
+      const entry = VOCAB_POOL.find(e => e.word.toLowerCase() === w.toLowerCase())
+      const p = progress[w]
+      return {
+        word: entry?.word || w,
+        phonetic: entry?.phonetic || '',
+        definition: entry?.definition || '',
+        example: entry?.example || '',
+        exampleCn: entry?.exampleCn || '',
+        frequency: entry?.frequency || '中频',
+        unit: entry?.unit || 0,
+        reviews: p.reviews,
+        nextReview: p.nextReview,
+      }
+    })
+
+    // Suggest new words not yet learned
+    const suggested = VOCAB_POOL
+      .filter(w => !existingSet.has(w.word.toLowerCase()))
+      .slice(0, 15)
+      .map(w => ({
+        word: w.word, definition: w.definition, phonetic: w.phonetic,
+        example: w.example, frequency: w.frequency, unit: w.unit,
+      }))
+
+    // Stats
+    const mastered = learnedWords.filter(w => progress[w].reviews >= 5).length
+    const learning = learnedWords.filter(w => progress[w].reviews > 0 && progress[w].reviews < 5).length
+    const newWords = learnedWords.filter(w => progress[w].reviews === 0).length
+
+    res.json({
+      totalWords: learnedWords.length,
+      dueWords: dueWords.length,
+      dueRecords,
+      suggested,
+      stats: { mastered, learning, newWords },
+    })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.post('/api/study/vocabulary/add', (req, res) => {
+  try {
+    const { words } = req.body as { words: Array<{ word: string; definition: string; phonetic?: string }> }
+    if (!words || !words.length) { res.status(400).json({ error: 'No words provided' }); return }
+
+    const progress = readVocabProgress()
+    const todayStr = new Date().toISOString().split('T')[0]
+    let addedCount = 0
+
+    for (const w of words) {
+      const key = w.word.toLowerCase()
+      if (!progress[key]) {
+        progress[w.word] = { status: 'new', nextReview: todayStr, reviews: 0, addedDate: todayStr }
+        addedCount++
+      }
+    }
+
+    writeVocabProgress(progress)
+    res.json({ ok: true, added: addedCount, total: Object.keys(progress).length })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.post('/api/study/vocabulary/review', (req, res) => {
+  try {
+    const { word, result } = req.body as { word: string; result: 'known' | 'fuzzy' | 'unknown' }
+    if (!word) { res.status(400).json({ error: 'Missing word' }); return }
+
+    const progress = readVocabProgress()
+    const key = Object.keys(progress).find(k => k.toLowerCase() === word.toLowerCase())
+    if (!key) { res.status(404).json({ error: 'Word not found in progress' }); return }
+
+    progress[key].reviews++
+    progress[key].status = result
+    const days = result === 'known' ? 7 : result === 'fuzzy' ? 3 : 1
+    progress[key].nextReview = new Date(Date.now() + days * 86400000).toISOString().split('T')[0]
+
+    writeVocabProgress(progress)
+    res.json({ ok: true, word, reviewCount: progress[key].reviews, nextReview: progress[key].nextReview })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// Generate vocabulary: return suggested words from pool (AI could be integrated later)
+app.post('/api/study/vocabulary/generate', (req, res) => {
+  try {
+    const { unit, frequency } = req.body as { unit?: number; frequency?: string }
+    const progress = readVocabProgress()
+    const existingSet = new Set(Object.keys(progress).map(w => w.toLowerCase()))
+
+    let filtered = VOCAB_POOL.filter(w => !existingSet.has(w.word.toLowerCase()))
+    if (unit) filtered = filtered.filter(w => w.unit === unit)
+    if (frequency) filtered = filtered.filter(w => w.frequency === frequency)
+
+    const words = filtered.slice(0, 20).map(w => ({
+      word: w.word, definition: w.definition, phonetic: w.phonetic,
+      example: w.example, exampleCn: w.exampleCn, frequency: w.frequency, unit: w.unit,
+    }))
+
+    res.json({ words })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 app.post('/api/vault/refresh', (_req, res) => {
   invalidateCache()
+  startWatcher() // Restart watcher in case vault path changed
   const notes = getNotes()
   res.json({ ok: true, noteCount: notes.length })
+})
+
+// ===== Music =====
+
+const AUDIO_EXTS = new Set(['.mp3', '.wav', '.ogg', '.flac', '.m4a', '.aac', '.wma'])
+
+app.get('/api/music/scan', (req, res) => {
+  const folderPath = (req.query.path as string) || ''
+  if (!folderPath) {
+    return res.status(400).json({ error: 'Missing path parameter' })
+  }
+
+  // Security: only allow scanning paths that exist
+  if (!fs.existsSync(folderPath)) {
+    return res.status(404).json({ error: 'Directory not found' })
+  }
+
+  try {
+    const files: { name: string; path: string; size: number; ext: string }[] = []
+
+    function scanDir(dir: string) {
+      const entries = fs.readdirSync(dir, { withFileTypes: true })
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name)
+        if (entry.isDirectory()) {
+          scanDir(fullPath)
+        } else if (entry.isFile()) {
+          const ext = path.extname(entry.name).toLowerCase()
+          if (AUDIO_EXTS.has(ext)) {
+            const stat = fs.statSync(fullPath)
+            files.push({
+              name: path.basename(entry.name, ext),
+              path: fullPath,
+              size: stat.size,
+              ext: ext.slice(1),
+            })
+          }
+        }
+      }
+    }
+
+    scanDir(folderPath)
+    res.json({ path: folderPath, files })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.get('/api/music/stream', (req, res) => {
+  const filePath = req.query.path as string
+  if (!filePath || !fs.existsSync(filePath)) {
+    return res.status(404).json({ error: 'File not found' })
+  }
+
+  const stat = fs.statSync(filePath)
+  const ext = path.extname(filePath).toLowerCase()
+  const mimeTypes: Record<string, string> = {
+    '.mp3': 'audio/mpeg',
+    '.wav': 'audio/wav',
+    '.ogg': 'audio/ogg',
+    '.flac': 'audio/flac',
+    '.m4a': 'audio/mp4',
+    '.aac': 'audio/aac',
+    '.wma': 'audio/x-ms-wma',
+  }
+  const contentType = mimeTypes[ext] || 'audio/mpeg'
+  const fileSize = stat.size
+
+  const range = req.headers.range
+  if (range) {
+    const parts = range.replace(/bytes=/, '').split('-')
+    const start = parseInt(parts[0], 10)
+    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1
+    const chunkSize = end - start + 1
+
+    res.writeHead(206, {
+      'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+      'Accept-Ranges': 'bytes',
+      'Content-Length': chunkSize,
+      'Content-Type': contentType,
+    })
+    fs.createReadStream(filePath, { start, end }).pipe(res)
+  } else {
+    res.writeHead(200, {
+      'Content-Length': fileSize,
+      'Content-Type': contentType,
+      'Accept-Ranges': 'bytes',
+    })
+    fs.createReadStream(filePath).pipe(res)
+  }
+})
+
+// ===== Default / Music paths saved in settings =====
+app.get('/api/music/path', (_req, res) => {
+  res.json({ musicPath: (config as any).musicPath || '' })
+})
+
+app.put('/api/music/path', (req, res) => {
+  const { musicPath } = req.body
+  if (musicPath !== undefined) {
+    (config as any).musicPath = musicPath
+    // Persist to config file
+    if (loadedConfigPath) {
+      try {
+        const raw = fs.readFileSync(loadedConfigPath, 'utf-8')
+        const cfg = JSON.parse(raw)
+        cfg.musicPath = musicPath
+        fs.writeFileSync(loadedConfigPath, JSON.stringify(cfg, null, 2))
+      } catch { /* ignore */ }
+    }
+  }
+  res.json({ ok: true, musicPath })
+})
+
+// ===== Quiz (在线做题) =====
+
+app.post('/api/quiz/submit', (req, res) => {
+  try {
+    const { mode, answers, questions, timeTaken } = req.body as {
+      mode: 'practice' | 'exam'
+      answers: Record<string, string>
+      questions: Array<{ id: string; subject: string; question: string; answer: string; explanation: string; tags: string[] }>
+      timeTaken: number
+    }
+
+    if (!questions || !Array.isArray(questions) || questions.length === 0) {
+      res.status(400).json({ error: 'Missing or empty questions' }); return
+    }
+    if (!answers || typeof answers !== 'object') {
+      res.status(400).json({ error: 'Missing answers' }); return
+    }
+
+    // Generate summary markdown
+    const summary = generateQuizSummary({
+      mode: mode || 'practice',
+      questions,
+      answers,
+      timeTaken: timeTaken || 0,
+    })
+
+    // Build per-subject breakdown
+    const subjectBreakdown: Record<string, { total: number; correct: number }> = {}
+    for (const q of questions) {
+      if (!subjectBreakdown[q.subject]) {
+        subjectBreakdown[q.subject] = { total: 0, correct: 0 }
+      }
+      subjectBreakdown[q.subject].total++
+      if (answers[q.id] === q.answer) {
+        subjectBreakdown[q.subject].correct++
+      }
+    }
+
+    // Save summary to vault at 做题记录/YYYY-MM-DD-HHmm.md
+    let summaryPath = ''
+    try {
+      const now = new Date()
+      const dateStr = now.toISOString().split('T')[0]
+      const hmStr = now.toTimeString().split(' ')[0].substring(0, 5).replace(':', '')
+      const fileName = `${dateStr}-${hmStr}.md`
+      const targetPath = `做题记录/${fileName}`
+
+      const fm = {
+        type: 'quiz-result',
+        date: dateStr,
+        mode: mode || 'practice',
+        score: questions.length > 0 ? Math.round((summary.correctCount / questions.length) * 100) : 0,
+        total: questions.length,
+        correct: summary.correctCount,
+        wrong: summary.wrongCount,
+        tags: ['quiz', '做题记录'],
+      }
+
+      try {
+        createFile(config.vaultPath, targetPath, summary.content, fm)
+      } catch {
+        // File may exist, try update
+        updateFile(config.vaultPath, targetPath, summary.content, fm)
+      }
+      markSelfWrite(targetPath)
+      invalidateCache()
+      summaryPath = targetPath
+    } catch (saveErr: any) {
+      console.error('Quiz summary save error:', saveErr.message)
+      // Continue — return results even if save fails
+    }
+
+    res.json({
+      result: {
+        total: questions.length,
+        correct: summary.correctCount,
+        wrong: summary.wrongCount,
+        timeTaken: timeTaken || 0,
+        subjectBreakdown,
+      },
+      summaryPath,
+    })
+  } catch (err: any) {
+    console.error('Quiz submit error:', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.get('/api/quiz/history', (_req, res) => {
+  try {
+    const quizDir = path.resolve(config.vaultPath, '做题记录')
+    if (!fs.existsSync(quizDir)) {
+      res.json({ files: [] })
+      return
+    }
+
+    const files = fs.readdirSync(quizDir)
+      .filter(f => f.endsWith('.md'))
+      .sort()
+      .reverse()
+      .map(f => {
+        try {
+          const fullPath = path.join(quizDir, f)
+          const raw = fs.readFileSync(fullPath, 'utf-8')
+          const { data: fm } = matter(raw)
+          return {
+            fileName: f,
+            path: `做题记录/${f}`,
+            date: fm.date || '',
+            mode: fm.mode || '',
+            score: fm.score ?? null,
+            total: fm.total ?? null,
+            correct: fm.correct ?? null,
+            wrong: fm.wrong ?? null,
+          }
+        } catch {
+          return { fileName: f, path: `做题记录/${f}`, date: '', mode: '', score: null, total: null, correct: null, wrong: null }
+        }
+      })
+
+    res.json({ files })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
 })
 
 // SPA fallback — serve index.html for client-side routes (non-API paths)
@@ -948,7 +1783,12 @@ export function startServer(port?: number) {
 export { app }
 
 // Standalone mode
-const isMain = process.argv[1] && (process.argv[1].endsWith('index.ts') || process.argv[1].endsWith('index.js'))
+const isMain = process.argv[1] && (
+  process.argv[1].endsWith('index.ts') ||
+  process.argv[1].endsWith('index.js') ||
+  process.argv[1].endsWith('server.mjs') ||
+  process.argv[1].endsWith('server.js')
+)
 if (isMain) {
   startServer()
 }

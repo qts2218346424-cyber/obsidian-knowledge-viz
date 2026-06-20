@@ -223,6 +223,75 @@ export interface ReviewDueData {
   stats: SubjectStats[]
 }
 
+export interface AppSettings {
+  vaultPath: string
+  port: number
+  ai?: { apiKey: string; baseURL: string; model?: string }
+  configPath?: string
+}
+
+export interface ErrorQuestion {
+  source: string
+  question: string
+  userAnswer: string
+  correctAnswer: string
+  explanation: string
+  reviewCount: string
+  nextReview: string
+  _sourceFile?: string
+}
+
+export interface DailyReviewData {
+  date: string
+  dueQuestions: ErrorQuestion[]
+  generatedQuestions: any[]
+  stats: {
+    totalQuestions: number
+    masteredCount: number
+    dueCount: number
+    subjectCounts: Record<string, number>
+    streakDays: number
+  }
+}
+
+export interface VocabWord {
+  word: string
+  phonetic?: string
+  definition: string
+  example?: string
+  subject: string
+  reviewCount: number
+  nextReview: string
+  addedDate: string
+}
+
+export interface VocabData {
+  totalWords: number
+  dueWords: number
+  dueRecords: VocabWord[]
+  suggested: Array<{ word: string; definition: string; phonetic?: string; example?: string; subject: string }>
+  subjectDistribution: Record<string, number>
+  stats: { mastered: number; learning: number; newWords: number }
+}
+
+export interface VaultEvent {
+  type: 'file-added' | 'file-changed' | 'file-deleted'
+  path: string
+  timestamp: string
+}
+
+export interface MusicFile {
+  name: string
+  path: string
+  size: number
+  ext: string
+}
+
+export interface MusicScanResult {
+  path: string
+  files: MusicFile[]
+}
+
 // ===== API Functions =====
 
 export const api = {
@@ -287,6 +356,49 @@ export const api = {
     postJSON<FlashcardResult>('/study/flashcards', { notePath }),
 
   getReviewDue: () => fetchJSON<ReviewDueData>('/study/review-due'),
+
+  // Settings
+  getSettings: () => fetchJSON<AppSettings>('/settings'),
+
+  updateSettings: (settings: Partial<AppSettings> & { ai?: { apiKey: string; baseURL: string; model?: string } }) =>
+    putJSON<{ ok: boolean; vaultPath: string; aiConfigured: boolean }>('/settings', settings),
+
+  // Daily Error Log
+  addErrorLog: (data: { notePath?: string; question: string; userAnswer?: string; correctAnswer: string; explanation?: string }) =>
+    postJSON<{ ok: boolean; path: string; totalQuestions: number }>('/study/error-log', data),
+
+  getErrorLog: (date?: string) =>
+    fetchJSON<{ date: string; questions: ErrorQuestion[]; path: string }>(`/study/error-log${date ? `?date=${date}` : ''}`),
+
+  getDailyReview: () => fetchJSON<DailyReviewData>('/study/daily-review'),
+
+  markReviewComplete: (date: string, questionIndex: number, result: 'mastered' | 'hard' | 'easy') =>
+    postJSON<{ ok: boolean }>('/study/review-complete', { date, questionIndex, result }),
+
+  // Vocabulary
+  getVocabulary: () => fetchJSON<VocabData>('/study/vocabulary'),
+
+  addVocabulary: (words: Array<{ word: string; definition: string; phonetic?: string; example?: string; subject?: string }>) =>
+    postJSON<{ ok: boolean; added: number; total: number }>('/study/vocabulary/add', { words }),
+
+  reviewVocabulary: (word: string, result: 'known' | 'fuzzy' | 'unknown') =>
+    postJSON<{ ok: boolean; word: string; reviewCount: number; nextReview: string }>('/study/vocabulary/review', { word, result }),
+
+  generateVocabulary: (subject?: string, notePath?: string) =>
+    postJSON<{ words: Array<{ word: string; definition: string; phonetic?: string; example?: string; subject: string }> }>('/study/vocabulary/generate', { subject, notePath }),
+
+  // Music
+  scanMusicFolder: (folderPath: string) =>
+    fetchJSON<MusicScanResult>(`/music/scan?path=${encodeURIComponent(folderPath)}`),
+
+  getMusicStreamUrl: (filePath: string) =>
+    `${BASE}/music/stream?path=${encodeURIComponent(filePath)}`,
+
+  getMusicPath: () =>
+    fetchJSON<{ musicPath: string }>('/music/path'),
+
+  setMusicPath: (musicPath: string) =>
+    putJSON<{ ok: boolean; musicPath: string }>('/music/path', { musicPath }),
 }
 
 // Check if the API is available

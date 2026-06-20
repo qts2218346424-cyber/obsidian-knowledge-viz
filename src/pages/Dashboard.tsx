@@ -102,31 +102,31 @@ export default function Dashboard() {
       {/* Top stat cards */}
       <div className="grid grid-cols-5 gap-3">
         {[
-          { label: '笔记总数', value: `${totalNotes}`, sub: isRealData ? '来自 Vault' : '示例数据', color: 'text-violet-400' },
-          { label: '健康评分', value: `${overallScore}`, sub: scoreLabel, color: overallScore >= 80 ? 'text-emerald-400' : 'text-amber-400' },
-          { label: '交叉引用', value: `${totalLinks}`, sub: stats ? `平均 ${stats.avgWordsPerNote} 字/篇` : '示例数据', color: 'text-cyan-400' },
+          { label: '笔记总数', value: `${totalNotes}`, sub: isRealData ? '来自 Vault' : '示例数据', color: 'text-accent-orange' },
+          { label: '健康评分', value: `${overallScore}`, sub: scoreLabel, color: overallScore >= 80 ? 'text-accent-sage' : 'text-accent-amber' },
+          { label: '交叉引用', value: `${totalLinks}`, sub: stats ? `平均 ${stats.avgWordsPerNote} 字/篇` : '示例数据', color: 'text-accent-sage' },
           { label: '孤立笔记', value: `${orphanNotes}`, sub: stats ? `${stats.danglingLinks} 断链` : '示例数据', color: 'text-rose-400' },
-          { label: '标签数', value: `${totalTags}`, sub: isRealData ? '已识别' : '示例数据', color: 'text-amber-400' },
+          { label: '标签数', value: `${totalTags}`, sub: isRealData ? '已识别' : '示例数据', color: 'text-accent-amber' },
         ].map(s => (
-          <div key={s.label} className="bg-slate-900 border border-slate-800 rounded-xl px-4 py-3.5">
-            <div className="text-[11px] text-slate-500 mb-1.5">{s.label}</div>
+          <div key={s.label} className="bg-surface border border-cream-200 rounded-xl px-4 py-3.5">
+            <div className="text-[11px] text-warm-400 mb-1.5">{s.label}</div>
             <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
-            <div className="text-[11px] text-slate-600 mt-1">{s.sub}</div>
+            <div className="text-[11px] text-warm-400 mt-1">{s.sub}</div>
           </div>
         ))}
       </div>
 
       {/* Loading / Status */}
       {(healthLoading || statsLoading) && (
-        <div className="flex items-center gap-2 text-sm text-slate-400">
+        <div className="flex items-center gap-2 text-sm text-warm-500">
           <Loader2 className="w-4 h-4 animate-spin" />
           加载健康数据...
         </div>
       )}
       {healthError && (
-        <div className="flex items-center gap-2 text-sm text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-lg px-3 py-2">
+        <div className="flex items-center gap-2 text-sm text-accent-amber bg-accent-amber/10 border border-accent-amber/20 rounded-lg px-3 py-2">
           API 未连接，显示示例数据。启动后端: npm run dev:all
-          <button onClick={reload} className="ml-auto p-1 rounded hover:bg-amber-400/10">
+          <button onClick={reload} className="ml-auto p-1 rounded hover:bg-accent-amber/10">
             <RefreshCw className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -138,13 +138,13 @@ export default function Dashboard() {
         <Card title="Vault 健康雷达图" subtitle="8 维度综合评估">
           <ResponsiveContainer width="100%" height={300}>
             <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="75%">
-              <PolarGrid stroke="#1e293b" />
-              <PolarAngleAxis dataKey="metric" tick={{ fill: '#94a3b8', fontSize: 11 }} />
+              <PolarGrid stroke="#E8D5BC" />
+              <PolarAngleAxis dataKey="metric" tick={{ fill: '#8B7355', fontSize: 11 }} />
               <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} axisLine={false} />
               <Radar
                 dataKey="score"
-                stroke="#8b5cf6"
-                fill="#8b5cf6"
+                stroke="#E07A3A"
+                fill="#E07A3A"
                 fillOpacity={0.2}
                 strokeWidth={2}
               />
@@ -173,10 +173,10 @@ export default function Dashboard() {
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    background: '#1e293b',
-                    border: 'none',
+                    background: '#FFFBF5',
+                    border: '1px solid #E8D5BC',
                     borderRadius: 8,
-                    color: '#e2e8f0',
+                    color: '#4A3728',
                     fontSize: 12,
                   }}
                 />
@@ -184,13 +184,13 @@ export default function Dashboard() {
             </ResponsiveContainer>
             <div className="flex-1 text-center">
               <div className="text-5xl font-bold" style={{ color: scoreColor }}>{overallScore}</div>
-              <div className="text-xs text-slate-500 mt-1">综合健康分</div>
+              <div className="text-xs text-warm-400 mt-1">综合健康分</div>
               <div className="mt-5 text-left space-y-2.5">
                 {noteDistribution.map(d => (
                   <div key={d.name} className="flex items-center gap-2 text-xs">
                     <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: d.color }} />
-                    <span className="text-slate-400 flex-1">{d.name}</span>
-                    <span className="text-slate-200 font-medium">{d.value}</span>
+                    <span className="text-warm-500 flex-1">{d.name}</span>
+                    <span className="text-warm-700 font-medium">{d.value}</span>
                   </div>
                 ))}
               </div>
@@ -203,16 +203,16 @@ export default function Dashboard() {
       <Card title="30 天活动趋势" subtitle={isRealData ? '基于文件修改时间' : '示例数据'}>
         <ResponsiveContainer width="100%" height={260}>
           <AreaChart data={activityData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-            <XAxis dataKey="day" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={{ stroke: '#1e293b' }} />
-            <YAxis tick={{ fill: '#64748b', fontSize: 10 }} axisLine={{ stroke: '#1e293b' }} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#E8D5BC" />
+            <XAxis dataKey="day" tick={{ fill: '#8B7355', fontSize: 10 }} axisLine={{ stroke: '#E8D5BC' }} />
+            <YAxis tick={{ fill: '#8B7355', fontSize: 10 }} axisLine={{ stroke: '#E8D5BC' }} />
             <Tooltip
-              contentStyle={{ background: '#1e293b', border: 'none', borderRadius: 8, color: '#e2e8f0', fontSize: 12 }}
+              contentStyle={{ background: '#FFFBF5', border: '1px solid #E8D5BC', borderRadius: 8, color: '#4A3728', fontSize: 12 }}
             />
-            <Legend wrapperStyle={{ fontSize: 11, color: '#94a3b8', paddingTop: 8 }} />
-            <Area type="monotone" dataKey="摄取" stroke="#06b6d4" fill="#06b6d4" fillOpacity={0.1} strokeWidth={2} />
-            <Area type="monotone" dataKey="查询" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.1} strokeWidth={2} />
-            <Area type="monotone" dataKey="研究" stroke="#10b981" fill="#10b981" fillOpacity={0.1} strokeWidth={2} />
+            <Legend wrapperStyle={{ fontSize: 11, color: '#8B7355', paddingTop: 8 }} />
+            <Area type="monotone" dataKey="摄取" stroke="#7A9B6D" fill="#7A9B6D" fillOpacity={0.1} strokeWidth={2} />
+            <Area type="monotone" dataKey="查询" stroke="#E07A3A" fill="#E07A3A" fillOpacity={0.1} strokeWidth={2} />
+            <Area type="monotone" dataKey="研究" stroke="#C4943D" fill="#C4943D" fillOpacity={0.1} strokeWidth={2} />
           </AreaChart>
         </ResponsiveContainer>
       </Card>
@@ -221,13 +221,13 @@ export default function Dashboard() {
       <Card title={isRealData ? '高频标签 Top 8' : '高频实体 Top 8'} subtitle={isRealData ? '基于标签使用频率' : '示例数据'}>
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={topEntities} layout="vertical" margin={{ left: 20 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" horizontal={false} />
-            <XAxis type="number" tick={{ fill: '#64748b', fontSize: 10 }} axisLine={{ stroke: '#1e293b' }} />
-            <YAxis type="category" dataKey="name" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} width={90} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#E8D5BC" horizontal={false} />
+            <XAxis type="number" tick={{ fill: '#8B7355', fontSize: 10 }} axisLine={{ stroke: '#E8D5BC' }} />
+            <YAxis type="category" dataKey="name" tick={{ fill: '#8B7355', fontSize: 11 }} axisLine={false} width={90} />
             <Tooltip
-              contentStyle={{ background: '#1e293b', border: 'none', borderRadius: 8, color: '#e2e8f0', fontSize: 12 }}
+              contentStyle={{ background: '#FFFBF5', border: '1px solid #E8D5BC', borderRadius: 8, color: '#4A3728', fontSize: 12 }}
             />
-            <Bar dataKey="mentions" fill="#8b5cf6" radius={[0, 4, 4, 0]} barSize={16} />
+            <Bar dataKey="mentions" fill="#E07A3A" radius={[0, 4, 4, 0]} barSize={16} />
           </BarChart>
         </ResponsiveContainer>
       </Card>
@@ -243,10 +243,10 @@ export default function Dashboard() {
               const scorePercent = Math.round((cat.score / cat.maxScore) * 100)
 
               return (
-                <div key={cat.name} className="bg-slate-800/40 border border-slate-700/50 rounded-lg p-3">
+                <div key={cat.name} className="bg-cream-200/50 border border-cream-300/50 rounded-lg p-3">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-medium text-slate-200">{cat.label}</span>
-                    <span className={`text-xs font-bold ${scorePercent >= 80 ? 'text-emerald-400' : scorePercent >= 60 ? 'text-amber-400' : 'text-rose-400'}`}>
+                    <span className="text-xs font-medium text-warm-700">{cat.label}</span>
+                    <span className={`text-xs font-bold ${scorePercent >= 80 ? 'text-accent-sage' : scorePercent >= 60 ? 'text-accent-amber' : 'text-rose-400'}`}>
                       {cat.score}/{cat.maxScore}
                     </span>
                   </div>
@@ -254,21 +254,21 @@ export default function Dashboard() {
                   {issueCount > 0 && (
                     <div className="space-y-1 mb-2 max-h-20 overflow-auto">
                       {cat.issues.slice(0, 3).map((issue, i) => (
-                        <div key={i} className="text-[10px] text-slate-500 flex items-start gap-1">
+                        <div key={i} className="text-[10px] text-warm-400 flex items-start gap-1">
                           <AlertTriangle className={`w-2.5 h-2.5 mt-0.5 shrink-0 ${
-                            issue.severity === 'error' ? 'text-rose-400' : issue.severity === 'warning' ? 'text-amber-400' : 'text-slate-500'
+                            issue.severity === 'error' ? 'text-rose-400' : issue.severity === 'warning' ? 'text-accent-amber' : 'text-warm-400'
                           }`} />
                           <span className="truncate">{issue.message}</span>
                         </div>
                       ))}
                       {issueCount > 3 && (
-                        <div className="text-[10px] text-slate-600">+{issueCount - 3} 更多问题</div>
+                        <div className="text-[10px] text-warm-400">+{issueCount - 3} 更多问题</div>
                       )}
                     </div>
                   )}
 
                   {issueCount === 0 && (
-                    <div className="text-[10px] text-emerald-400 flex items-center gap-1 mb-2">
+                    <div className="text-[10px] text-accent-sage flex items-center gap-1 mb-2">
                       <Check className="w-3 h-3" /> 无问题
                     </div>
                   )}
@@ -277,7 +277,7 @@ export default function Dashboard() {
                     <button
                       onClick={() => fixCategory(cat.name)}
                       disabled={fixing === cat.name}
-                      className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded text-[11px] bg-violet-600/80 text-white hover:bg-violet-500 disabled:opacity-40 transition-colors"
+                      className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 rounded text-[11px] bg-accent-orange text-white hover:bg-accent-orange/90 disabled:opacity-40 transition-colors"
                     >
                       {fixing === cat.name ? (
                         <Loader2 className="w-3 h-3 animate-spin" />
@@ -289,7 +289,7 @@ export default function Dashboard() {
                   )}
 
                   {fixResult && (
-                    <div className="text-[10px] text-emerald-400 flex items-center gap-1 bg-emerald-500/10 rounded px-2 py-1">
+                    <div className="text-[10px] text-accent-sage flex items-center gap-1 bg-accent-sage/10 rounded px-2 py-1">
                       <Check className="w-3 h-3" />
                       修复 {fixResult.fixed} 个，跳过 {fixResult.skipped} 个
                     </div>
@@ -306,10 +306,10 @@ export default function Dashboard() {
 
 function Card({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
+    <div className="bg-surface border border-cream-200 rounded-xl p-5">
       <div className="mb-3">
-        <div className="text-sm font-semibold text-slate-200">{title}</div>
-        {subtitle && <div className="text-[11px] text-slate-500 mt-0.5">{subtitle}</div>}
+        <div className="text-sm font-semibold text-warm-700">{title}</div>
+        {subtitle && <div className="text-[11px] text-warm-400 mt-0.5">{subtitle}</div>}
       </div>
       {children}
     </div>
