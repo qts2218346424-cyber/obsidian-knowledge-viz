@@ -3,7 +3,8 @@ import {
   Save, Trash2, FileEdit, FilePlus, Upload,
   ChevronDown, ChevronRight, X, Loader2, AlertTriangle,
   FolderTree, Eye, Bold, Italic, Heading, List, Code,
-  Link, Table, Hash
+  Link, Table, Hash, Sparkles, Wand2, ChevronUp,
+  Undo2, Copy, Check, Quote, Strikethrough, Minus, ListOrdered,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -105,6 +106,13 @@ export default function Editor() {
 
   // Preview
   const [showPreview, setShowPreview] = useState(true)
+
+  // AI Edit state
+  const [showAiMenu, setShowAiMenu] = useState(false)
+  const [aiEditing, setAiEditing] = useState(false)
+  const [aiResult, setAiResult] = useState('')
+  const [aiAction, setAiAction] = useState('')
+  const [showAiResult, setShowAiResult] = useState(false)
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const { tree } = useVaultTree()
@@ -285,14 +293,78 @@ export default function Editor() {
   const fmt = {
     bold: () => ta() && insertAtCursor(ta()!, '**', '**', content, setContent),
     italic: () => ta() && insertAtCursor(ta()!, '*', '*', content, setContent),
+    strike: () => ta() && insertAtCursor(ta()!, '~~', '~~', content, setContent),
     h1: () => ta() && insertAtLine(ta()!, '# ', content, setContent),
     h2: () => ta() && insertAtLine(ta()!, '## ', content, setContent),
     h3: () => ta() && insertAtLine(ta()!, '### ', content, setContent),
     list: () => ta() && insertAtLine(ta()!, '- ', content, setContent),
+    olist: () => ta() && insertAtLine(ta()!, '1. ', content, setContent),
+    quote: () => ta() && insertAtLine(ta()!, '> ', content, setContent),
+    hr: () => ta() && insertBlock(ta()!, '---', content, setContent),
     code: () => ta() && insertBlock(ta()!, '```\ncode here\n```', content, setContent),
     link: () => ta() && insertAtCursor(ta()!, '[', '](url)', content, setContent),
     wiki: () => ta() && insertAtCursor(ta()!, '[[', ']]', content, setContent),
     table: () => ta() && insertBlock(ta()!, '| Col 1 | Col 2 | Col 3 |\n|-------|-------|-------|\n| cell  | cell  | cell  |', content, setContent),
+  }
+
+  // ─── AI Edit Actions ──────────────────────────────────────────────────────────
+
+  const aiActions = [
+    { key: 'polish', label: '润色优化', desc: '改善表达，使文字更流畅', icon: Wand2 },
+    { key: 'simplify', label: '简化内容', desc: '精简冗余，保留核心', icon: Minus },
+    { key: 'expand', label: '扩展补充', desc: '丰富细节，补充说明', icon: Sparkles },
+    { key: 'structure', label: '整理结构', desc: '优化排版和层级结构', icon: ListOrdered },
+    { key: 'grammar', label: '修正语法', desc: '修复错别字和语法问题', icon: Check },
+    { key: 'summary', label: '生成摘要', desc: '为笔记生成概要', icon: Quote },
+  ]
+
+  const handleAiEdit = async (actionKey: string) => {
+    const action = aiActions.find(a => a.key === actionKey)
+    if (!action || !content.trim()) return
+    setShowAiMenu(false)
+    setAiEditing(true)
+    setAiAction(action.label)
+    setShowAiResult(true)
+    setAiResult('')
+
+    const prompts: Record<string, string> = {
+      polish: '请润色以下Markdown笔记，改善文字表达使其更流畅、更专业，保持Markdown格式不变：',
+      simplify: '请简化以下Markdown笔记，去除冗余内容，保留核心要点，保持Markdown格式：',
+      expand: '请扩展以下Markdown笔记，补充更多细节和说明，保持Markdown格式：',
+      structure: '请重新整理以下Markdown笔记的结构和排版，优化层级关系和列表组织：',
+      grammar: '请修正以下Markdown笔记中的错别字、语法问题和标点符号：',
+      summary: '请为以下Markdown笔记生成一段简洁的摘要，放在笔记最前面（用 > 引用格式）：',
+    }
+
+    try {
+      const resp = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: `${prompts[actionKey] || prompts.polish}\n\n${content}`,
+        }),
+      })
+      if (resp.ok) {
+        const data = await resp.json()
+        setAiResult(data.reply || 'AI 暂无返回结果')
+      } else {
+        setAiResult('AI 服务暂时不可用，请稍后再试')
+      }
+    } catch {
+      setAiResult('网络连接失败，请检查服务是否运行中')
+    } finally {
+      setAiEditing(false)
+    }
+  }
+
+  const applyAiResult = () => {
+    if (aiResult && aiResult !== 'AI 服务暂时不可用，请稍后再试' && aiResult !== '网络连接失败，请检查服务是否运行中') {
+      setContent(aiResult)
+      setShowAiResult(false)
+      setAiResult('')
+      setSaveMsg('AI 编辑已应用')
+      setTimeout(() => setSaveMsg(''), 2000)
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -397,19 +469,57 @@ export default function Editor() {
         </div>
 
         {/* Formatting Toolbar */}
-        <div className="flex items-center gap-0.5 px-4 py-1.5 border-b border-cream-200 bg-surface/50 shrink-0">
+        <div className="flex items-center gap-0.5 px-4 py-1.5 border-b border-cream-200 bg-surface/50 shrink-0 flex-wrap">
           <ToolBtn icon={Bold} label="粗体 (Ctrl+B)" onClick={fmt.bold} />
           <ToolBtn icon={Italic} label="斜体 (Ctrl+I)" onClick={fmt.italic} />
+          <ToolBtn icon={Strikethrough} label="删除线" onClick={fmt.strike} />
           <div className="w-px h-4 bg-cream-300 mx-1" />
           <ToolBtn icon={Heading} label="H1 (Ctrl+1)" onClick={fmt.h1} />
           <ToolBtn icon={Heading} label="H2 (Ctrl+2)" onClick={fmt.h2} className="!text-[10px]" suffix="2" />
           <ToolBtn icon={Heading} label="H3 (Ctrl+3)" onClick={fmt.h3} className="!text-[9px]" suffix="3" />
           <div className="w-px h-4 bg-cream-300 mx-1" />
           <ToolBtn icon={List} label="无序列表" onClick={fmt.list} />
+          <ToolBtn icon={ListOrdered} label="有序列表" onClick={fmt.olist} />
+          <ToolBtn icon={Quote} label="引用" onClick={fmt.quote} />
           <ToolBtn icon={Code} label="代码块" onClick={fmt.code} />
           <ToolBtn icon={Link} label="链接" onClick={fmt.link} />
           <ToolBtn icon={Hash} label="Wiki链接" onClick={fmt.wiki} />
           <ToolBtn icon={Table} label="表格" onClick={fmt.table} />
+          <ToolBtn icon={Minus} label="分隔线" onClick={fmt.hr} />
+
+          {/* AI Edit Button */}
+          <div className="ml-auto relative">
+            <button
+              onClick={() => setShowAiMenu(!showAiMenu)}
+              disabled={!content.trim()}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-gradient-to-r from-accent-orange to-accent-peach text-white hover:opacity-90 disabled:opacity-40 transition-all"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              AI 编辑
+              <ChevronDown className={`w-3 h-3 transition-transform ${showAiMenu ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showAiMenu && (
+              <div className="absolute right-0 top-full mt-1 w-56 bg-surface border border-cream-200 rounded-xl shadow-xl z-50 overflow-hidden animate-fade-in-up">
+                <div className="px-3 py-2 border-b border-cream-200 bg-cream-100/50">
+                  <span className="text-[10px] text-warm-500 uppercase tracking-wider">AI 智能编辑</span>
+                </div>
+                {aiActions.map(action => (
+                  <button
+                    key={action.key}
+                    onClick={() => handleAiEdit(action.key)}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-cream-100 transition-colors"
+                  >
+                    <action.icon className="w-4 h-4 text-accent-orange shrink-0" />
+                    <div>
+                      <div className="text-xs font-medium text-warm-700">{action.label}</div>
+                      <div className="text-[10px] text-warm-400">{action.desc}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Import status bar */}
@@ -603,6 +713,82 @@ export default function Editor() {
                 <button onClick={handleRename} disabled={!renamePath} className="flex-1 px-3 py-2 rounded-lg text-xs bg-accent-orange text-white hover:bg-accent-orange/90 disabled:opacity-40">重命名</button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Edit Result Panel */}
+      {showAiResult && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-surface border border-cream-300 rounded-2xl w-[600px] max-h-[80vh] shadow-2xl flex flex-col animate-fade-in-up">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-cream-200">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-accent-orange" />
+                <h3 className="text-sm font-semibold text-warm-700">AI {aiAction}</h3>
+              </div>
+              <button onClick={() => { setShowAiResult(false); setAiResult(''); setAiAction('') }}
+                className="p-1 rounded hover:bg-cream-200 text-warm-400"><X className="w-4 h-4" /></button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-auto p-6">
+              {aiEditing ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-3">
+                  <Loader2 className="w-6 h-6 text-accent-orange animate-spin" />
+                  <span className="text-sm text-warm-500">AI 正在{aiAction}...</span>
+                  <span className="text-xs text-warm-400">请稍候，正在处理笔记内容</span>
+                </div>
+              ) : (
+                <div className="md-preview">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}
+                    components={{
+                      h1: ({ children }) => <h1 className="text-lg font-bold text-warm-800 mt-4 mb-2">{children}</h1>,
+                      h2: ({ children }) => <h2 className="text-base font-semibold text-warm-700 mt-3 mb-2">{children}</h2>,
+                      h3: ({ children }) => <h3 className="text-sm font-semibold text-warm-700 mt-3 mb-1">{children}</h3>,
+                      p: ({ children }) => <p className="text-sm text-warm-600 leading-relaxed my-2">{children}</p>,
+                      code: ({ className, children, ...props }) => {
+                        const isInline = !className
+                        return isInline
+                          ? <code className="bg-cream-200 text-accent-sage px-1.5 py-0.5 rounded text-xs font-mono">{children}</code>
+                          : <code className={className} {...props}>{children}</code>
+                      },
+                      pre: ({ children }) => <pre className="bg-cream-100 border border-cream-200 rounded-lg p-3 my-2 overflow-x-auto text-xs">{children}</pre>,
+                      ul: ({ children }) => <ul className="list-disc pl-5 my-2 space-y-1">{children}</ul>,
+                      ol: ({ children }) => <ol className="list-decimal pl-5 my-2 space-y-1">{children}</ol>,
+                      li: ({ children }) => <li className="text-sm text-warm-600">{children}</li>,
+                      blockquote: ({ children }) => <blockquote className="border-l-2 border-accent-orange pl-3 text-warm-500 italic my-2">{children}</blockquote>,
+                    }}
+                  >
+                    {aiResult}
+                  </ReactMarkdown>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            {!aiEditing && aiResult && (
+              <div className="flex items-center justify-between px-6 py-4 border-t border-cream-200 bg-cream-100/50">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(aiResult) }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-cream-200 text-warm-600 hover:bg-cream-300 transition-colors"
+                  >
+                    <Copy className="w-3.5 h-3.5" /> 复制
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => { setShowAiResult(false); setAiResult(''); setAiAction('') }}
+                    className="px-4 py-1.5 rounded-lg text-xs bg-cream-200 text-warm-600 hover:bg-cream-300 transition-colors">
+                    取消
+                  </button>
+                  <button onClick={applyAiResult}
+                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs bg-accent-orange text-white hover:bg-accent-orange/90 transition-colors">
+                    <Undo2 className="w-3.5 h-3.5" /> 应用到编辑器
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

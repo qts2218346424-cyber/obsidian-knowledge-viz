@@ -11,6 +11,7 @@ import Settings from './pages/Settings'
 import Quiz from './pages/Quiz'
 import Vocabulary from './pages/Vocabulary'
 import Music from './pages/Music'
+import Pomodoro from './pages/Pomodoro'
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
             <Route path="/quiz" element={<Quiz />} />
             <Route path="/vocabulary" element={<Vocabulary />} />
             <Route path="/music" element={<Music />} />
+            <Route path="/pomodoro" element={<Pomodoro />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>

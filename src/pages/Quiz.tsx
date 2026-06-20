@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { Upload } from 'lucide-react'
 import WarmCard from '../components/ui/WarmCard'
 import WarmButton from '../components/ui/WarmButton'
 import { QUESTION_BANK, type QuizQuestion } from '../data/questions'
@@ -80,6 +81,17 @@ export default function Quiz() {
   // Results state
   const [result, setResult] = useState<QuizResult | null>(null)
 
+  // Import state
+  const [customQuestions, setCustomQuestions] = useState<QuizQuestion[]>([])
+  const [showImportPanel, setShowImportPanel] = useState(false)
+  const [importTab, setImportTab] = useState<'file' | 'text' | 'ai'>('file')
+  const [importText, setImportText] = useState('')
+  const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null)
+  const [aiTopic, setAiTopic] = useState('')
+  const [aiSubject, setAiSubject] = useState<string>('all')
+  const [isGenerating, setIsGenerating] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   // ── Timer ──────────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -96,7 +108,8 @@ export default function Quiz() {
   // ── Quiz lifecycle ─────────────────────────────────────────────────────────
 
   const startQuiz = useCallback(() => {
-    const pool = QUESTION_BANK.filter((q) => selectedSubjects.has(q.subject))
+    const allQuestions = [...QUESTION_BANK, ...customQuestions]
+    const pool = allQuestions.filter((q) => selectedSubjects.has(q.subject))
     const shuffled = shuffleArray(pool)
     const selected = shuffled.slice(0, questionCount)
     setQuestions(selected)
@@ -107,7 +120,7 @@ export default function Quiz() {
     setTimeElapsed(0)
     setExamNavGrid(false)
     setView('quiz')
-  }, [selectedSubjects, questionCount])
+  }, [selectedSubjects, questionCount, customQuestions])
 
   const handleOptionSelect = useCallback((option: string) => {
     if (view !== 'quiz' || questions.length === 0) return
@@ -203,6 +216,119 @@ export default function Quiz() {
     }
   }, [answers, questions, timeElapsed, mode])
 
+  // ── Import handlers ─────────────────────────────────────────────────────────
+
+  const VALID_SUBJECTS = ['数据结构', '计算机组成原理', '操作系统', '计算机网络'] as const
+  const VALID_DIFFICULTIES = ['简单', '中等', '困难'] as const
+
+  const validateAndImport = useCallback((data: unknown): number => {
+    if (!Array.isArray(data)) return 0
+    let count = 0
+    const newQs: QuizQuestion[] = []
+    for (const q of data) {
+      if (q && typeof q === 'object' && q.question && q.options && q.answer) {
+        const subj = VALID_SUBJECTS.includes(q.subject) ? q.subject : '数据结构'
+        const diff = VALID_DIFFICULTIES.includes(q.difficulty) ? q.difficulty : '中等'
+        newQs.push({
+          id: `imp-${Date.now()}-${count}`,
+          subject: subj as QuizQuestion['subject'],
+          difficulty: diff as QuizQuestion['difficulty'],
+          question: String(q.question),
+          options: {
+            A: String(q.options.A || ''),
+            B: String(q.options.B || ''),
+            C: String(q.options.C || ''),
+            D: String(q.options.D || ''),
+          },
+          answer: (['A', 'B', 'C', 'D'].includes(q.answer) ? q.answer : 'A') as 'A' | 'B' | 'C' | 'D',
+          explanation: String(q.explanation || '暂无解析'),
+          tags: Array.isArray(q.tags) ? q.tags.map(String) : ['导入'],
+        })
+        count++
+      }
+    }
+    if (count > 0) {
+      setCustomQuestions(prev => [...prev, ...newQs])
+    }
+    return count
+  }, [])
+
+  const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target?.result as string)
+        const count = validateAndImport(data)
+        if (count > 0) {
+          setImportStatus({ type: 'success', message: `成功导入 ${count} 道题目` })
+        } else {
+          setImportStatus({ type: 'error', message: '未找到有效题目，请检查格式' })
+        }
+      } catch {
+        setImportStatus({ type: 'error', message: 'JSON 解析失败，请检查文件格式' })
+      }
+    }
+    reader.readAsText(file)
+    e.target.value = ''
+  }, [validateAndImport])
+
+  const handleTextImport = useCallback(() => {
+    try {
+      const data = JSON.parse(importText)
+      const count = validateAndImport(data)
+      if (count > 0) {
+        setImportStatus({ type: 'success', message: `成功导入 ${count} 道题目` })
+        setImportText('')
+      } else {
+        setImportStatus({ type: 'error', message: '未找到有效题目，请检查格式' })
+      }
+    } catch {
+      setImportStatus({ type: 'error', message: 'JSON 解析失败，请检查格式' })
+    }
+  }, [importText, validateAndImport])
+
+  const handleAiGenerate = useCallback(async () => {
+    if (!aiTopic.trim() || isGenerating) return
+    setIsGenerating(true)
+    setImportStatus({ type: 'info', message: 'AI 正在生成题目，请稍候...' })
+    try {
+      const subjectHint = aiSubject === 'all' ? '408考研四门科目（数据结构、计算机组成原理、操作系统、计算机网络）' : aiSubject
+      const resp = await fetch('/api/quiz/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: `请根据以下知识点生成10道408考研风格的选择题。科目范围：${subjectHint}。知识点：${aiTopic}。\n\n请严格按以下JSON数组格式输出，不要添加任何额外文字：\n[{"subject":"数据结构","difficulty":"中等","question":"题目内容","options":{"A":"选项A","B":"选项B","C":"选项C","D":"选项D"},"answer":"A","explanation":"解析","tags":["标签1"]}]`,
+        }),
+      })
+      if (!resp.ok) throw new Error('Server error')
+      const result = await resp.json()
+      let parsed: unknown
+      if (typeof result.questions === 'string') {
+        const text = result.questions.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
+        const start = text.indexOf('[')
+        const end = text.lastIndexOf(']')
+        if (start >= 0 && end > start) {
+          parsed = JSON.parse(text.slice(start, end + 1))
+        }
+      } else if (Array.isArray(result.questions)) {
+        parsed = result.questions
+      }
+      const count = validateAndImport(parsed)
+      if (count > 0) {
+        setImportStatus({ type: 'success', message: `AI 生成了 ${count} 道题目` })
+        setAiTopic('')
+      } else {
+        setImportStatus({ type: 'error', message: 'AI 返回的题目格式有误' })
+      }
+    } catch {
+      setImportStatus({ type: 'error', message: 'AI 生成失败，请稍后再试' })
+    } finally {
+      setIsGenerating(false)
+    }
+  }, [aiTopic, aiSubject, isGenerating, validateAndImport])
+
   const toggleSubject = (subject: Subject) => {
     setSelectedSubjects((prev) => {
       const next = new Set(prev)
@@ -218,7 +344,8 @@ export default function Quiz() {
   // ── Start View ─────────────────────────────────────────────────────────────
 
   if (view === 'start') {
-    const availableCount = QUESTION_BANK.filter((q) => selectedSubjects.has(q.subject)).length
+    const allPool = [...QUESTION_BANK, ...customQuestions]
+    const availableCount = allPool.filter((q) => selectedSubjects.has(q.subject)).length
     const maxQuestions = Math.min(40, availableCount)
     const effectiveCount = Math.min(questionCount, maxQuestions)
 
@@ -232,7 +359,7 @@ export default function Quiz() {
         {/* Subject Selection */}
         <div className="grid grid-cols-2 gap-3 max-w-lg">
           {SUBJECTS.map((s) => {
-            const count = getSubjectCount(s.key)
+            const count = allPool.filter(q => q.subject === s.key).length
             const isSelected = selectedSubjects.has(s.key)
             return (
               <WarmCard
@@ -316,6 +443,177 @@ export default function Quiz() {
             </div>
           </div>
         </WarmCard>
+
+        {/* Import Section */}
+        <div className="max-w-lg space-y-2">
+          <button
+            onClick={() => setShowImportPanel(!showImportPanel)}
+            className="flex items-center gap-2 text-sm text-warm-500 hover:text-accent-orange transition-colors"
+          >
+            <Upload size={15} />
+            <span>导入题库</span>
+            <span className="text-xs">{showImportPanel ? '收起' : '展开'}</span>
+          </button>
+
+          {customQuestions.length > 0 && (
+            <div className="flex items-center justify-between bg-accent-sage/10 rounded-lg px-3 py-1.5">
+              <span className="text-xs text-accent-sage">
+                ✓ 已导入 {customQuestions.length} 道题目
+              </span>
+              <button
+                onClick={() => { setCustomQuestions([]); setImportStatus(null) }}
+                className="text-xs text-warm-400 hover:text-red-500"
+              >
+                清除
+              </button>
+            </div>
+          )}
+
+          {showImportPanel && (
+            <WarmCard className="space-y-4">
+              {/* Tab bar */}
+              <div className="flex gap-1 bg-cream-100 rounded-lg p-1">
+                {([['file', '📁 文件导入'], ['text', '📋 粘贴导入'], ['ai', '🤖 AI 生成']] as const).map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => { setImportTab(key as 'file' | 'text' | 'ai'); setImportStatus(null) }}
+                    className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                      importTab === key
+                        ? 'bg-white text-warm-800 shadow-sm'
+                        : 'text-warm-500 hover:text-warm-700'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* File upload tab */}
+              {importTab === 'file' && (
+                <div className="space-y-3">
+                  <p className="text-xs text-warm-500">
+                    支持 JSON 格式的题目文件。文件内容应为题目数组。
+                  </p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".json,.txt"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full border-2 border-dashed border-cream-300 rounded-xl py-8 text-center hover:border-accent-orange/50 hover:bg-accent-orange/5 transition-all"
+                  >
+                    <Upload size={24} className="mx-auto text-warm-400 mb-2" />
+                    <div className="text-sm font-medium text-warm-600">点击选择 JSON 文件</div>
+                    <div className="text-xs text-warm-400 mt-1">或将文件拖拽到此处</div>
+                  </button>
+                </div>
+              )}
+
+              {/* Text paste tab */}
+              {importTab === 'text' && (
+                <div className="space-y-3">
+                  <p className="text-xs text-warm-500">
+                    粘贴 JSON 格式的题目数组，点击"导入"按钮即可加入题库。
+                  </p>
+                  <textarea
+                    value={importText}
+                    onChange={(e) => setImportText(e.target.value)}
+                    placeholder={'[\n  {\n    "subject": "数据结构",\n    "difficulty": "中等",\n    "question": "题目内容...",\n    "options": { "A": "...", "B": "...", "C": "...", "D": "..." },\n    "answer": "A",\n    "explanation": "解析...",\n    "tags": ["标签"]\n  }\n]'}
+                    className="w-full h-40 rounded-xl border border-cream-300 bg-cream-50 px-3 py-2 text-xs font-mono text-warm-700 focus:outline-none focus:ring-2 focus:ring-accent-orange/30 focus:border-accent-orange resize-none"
+                  />
+                  <WarmButton
+                    size="sm"
+                    onClick={handleTextImport}
+                    disabled={!importText.trim()}
+                    className="w-full"
+                  >
+                    导入题目
+                  </WarmButton>
+                </div>
+              )}
+
+              {/* AI generate tab */}
+              {importTab === 'ai' && (
+                <div className="space-y-3">
+                  <p className="text-xs text-warm-500">
+                    输入知识点，AI 将自动生成考研风格的选择题。
+                  </p>
+                  <div>
+                    <label className="text-xs font-medium text-warm-600 mb-1 block">科目范围</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[['all', '全部'], ...SUBJECTS.map(s => [s.key, s.key])].map(([val, label]) => (
+                        <button
+                          key={val}
+                          onClick={() => setAiSubject(val)}
+                          className={`rounded-full px-3 py-1 text-xs transition-all ${
+                            aiSubject === val
+                              ? 'bg-accent-orange text-white'
+                              : 'bg-cream-100 text-warm-500 hover:bg-cream-200'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-warm-600 mb-1 block">知识点 / 主题</label>
+                    <input
+                      type="text"
+                      value={aiTopic}
+                      onChange={(e) => setAiTopic(e.target.value)}
+                      placeholder="如：二叉树的遍历、TCP三次握手、进程调度算法..."
+                      className="w-full rounded-xl border border-cream-300 bg-cream-50 px-3 py-2 text-sm text-warm-700 focus:outline-none focus:ring-2 focus:ring-accent-orange/30 focus:border-accent-orange"
+                    />
+                  </div>
+                  <WarmButton
+                    size="sm"
+                    onClick={handleAiGenerate}
+                    disabled={!aiTopic.trim() || isGenerating}
+                    className="w-full"
+                  >
+                    {isGenerating ? '生成中...' : '🤖 生成 10 道题目'}
+                  </WarmButton>
+                </div>
+              )}
+
+              {/* Format spec */}
+              {importTab !== 'ai' && (
+                <details>
+                  <summary className="cursor-pointer text-xs text-warm-400 hover:text-warm-600">
+                    查看题目格式规范
+                  </summary>
+                  <pre className="mt-2 text-xs bg-cream-100 rounded-lg p-3 overflow-x-auto text-warm-600 whitespace-pre-wrap">{`[{
+  "subject": "数据结构",  // 四选一
+  "difficulty": "中等",   // 简单/中等/困难
+  "question": "题目内容",
+  "options": {
+    "A": "选项A", "B": "选项B",
+    "C": "选项C", "D": "选项D"
+  },
+  "answer": "A",          // 正确答案
+  "explanation": "解析",
+  "tags": ["标签1", "标签2"]
+}]`}</pre>
+                </details>
+              )}
+
+              {/* Status message */}
+              {importStatus && (
+                <div className={`text-xs rounded-lg px-3 py-2 ${
+                  importStatus.type === 'success' ? 'bg-green-50 text-green-700' :
+                  importStatus.type === 'error' ? 'bg-red-50 text-red-600' :
+                  'bg-blue-50 text-blue-600'
+                }`}>
+                  {importStatus.message}
+                </div>
+              )}
+            </WarmCard>
+          )}
+        </div>
 
         {/* Start Button */}
         <WarmButton size="lg" onClick={startQuiz} className="w-full max-w-lg">

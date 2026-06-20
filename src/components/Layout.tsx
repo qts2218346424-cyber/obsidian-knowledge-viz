@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { type ReactNode } from 'react'
-import { Network, Workflow, MessageCircle, BookOpen, ExternalLink, FileEdit, GraduationCap, Search, Settings, AlertCircle, Music, ClipboardList, Languages } from 'lucide-react'
+import { Network, Workflow, MessageCircle, BookOpen, ExternalLink, FileEdit, GraduationCap, Search, Settings, AlertCircle, Music, ClipboardList, Languages, Timer } from 'lucide-react'
 import { useVaultStats, useApiHealth } from '../hooks/useVaultData'
 import { useVaultEvents } from '../hooks/useVaultEvents'
 import SearchModal from './SearchModal'
@@ -15,6 +15,7 @@ const navItems = [
   { to: '/quiz', label: '在线做题', icon: ClipboardList, emoji: '📝' },
   { to: '/vocabulary', label: '背单词', icon: Languages, emoji: '📖' },
   { to: '/music', label: '音乐', icon: Music, emoji: '🎵' },
+  { to: '/pomodoro', label: '番茄钟', icon: Timer, emoji: '🍅' },
   { to: '/chat', label: 'AI 聊天', icon: MessageCircle, emoji: '💬' },
   { to: '/settings', label: '设置', icon: Settings, emoji: '⚙️' },
 ]

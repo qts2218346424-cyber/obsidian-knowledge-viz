@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   Loader2, ChevronLeft, ChevronRight, RefreshCw, Plus,
   Volume2, Check, Award, BookOpen, Languages, Sparkles,
+  Quote, X, Star, TrendingUp,
 } from 'lucide-react'
 import { api } from '../../services/api'
-import ProgressBar from '../ui/ProgressBar'
 import WarmButton from '../ui/WarmButton'
 
-// ─── Types (new VocabData format) ─────────────────────────────────────────────
+// ─── Types ─────────────────────────────────────────────────────────────────────
 
 interface VocabRecord {
   word: string
@@ -38,17 +38,37 @@ interface VocabData {
   stats: { mastered: number; learning: number; newWords: number }
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── Constants ─────────────────────────────────────────────────────────────────
 
 const DAILY_GOAL = 20
 
-const frequencyLabels: Record<string, { label: string; color: string }> = {
-  high: { label: '高频', color: 'bg-accent-rose/15 text-accent-rose' },
-  medium: { label: '中频', color: 'bg-accent-amber/15 text-accent-amber' },
-  low: { label: '低频', color: 'bg-accent-sage/15 text-accent-sage' },
+const frequencyThemes: Record<string, {
+  label: string
+  gradient: string
+  accent: string
+  badge: string
+}> = {
+  high: {
+    label: '高频',
+    gradient: 'from-orange-50 to-amber-50',
+    accent: 'text-orange-600',
+    badge: 'bg-orange-100 text-orange-700',
+  },
+  medium: {
+    label: '中频',
+    gradient: 'from-amber-50 to-yellow-50',
+    accent: 'text-amber-600',
+    badge: 'bg-amber-100 text-amber-700',
+  },
+  low: {
+    label: '低频',
+    gradient: 'from-sage-50 to-emerald-50',
+    accent: 'text-emerald-600',
+    badge: 'bg-emerald-100 text-emerald-700',
+  },
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// ─── Component ─────────────────────────────────────────────────────────────────
 
 export default function VocabTab() {
   const [data, setData] = useState<VocabData | null>(null)
@@ -57,13 +77,14 @@ export default function VocabTab() {
 
   // Review session state
   const [currentIdx, setCurrentIdx] = useState(0)
-  const [flipped, setFlipped] = useState(false)
+  const [revealed, setRevealed] = useState(false)
   const [reviewing, setReviewing] = useState(false)
   const [sessionReviewed, setSessionReviewed] = useState(0)
   const [sessionResults, setSessionResults] = useState<{ known: number; fuzzy: number; unknown: number }>({
     known: 0, fuzzy: 0, unknown: 0,
   })
   const [done, setDone] = useState(false)
+  const [slideDir, setSlideDir] = useState<'left' | 'right' | null>(null)
 
   // Add words state
   const [addingSuggested, setAddingSuggested] = useState(false)
@@ -79,7 +100,7 @@ export default function VocabTab() {
       const result = await api.getVocabulary() as unknown as VocabData
       setData(result)
       setCurrentIdx(0)
-      setFlipped(false)
+      setRevealed(false)
       setDone(false)
     } catch {
       setError('加载单词数据失败，请稍后重试')
@@ -105,17 +126,20 @@ export default function VocabTab() {
     setSessionReviewed(newReviewed)
     setSessionResults(prev => ({
       ...prev,
-      [result === 'known' ? 'known' : result === 'fuzzy' ? 'fuzzy' : 'unknown']:
-        prev[result === 'known' ? 'known' : result === 'fuzzy' ? 'fuzzy' : 'unknown'] + 1,
+      [result]: prev[result] + 1,
     }))
 
-    // Move to next card or finish
-    if (currentIdx < data.dueRecords.length - 1) {
-      setCurrentIdx(currentIdx + 1)
-      setFlipped(false)
-    } else {
-      setDone(true)
-    }
+    // Slide to next card or finish
+    setSlideDir('left')
+    setTimeout(() => {
+      if (currentIdx < data.dueRecords.length - 1) {
+        setCurrentIdx(currentIdx + 1)
+        setRevealed(false)
+      } else {
+        setDone(true)
+      }
+      setSlideDir(null)
+    }, 250)
 
     setReviewing(false)
   }
@@ -124,15 +148,23 @@ export default function VocabTab() {
 
   const goNext = () => {
     if (data && currentIdx < data.dueRecords.length - 1) {
-      setCurrentIdx(currentIdx + 1)
-      setFlipped(false)
+      setSlideDir('left')
+      setTimeout(() => {
+        setCurrentIdx(currentIdx + 1)
+        setRevealed(false)
+        setSlideDir(null)
+      }, 200)
     }
   }
 
   const goPrev = () => {
     if (currentIdx > 0) {
-      setCurrentIdx(currentIdx - 1)
-      setFlipped(false)
+      setSlideDir('right')
+      setTimeout(() => {
+        setCurrentIdx(currentIdx - 1)
+        setRevealed(false)
+        setSlideDir(null)
+      }, 200)
     }
   }
 
@@ -163,7 +195,6 @@ export default function VocabTab() {
         phonetic: word.phonetic,
         example: word.example,
       }])
-      // Remove from suggested list locally
       if (data) {
         setData({
           ...data,
@@ -220,89 +251,107 @@ export default function VocabTab() {
 
   const currentWord: VocabRecord | undefined = data.dueRecords[currentIdx]
   const totalDue = data.dueRecords.length
-  const freqInfo = currentWord ? frequencyLabels[currentWord.frequency] || frequencyLabels['medium'] : null
+  const theme = currentWord ? (frequencyThemes[currentWord.frequency] || frequencyThemes['medium']) : frequencyThemes['medium']
 
   // ── Render: Done / Stats Summary ──────────────────────────────────────────
 
   if (done || totalDue === 0) {
+    const pct = sessionReviewed > 0 ? Math.round((sessionResults.known / sessionReviewed) * 100) : 0
+
     return (
       <div className="max-w-xl mx-auto space-y-6 animate-fade-in-up">
         {/* Completion header */}
-        <div className="text-center space-y-3 py-6">
-          <div className="w-16 h-16 rounded-full bg-accent-sage/15 flex items-center justify-center mx-auto">
-            <Award className="w-8 h-8 text-accent-sage" />
+        <div className="text-center space-y-4 py-8">
+          <div className="relative w-20 h-20 mx-auto">
+            <div className="absolute inset-0 rounded-full bg-accent-sage/10 animate-pulse-soft" />
+            <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-accent-sage/20 to-accent-mint/20 flex items-center justify-center">
+              <Award className="w-10 h-10 text-accent-sage" />
+            </div>
           </div>
-          <h3 className="text-lg font-bold text-warm-800">
-            {totalDue === 0 && sessionReviewed === 0
-              ? '今日单词已全部复习完毕'
-              : '本轮复习完成！'}
-          </h3>
-          <p className="text-sm text-warm-500">
-            {sessionReviewed > 0
-              ? `本次复习了 ${sessionReviewed} 个单词`
-              : '暂时没有需要复习的单词'}
-          </p>
+          <div>
+            <h3 className="text-xl font-bold text-warm-800">
+              {totalDue === 0 && sessionReviewed === 0
+                ? '今日单词已全部复习完毕'
+                : '本轮复习完成！'}
+            </h3>
+            <p className="text-sm text-warm-500 mt-1">
+              {sessionReviewed > 0
+                ? `本次复习了 ${sessionReviewed} 个单词`
+                : '暂时没有需要复习的单词'}
+            </p>
+          </div>
         </div>
 
         {/* Session stats */}
         {sessionReviewed > 0 && (
-          <div className="bg-surface border border-cream-200 rounded-2xl p-6 space-y-4">
+          <div className="bg-surface border border-cream-200 rounded-2xl p-6 space-y-5">
             <div className="text-xs font-medium text-warm-500 uppercase tracking-wider">本次复习统计</div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-accent-sage">{sessionResults.known}</div>
-                <div className="text-xs text-warm-400 mt-1">认识</div>
+
+            {/* Accuracy ring */}
+            <div className="flex items-center justify-center gap-8">
+              <div className="relative w-24 h-24">
+                <svg className="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="40" fill="none" stroke="#e7e5e4" strokeWidth="8" />
+                  <circle
+                    cx="50" cy="50" r="40" fill="none"
+                    stroke="#7c9a72" strokeWidth="8"
+                    strokeLinecap="round"
+                    strokeDasharray={`${pct * 2.51} 251`}
+                    className="transition-all duration-1000"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-2xl font-bold text-warm-800">{pct}%</span>
+                  <span className="text-[10px] text-warm-400">掌握率</span>
+                </div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-accent-amber">{sessionResults.fuzzy}</div>
-                <div className="text-xs text-warm-400 mt-1">模糊</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-accent-rose">{sessionResults.unknown}</div>
-                <div className="text-xs text-warm-400 mt-1">不认识</div>
+
+              <div className="space-y-3">
+                {[
+                  { label: '认识', count: sessionResults.known, color: 'text-accent-sage', bg: 'bg-accent-sage' },
+                  { label: '模糊', count: sessionResults.fuzzy, color: 'text-accent-amber', bg: 'bg-accent-amber' },
+                  { label: '不认识', count: sessionResults.unknown, color: 'text-accent-rose', bg: 'bg-accent-rose' },
+                ].map(item => (
+                  <div key={item.label} className="flex items-center gap-3">
+                    <div className={`w-2.5 h-2.5 rounded-full ${item.bg}`} />
+                    <span className="text-sm text-warm-600 w-12">{item.label}</span>
+                    <span className={`text-lg font-bold ${item.color}`}>{item.count}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
             {/* Accuracy bar */}
-            {sessionReviewed > 0 && (
-              <div className="space-y-1">
-                <div className="flex justify-between text-[11px] text-warm-400">
-                  <span>掌握率</span>
-                  <span>{Math.round((sessionResults.known / sessionReviewed) * 100)}%</span>
-                </div>
-                <div className="flex h-2 rounded-full overflow-hidden bg-cream-200">
-                  <div
-                    className="bg-accent-sage transition-all duration-500"
-                    style={{ width: `${(sessionResults.known / sessionReviewed) * 100}%` }}
-                  />
-                  <div
-                    className="bg-accent-amber transition-all duration-500"
-                    style={{ width: `${(sessionResults.fuzzy / sessionReviewed) * 100}%` }}
-                  />
-                  <div
-                    className="bg-accent-rose transition-all duration-500"
-                    style={{ width: `${(sessionResults.unknown / sessionReviewed) * 100}%` }}
-                  />
-                </div>
-              </div>
-            )}
+            <div className="flex h-2 rounded-full overflow-hidden bg-cream-200">
+              <div
+                className="bg-accent-sage transition-all duration-500"
+                style={{ width: `${(sessionResults.known / sessionReviewed) * 100}%` }}
+              />
+              <div
+                className="bg-accent-amber transition-all duration-500"
+                style={{ width: `${(sessionResults.fuzzy / sessionReviewed) * 100}%` }}
+              />
+              <div
+                className="bg-accent-rose transition-all duration-500"
+                style={{ width: `${(sessionResults.unknown / sessionReviewed) * 100}%` }}
+              />
+            </div>
           </div>
         )}
 
         {/* Overall stats */}
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-surface border border-cream-200 rounded-2xl px-4 py-4 text-center">
-            <div className="text-xs text-warm-400">已掌握</div>
-            <div className="text-2xl font-bold text-accent-sage mt-1">{data.stats.mastered}</div>
-          </div>
-          <div className="bg-surface border border-cream-200 rounded-2xl px-4 py-4 text-center">
-            <div className="text-xs text-warm-400">学习中</div>
-            <div className="text-2xl font-bold text-accent-amber mt-1">{data.stats.learning}</div>
-          </div>
-          <div className="bg-surface border border-cream-200 rounded-2xl px-4 py-4 text-center">
-            <div className="text-xs text-warm-400">总词数</div>
-            <div className="text-2xl font-bold text-warm-800 mt-1">{data.totalWords}</div>
-          </div>
+          {[
+            { label: '已掌握', value: data.stats.mastered, icon: Check, color: 'text-accent-sage' },
+            { label: '学习中', value: data.stats.learning, icon: TrendingUp, color: 'text-accent-amber' },
+            { label: '总词数', value: data.totalWords, icon: BookOpen, color: 'text-warm-800' },
+          ].map(stat => (
+            <div key={stat.label} className="bg-surface border border-cream-200 rounded-2xl px-4 py-5 text-center">
+              <stat.icon className={`w-4 h-4 mx-auto mb-2 ${stat.color} opacity-50`} />
+              <div className={`text-2xl font-bold ${stat.color}`}>{stat.value}</div>
+              <div className="text-xs text-warm-400 mt-1">{stat.label}</div>
+            </div>
+          ))}
         </div>
 
         {/* Actions */}
@@ -315,7 +364,6 @@ export default function VocabTab() {
           </WarmButton>
         </div>
 
-        {/* Add words section (conditionally shown) */}
         {showAddSection && (
           <AddWordsSection
             suggested={data.suggested}
@@ -332,189 +380,184 @@ export default function VocabTab() {
 
   // ── Render: Review in progress ────────────────────────────────────────────
 
+  const progressPct = ((sessionReviewed) / DAILY_GOAL) * 100
+
   return (
-    <div className="max-w-xl mx-auto space-y-5 animate-fade-in-up">
-      {/* Daily goal banner */}
-      <div className="bg-surface border border-cream-200 rounded-2xl px-5 py-4 space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <BookOpen className="w-4 h-4 text-accent-orange" />
-            <span className="text-sm font-medium text-warm-700">今日进度</span>
-          </div>
-          <span className="text-sm font-bold text-warm-800">
-            {sessionReviewed}<span className="text-warm-400 font-normal">/{DAILY_GOAL} 词</span>
+    <div className="max-w-xl mx-auto space-y-4 animate-fade-in-up">
+      {/* Top bar: progress + stats */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <BookOpen className="w-4 h-4 text-accent-orange" />
+          <span className="text-xs text-warm-500">
+            今日 <span className="font-bold text-warm-800">{sessionReviewed}</span>/{DAILY_GOAL}
           </span>
         </div>
-        <ProgressBar
-          value={sessionReviewed}
-          max={DAILY_GOAL}
-          color="bg-accent-orange"
-          height={6}
-        />
-        <div className="flex items-center justify-between text-[11px] text-warm-400">
-          <span>待复习 {totalDue} 词</span>
-          <span>已掌握 {data.stats.mastered} / {data.totalWords}</span>
+        <div className="flex items-center gap-3 text-[11px] text-warm-400">
+          <span>待复习 {totalDue}</span>
+          <span className="w-1 h-1 rounded-full bg-cream-300" />
+          <span>已掌握 {data.stats.mastered}</span>
         </div>
       </div>
 
-      {/* Card counter + refresh */}
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-warm-500">
-          第 <span className="font-bold text-warm-700">{currentIdx + 1}</span> / {totalDue} 词
-        </span>
-        <button
-          onClick={loadData}
-          className="p-1.5 rounded-lg text-warm-400 hover:text-warm-600 hover:bg-cream-100 transition-colors"
-          title="刷新"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
-      {/* ── Flip Card ─────────────────────────────────────────────────────── */}
-      {currentWord && (
+      {/* Thin progress bar */}
+      <div className="h-1 bg-cream-200 rounded-full overflow-hidden">
         <div
-          className={`flip-card cursor-pointer ${flipped ? 'flipped' : ''}`}
-          onClick={() => setFlipped(f => !f)}
-          style={{ minHeight: 320 }}
-        >
-          <div className="flip-card-inner relative w-full" style={{ minHeight: 320 }}>
-            {/* ── Front: Word + Phonetic + Frequency ─────────────────────── */}
-            <div
-              className="flip-card-front absolute inset-0 bg-surface border border-cream-200 rounded-2xl p-8 flex flex-col items-center justify-center"
-              style={{ minHeight: 320 }}
-            >
-              {/* Frequency badge */}
-              {freqInfo && (
-                <span className={`absolute top-4 right-4 text-[10px] px-2.5 py-1 rounded-full font-medium ${freqInfo.color}`}>
-                  {freqInfo.label}
-                </span>
-              )}
+          className="h-full bg-accent-orange rounded-full transition-all duration-500"
+          style={{ width: `${Math.min(progressPct, 100)}%` }}
+        />
+      </div>
 
-              {/* Unit badge */}
-              <span className="absolute top-4 left-4 text-[10px] px-2.5 py-1 rounded-full bg-cream-200 text-warm-500">
-                Unit {currentWord.unit}
-              </span>
-
-              {/* Word */}
-              <div className="text-3xl font-bold text-warm-800 mb-3">{currentWord.word}</div>
-
-              {/* Phonetic */}
-              {currentWord.phonetic && (
-                <div className="flex items-center gap-1.5 text-warm-400">
-                  <Volume2 className="w-3.5 h-3.5" />
-                  <span className="text-sm">{currentWord.phonetic}</span>
-                </div>
-              )}
-
-              {/* Review count */}
-              <div className="absolute bottom-5 flex items-center gap-3 text-[11px] text-warm-400">
-                <span>复习 {currentWord.reviews} 次</span>
-                <span className="w-1 h-1 rounded-full bg-cream-300" />
-                <span>点击翻转查看释义</span>
-              </div>
-            </div>
-
-            {/* ── Back: Definition + Example + Translation ──────────────── */}
-            <div
-              className="flip-card-back absolute inset-0 bg-cream-100 border border-cream-300 rounded-2xl p-8 flex flex-col items-center justify-center"
-              style={{ minHeight: 320 }}
-            >
-              {/* Chinese definition */}
-              <div className="text-[10px] text-accent-sage uppercase tracking-wider mb-3 font-medium">释义</div>
-              <div className="text-lg text-warm-800 font-medium text-center mb-5 leading-relaxed">
-                {currentWord.definition}
-              </div>
-
-              {/* English example */}
-              {currentWord.example && (
-                <div className="space-y-2 w-full max-w-sm">
-                  <div className="text-[10px] text-accent-orange uppercase tracking-wider font-medium">例句</div>
-                  <div className="text-sm text-warm-700 text-center italic leading-relaxed">
-                    &ldquo;{currentWord.example}&rdquo;
-                  </div>
-                  {currentWord.exampleCn && (
-                    <div className="text-xs text-warm-500 text-center leading-relaxed">
-                      {currentWord.exampleCn}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="absolute bottom-5 text-[11px] text-warm-400">
-                点击翻回正面
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Navigation ──────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-center gap-4">
+      {/* Card navigation counter */}
+      <div className="flex items-center justify-between">
         <button
           onClick={goPrev}
           disabled={currentIdx === 0}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs bg-cream-200 text-warm-600 hover:bg-cream-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs text-warm-500 hover:text-warm-700 hover:bg-cream-100 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
         >
-          <ChevronLeft className="w-3.5 h-3.5" /> 上一个
+          <ChevronLeft className="w-4 h-4" />
         </button>
 
-        {/* Dot indicators */}
-        <div className="flex gap-1">
-          {data.dueRecords.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => { setCurrentIdx(i); setFlipped(false) }}
-              className={`w-2 h-2 rounded-full transition-colors ${
-                i === currentIdx
-                  ? 'bg-accent-orange'
-                  : i < currentIdx
-                    ? 'bg-accent-sage/50'
-                    : 'bg-cream-300 hover:bg-cream-200'
-              }`}
-            />
-          ))}
-        </div>
+        <span className="text-xs text-warm-400 tabular-nums">
+          <span className="font-bold text-warm-700">{currentIdx + 1}</span>
+          <span className="mx-1">/</span>
+          <span>{totalDue}</span>
+        </span>
 
         <button
           onClick={goNext}
           disabled={currentIdx === totalDue - 1}
-          className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs bg-cream-200 text-warm-600 hover:bg-cream-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs text-warm-500 hover:text-warm-700 hover:bg-cream-100 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
         >
-          下一个 <ChevronRight className="w-3.5 h-3.5" />
+          <ChevronRight className="w-4 h-4" />
         </button>
       </div>
 
-      {/* ── Review Buttons (only when flipped) ──────────────────────────────── */}
-      {flipped && (
+      {/* ── Immersive Word Card ─────────────────────────────────────────────── */}
+      {currentWord && (
+        <div
+          className={`relative overflow-hidden rounded-3xl border border-cream-200 transition-all duration-250 ${
+            slideDir === 'left' ? '-translate-x-4 opacity-0' :
+            slideDir === 'right' ? 'translate-x-4 opacity-0' :
+            'translate-x-0 opacity-100'
+          }`}
+        >
+          {/* Gradient accent top bar */}
+          <div className={`h-1.5 bg-gradient-to-r ${
+            currentWord.frequency === 'high' ? 'from-orange-400 to-amber-400' :
+            currentWord.frequency === 'low' ? 'from-emerald-400 to-sage-400' :
+            'from-amber-400 to-yellow-400'
+          }`} />
+
+          <div className={`bg-gradient-to-b ${theme.gradient} to-white px-8 pt-8 pb-6`}>
+            {/* Unit + Frequency badges */}
+            <div className="flex items-center justify-between mb-6">
+              <span className="text-[10px] px-2.5 py-1 rounded-full bg-white/70 text-warm-500 font-medium backdrop-blur-sm">
+                Unit {currentWord.unit}
+              </span>
+              <span className={`text-[10px] px-2.5 py-1 rounded-full font-medium ${theme.badge}`}>
+                {theme.label}
+              </span>
+            </div>
+
+            {/* Word display */}
+            <div className="text-center mb-6">
+              <h2 className="text-4xl font-bold text-warm-900 tracking-tight mb-2">
+                {currentWord.word}
+              </h2>
+              {currentWord.phonetic && (
+                <div className="flex items-center justify-center gap-1.5 text-warm-400">
+                  <Volume2 className="w-3.5 h-3.5" />
+                  <span className="text-sm font-light">{currentWord.phonetic}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Example sentence (hero element) */}
+            {currentWord.example && (
+              <div className="relative bg-white/60 backdrop-blur-sm rounded-2xl px-6 py-5 mb-5 border border-white/80">
+                <Quote className={`absolute top-3 left-3 w-5 h-5 ${theme.accent} opacity-20`} />
+                <p className="text-sm text-warm-700 leading-relaxed pl-4 italic">
+                  {currentWord.example}
+                </p>
+                {currentWord.exampleCn && (
+                  <p className="text-xs text-warm-400 leading-relaxed pl-4 mt-2">
+                    {currentWord.exampleCn}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Definition reveal area */}
+            <div
+              className="cursor-pointer"
+              onClick={() => setRevealed(r => !r)}
+            >
+              {!revealed ? (
+                <div className="text-center py-6 rounded-2xl border-2 border-dashed border-cream-300 hover:border-accent-orange/40 hover:bg-accent-orange/5 transition-all">
+                  <span className="text-sm text-warm-400">
+                    点击查看释义
+                  </span>
+                </div>
+              ) : (
+                <div className="text-center py-5 animate-fade-in-up">
+                  <div className={`text-[10px] uppercase tracking-widest font-medium mb-2 ${theme.accent}`}>
+                    释义
+                  </div>
+                  <p className="text-lg text-warm-800 font-medium leading-relaxed">
+                    {currentWord.definition}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Review count footer */}
+            <div className="flex items-center justify-center gap-4 mt-5 text-[11px] text-warm-400">
+              <span className="flex items-center gap-1">
+                <Star className="w-3 h-3" />
+                复习 {currentWord.reviews} 次
+              </span>
+              <span className="w-1 h-1 rounded-full bg-cream-300" />
+              <span>
+                {revealed ? '点击卡片隐藏释义' : '点击卡片显示释义'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Review Buttons ──────────────────────────────────────────────────── */}
+      {revealed && (
         <div className="flex gap-3 animate-fade-in-up">
           <button
             onClick={() => handleReview('known')}
             disabled={reviewing}
-            className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl bg-accent-sage/10 border border-accent-sage/25 text-accent-sage text-sm font-medium hover:bg-accent-sage/20 transition-all disabled:opacity-50"
+            className="flex-1 flex flex-col items-center gap-1 py-4 rounded-2xl bg-accent-sage/8 border border-accent-sage/20 text-accent-sage text-sm font-medium hover:bg-accent-sage/15 active:scale-[0.97] transition-all disabled:opacity-50"
           >
-            <Check className="w-4 h-4" /> 认识
+            <Check className="w-5 h-5" />
+            <span>认识</span>
           </button>
           <button
             onClick={() => handleReview('fuzzy')}
             disabled={reviewing}
-            className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl bg-accent-amber/10 border border-accent-amber/25 text-accent-amber text-sm font-medium hover:bg-accent-amber/20 transition-all disabled:opacity-50"
+            className="flex-1 flex flex-col items-center gap-1 py-4 rounded-2xl bg-accent-amber/8 border border-accent-amber/20 text-accent-amber text-sm font-medium hover:bg-accent-amber/15 active:scale-[0.97] transition-all disabled:opacity-50"
           >
-            <Sparkles className="w-4 h-4" /> 模糊
+            <Sparkles className="w-5 h-5" />
+            <span>模糊</span>
           </button>
           <button
             onClick={() => handleReview('unknown')}
             disabled={reviewing}
-            className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl bg-accent-rose/10 border border-accent-rose/25 text-accent-rose text-sm font-medium hover:bg-accent-rose/20 transition-all disabled:opacity-50"
+            className="flex-1 flex flex-col items-center gap-1 py-4 rounded-2xl bg-accent-rose/8 border border-accent-rose/20 text-accent-rose text-sm font-medium hover:bg-accent-rose/15 active:scale-[0.97] transition-all disabled:opacity-50"
           >
-            <Languages className="w-4 h-4" /> 不认识
+            <X className="w-5 h-5" />
+            <span>不认识</span>
           </button>
         </div>
       )}
 
-      {!flipped && (
-        <div className="text-center">
-          <span className="text-xs text-warm-400">点击卡片翻转查看释义后再评分</span>
+      {!revealed && (
+        <div className="text-center py-2">
+          <span className="text-xs text-warm-400">点击释义区域查看后评分</span>
         </div>
       )}
 
@@ -604,9 +647,9 @@ function AddWordsSection({
                     {w.phonetic && (
                       <span className="text-[10px] text-warm-400">{w.phonetic}</span>
                     )}
-                    {frequencyLabels[w.frequency] && (
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${frequencyLabels[w.frequency].color}`}>
-                        {frequencyLabels[w.frequency].label}
+                    {frequencyThemes[w.frequency] && (
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${frequencyThemes[w.frequency].badge}`}>
+                        {frequencyThemes[w.frequency].label}
                       </span>
                     )}
                   </div>

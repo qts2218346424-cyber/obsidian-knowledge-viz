@@ -1718,6 +1718,35 @@ app.post('/api/quiz/submit', (req, res) => {
   }
 })
 
+// ===== Quiz AI Generate (AI 生成题目) =====
+
+app.post('/api/quiz/generate', async (req, res) => {
+  try {
+    if (!anthropic) {
+      res.status(503).json({ error: 'AI 服务未配置' })
+      return
+    }
+    const { prompt } = req.body as { prompt: string }
+    if (!prompt) {
+      res.status(400).json({ error: '缺少 prompt 参数' })
+      return
+    }
+
+    const aiRes = await anthropic.messages.create({
+      model: config.ai?.model || 'mimo-v2.5-pro',
+      max_tokens: 4096,
+      system: '你是一个408考研出题专家。请严格按照用户要求的JSON格式输出题目，不要添加任何额外文字、解释或markdown标记。只输出纯JSON数组。',
+      messages: [{ role: 'user', content: prompt }],
+    })
+
+    const text = aiRes.content[0].type === 'text' ? aiRes.content[0].text : '[]'
+    res.json({ questions: text })
+  } catch (err: any) {
+    console.error('Quiz generate error:', err.message)
+    res.status(500).json({ error: 'AI 生成失败: ' + err.message })
+  }
+})
+
 app.get('/api/quiz/history', (_req, res) => {
   try {
     const quizDir = path.resolve(config.vaultPath, '做题记录')
