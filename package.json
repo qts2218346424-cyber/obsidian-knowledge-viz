@@ -13,7 +13,6 @@
     "build:all": "npm run build && npm run build:server",
     "electron:dev": "concurrently -n VITE,API,ELECTRON -c blue,green,magenta \"vite\" \"tsx watch server/index.ts\" \"wait-on http://localhost:3001 && electron .\"",
     "pack": "npm run build:all && electron-builder --win",
-    "lint": "eslint .",
     "preview": "vite preview"
   },
   "build": {
