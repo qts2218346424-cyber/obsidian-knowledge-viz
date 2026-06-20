@@ -1,0 +1,9 @@
+{
+  "vaultPath": "C:\\Users\\YourName\\Documents\\ObsidianVault",
+  "port": 3001,
+  "ai": {
+    "apiKey": "your-api-key-here",
+    "baseURL": "https://api.anthropic.com",
+    "model": "claude-3-5-sonnet-20241022"
+  }
+}

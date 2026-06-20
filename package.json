@@ -1,0 +1,95 @@
+{
+  "name": "obsidian-viz",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "server:dev": "tsx watch server/index.ts",
+    "dev:all": "concurrently -n VITE,API -c blue,green \"vite\" \"tsx watch server/index.ts\"",
+    "build": "tsc -b && vite build",
+    "build:server": "esbuild server/index.ts --bundle --platform=node --format=esm --outfile=dist-server/server.mjs --packages=external",
+    "build:all": "npm run build && npm run build:server",
+    "electron:dev": "concurrently -n VITE,API,ELECTRON -c blue,green,magenta \"vite\" \"tsx watch server/index.ts\" \"wait-on http://localhost:3001 && electron .\"",
+    "pack": "npm run build:all && electron-builder --win",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "build": {
+    "appId": "com.obsidian-viz.app",
+    "productName": "Knowledge Viz",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-server/**/*",
+      "electron/**/*",
+      "public/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "server/config.json",
+        "to": "config.json"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "dir",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "public/favicon.svg"
+    }
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.105.0",
+    "@tailwindcss/vite": "^4.3.1",
+    "@types/d3": "^7.4.3",
+    "@types/dagre": "^0.7.54",
+    "@types/multer": "^2.1.0",
+    "@xyflow/react": "^12.11.0",
+    "cors": "^2.8.6",
+    "d3": "^7.9.0",
+    "dagre": "^0.8.5",
+    "express": "^5.2.1",
+    "gray-matter": "^4.0.3",
+    "highlight.js": "^11.11.1",
+    "lucide-react": "^1.21.0",
+    "multer": "^2.2.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.18.0",
+    "recharts": "^3.8.1",
+    "rehype-highlight": "^7.0.2",
+    "remark-gfm": "^4.0.1",
+    "tailwindcss": "^4.3.1"
+  },
+  "devDependencies": {
+    "@electron/packager": "^20.0.1",
+    "@eslint/js": "^10.0.1",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.12.3",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "concurrently": "^10.0.3",
+    "electron": "^42.4.1",
+    "electron-builder": "^26.15.3",
+    "esbuild": "^0.28.1",
+    "eslint": "^10.3.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.6.0",
+    "tsx": "^4.22.4",
+    "typescript": "~6.0.2",
+    "typescript-eslint": "^8.59.2",
+    "vite": "^8.0.12"
+  }
+}
