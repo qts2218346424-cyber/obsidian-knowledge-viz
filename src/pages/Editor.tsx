@@ -3,7 +3,7 @@ import {
   Save, Trash2, FileEdit, FilePlus, Upload,
   ChevronDown, ChevronRight, X, Loader2, AlertTriangle,
   FolderTree, Eye, Bold, Italic, Heading, List, Code,
-  Link, Table, Hash, Sparkles, Wand2, ChevronUp,
+  Link, Table, Hash, Sparkles, Wand2,
   Undo2, Copy, Check, Quote, Strikethrough, Minus, ListOrdered,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'

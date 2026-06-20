@@ -39,10 +39,6 @@ const SUBJECTS: SubjectInfo[] = [
   { key: '计算机网络', emoji: '🌐', color: 'text-purple-600', bgColor: 'bg-purple-50 border-purple-200' },
 ]
 
-function getSubjectCount(subject: Subject): number {
-  return QUESTION_BANK.filter((q) => q.subject === subject).length
-}
-
 function shuffleArray<T>(arr: T[]): T[] {
   const shuffled = [...arr]
   for (let i = shuffled.length - 1; i > 0; i--) {
