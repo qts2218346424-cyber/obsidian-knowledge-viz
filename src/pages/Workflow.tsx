@@ -1,10 +1,8 @@
-import { useMemo, useState, useCallback, useRef } from 'react'
+import { useMemo, useState, useCallback, useRef, useEffect } from 'react'
 import {
   ReactFlow, Background, Controls, MiniMap,
-  type Node, type Edge, type NodeTypes, Handle, Position
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import dagre from 'dagre'
 import {
   FileInput, Cog, Search, Link, Binary, CheckCircle,
   Lightbulb, Globe, Puzzle, Archive,
@@ -13,134 +11,13 @@ import {
 } from 'lucide-react'
 import { api, type IngestResult, type ResearchGap, type LintFixResult } from '../services/api'
 import { useVaultHealth } from '../hooks/useVaultData'
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface PipelineStep {
-  id: string
-  label: string
-  desc: string
-  icon: string
-  status: 'done' | 'active' | 'pending'
-  detail?: string
-}
-
-const iconMap: Record<string, React.FC<{ className?: string }>> = {
-  FileInput, Cog, Search, Link, Binary, CheckCircle,
-  Lightbulb, Globe, Puzzle, Archive,
-  FolderSearch, ShieldCheck, FileText, Wrench,
-}
-
-// ─── Step Node ────────────────────────────────────────────────────────────────
-
-const statusStyles = {
-  done: {
-    bg: 'bg-accent-sage/10', border: 'border-accent-sage/30',
-    iconBg: 'bg-accent-sage/15', iconColor: 'text-accent-sage',
-    labelColor: 'text-accent-sage',
-    badge: 'bg-accent-sage/10 text-accent-sage border-accent-sage/20',
-    badgeText: '已完成', glow: 'shadow-accent-sage/10',
-  },
-  active: {
-    bg: 'bg-accent-orange/10', border: 'border-accent-orange/30',
-    iconBg: 'bg-accent-orange/15', iconColor: 'text-accent-orange',
-    labelColor: 'text-accent-orange',
-    badge: 'bg-accent-orange/10 text-accent-orange border-accent-orange/30',
-    badgeText: '进行中', glow: 'shadow-accent-orange/20 shadow-lg',
-  },
-  pending: {
-    bg: 'bg-cream-200/50', border: 'border-cream-300/40',
-    iconBg: 'bg-cream-200', iconColor: 'text-warm-400',
-    labelColor: 'text-warm-400',
-    badge: '', badgeText: '', glow: '',
-  },
-}
-
-function StepNode({ data }: { data: any }) {
-  const s = statusStyles[data.status as keyof typeof statusStyles]
-  const IconComp = iconMap[data.icon] || Cog
-
-  return (
-    <div className={`px-4 py-3 rounded-xl border ${s.bg} ${s.border} ${s.glow} min-w-[200px] transition-all`}>
-      <Handle type="target" position={Position.Top} className="!bg-cream-300 !w-2 !h-2 !border-0" />
-      <div className="flex items-center gap-3">
-        <div className={`w-8 h-8 rounded-lg ${s.iconBg} flex items-center justify-center shrink-0`}>
-          <IconComp className={`w-4 h-4 ${s.iconColor}`} />
-        </div>
-        <div>
-          <div className={`text-sm font-medium ${s.labelColor}`}>{data.label}</div>
-          <div className="text-[11px] text-warm-400 mt-0.5">{data.desc}</div>
-        </div>
-      </div>
-      {data.status === 'active' && (
-        <div className={`inline-flex mt-2 px-2 py-0.5 rounded-md border text-[10px] ${s.badge}`}>
-          <div className="w-1.5 h-1.5 rounded-full bg-accent-orange animate-pulse mr-1.5 mt-1" />
-          {s.badgeText}
-        </div>
-      )}
-      {data.status === 'done' && data.detail && (
-        <div className="mt-2 text-[10px] text-accent-sage/80">{data.detail}</div>
-      )}
-      {data.status === 'done' && !data.detail && (
-        <div className={`inline-flex mt-2 px-2 py-0.5 rounded-md border text-[10px] ${s.badge}`}>
-          {s.badgeText}
-        </div>
-      )}
-      <Handle type="source" position={Position.Bottom} className="!bg-cream-300 !w-2 !h-2 !border-0" />
-    </div>
-  )
-}
-
-const nodeTypes: NodeTypes = { stepNode: StepNode }
-
-// ─── Dagre Layout ─────────────────────────────────────────────────────────────
-
-function getLayoutedElements(steps: PipelineStep[]) {
-  const g = new dagre.graphlib.Graph()
-  g.setDefaultEdgeLabel(() => ({}))
-  g.setGraph({ rankdir: 'TB', nodesep: 50, ranksep: 70 })
-
-  const nodeWidth = 240
-  const nodeHeight = 90
-
-  steps.forEach(step => g.setNode(step.id, { width: nodeWidth, height: nodeHeight }))
-  for (let i = 0; i < steps.length - 1; i++) {
-    g.setEdge(steps[i].id, steps[i + 1].id)
-  }
-
-  dagre.layout(g)
-
-  const nodes: Node[] = steps.map(step => {
-    const pos = g.node(step.id)
-    return {
-      id: step.id,
-      type: 'stepNode',
-      position: { x: (pos.x || 0) - nodeWidth / 2, y: (pos.y || 0) - nodeHeight / 2 },
-      data: { ...step },
-    }
-  })
-
-  const edges: Edge[] = []
-  for (let i = 0; i < steps.length - 1; i++) {
-    edges.push({
-      id: `e-${steps[i].id}-${steps[i + 1].id}`,
-      source: steps[i].id,
-      target: steps[i + 1].id,
-      type: 'smoothstep',
-      style: {
-        stroke: steps[i].status === 'done' ? '#7A9B6D' : '#D4B896',
-        strokeWidth: steps[i].status === 'done' ? 2 : 1.5,
-      },
-      animated: steps[i + 1].status === 'active',
-    })
-  }
-
-  return { nodes, edges }
-}
-
-// ─── Delay helper ─────────────────────────────────────────────────────────────
-
-const delay = (ms: number) => new Promise(r => setTimeout(r, ms))
+import { DefuddlePanel, QueryPanel, FoldPanel, ThinkPanel } from '../components/workflow/SkillPanels'
+import TagManager from '../components/workflow/TagManager'
+import DuplicatesPanel from '../components/workflow/DuplicatesPanel'
+import {
+  type PipelineStep, iconMap, statusStyles, nodeTypes,
+  getLayoutedElements, delay, PipelineFlow,
+} from '../components/workflow/shared'
 
 // ─── Ingestion Pipeline ───────────────────────────────────────────────────────
 
@@ -479,6 +356,39 @@ function LintPanel() {
   const [fixResults, setFixResults] = useState<Record<string, LintFixResult>>({})
   const [error, setError] = useState('')
   const { report, reload: reloadHealth } = useVaultHealth()
+  const [schedule, setSchedule] = useState<{
+    enabled: boolean; intervalMinutes: number; autoApplySafe: boolean;
+    safeCategories: string[]; lastRun: string | null; schedulerStatus: string
+  } | null>(null)
+  const [scheduleLoading, setScheduleLoading] = useState(false)
+
+  const loadSchedule = async () => {
+    try {
+      const res = await api.getScheduleStatus()
+      setSchedule(res)
+    } catch { /* ignore */ }
+  }
+
+  useEffect(() => { loadSchedule() }, [])
+
+  const handleScheduleToggle = async (enabled: boolean) => {
+    setScheduleLoading(true)
+    try {
+      await api.updateScheduleConfig({ enabled })
+      await loadSchedule()
+    } catch { /* ignore */ }
+    setScheduleLoading(false)
+  }
+
+  const handleRunNow = async () => {
+    setScheduleLoading(true)
+    try {
+      await api.runScheduleNow()
+      await reloadHealth()
+      await loadSchedule()
+    } catch { /* ignore */ }
+    setScheduleLoading(false)
+  }
 
   const updateStep = useCallback((id: string, patch: Partial<PipelineStep>) => {
     setSteps(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s))
@@ -623,6 +533,56 @@ function LintPanel() {
                 )
               })}
             </div>
+
+            {/* Schedule control */}
+            <div className="p-3 border-t border-cream-200">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-warm-600">定时整理</span>
+                <button
+                  onClick={() => handleScheduleToggle(!schedule?.enabled)}
+                  disabled={scheduleLoading}
+                  className={`w-8 h-4 rounded-full transition-colors relative ${
+                    schedule?.enabled ? 'bg-accent-sage' : 'bg-cream-300'
+                  }`}
+                >
+                  <div className={`w-3 h-3 rounded-full bg-white absolute top-0.5 transition-all ${
+                    schedule?.enabled ? 'left-4.5' : 'left-0.5'
+                  }`} />
+                </button>
+              </div>
+              {schedule?.enabled && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-warm-400">间隔:</span>
+                    <input
+                      type="number"
+                      value={schedule.intervalMinutes}
+                      min={5}
+                      onChange={async (e) => {
+                        const v = Math.max(5, parseInt(e.target.value) || 60)
+                        await api.updateScheduleConfig({ intervalMinutes: v })
+                        await loadSchedule()
+                      }}
+                      className="w-14 bg-cream-200 border border-cream-300 rounded px-1.5 py-0.5 text-[10px] text-warm-600 outline-none"
+                    />
+                    <span className="text-[10px] text-warm-400">分钟</span>
+                  </div>
+                  <button
+                    onClick={handleRunNow}
+                    disabled={scheduleLoading}
+                    className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded text-[10px] bg-accent-orange/10 text-accent-orange hover:bg-accent-orange/20 transition-colors"
+                  >
+                    {scheduleLoading ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Play className="w-2.5 h-2.5" />}
+                    立即执行
+                  </button>
+                  {schedule.lastRun && (
+                    <div className="text-[9px] text-warm-400">
+                      上次: {new Date(schedule.lastRun).toLocaleString()}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -645,11 +605,17 @@ export default function Workflow() {
   return (
     <div className="space-y-5 h-full flex flex-col">
       {/* Pipeline selector */}
-      <div className="flex gap-2 shrink-0">
+      <div className="flex gap-2 shrink-0 flex-wrap">
         {[
           { key: 'ingestion', label: '文档摄取' },
           { key: 'research', label: '自动研究' },
           { key: 'lint', label: '健康检查' },
+          { key: 'defuddle', label: '网页抓取' },
+          { key: 'query', label: '智能查询' },
+          { key: 'fold', label: '笔记整理' },
+          { key: 'think', label: '思维画布' },
+          { key: 'tags', label: '标签管理' },
+          { key: 'duplicates', label: '重复检测' },
         ].map(p => (
           <button
             key={p.key}
@@ -670,6 +636,12 @@ export default function Workflow() {
         {activePipeline === 'ingestion' && <IngestionPanel />}
         {activePipeline === 'research' && <ResearchPanel />}
         {activePipeline === 'lint' && <LintPanel />}
+        {activePipeline === 'defuddle' && <DefuddlePanel />}
+        {activePipeline === 'query' && <QueryPanel />}
+        {activePipeline === 'fold' && <FoldPanel />}
+        {activePipeline === 'think' && <ThinkPanel />}
+        {activePipeline === 'tags' && <TagManager />}
+        {activePipeline === 'duplicates' && <DuplicatesPanel />}
       </div>
     </div>
   )

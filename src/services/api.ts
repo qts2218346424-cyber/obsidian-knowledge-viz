@@ -274,6 +274,121 @@ export interface VocabData {
   stats: { mastered: number; learning: number; newWords: number }
 }
 
+// Extended Vocabulary Management Types
+export interface VocabBrowseItem {
+  word: string
+  phonetic: string
+  definition: string
+  example: string
+  exampleCn: string
+  frequency: string
+  unit: number
+  roots?: string
+  synonyms?: string
+  progress: { status: string; reviews: number; nextReview: string } | null
+}
+
+export interface VocabBrowseData {
+  words: VocabBrowseItem[]
+  total: number
+  page: number
+  size: number
+  units: number[]
+  stats: { total: number; mastered: number; learning: number; newWords: number; notAdded: number }
+}
+
+export interface VocabUnitProgress {
+  unit: number
+  total: number
+  mastered: number
+  learning: number
+  newWords: number
+  notAdded: number
+}
+
+export interface VocabStatsData {
+  unitProgress: VocabUnitProgress[]
+  frequencyDistribution: Record<string, { total: number; mastered: number; learning: number; newWords: number; notAdded: number }>
+  overall: { total: number; mastered: number; learning: number; newWords: number; notAdded: number; masteredPct: number }
+}
+
+export interface VocabRootEntry {
+  root: string
+  meaning: string
+  words: Array<{ word: string; definition: string; unit: number; frequency: string }>
+}
+
+export interface VocabRelationsData {
+  roots: VocabRootEntry[]
+  connections: Array<{ from: string; to: string; type: string }>
+}
+
+export interface VocabImportResult {
+  imported: number
+  skipped: number
+  errors: string[]
+  total: number
+}
+
+export interface DefuddleResult {
+  url: string
+  filePath: string
+  title: string
+  wordCount: number
+  tags: string[]
+  preview: string
+}
+
+export interface QueryResultItem {
+  path: string
+  title: string
+  tags: string[]
+  snippet: string
+  score: number
+}
+
+export interface QueryResult {
+  query: string
+  results: QueryResultItem[]
+  insights: string
+  relatedTopics: string[]
+}
+
+export interface FoldSuggestion {
+  type: 'move' | 'merge' | 'tag' | 'link' | 'create'
+  description: string
+  from: string
+  to?: string
+  reason: string
+}
+
+export interface FoldResult {
+  totalNotes: number
+  totalFolders: number
+  folders: string[]
+  analysis: string
+  suggestions: FoldSuggestion[]
+  proposedStructure: string[]
+}
+
+export interface ThinkBranch {
+  id: string
+  label: string
+  color?: string
+  children?: { id: string; label: string; note?: string }[]
+}
+
+export interface ThinkResult {
+  center: { id: string; label: string; color?: string }
+  branches: ThinkBranch[]
+  connections: { from: string; to: string; label?: string }[]
+  summary?: string
+  canvas?: {
+    nodes: { id: string; x: number; y: number; width: number; height: number; text: string; color?: string }[]
+    edges: { id: string; fromNode: string; toNode: string }[]
+  }
+}
+
 export interface VaultEvent {
   type: 'file-added' | 'file-changed' | 'file-deleted'
   path: string
@@ -387,6 +502,26 @@ export const api = {
   generateVocabulary: (subject?: string, notePath?: string) =>
     postJSON<{ words: Array<{ word: string; definition: string; phonetic?: string; example?: string; subject: string }> }>('/study/vocabulary/generate', { subject, notePath }),
 
+  // Vocabulary Management (Extended)
+  getAllVocab: (params?: { page?: number; size?: number; unit?: number; frequency?: string; status?: string; search?: string }) => {
+    const q = new URLSearchParams()
+    if (params?.page) q.set('page', String(params.page))
+    if (params?.size) q.set('size', String(params.size))
+    if (params?.unit) q.set('unit', String(params.unit))
+    if (params?.frequency) q.set('frequency', params.frequency)
+    if (params?.status) q.set('status', params.status)
+    if (params?.search) q.set('search', params.search)
+    return fetchJSON<VocabBrowseData>(`/vocab/all?${q.toString()}`)
+  },
+
+  getVocabStats: () => fetchJSON<VocabStatsData>('/vocab/stats'),
+
+  getVocabRelations: (root?: string) =>
+    fetchJSON<VocabRelationsData>(`/vocab/relations${root ? `?root=${encodeURIComponent(root)}` : ''}`),
+
+  importVocab: (format: 'csv' | 'json', data: string) =>
+    postJSON<VocabImportResult>('/vocab/import', { format, data }),
+
   // Music
   scanMusicFolder: (folderPath: string) =>
     fetchJSON<MusicScanResult>(`/music/scan?path=${encodeURIComponent(folderPath)}`),
@@ -399,6 +534,75 @@ export const api = {
 
   setMusicPath: (musicPath: string) =>
     putJSON<{ ok: boolean; musicPath: string }>('/music/path', { musicPath }),
+
+  // Wiki Skills
+  defuddle: (url: string, targetFolder?: string) =>
+    postJSON<DefuddleResult>('/defuddle', { url, targetFolder }),
+
+  query: (query: string, limit?: number) =>
+    postJSON<QueryResult>('/query', { query, limit }),
+
+  fold: (targetFolder?: string) =>
+    postJSON<FoldResult>('/fold', { targetFolder }),
+
+  think: (topic: string, depth?: number) =>
+    postJSON<ThinkResult>('/think', { topic, depth }),
+
+  // Duplicates
+  getDuplicates: () =>
+    fetchJSON<{ pairs: Array<{ fileA: string; fileB: string; similarity: number; matchType: 'prefix' | 'jaccard' | 'title'; longerFile: string; shorterFile: string }> }>('/vault/duplicates'),
+
+  mergeDuplicates: (pairs: { keepFile: string; mergeFile: string; mode: string }[]) =>
+    postJSON<{ results: Array<{ keepFile: string; mergedFile: string; success: boolean; appendedChars: number; error?: string }> }>('/vault/duplicates/merge', { pairs }),
+
+  // Tag management
+  getVaultTags: () =>
+    fetchJSON<{ tags: Array<{ name: string; count: number; files: string[] }> }>('/vault/tags'),
+
+  renameTag: (oldTag: string, newTag: string) =>
+    postJSON<{ oldTag: string; newTag: string; filesUpdated: number }>('/vault/tags/rename', { oldTag, newTag }),
+
+  mergeTags: (keepTag: string, mergeTag: string) =>
+    postJSON<{ keepTag: string; mergeTag: string; filesUpdated: number }>('/vault/tags/merge', { keepTag, mergeTag }),
+
+  deleteTag: (tag: string) =>
+    postJSON<{ tag: string; filesUpdated: number }>('/vault/tags/delete', { tag }),
+
+  // Fold apply
+  foldApply: (suggestions: FoldSuggestion[]) =>
+    postJSON<{
+      results: Array<{ index: number; success: boolean; action: string; error?: string }>,
+      summary: { total: number; succeeded: number; failed: number },
+      backupPath: string
+    }>('/fold/apply', { suggestions }),
+
+  // Reorganize
+  reorganize: (mode: 'preview' | 'execute', targetFolder?: string) =>
+    postJSON<{
+      proposedMoves: Array<{ file: string; currentFolder: string; proposedFolder: string; reason: string }>,
+      executionResults?: {
+        results: Array<{ index: number; success: boolean; action: string; error?: string }>,
+        summary: { total: number; succeeded: number; failed: number },
+        backupPath: string
+      }
+    }>('/vault/reorganize', { mode, targetFolder }),
+
+  // Rollback
+  rollback: (backupPath: string) =>
+    postJSON<{ ok: boolean; restored: number }>('/vault/rollback', { backupPath }),
+
+  // Schedule
+  getScheduleStatus: () =>
+    fetchJSON<{
+      enabled: boolean; intervalMinutes: number; autoApplySafe: boolean;
+      safeCategories: string[]; lastRun: string | null; schedulerStatus: string
+    }>('/schedule/status'),
+
+  updateScheduleConfig: (patch: { enabled?: boolean; intervalMinutes?: number; autoApplySafe?: boolean; safeCategories?: string[] }) =>
+    postJSON<{ ok: boolean }>('/schedule/config', patch),
+
+  runScheduleNow: () =>
+    postJSON<{ ok: boolean; fixed: number; message: string }>('/schedule/run-now', {}),
 }
 
 // Check if the API is available

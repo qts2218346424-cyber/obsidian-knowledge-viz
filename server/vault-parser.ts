@@ -80,7 +80,7 @@ function parseFile(filePath: string, vaultPath: string): VaultNote | null {
 /**
  * Recursively scan a vault directory for all .md files.
  */
-function walkDir(dir: string): string[] {
+export function walkDir(dir: string): string[] {
   const results: string[] = []
   try {
     const entries = fs.readdirSync(dir, { withFileTypes: true })

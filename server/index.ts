@@ -6,12 +6,17 @@ import { fileURLToPath } from 'url'
 import Anthropic from '@anthropic-ai/sdk'
 import multer from 'multer'
 import matter from 'gray-matter'
-import { scanVault, getFile, getTree, createFile, updateFile, deleteFile, renameFile, type VaultNote } from './vault-parser.js'
+import { scanVault, getFile, getTree, createFile, updateFile, deleteFile, renameFile, walkDir, type VaultNote } from './vault-parser.js'
 import { buildGraph } from './graph-builder.js'
 import { checkHealth } from './health-checker.js'
 import { runAgentLoop, type AgentEvent } from './agent.js'
 import chokidar from 'chokidar'
 import { generateQuizSummary } from './quiz-summary.js'
+import { scanVaultTags, renameTagInContent, removeTagFromContent } from './tag-utils.js'
+import { VaultBackup, executeSuggestionsBatch, rollback as rollbackBackup } from './vault-ops.js'
+import { detectDuplicates, mergeNotes } from './duplicate-detector.js'
+import { loadScheduleConfig, saveScheduleConfig } from './schedule-store.js'
+import { VaultScheduler } from './scheduler.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -1089,6 +1094,16 @@ function startWatcher() {
 // Start watcher on boot
 startWatcher()
 
+// Initialize scheduler
+const scheduler = new VaultScheduler(
+  getNotes,
+  () => config.vaultPath,
+  invalidateCache
+)
+if (loadScheduleConfig().enabled) {
+  scheduler.start()
+}
+
 app.get('/api/vault/events', (_req, res) => {
   res.setHeader('Content-Type', 'text/event-stream')
   res.setHeader('Cache-Control', 'no-cache')
@@ -1327,36 +1342,35 @@ interface VocabProgress {
   addedDate: string
 }
 
-// Load vocabulary pool from the data file
-function loadVocabPool(): Array<{ word: string; phonetic: string; definition: string; example: string; exampleCn: string; frequency: string; unit: number }> {
-  try {
-    // Try reading from src/data/vocabulary.ts (development)
-    const vocabFilePath = path.join(__dirname, '..', 'src', 'data', 'vocabulary.ts')
-    if (fs.existsSync(vocabFilePath)) {
-      const content = fs.readFileSync(vocabFilePath, 'utf-8')
-      // Extract the array from VOCAB_POOL export
-      const arrayMatch = content.match(/VOCAB_POOL.*?=\s*\[([\s\S]*)\]/)
-      if (arrayMatch) {
-        // Parse objects from the array content
-        const items: any[] = []
-        const objRegex = /\{[\s\S]*?word:\s*'([^']*)'[\s\S]*?phonetic:\s*'([^']*)'[\s\S]*?definition:\s*'([^']*)'[\s\S]*?example:\s*'([^']*)'[\s\S]*?exampleCn:\s*'([^']*)'[\s\S]*?frequency:\s*'([^']*)'[\s\S]*?unit:\s*(\d+)[\s\S]*?\}/g
-        let match
-        while ((match = objRegex.exec(arrayMatch[1])) !== null) {
-          items.push({
-            word: match[1], phonetic: match[2], definition: match[3],
-            example: match[4], exampleCn: match[5], frequency: match[6],
-            unit: parseInt(match[7]),
-          })
-        }
-        if (items.length > 0) return items
+// Load vocabulary pool from the 4 part files
+function loadVocabPool(): Array<{ word: string; phonetic: string; definition: string; example: string; exampleCn: string; frequency: string; unit: number; roots?: string; synonyms?: string }> {
+  const items: any[] = []
+  const objRegex = /\{\s*word:\s*'([^']*)'[\s,]*phonetic:\s*'([^']*)'[\s,]*definition:\s*'([^']*)'[\s,]*example:\s*'([^']*)'[\s,]*exampleCn:\s*'([^']*)'[\s,]*frequency:\s*'([^']*)'[\s,]*unit:\s*(\d+)(?:[\s,]*roots?:\s*'([^']*)')?(?:[\s,]*synonyms?:\s*'([^']*)')?[\s,]*\}/g
+  for (let i = 1; i <= 4; i++) {
+    try {
+      const fp = path.join(__dirname, '..', 'src', 'data', `vocab-part${i}.ts`)
+      if (!fs.existsSync(fp)) continue
+      const content = fs.readFileSync(fp, 'utf-8')
+      const arrayMatch = content.match(/VOCAB_PART\d.*?=\s*\[([\s\S]*)\]/)
+      if (!arrayMatch) continue
+      let match
+      while ((match = objRegex.exec(arrayMatch[1])) !== null) {
+        items.push({
+          word: match[1], phonetic: match[2], definition: match[3],
+          example: match[4], exampleCn: match[5], frequency: match[6],
+          unit: parseInt(match[7]),
+          roots: match[8] || undefined,
+          synonyms: match[9] || undefined,
+        })
       }
-    }
-  } catch { /* ignore */ }
-  // Fallback: small built-in pool
+      objRegex.lastIndex = 0
+    } catch { /* skip failed part */ }
+  }
+  if (items.length > 0) return items
+  // Fallback
   return [
     { word: 'analyze', phonetic: '/ˈænəlaɪz/', definition: '分析', example: 'We need to analyze the data.', exampleCn: '我们需要分析数据。', frequency: '高频', unit: 1 },
     { word: 'significant', phonetic: '/sɪɡˈnɪfɪkənt/', definition: '重要的；显著的', example: 'A significant difference.', exampleCn: '一个显著的差异。', frequency: '高频', unit: 1 },
-    { word: 'hypothesis', phonetic: '/haɪˈpɒθəsɪs/', definition: '假设', example: 'Test the hypothesis.', exampleCn: '验证假设。', frequency: '高频', unit: 1 },
   ]
 }
 
@@ -1516,6 +1530,266 @@ app.post('/api/vault/refresh', (_req, res) => {
   startWatcher() // Restart watcher in case vault path changed
   const notes = getNotes()
   res.json({ ok: true, noteCount: notes.length })
+})
+
+// ===== Vocabulary Extended APIs (词库管理扩展) =====
+
+// GET /api/vocab/all - 全量词库 + 学习进度 (分页/筛选)
+app.get('/api/vocab/all', (req, res) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1
+    const size = Math.min(parseInt(req.query.size as string) || 50, 200)
+    const unitFilter = req.query.unit ? parseInt(req.query.unit as string) : null
+    const freqFilter = req.query.frequency as string || null
+    const statusFilter = req.query.status as string || null
+    const search = (req.query.search as string || '').toLowerCase().trim()
+
+    const progress = readVocabProgress()
+    const existingSet = new Set(Object.keys(progress).map(w => w.toLowerCase()))
+
+    let pool = [...VOCAB_POOL]
+
+    // Filters
+    if (unitFilter) pool = pool.filter(w => w.unit === unitFilter)
+    if (freqFilter) pool = pool.filter(w => w.frequency === freqFilter)
+    if (search) pool = pool.filter(w =>
+      w.word.toLowerCase().includes(search) ||
+      w.definition.toLowerCase().includes(search)
+    )
+    if (statusFilter) {
+      pool = pool.filter(w => {
+        const key = w.word.toLowerCase()
+        const hasProgress = progress[w.word] || progress[key]
+        if (statusFilter === 'notAdded') return !hasProgress
+        if (!hasProgress) return false
+        if (statusFilter === 'mastered') return hasProgress.reviews >= 5
+        if (statusFilter === 'learning') return hasProgress.reviews > 0 && hasProgress.reviews < 5
+        if (statusFilter === 'newWords') return hasProgress.reviews === 0
+        return true
+      })
+    }
+
+    const total = pool.length
+    const start = (page - 1) * size
+    const pagePool = pool.slice(start, start + size)
+
+    const words = pagePool.map(w => {
+      const p = progress[w.word] || progress[w.word.toLowerCase()]
+      return {
+        word: w.word, phonetic: w.phonetic, definition: w.definition,
+        example: w.example, exampleCn: w.exampleCn, frequency: w.frequency,
+        unit: w.unit, roots: (w as any).roots, synonyms: (w as any).synonyms,
+        progress: p ? { status: p.status, reviews: p.reviews, nextReview: p.nextReview } : null,
+      }
+    })
+
+    const units = [...new Set(VOCAB_POOL.map(w => w.unit))].sort((a, b) => a - b)
+
+    // Global stats
+    const allLearned = Object.keys(progress)
+    const mastered = allLearned.filter(w => progress[w].reviews >= 5).length
+    const learning = allLearned.filter(w => progress[w].reviews > 0 && progress[w].reviews < 5).length
+    const newWords = allLearned.filter(w => progress[w].reviews === 0).length
+
+    res.json({
+      words, total, page, size, units,
+      stats: { total: VOCAB_POOL.length, mastered, learning, newWords, notAdded: VOCAB_POOL.length - allLearned.length },
+    })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// GET /api/vocab/stats - 详细统计数据 (图表用)
+app.get('/api/vocab/stats', (_req, res) => {
+  try {
+    const progress = readVocabProgress()
+    const units = [...new Set(VOCAB_POOL.map(w => w.unit))].sort((a, b) => a - b)
+
+    // Per-unit progress
+    const unitProgress = units.map(unit => {
+      const unitWords = VOCAB_POOL.filter(w => w.unit === unit)
+      let mastered = 0, learning = 0, newWords = 0, notAdded = 0
+      for (const w of unitWords) {
+        const p = progress[w.word] || progress[w.word.toLowerCase()]
+        if (!p) { notAdded++; continue }
+        if (p.reviews >= 5) mastered++
+        else if (p.reviews > 0) learning++
+        else newWords++
+      }
+      return { unit, total: unitWords.length, mastered, learning, newWords, notAdded }
+    })
+
+    // Frequency distribution
+    const freqDist: Record<string, { total: number; mastered: number; learning: number; newWords: number; notAdded: number }> = {}
+    for (const freq of ['高频', '中频', '低频']) {
+      const words = VOCAB_POOL.filter(w => w.frequency === freq)
+      let mastered = 0, learning = 0, newWords = 0, notAdded = 0
+      for (const w of words) {
+        const p = progress[w.word] || progress[w.word.toLowerCase()]
+        if (!p) { notAdded++; continue }
+        if (p.reviews >= 5) mastered++
+        else if (p.reviews > 0) learning++
+        else newWords++
+      }
+      freqDist[freq] = { total: words.length, mastered, learning, newWords, notAdded }
+    }
+
+    // Overall
+    const allLearned = Object.keys(progress)
+    const mastered = allLearned.filter(w => progress[w].reviews >= 5).length
+    const learning = allLearned.filter(w => progress[w].reviews > 0 && progress[w].reviews < 5).length
+    const newWordsCount = allLearned.filter(w => progress[w].reviews === 0).length
+
+    res.json({
+      unitProgress,
+      frequencyDistribution: freqDist,
+      overall: {
+        total: VOCAB_POOL.length,
+        mastered, learning, newWords: newWordsCount,
+        notAdded: VOCAB_POOL.length - allLearned.length,
+        masteredPct: VOCAB_POOL.length > 0 ? Math.round((mastered / VOCAB_POOL.length) * 100) : 0,
+      },
+    })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// GET /api/vocab/relations - 词根词缀关系数据
+app.get('/api/vocab/relations', (req, res) => {
+  try {
+    const searchRoot = (req.query.root as string || '').toLowerCase()
+
+    // Build roots index from VOCAB_POOL
+    const rootMap = new Map<string, { meaning: string; words: Array<{ word: string; definition: string; unit: number; frequency: string }> }>()
+
+    for (const entry of VOCAB_POOL) {
+      const roots = (entry as any).roots
+      if (!roots) continue
+      const matches = roots.match(/([a-zA-Z-]+)\(([^)]+)\)/g)
+      if (!matches) continue
+      for (const m of matches) {
+        const rm = m.match(/([a-zA-Z-]+)\(([^)]+)\)/)
+        if (!rm) continue
+        const rootKey = rm[1].replace(/-$/, '').toLowerCase()
+        const meaning = rm[2]
+        if (!rootMap.has(rootKey)) rootMap.set(rootKey, { meaning, words: [] })
+        rootMap.get(rootKey)!.words.push({
+          word: entry.word, definition: entry.definition,
+          unit: entry.unit, frequency: entry.frequency,
+        })
+      }
+    }
+
+    // Filter and sort
+    let roots = Array.from(rootMap.entries())
+      .filter(([, v]) => v.words.length >= 2)
+      .map(([root, v]) => ({ root, meaning: v.meaning, words: v.words }))
+      .sort((a, b) => b.words.length - a.words.length)
+
+    if (searchRoot) {
+      roots = roots.filter(r =>
+        r.root.includes(searchRoot) ||
+        r.words.some(w => w.word.toLowerCase().includes(searchRoot))
+      )
+    }
+
+    // Build connections (words sharing roots)
+    const connections: Array<{ from: string; to: string; type: string }> = []
+    for (const rootEntry of roots.slice(0, 30)) {
+      const ws = rootEntry.words
+      for (let i = 0; i < Math.min(ws.length, 8); i++) {
+        for (let j = i + 1; j < Math.min(ws.length, 8); j++) {
+          connections.push({ from: ws[i].word, to: ws[j].word, type: rootEntry.root })
+        }
+      }
+    }
+
+    res.json({ roots: roots.slice(0, 60), connections })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// POST /api/vocab/import - 导入 CSV/JSON 词库
+app.post('/api/vocab/import', (req, res) => {
+  try {
+    const { format, data } = req.body as { format: 'csv' | 'json'; data: string }
+    if (!data) { res.status(400).json({ error: 'No data provided' }); return }
+
+    let imported = 0, skipped = 0
+    const errors: string[] = []
+    const newWords: typeof VOCAB_POOL = []
+    const existingWords = new Set(VOCAB_POOL.map(w => w.word.toLowerCase()))
+
+    if (format === 'json') {
+      let parsed: any[]
+      try { parsed = JSON.parse(data) } catch { res.status(400).json({ error: 'Invalid JSON format' }); return }
+      if (!Array.isArray(parsed)) { res.status(400).json({ error: 'JSON must be an array' }); return }
+
+      for (const item of parsed) {
+        if (!item.word) { errors.push(`Missing word field: ${JSON.stringify(item).slice(0, 50)}`); continue }
+        if (existingWords.has(item.word.toLowerCase())) { skipped++; continue }
+        newWords.push({
+          word: item.word, phonetic: item.phonetic || '',
+          definition: item.definition || '', example: item.example || '',
+          exampleCn: item.exampleCn || '', frequency: item.frequency || '中频',
+          unit: item.unit || 99, roots: item.roots, synonyms: item.synonyms,
+        })
+        existingWords.add(item.word.toLowerCase())
+        imported++
+      }
+    } else if (format === 'csv') {
+      const lines = data.split('\n').filter(l => l.trim())
+      const hasHeader = lines[0]?.toLowerCase().includes('word')
+      const startIdx = hasHeader ? 1 : 0
+
+      for (let i = startIdx; i < lines.length; i++) {
+        const cols = lines[i].split(',').map(s => s.trim().replace(/^["']|["']$/g, ''))
+        if (cols.length < 3) { errors.push(`Line ${i + 1}: insufficient columns`); continue }
+        const [word, phonetic, definition, example, exampleCn, frequency] = cols
+        if (!word) continue
+        if (existingWords.has(word.toLowerCase())) { skipped++; continue }
+        newWords.push({
+          word, phonetic: phonetic || '', definition: definition || '',
+          example: example || '', exampleCn: exampleCn || '',
+          frequency: frequency || '中频', unit: 99,
+        })
+        existingWords.add(word.toLowerCase())
+        imported++
+      }
+    } else {
+      res.status(400).json({ error: 'Unsupported format. Use csv or json.' }); return
+    }
+
+    // Save custom words to vault
+    if (newWords.length > 0) {
+      const customPath = '单词本/custom-words.json'
+      let existing: any[] = []
+      try {
+        const file = getFile(config.vaultPath, customPath)
+        if (file) {
+          const { content: body } = matter(file.content)
+          const jsonMatch = body.match(/```json\s*([\s\S]*?)```/)
+          if (jsonMatch) existing = JSON.parse(jsonMatch[1])
+        }
+      } catch { /* ignore */ }
+      existing = existing.concat(newWords)
+      const todayStr = new Date().toISOString().split('T')[0]
+      const content = `---\ntype: custom-vocab\nupdated: '${todayStr}'\n---\n\n\`\`\`json\n${JSON.stringify(existing, null, 2)}\n\`\`\`\n`
+      try { updateFile(config.vaultPath, customPath, content, { type: 'custom-vocab', updated: todayStr }) }
+      catch { createFile(config.vaultPath, customPath, content, { type: 'custom-vocab', updated: todayStr }) }
+      markSelfWrite(customPath)
+
+      // Also add to runtime pool
+      VOCAB_POOL.push(...newWords)
+    }
+
+    res.json({ imported, skipped, errors: errors.slice(0, 10), total: VOCAB_POOL.length })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
 })
 
 // ===== Music =====
@@ -1780,6 +2054,655 @@ app.get('/api/quiz/history', (_req, res) => {
       })
 
     res.json({ files })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ===== Wiki Skills: Defuddle (网页抓取) =====
+
+app.post('/api/defuddle', async (req, res) => {
+  try {
+    if (!anthropic) { res.status(503).json({ error: 'AI 服务未配置' }); return }
+    const { url, targetFolder } = req.body as { url: string; targetFolder?: string }
+    if (!url) { res.status(400).json({ error: '缺少 url 参数' }); return }
+
+    // Fetch the web page content
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 15000)
+    let html = ''
+    try {
+      const resp = await fetch(url, {
+        signal: controller.signal,
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ObsidianViz/1.1' },
+      })
+      html = await resp.text()
+    } finally {
+      clearTimeout(timeout)
+    }
+
+    // Extract text content - strip HTML tags, scripts, styles
+    const textContent = html
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[\s\S]*?<\/style>/gi, '')
+      .replace(/<nav[\s\S]*?<\/nav>/gi, '')
+      .replace(/<footer[\s\S]*?<\/footer>/gi, '')
+      .replace(/<header[\s\S]*?<\/header>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 12000)
+
+    // AI: Clean, summarize, and generate structured note
+    const aiRes = await anthropic.messages.create({
+      model: config.ai?.model || 'mimo-v2.5-pro',
+      max_tokens: 4096,
+      system: `你是一个专业的知识整理助手。请将以下网页内容整理为结构化的 Obsidian Markdown 笔记。
+要求：
+1. 提取核心知识点，去除广告和无关内容
+2. 生成清晰的层级结构（标题/要点/细节）
+3. 在 frontmatter 中生成 tags 和 summary
+4. 保持中文输出
+5. 如果内容涉及 408 考研科目，标注相关科目
+
+输出格式：直接输出 Markdown 内容（包含 --- frontmatter），不要添加任何解释。`,
+      messages: [
+        { role: 'user', content: `来源 URL: ${url}\n\n网页内容:\n${textContent}` },
+      ],
+    })
+
+    const markdown = aiRes.content[0].type === 'text' ? aiRes.content[0].text : ''
+
+    // Generate filename from URL
+    const urlObj = new URL(url)
+    const slug = urlObj.pathname.split('/').filter(Boolean).pop() || urlObj.hostname.replace(/\./g, '-')
+    const fileName = `${slug}.md`
+    const folder = targetFolder || 'Web-Clippings'
+    const filePath = path.join(folder, fileName)
+    const fullPath = path.join(config.vaultPath, filePath)
+
+    // Ensure directory exists
+    const dir = path.dirname(fullPath)
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+
+    // Add source link to the markdown
+    const finalContent = markdown + `\n\n---\n> 来源: [${urlObj.hostname}](${url})\n> 抓取时间: ${new Date().toISOString().split('T')[0]}\n`
+    fs.writeFileSync(fullPath, finalContent, 'utf-8')
+    invalidateCache()
+
+    // Extract tags from frontmatter
+    let tags: string[] = []
+    try {
+      const fm = matter(finalContent)
+      tags = Array.isArray(fm.data.tags) ? fm.data.tags : []
+    } catch { /* ignore */ }
+
+    res.json({
+      url,
+      filePath,
+      title: slug.replace(/-/g, ' '),
+      wordCount: finalContent.split(/\s+/).length,
+      tags,
+      preview: finalContent.slice(0, 500),
+    })
+  } catch (err: any) {
+    console.error('Defuddle error:', err.message)
+    res.status(500).json({ error: '网页抓取失败: ' + err.message })
+  }
+})
+
+// ===== Wiki Skills: Query (智能查询) =====
+
+app.post('/api/query', async (req, res) => {
+  try {
+    if (!anthropic) { res.status(503).json({ error: 'AI 服务未配置' }); return }
+    const { query, limit: maxResults } = req.body as { query: string; limit?: number }
+    if (!query) { res.status(400).json({ error: '缺少 query 参数' }); return }
+
+    const notes = getNotes()
+    const tokens = query.toLowerCase().split(/\s+/).filter(t => t.length > 0)
+    const max = maxResults || 8
+
+    // Search and score
+    const scored = notes.map(note => {
+      let score = 0
+      const titleLower = note.title.toLowerCase()
+      const contentLower = note.content.toLowerCase()
+
+      for (const token of tokens) {
+        if (titleLower.includes(token)) score += 5
+        for (const tag of note.tags) {
+          if (tag.toLowerCase().includes(token)) { score += 3; break }
+        }
+        if (contentLower.includes(token)) score += 1
+      }
+      return { note, score }
+    }).filter(r => r.score > 0).sort((a, b) => b.score - a.score).slice(0, max)
+
+    if (scored.length === 0) {
+      res.json({ query, results: [], insights: '未找到相关笔记。', relatedTopics: [] })
+      return
+    }
+
+    // Build context for AI
+    const context = scored.map(({ note }) =>
+      `## ${note.title}\n标签: ${note.tags.join(', ')}\n${note.content.slice(0, 800)}`
+    ).join('\n\n---\n\n')
+
+    // AI: Analyze and synthesize
+    const aiRes = await anthropic.messages.create({
+      model: config.ai?.model || 'mimo-v2.5-pro',
+      max_tokens: 2048,
+      system: `你是一个 408 考研知识库查询助手。请基于提供的笔记内容回答用户的查询。
+要求：
+1. 综合分析相关笔记，给出有价值的洞察
+2. 指出知识点之间的联系
+3. 建议可以进一步学习的方向
+4. 保持简洁、有条理
+
+请以 JSON 格式输出：
+{
+  "insights": "综合分析（200字以内）",
+  "relatedTopics": ["相关话题1", "相关话题2", "相关话题3"]
+}`,
+      messages: [
+        { role: 'user', content: `查询: ${query}\n\n相关笔记:\n\n${context}` },
+      ],
+    })
+
+    const text = aiRes.content[0].type === 'text' ? aiRes.content[0].text : '{}'
+    let aiData: any = {}
+    try { aiData = JSON.parse(text) } catch { aiData = { insights: text.slice(0, 500), relatedTopics: [] } }
+
+    res.json({
+      query,
+      results: scored.map(({ note, score }) => ({
+        path: note.path,
+        title: note.title,
+        tags: note.tags,
+        snippet: note.content.slice(0, 200),
+        score,
+      })),
+      insights: aiData.insights || '',
+      relatedTopics: aiData.relatedTopics || [],
+    })
+  } catch (err: any) {
+    console.error('Query error:', err.message)
+    res.status(500).json({ error: '查询失败: ' + err.message })
+  }
+})
+
+// ===== Wiki Skills: Fold (笔记整理) =====
+
+app.post('/api/fold', async (req, res) => {
+  try {
+    if (!anthropic) { res.status(503).json({ error: 'AI 服务未配置' }); return }
+    const { targetFolder } = req.body as { targetFolder?: string }
+
+    const notes = getNotes()
+    const folder = targetFolder || ''
+
+    // Filter notes by folder if specified
+    const filteredNotes = folder
+      ? notes.filter(n => n.path.toLowerCase().startsWith(folder.toLowerCase()))
+      : notes
+
+    if (filteredNotes.length === 0) {
+      res.status(404).json({ error: '未找到笔记' })
+      return
+    }
+
+    // Build note structure for AI
+    const noteStructure = filteredNotes.slice(0, 60).map(n => ({
+      path: n.path,
+      title: n.title,
+      tags: n.tags,
+      words: n.wordCount,
+      links: n.links?.slice(0, 5) || [],
+    }))
+
+    // Build folder structure
+    const folders = new Set<string>()
+    filteredNotes.forEach(n => {
+      const parts = n.path.split('/')
+      for (let i = 1; i < parts.length; i++) {
+        folders.add(parts.slice(0, i).join('/'))
+      }
+    })
+
+    // AI: Suggest reorganization
+    const aiRes = await anthropic.messages.create({
+      model: config.ai?.model || 'mimo-v2.5-pro',
+      max_tokens: 4096,
+      system: `你是一个 Obsidian 知识库整理专家。请分析用户的笔记结构并提出整理建议。
+要求：
+1. 分析当前目录结构的问题
+2. 建议更合理的分类方式
+3. 找出可能需要合并的重复笔记
+4. 找出缺少标签或元数据的笔记
+5. 建议笔记之间的交叉引用
+
+请以 JSON 格式输出：
+{
+  "currentAnalysis": "当前结构分析（100字以内）",
+  "suggestions": [
+    {
+      "type": "move" | "merge" | "tag" | "link" | "create",
+      "description": "操作描述",
+      "from": "来源路径",
+      "to": "目标路径（如适用）",
+      "reason": "原因"
+    }
+  ],
+  "proposedStructure": ["建议的目录结构"]
+}`,
+      messages: [
+        { role: 'user', content: `当前目录: ${Array.from(folders).join(', ')}\n\n笔记列表:\n${JSON.stringify(noteStructure, null, 2)}` },
+      ],
+    })
+
+    const text = aiRes.content[0].type === 'text' ? aiRes.content[0].text : '{}'
+    let aiData: any = {}
+    try { aiData = JSON.parse(text) } catch { aiData = { currentAnalysis: text.slice(0, 300), suggestions: [], proposedStructure: [] } }
+
+    res.json({
+      totalNotes: filteredNotes.length,
+      totalFolders: folders.size,
+      folders: Array.from(folders),
+      analysis: aiData.currentAnalysis || '',
+      suggestions: aiData.suggestions || [],
+      proposedStructure: aiData.proposedStructure || [],
+    })
+  } catch (err: any) {
+    console.error('Fold error:', err.message)
+    res.status(500).json({ error: '笔记整理分析失败: ' + err.message })
+  }
+})
+
+// ===== Wiki Skills: Think (思维画布) =====
+
+app.post('/api/think', async (req, res) => {
+  try {
+    if (!anthropic) { res.status(503).json({ error: 'AI 服务未配置' }); return }
+    const { topic, depth } = req.body as { topic: string; depth?: number }
+    if (!topic) { res.status(400).json({ error: '缺少 topic 参数' }); return }
+
+    const notes = getNotes()
+    const maxDepth = depth || 2
+
+    // Find related notes as context
+    const topicLower = topic.toLowerCase()
+    const related = notes
+      .filter(n => n.title.toLowerCase().includes(topicLower) || n.content.toLowerCase().includes(topicLower) || n.tags.some(t => t.toLowerCase().includes(topicLower)))
+      .slice(0, 5)
+
+    const vaultContext = related.map(n => `${n.title}: ${n.tags.join(', ')}`).join('; ')
+
+    // AI: Generate mind map
+    const aiRes = await anthropic.messages.create({
+      model: config.ai?.model || 'mimo-v2.5-pro',
+      max_tokens: 4096,
+      system: `你是一个思维导图生成专家。请为给定主题生成结构化的思维导图数据。
+要求：
+1. 中心是主题本身
+2. 第一层是主要分支（3-6个）
+3. 第二层是每个分支的子节点（每个分支2-4个）
+4. 如果主题与 408 考研相关，融入考研知识点
+5. 节点之间可以有关联关系
+
+请严格以 JSON 格式输出（不要 markdown 代码块）：
+{
+  "center": { "id": "root", "label": "主题", "color": "#E8784E" },
+  "branches": [
+    {
+      "id": "b1",
+      "label": "分支名",
+      "color": "#7A9B6D",
+      "children": [
+        { "id": "b1c1", "label": "子节点", "note": "关联笔记路径（如有）" }
+      ]
+    }
+  ],
+  "connections": [
+    { "from": "b1c1", "to": "b2c1", "label": "关联描述" }
+  ],
+  "summary": "简要概述（50字以内）"
+}`,
+      messages: [
+        { role: 'user', content: `主题: ${topic}\n展开深度: ${maxDepth}\n知识库相关笔记: ${vaultContext || '无直接相关'}` },
+      ],
+    })
+
+    const text = aiRes.content[0].type === 'text' ? aiRes.content[0].text : '{}'
+    let mindmap: any = {}
+    try { mindmap = JSON.parse(text) } catch { mindmap = { center: { id: 'root', label: topic }, branches: [], connections: [], summary: '生成失败' } }
+
+    // Optionally save as canvas JSON for Obsidian
+    if (mindmap.branches?.length > 0) {
+      const canvasNodes: any[] = []
+      const canvasEdges: any[] = []
+      let x = 400, y = 300
+
+      // Center node
+      canvasNodes.push({ id: mindmap.center?.id || 'root', x: x - 100, y: y - 30, width: 200, height: 60, text: mindmap.center?.label || topic, color: mindmap.center?.color || '#E8784E' })
+
+      // Branches
+      mindmap.branches.forEach((branch: any, bi: number) => {
+        const bx = 100 + bi * 250
+        const by = 50
+        canvasNodes.push({ id: branch.id, x: bx, y: by, width: 180, height: 50, text: branch.label, color: branch.color || '#7A9B6D' })
+        canvasEdges.push({ id: `e-root-${branch.id}`, fromNode: 'root', toNode: branch.id })
+
+        // Children
+        (branch.children || []).forEach((child: any, ci: number) => {
+          const cx = bx - 40 + ci * 100
+          const cy = by + 120
+          canvasNodes.push({ id: child.id, x: cx, y: cy, width: 160, height: 40, text: child.label })
+          canvasEdges.push({ id: `e-${branch.id}-${child.id}`, fromNode: branch.id, toNode: child.id })
+        })
+      })
+
+      mindmap.canvas = { nodes: canvasNodes, edges: canvasEdges }
+    }
+
+    res.json(mindmap)
+  } catch (err: any) {
+    console.error('Think error:', err.message)
+    res.status(500).json({ error: '思维导图生成失败: ' + err.message })
+  }
+})
+
+// ===== Tag Management =====
+
+app.get('/api/vault/tags', (_req, res) => {
+  try {
+    const tagMap = scanVaultTags(config.vaultPath)
+    const tags = Array.from(tagMap.entries())
+      .map(([name, files]) => ({ name, count: files.length, files }))
+      .sort((a, b) => b.count - a.count)
+    res.json({ tags })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.post('/api/vault/tags/rename', async (req, res) => {
+  try {
+    const { oldTag, newTag } = req.body as { oldTag: string; newTag: string }
+    if (!oldTag || !newTag) { res.status(400).json({ error: 'Missing oldTag or newTag' }); return }
+    if (oldTag === newTag) { res.status(400).json({ error: 'Tags are the same' }); return }
+
+    const backup = new VaultBackup(config.vaultPath)
+    const tagMap = scanVaultTags(config.vaultPath)
+    const files = tagMap.get(oldTag.toLowerCase()) || []
+
+    if (files.length === 0) { res.status(404).json({ error: `Tag '${oldTag}' not found` }); return }
+
+    backup.snapshot(files)
+    let updated = 0
+    for (const filePath of files) {
+      try {
+        const absPath = path.resolve(config.vaultPath, filePath)
+        const raw = fs.readFileSync(absPath, 'utf-8')
+        const newContent = renameTagInContent(raw, oldTag, newTag)
+        if (newContent !== raw) {
+          fs.writeFileSync(absPath, newContent, 'utf-8')
+          updated++
+        }
+      } catch { /* skip unreadable files */ }
+    }
+    invalidateCache()
+    res.json({ oldTag, newTag, filesUpdated: updated })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.post('/api/vault/tags/merge', async (req, res) => {
+  try {
+    const { keepTag, mergeTag } = req.body as { keepTag: string; mergeTag: string }
+    if (!keepTag || !mergeTag) { res.status(400).json({ error: 'Missing keepTag or mergeTag' }); return }
+
+    const tagMap = scanVaultTags(config.vaultPath)
+    const files = tagMap.get(mergeTag.toLowerCase()) || []
+    const keepFiles = new Set(tagMap.get(keepTag.toLowerCase()) || [])
+
+    const backup = new VaultBackup(config.vaultPath)
+    backup.snapshot(files)
+
+    let updated = 0
+    for (const filePath of files) {
+      if (keepFiles.has(filePath)) continue // already has keepTag
+      try {
+        const absPath = path.resolve(config.vaultPath, filePath)
+        const raw = fs.readFileSync(absPath, 'utf-8')
+        const newContent = renameTagInContent(raw, mergeTag, keepTag)
+        if (newContent !== raw) {
+          fs.writeFileSync(absPath, newContent, 'utf-8')
+          updated++
+        }
+      } catch { /* skip */ }
+    }
+    invalidateCache()
+    res.json({ keepTag, mergeTag, filesUpdated: updated })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.post('/api/vault/tags/delete', async (req, res) => {
+  try {
+    const { tag } = req.body as { tag: string }
+    if (!tag) { res.status(400).json({ error: 'Missing tag' }); return }
+
+    const tagMap = scanVaultTags(config.vaultPath)
+    const files = tagMap.get(tag.toLowerCase()) || []
+
+    const backup = new VaultBackup(config.vaultPath)
+    backup.snapshot(files)
+
+    let updated = 0
+    for (const filePath of files) {
+      try {
+        const absPath = path.resolve(config.vaultPath, filePath)
+        const raw = fs.readFileSync(absPath, 'utf-8')
+        const newContent = removeTagFromContent(raw, tag)
+        if (newContent !== raw) {
+          fs.writeFileSync(absPath, newContent, 'utf-8')
+          updated++
+        }
+      } catch { /* skip */ }
+    }
+    invalidateCache()
+    res.json({ tag, filesUpdated: updated })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ===== Duplicate Detection & Merge =====
+
+app.get('/api/vault/duplicates', (_req, res) => {
+  try {
+    const pairs = detectDuplicates(config.vaultPath)
+    res.json({ pairs })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.post('/api/vault/duplicates/merge', async (req, res) => {
+  try {
+    const { pairs: mergePairs } = req.body as {
+      pairs: Array<{ keepFile: string; mergeFile: string; mode: string }>
+    }
+    if (!mergePairs || mergePairs.length === 0) {
+      res.status(400).json({ error: 'No pairs provided' }); return
+    }
+
+    const allFiles = mergePairs.flatMap(p => [p.keepFile, p.mergeFile])
+    const backup = new VaultBackup(config.vaultPath)
+    backup.snapshot([...new Set(allFiles)])
+
+    const results: any[] = []
+    for (const pair of mergePairs) {
+      try {
+        const result = mergeNotes(pair.keepFile, pair.mergeFile, config.vaultPath, (pair.mode || 'auto') as 'auto' | 'ai')
+        results.push(result)
+      } catch (err: any) {
+        results.push({
+          keepFile: pair.keepFile, mergedFile: pair.mergeFile,
+          success: false, appendedChars: 0, error: err.message,
+        })
+      }
+    }
+    invalidateCache()
+    res.json({ results })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ===== Fold Apply =====
+
+app.post('/api/fold/apply', async (req, res) => {
+  try {
+    const { suggestions } = req.body as { suggestions: any[] }
+    if (!suggestions || suggestions.length === 0) {
+      res.status(400).json({ error: 'No suggestions provided' }); return
+    }
+
+    const filesToBackup = new Set<string>()
+    for (const s of suggestions) {
+      if (s.from) filesToBackup.add(s.from)
+      if (s.to) filesToBackup.add(s.to)
+    }
+
+    const backup = new VaultBackup(config.vaultPath)
+    backup.snapshot([...filesToBackup])
+
+    const result = await executeSuggestionsBatch(suggestions, config.vaultPath)
+    invalidateCache()
+    res.json(result)
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ===== Reorganize =====
+
+app.post('/api/vault/reorganize', async (req, res) => {
+  try {
+    const { mode, targetFolder } = req.body as { mode: 'preview' | 'execute'; targetFolder?: string }
+
+    if (!anthropic) { res.status(503).json({ error: 'AI 服务未配置' }); return }
+
+    const notes = getNotes()
+    const filtered = targetFolder
+      ? notes.filter(n => n.path.toLowerCase().startsWith(targetFolder.toLowerCase()))
+      : notes
+
+    if (filtered.length === 0) { res.status(404).json({ error: '未找到笔记' }); return }
+
+    const folders = new Set<string>()
+    filtered.forEach(n => {
+      const parts = n.path.split('/')
+      for (let i = 1; i < parts.length; i++) folders.add(parts.slice(0, i).join('/'))
+    })
+
+    const noteInfo = filtered.slice(0, 60).map(n => ({
+      path: n.path, title: n.title, tags: n.tags, folder: n.path.split('/').slice(0, -1).join('/') || '(root)',
+    }))
+
+    const aiRes = await anthropic.messages.create({
+      model: config.ai?.model || 'mimo-v2.5-pro',
+      max_tokens: 4096,
+      system: `你是一个知识库整理专家。请分析笔记并建议更合理的文件夹分类。
+只返回 move 类型的建议。请严格以 JSON 格式输出（不要 markdown 代码块）：
+{"moves": [{"file": "文件路径", "proposedFolder": "建议目录", "reason": "原因"}]}`,
+      messages: [{
+        role: 'user',
+        content: `当前目录: ${Array.from(folders).join(', ')}\n\n笔记:\n${JSON.stringify(noteInfo, null, 2)}`,
+      }],
+    })
+
+    const text = aiRes.content[0].type === 'text' ? aiRes.content[0].text : '{}'
+    let aiData: any = {}
+    try { aiData = JSON.parse(text) } catch { aiData = { moves: [] } }
+
+    const moves = (aiData.moves || []).map((m: any) => ({
+      file: m.file,
+      currentFolder: m.file.split('/').slice(0, -1).join('/') || '(root)',
+      proposedFolder: m.proposedFolder,
+      reason: m.reason,
+    }))
+
+    if (mode === 'execute' && moves.length > 0) {
+      const suggestions = moves.map((m: any) => ({
+        type: 'move' as const,
+        description: `移动 ${m.file} 到 ${m.proposedFolder}`,
+        from: m.file,
+        to: `${m.proposedFolder}/${m.file.split('/').pop()}`,
+        reason: m.reason,
+      }))
+      const backup = new VaultBackup(config.vaultPath)
+      backup.snapshot(moves.map((m: any) => m.file))
+      const execResults = await executeSuggestionsBatch(suggestions, config.vaultPath)
+      invalidateCache()
+      res.json({ proposedMoves: moves, executionResults: execResults })
+    } else {
+      res.json({ proposedMoves: moves })
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ===== Rollback =====
+
+app.post('/api/vault/rollback', async (req, res) => {
+  try {
+    const { backupPath } = req.body as { backupPath: string }
+    if (!backupPath) { res.status(400).json({ error: 'Missing backupPath' }); return }
+
+    await rollbackBackup(backupPath)
+    invalidateCache()
+    res.json({ ok: true, restored: 1 })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ===== Schedule =====
+
+app.get('/api/schedule/status', (_req, res) => {
+  try {
+    const config = loadScheduleConfig()
+    const status = scheduler.getStatus()
+    res.json({ ...config, schedulerStatus: status.running ? 'running' : 'idle', ...status })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.post('/api/schedule/config', (req, res) => {
+  try {
+    const patch = req.body as Partial<{
+      enabled: boolean; intervalMinutes: number;
+      autoApplySafe: boolean; safeCategories: string[]
+    }>
+    scheduler.updateConfig(patch)
+    res.json({ ok: true })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.post('/api/schedule/run-now', async (_req, res) => {
+  try {
+    const result = await scheduler.executeRun()
+    invalidateCache()
+    res.json({ ok: true, ...result })
   } catch (err: any) {
     res.status(500).json({ error: err.message })
   }
