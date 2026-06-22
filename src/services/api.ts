@@ -487,6 +487,10 @@ export const api = {
   fsExists: (dirPath: string) =>
     fetchJSON<{ exists: boolean; isDirectory?: boolean }>(`/fs/exists?path=${encodeURIComponent(dirPath)}`),
 
+  // AI Models
+  fetchAIModels: () =>
+    fetchJSON<{ models: { id: string; name: string }[]; current: string }>('/ai/models'),
+
   // Daily Error Log
   addErrorLog: (data: { notePath?: string; question: string; userAnswer?: string; correctAnswer: string; explanation?: string }) =>
     postJSON<{ ok: boolean; path: string; totalQuestions: number }>('/study/error-log', data),

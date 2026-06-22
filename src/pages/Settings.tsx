@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api, type AppSettings } from '../services/api'
-import { Save, RefreshCw, CheckCircle, AlertCircle, Key, FolderOpen, Globe, Cpu, Eye, EyeOff, Folder, AlertTriangle, Zap, ChevronRight, ArrowUp, Loader2, X, HardDrive } from 'lucide-react'
+import { Save, RefreshCw, CheckCircle, AlertCircle, Key, FolderOpen, Globe, Cpu, Eye, EyeOff, Folder, AlertTriangle, Zap, ChevronRight, ChevronDown, ArrowUp, Loader2, X, HardDrive, Check } from 'lucide-react'
 
 declare global {
   interface Window {
@@ -25,6 +25,12 @@ export default function Settings() {
 
   // Folder picker state
   const [showPicker, setShowPicker] = useState(false)
+
+  // Model selector state
+  const [availableModels, setAvailableModels] = useState<{ id: string; name: string }[]>([])
+  const [fetchingModels, setFetchingModels] = useState(false)
+  const [showModelList, setShowModelList] = useState(false)
+  const [modelFetchError, setModelFetchError] = useState('')
 
   // Form state
   const [vaultPath, setVaultPath] = useState('')
@@ -62,6 +68,24 @@ export default function Settings() {
   function handlePickerSelect(folderPath: string) {
     setVaultPath(folderPath)
     setShowPicker(false)
+  }
+
+  async function handleFetchModels() {
+    setFetchingModels(true)
+    setModelFetchError('')
+    setShowModelList(true)
+    try {
+      const data = await api.fetchAIModels()
+      setAvailableModels(data.models || [])
+      if (data.models.length === 0) {
+        setModelFetchError('未找到可用模型')
+      }
+    } catch (err: any) {
+      setModelFetchError(err.message || '获取失败')
+      setAvailableModels([])
+    } finally {
+      setFetchingModels(false)
+    }
   }
 
   async function handleSave() {
@@ -286,18 +310,66 @@ export default function Settings() {
           <div>
             <label className="block text-xs text-warm-500 mb-1.5">模型名称</label>
             <div className="flex items-center gap-2">
-              <Key className="w-3.5 h-3.5 text-warm-400" />
-              <input
-                type="text"
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                placeholder="claude-3-5-sonnet-20241022"
-                className="flex-1 px-3 py-2 rounded-lg bg-cream-100 border border-cream-300 text-warm-700 text-sm placeholder:text-warm-400 focus:outline-none focus:border-accent-orange/40 focus:ring-1 focus:ring-accent-orange/15"
-              />
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={model}
+                  onChange={(e) => { setModel(e.target.value); setShowModelList(false) }}
+                  onFocus={() => availableModels.length > 0 && setShowModelList(true)}
+                  placeholder="选择或输入模型名称"
+                  className="w-full px-3 py-2 pr-8 rounded-lg bg-cream-100 border border-cream-300 text-warm-700 text-sm placeholder:text-warm-400 focus:outline-none focus:border-accent-orange/40 focus:ring-1 focus:ring-accent-orange/15"
+                />
+                {model && (
+                  <button
+                    onClick={() => { setModel(''); setShowModelList(false) }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-warm-300 hover:text-warm-500"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+              <button
+                onClick={handleFetchModels}
+                disabled={fetchingModels}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-cream-100 border border-cream-300 text-warm-600 text-sm hover:text-warm-800 hover:border-cream-200 transition-colors disabled:opacity-50 shrink-0"
+              >
+                {fetchingModels ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                拉取模型
+              </button>
             </div>
-            <p className="text-[11px] text-warm-400 mt-1">
-              例如: claude-3-5-sonnet-20241022, mimo-v2.5-pro
-            </p>
+
+            {/* Model dropdown */}
+            {showModelList && availableModels.length > 0 && (
+              <div className="mt-1.5 border border-cream-200 rounded-lg bg-surface max-h-48 overflow-auto">
+                {availableModels.map(m => (
+                  <button
+                    key={m.id}
+                    onClick={() => { setModel(m.id); setShowModelList(false) }}
+                    className={`w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-cream-100 transition-colors ${
+                      model === m.id ? 'text-accent-orange' : 'text-warm-700'
+                    }`}
+                  >
+                    {model === m.id && <Check className="w-3.5 h-3.5 text-accent-orange shrink-0" />}
+                    <span className="truncate flex-1">{m.name || m.id}</span>
+                    {m.name !== m.id && <span className="text-[10px] text-warm-400 shrink-0">{m.id}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {showModelList && fetchingModels && (
+              <p className="text-[11px] text-warm-400 mt-1 flex items-center gap-1">
+                <Loader2 className="w-3 h-3 animate-spin" /> 正在获取可用模型...
+              </p>
+            )}
+            {showModelList && modelFetchError && (
+              <p className="text-[11px] text-red-400 mt-1">{modelFetchError}</p>
+            )}
+            {!showModelList && (
+              <p className="text-[11px] text-warm-400 mt-1">
+                点击「拉取模型」自动获取可选模型列表，或直接输入模型名称
+              </p>
+            )}
           </div>
         </div>
       </section>

@@ -1122,6 +1122,54 @@ app.get('/api/fs/exists', async (req, res) => {
   }
 })
 
+// ===== AI Models (auto-fetch available models) =====
+
+app.get('/api/ai/models', async (req, res) => {
+  if (!config.ai?.apiKey || !config.ai?.baseURL) {
+    res.status(400).json({ error: 'AI 未配置，请先设置 API Key 和 Base URL' })
+    return
+  }
+  try {
+    const baseURL = config.ai.baseURL.replace(/\/+$/, '')
+    const modelsURL = `${baseURL}/v1/models`
+    const resp = await fetch(modelsURL, {
+      headers: {
+        'Authorization': `Bearer ${config.ai.apiKey}`,
+        'x-api-key': config.ai.apiKey,
+      },
+    })
+    if (!resp.ok) {
+      // Try without /v1 prefix (some providers use /models directly)
+      const altURL = `${baseURL}/models`
+      const altResp = await fetch(altURL, {
+        headers: {
+          'Authorization': `Bearer ${config.ai.apiKey}`,
+          'x-api-key': config.ai.apiKey,
+        },
+      })
+      if (!altResp.ok) {
+        res.status(resp.status).json({ error: `API 返回 ${resp.status}: 无法获取模型列表` })
+        return
+      }
+      const altData = await altResp.json()
+      const models = (altData.data || altData.models || altData || []).map((m: any) => ({
+        id: m.id || m.model_id || m.name,
+        name: m.name || m.display_name || m.id,
+      })).filter((m: any) => m.id)
+      res.json({ models, current: config.ai.model || '' })
+      return
+    }
+    const data = await resp.json()
+    const models = (data.data || data.models || data || []).map((m: any) => ({
+      id: m.id || m.model_id || m.name,
+      name: m.name || m.display_name || m.id,
+    })).filter((m: any) => m.id)
+    res.json({ models, current: config.ai.model || '' })
+  } catch (err: any) {
+    res.status(500).json({ error: `获取模型列表失败: ${err.message}` })
+  }
+})
+
 // ===== Vault Watcher & SSE (Bidirectional Sync) =====
 
 const sseClients: Set<express.Response> = new Set()
