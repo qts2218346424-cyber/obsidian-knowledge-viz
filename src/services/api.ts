@@ -478,6 +478,15 @@ export const api = {
   updateSettings: (settings: Partial<AppSettings> & { ai?: { apiKey: string; baseURL: string; model?: string } }) =>
     putJSON<{ ok: boolean; vaultPath: string; aiConfigured: boolean }>('/settings', settings),
 
+  // Filesystem browse (for folder picker)
+  fsBrowse: (dirPath?: string) => {
+    const url = dirPath ? `/fs/browse?path=${encodeURIComponent(dirPath)}` : '/fs/browse'
+    return fetchJSON<{ current?: string; parent?: string | null; entries: { name: string; path: string }[] }>(url)
+  },
+
+  fsExists: (dirPath: string) =>
+    fetchJSON<{ exists: boolean; isDirectory?: boolean }>(`/fs/exists?path=${encodeURIComponent(dirPath)}`),
+
   // Daily Error Log
   addErrorLog: (data: { notePath?: string; question: string; userAnswer?: string; correctAnswer: string; explanation?: string }) =>
     postJSON<{ ok: boolean; path: string; totalQuestions: number }>('/study/error-log', data),

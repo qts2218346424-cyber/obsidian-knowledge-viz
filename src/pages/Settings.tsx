@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { api, type AppSettings } from '../services/api'
-import { Save, RefreshCw, CheckCircle, AlertCircle, Key, FolderOpen, Globe, Cpu, Eye, EyeOff, Folder, AlertTriangle, Zap } from 'lucide-react'
+import { Save, RefreshCw, CheckCircle, AlertCircle, Key, FolderOpen, Globe, Cpu, Eye, EyeOff, Folder, AlertTriangle, Zap, ChevronRight, ArrowUp, Loader2, X, HardDrive } from 'lucide-react'
 
 declare global {
   interface Window {
@@ -18,11 +18,13 @@ export default function Settings() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [testing, setTesting] = useState(false)
   const [showApiKey, setShowApiKey] = useState(false)
-  const [pickingFolder, setPickingFolder] = useState(false)
 
   // Track original vaultPath for restart hint
   const [originalVaultPath, setOriginalVaultPath] = useState('')
   const [showRestartHint, setShowRestartHint] = useState(false)
+
+  // Folder picker state
+  const [showPicker, setShowPicker] = useState(false)
 
   // Form state
   const [vaultPath, setVaultPath] = useState('')
@@ -53,19 +55,13 @@ export default function Settings() {
     }
   }
 
-  async function handleSelectFolder() {
-    if (!window.electronAPI?.selectFolder) return
-    setPickingFolder(true)
-    try {
-      const folder = await window.electronAPI.selectFolder()
-      if (folder) {
-        setVaultPath(folder)
-      }
-    } catch {
-      // user cancelled
-    } finally {
-      setPickingFolder(false)
-    }
+  function handleOpenPicker() {
+    setShowPicker(true)
+  }
+
+  function handlePickerSelect(folderPath: string) {
+    setVaultPath(folderPath)
+    setShowPicker(false)
   }
 
   async function handleSave() {
@@ -106,8 +102,6 @@ export default function Settings() {
       setTesting(false)
     }
   }
-
-  const hasElectron = !!window.electronAPI?.selectFolder
 
   // Configuration status checks
   const vaultConfigured = !!settings?.vaultPath && settings.vaultPath.length > 0
@@ -210,17 +204,14 @@ export default function Settings() {
                 placeholder="例如: E:\我的知识库"
                 className="flex-1 px-3 py-2 rounded-lg bg-cream-100 border border-cream-300 text-warm-700 text-sm placeholder:text-warm-400 focus:outline-none focus:border-accent-orange/40 focus:ring-1 focus:ring-accent-orange/15"
               />
-              {hasElectron && (
-                <button
-                  onClick={handleSelectFolder}
-                  disabled={pickingFolder}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-cream-100 border border-cream-300 text-warm-600 text-sm hover:text-warm-800 hover:border-cream-200 transition-colors disabled:opacity-50"
-                  title="浏览文件夹"
-                >
-                  <Folder className="w-4 h-4" />
-                  浏览
-                </button>
-              )}
+              <button
+                onClick={handleOpenPicker}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-cream-100 border border-cream-300 text-warm-600 text-sm hover:text-warm-800 hover:border-cream-200 transition-colors"
+                title="浏览文件夹"
+              >
+                <Folder className="w-4 h-4" />
+                浏览
+              </button>
             </div>
             <p className="text-[11px] text-warm-400 mt-1">你的 Obsidian 笔记所在的文件夹路径</p>
           </div>
@@ -329,6 +320,163 @@ export default function Settings() {
           <Save className="w-4 h-4" />
           {saving ? '保存中...' : '保存设置'}
         </button>
+      </div>
+
+      {/* Folder Picker Modal */}
+      {showPicker && (
+        <FolderPickerModal
+          initialPath={vaultPath}
+          onSelect={handlePickerSelect}
+          onClose={() => setShowPicker(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+// ─── Folder Picker Modal ──────────────────────────────────────────────────────
+
+interface FsEntry {
+  name: string
+  path: string
+}
+
+function FolderPickerModal({
+  initialPath,
+  onSelect,
+  onClose,
+}: {
+  initialPath: string
+  onSelect: (path: string) => void
+  onClose: () => void
+}) {
+  const [currentPath, setCurrentPath] = useState<string | undefined>(undefined)
+  const [parent, setParent] = useState<string | null>(null)
+  const [entries, setEntries] = useState<FsEntry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  const browse = useCallback(async (dirPath?: string) => {
+    setLoading(true)
+    setError('')
+    try {
+      const data = await api.fsBrowse(dirPath)
+      setCurrentPath(data.current || undefined)
+      setParent(data.parent || null)
+      setEntries(data.entries || [])
+    } catch (err: any) {
+      setError(err.message || '浏览失败')
+      setEntries([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    // Start from the initial path's parent directory, or root
+    const startDir = initialPath || undefined
+    if (startDir) {
+      browse(startDir)
+    } else {
+      browse()
+    }
+  }, [browse, initialPath])
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="bg-surface border border-cream-200 rounded-2xl w-[480px] max-h-[520px] flex flex-col shadow-xl">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-cream-200">
+          <div className="flex items-center gap-2">
+            <Folder className="w-4 h-4 text-accent-orange" />
+            <span className="text-sm font-medium text-warm-800">选择知识库文件夹</span>
+          </div>
+          <button onClick={onClose} className="text-warm-400 hover:text-warm-600 transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Current path */}
+        {currentPath && (
+          <div className="flex items-center gap-2 px-5 py-2.5 bg-cream-100/60 border-b border-cream-200">
+            {parent && (
+              <button
+                onClick={() => browse(parent)}
+                className="flex items-center gap-1 text-xs text-accent-orange hover:text-accent-orange/80 transition-colors"
+              >
+                <ArrowUp className="w-3 h-3" />
+                上级
+              </button>
+            )}
+            <span className="text-xs text-warm-400 truncate flex-1" title={currentPath}>
+              {currentPath}
+            </span>
+          </div>
+        )}
+
+        {/* File list */}
+        <div className="flex-1 overflow-auto px-2 py-2">
+          {loading && (
+            <div className="flex items-center gap-2 text-sm text-warm-500 py-8 justify-center">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              加载中...
+            </div>
+          )}
+
+          {error && (
+            <div className="flex items-center gap-2 text-sm text-red-400 px-3 py-2">
+              <AlertCircle className="w-4 h-4" />
+              {error}
+            </div>
+          )}
+
+          {!loading && !error && entries.length === 0 && (
+            <div className="text-center text-warm-400 text-sm py-8">
+              此目录下没有子文件夹
+            </div>
+          )}
+
+          {!loading && entries.map(entry => {
+            const isDrive = /^[A-Z]:\\$/.test(entry.path)
+            return (
+              <button
+                key={entry.path}
+                onClick={() => browse(entry.path)}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-cream-100 transition-colors text-left group"
+              >
+                {isDrive ? (
+                  <HardDrive className="w-4 h-4 text-warm-400 shrink-0" />
+                ) : (
+                  <FolderOpen className="w-4 h-4 text-accent-orange/60 shrink-0" />
+                )}
+                <span className="text-sm text-warm-700 flex-1 truncate">{entry.name}</span>
+                <ChevronRight className="w-3.5 h-3.5 text-warm-300 group-hover:text-warm-500 transition-colors" />
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between px-5 py-3.5 border-t border-cream-200">
+          <div className="text-[11px] text-warm-400 truncate flex-1 mr-3">
+            {currentPath ? `当前: ${currentPath}` : '请选择一个磁盘或文件夹'}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onClose}
+              className="px-4 py-1.5 rounded-lg text-xs text-warm-500 hover:text-warm-700 transition-colors"
+            >
+              取消
+            </button>
+            <button
+              onClick={() => currentPath && onSelect(currentPath)}
+              disabled={!currentPath}
+              className="px-4 py-1.5 rounded-lg bg-accent-orange text-white text-xs font-medium hover:bg-accent-orange/85 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              选择此文件夹
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )

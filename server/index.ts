@@ -1066,6 +1066,62 @@ app.put('/api/settings', (req, res) => {
   }
 })
 
+// ===== Filesystem Browse (for folder picker) =====
+
+app.get('/api/fs/browse', async (req, res) => {
+  try {
+    const targetPath = req.query.path as string | undefined
+    const isWin = process.platform === 'win32'
+
+    if (!targetPath) {
+      // List drives on Windows, root on Unix
+      if (isWin) {
+        const drives: string[] = []
+        for (let code = 65; code <= 90; code++) {
+          const letter = String.fromCharCode(code)
+          const drive = `${letter}:\\`
+          try {
+            fs.accessSync(drive)
+            drives.push(drive)
+          } catch { /* drive not available */ }
+        }
+        res.json({ entries: drives.map(d => ({ name: d, path: d })) })
+      } else {
+        res.json({ entries: [{ name: '/', path: '/' }] })
+      }
+      return
+    }
+
+    // List subdirectories of targetPath
+    const entries = fs.readdirSync(targetPath, { withFileTypes: true })
+      .filter(d => d.isDirectory() && !d.name.startsWith('.'))
+      .map(d => {
+        const fullPath = path.join(targetPath, d.name)
+        return { name: d.name, path: fullPath }
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'))
+
+    // Include parent directory for navigation
+    const parent = path.dirname(targetPath)
+    const canGoUp = parent !== targetPath
+
+    res.json({ current: targetPath, parent: canGoUp ? parent : null, entries })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.get('/api/fs/exists', async (req, res) => {
+  const targetPath = req.query.path as string
+  if (!targetPath) { res.json({ exists: false }); return }
+  try {
+    const stat = fs.statSync(targetPath)
+    res.json({ exists: true, isDirectory: stat.isDirectory() })
+  } catch {
+    res.json({ exists: false })
+  }
+})
+
 // ===== Vault Watcher & SSE (Bidirectional Sync) =====
 
 const sseClients: Set<express.Response> = new Set()
