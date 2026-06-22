@@ -6,6 +6,7 @@ import WarmButton from '../components/ui/WarmButton'
 
 type TimerMode = 'focus' | 'shortBreak' | 'longBreak'
 type TimerStatus = 'idle' | 'running' | 'paused'
+type TimerType = 'countdown' | 'stopwatch'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -35,9 +36,13 @@ const MODE_COLORS: Record<TimerMode, { stroke: string; bg: string; text: string;
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-function formatTime(seconds: number): string {
-  const m = Math.floor(seconds / 60)
+function formatTime(seconds: number, showHours = false): string {
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
   const s = seconds % 60
+  if (showHours && h > 0) {
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  }
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
@@ -80,6 +85,8 @@ export default function Pomodoro() {
   const [pomodoroCount, setPomodoroCount] = useState(0)
   const [totalFocusMinutes, setTotalFocusMinutes] = useState(0)
   const [showSettings, setShowSettings] = useState(false)
+  const [timerType, setTimerType] = useState<TimerType>('countdown')
+  const [elapsed, setElapsed] = useState(0)
   const intervalRef = useRef<number | null>(null)
   const startTimeRef = useRef<number>(0)
 
@@ -89,20 +96,31 @@ export default function Pomodoro() {
       ? shortBreakDuration * 60
       : longBreakDuration * 60
 
-  const progress = totalDuration > 0 ? (totalDuration - timeLeft) / totalDuration : 0
+  const progress = timerType === 'stopwatch'
+    ? (totalDuration > 0 ? Math.min(elapsed / totalDuration, 1) : 0)
+    : (totalDuration > 0 ? (totalDuration - timeLeft) / totalDuration : 0)
 
   // ── Timer logic ────────────────────────────────────────────────────────────
 
   const tick = useCallback(() => {
-    setTimeLeft(prev => {
-      if (prev <= 1) {
-        // Timer finished
-        playNotificationSound()
-        return 0
-      }
-      return prev - 1
-    })
-  }, [])
+    if (timerType === 'stopwatch') {
+      setElapsed(prev => {
+        const next = prev + 1
+        if (mode === 'focus' && next === totalDuration) {
+          playNotificationSound()
+        }
+        return next
+      })
+    } else {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          playNotificationSound()
+          return 0
+        }
+        return prev - 1
+      })
+    }
+  }, [timerType, mode, totalDuration])
 
   useEffect(() => {
     if (status === 'running') {
@@ -120,6 +138,16 @@ export default function Pomodoro() {
 
   // Handle timer completion
   useEffect(() => {
+    if (timerType === 'stopwatch') {
+      // Stopwatch: count pomodoro when elapsed reaches focus duration, then keep going
+      if (elapsed > 0 && elapsed === totalDuration && status === 'running' && mode === 'focus') {
+        const newCount = pomodoroCount + 1
+        setPomodoroCount(newCount)
+        setTotalFocusMinutes(prev => prev + focusDuration)
+      }
+      return
+    }
+    // Countdown: handle as before
     if (timeLeft === 0 && status === 'running') {
       setStatus('idle')
       if (mode === 'focus') {
@@ -137,7 +165,7 @@ export default function Pomodoro() {
         switchMode('focus')
       }
     }
-  }, [timeLeft, status, mode, pomodoroCount, focusDuration])
+  }, [timeLeft, elapsed, status, mode, pomodoroCount, focusDuration, timerType, totalDuration])
 
   const switchMode = (newMode: TimerMode) => {
     setMode(newMode)
@@ -151,7 +179,7 @@ export default function Pomodoro() {
   }
 
   const start = () => {
-    if (timeLeft === 0) {
+    if (timerType === 'countdown' && timeLeft === 0) {
       setTimeLeft(totalDuration)
     }
     startTimeRef.current = Date.now()
@@ -162,7 +190,23 @@ export default function Pomodoro() {
 
   const reset = () => {
     setStatus('idle')
-    setTimeLeft(totalDuration)
+    if (timerType === 'stopwatch') {
+      setElapsed(0)
+    } else {
+      setTimeLeft(totalDuration)
+    }
+  }
+
+  const switchTimerType = (type: TimerType) => {
+    if (status === 'running') return // Don't switch while running
+    setTimerType(type)
+    if (type === 'stopwatch') {
+      setElapsed(0)
+      setStatus('idle')
+    } else {
+      setTimeLeft(totalDuration)
+      setStatus('idle')
+    }
   }
 
   const toggleTimer = () => {
@@ -197,7 +241,7 @@ export default function Pomodoro() {
           <button
             key={m}
             onClick={() => switchMode(m)}
-            disabled={status === 'running'}
+            disabled={status === 'running' || timerType === 'stopwatch'}
             className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
               mode === m
                 ? `${MODE_COLORS[m].bg} ${MODE_COLORS[m].text} border border-current/20`
@@ -207,6 +251,34 @@ export default function Pomodoro() {
             {MODE_EMOJIS[m]} {MODE_LABELS[m]}
           </button>
         ))}
+      </div>
+
+      {/* Timer type toggle */}
+      <div className="flex justify-center">
+        <div className="inline-flex bg-cream-100 rounded-xl p-1 border border-cream-200">
+          <button
+            onClick={() => switchTimerType('countdown')}
+            disabled={status === 'running'}
+            className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              timerType === 'countdown'
+                ? 'bg-surface text-warm-800 shadow-sm'
+                : 'text-warm-400 hover:text-warm-600'
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
+          >
+            ⏱ 倒计时
+          </button>
+          <button
+            onClick={() => switchTimerType('stopwatch')}
+            disabled={status === 'running'}
+            className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              timerType === 'stopwatch'
+                ? 'bg-surface text-warm-800 shadow-sm'
+                : 'text-warm-400 hover:text-warm-600'
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
+          >
+            ⏲ 正计时
+          </button>
+        </div>
       </div>
 
       {/* Timer circle */}
@@ -243,11 +315,20 @@ export default function Pomodoro() {
               <div className={`text-5xl font-bold text-warm-800 tracking-wider font-mono ${
                 status === 'running' ? 'animate-pulse' : ''
               }`}>
-                {formatTime(timeLeft)}
+                {timerType === 'stopwatch'
+                  ? formatTime(elapsed, true)
+                  : formatTime(timeLeft)
+                }
               </div>
               <div className={`text-xs mt-2 ${colors.text} font-medium`}>
-                {status === 'running' ? '点击暂停' : status === 'paused' ? '点击继续' : '点击开始'}
+                {timerType === 'stopwatch'
+                  ? (status === 'running' ? '点击暂停' : status === 'paused' ? '点击继续' : '点击开始')
+                  : (status === 'running' ? '点击暂停' : status === 'paused' ? '点击继续' : '点击开始')
+                }
               </div>
+              {timerType === 'stopwatch' && status === 'running' && (
+                <div className="text-[10px] text-warm-400 mt-1">已专注 {formatTime(elapsed, true)}</div>
+              )}
             </button>
           </div>
         </div>
@@ -268,6 +349,7 @@ export default function Pomodoro() {
           size="sm"
           onClick={() => setShowSettings(s => !s)}
           className="flex items-center gap-1.5"
+          style={timerType === 'stopwatch' ? { opacity: 0.4, pointerEvents: 'none' } : {}}
         >
           {showSettings ? '收起设置' : '时长设置'}
         </WarmButton>

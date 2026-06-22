@@ -933,10 +933,11 @@ app.get('/api/study/review-due', (_req, res) => {
   try {
     const notes = getNotes()
     const now = Date.now()
+    // Fixed: reversed order so longest-overdue is checked first
     const intervals = [
-      { days: 3, label: '3天未复习', priority: 'high' as const },
-      { days: 7, label: '7天未复习', priority: 'medium' as const },
       { days: 14, label: '14天未复习', priority: 'low' as const },
+      { days: 7, label: '7天未复习', priority: 'medium' as const },
+      { days: 3, label: '3天未复习', priority: 'high' as const },
     ]
 
     const subjectMap: Record<string, string[]> = {
@@ -946,6 +947,32 @@ app.get('/api/study/review-due', (_req, res) => {
       '操作系统': ['操作系统', 'os', 'operating-system', '进程', '线程', '内存', '文件系统'],
     }
 
+    // Skip template / metadata / index / trivial notes
+    const shouldSkip = (note: VaultNote) => {
+      const pathLower = note.path.toLowerCase()
+      const fileName = pathLower.split('/').pop() || ''
+
+      // Skip _index files (folder indexes)
+      if (fileName.includes('_index')) return true
+
+      // Skip metadata / template / config directories
+      const skipDirs = ['元数据', '模板', 'template', 'meta', 'config', '.obsidian']
+      if (skipDirs.some(d => pathLower.includes(`/${d}/`))) return true
+
+      // Skip known meta files
+      const skipFiles = ['claude.md', 'hot.md', 'overview.md', 'log.md', 'readme.md', 'todo.md']
+      if (skipFiles.some(f => fileName === f)) return true
+
+      // Skip very short notes (< 80 words = likely templates or stubs)
+      if (note.wordCount < 80) return true
+
+      // Skip template/meta tags
+      const tagsLower = note.tags.map(t => t.toLowerCase())
+      if (tagsLower.some(t => t.includes('template') || t.includes('模板') || t === 'meta' || t === '元数据')) return true
+
+      return false
+    }
+
     const subjectNotes: Record<string, { due: any[]; total: number; totalWords: number; lastModified: string }> = {}
     for (const subject of Object.keys(subjectMap)) {
       subjectNotes[subject] = { due: [], total: 0, totalWords: 0, lastModified: '' }
@@ -953,6 +980,8 @@ app.get('/api/study/review-due', (_req, res) => {
     subjectNotes['其他'] = { due: [], total: 0, totalWords: 0, lastModified: '' }
 
     for (const note of notes) {
+      if (shouldSkip(note)) continue
+
       const modTime = new Date(note.modified).getTime()
       const daysSince = Math.floor((now - modTime) / (1000 * 60 * 60 * 24))
       const pathLower = note.path.toLowerCase()

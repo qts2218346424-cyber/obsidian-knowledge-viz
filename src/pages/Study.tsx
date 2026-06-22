@@ -2,13 +2,13 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from 'recharts'
 import {
-  GraduationCap, BookOpen, Clock, RefreshCw, Loader2,
-  ChevronLeft, ChevronRight, RotateCcw, AlertTriangle, TrendingUp,
-  XCircle, Check, ThumbsUp, ThumbsDown, Minus
+  GraduationCap, Clock, RefreshCw, Loader2,
+  ChevronLeft, ChevronRight, AlertTriangle, TrendingUp,
+  XCircle, Check, ThumbsUp, ThumbsDown, Minus, Calendar, FileText, Sparkles
 } from 'lucide-react'
-import { api, type Flashcard, type FlashcardResult, type ReviewDueData, type SubjectStats, type FileListItem, type DailyReviewData } from '../services/api'
+import { api, type ReviewDueData, type SubjectStats, type FileListItem, type DailyReviewData } from '../services/api'
 
-type Tab = 'flashcards' | 'review' | 'progress' | 'errors'
+type Tab = 'updates' | 'review' | 'progress' | 'errors'
 
 const subjectColors: Record<string, string> = {
   '数据结构': '#8b5cf6',
@@ -19,14 +19,14 @@ const subjectColors: Record<string, string> = {
 }
 
 export default function Study() {
-  const [tab, setTab] = useState<Tab>('flashcards')
+  const [tab, setTab] = useState<Tab>('updates')
 
   return (
     <div className="h-full flex flex-col gap-4">
       {/* Tab bar */}
       <div className="flex items-center gap-2 border-b border-cream-200 pb-3">
         {[
-          { key: 'flashcards' as Tab, label: '复习卡片', icon: BookOpen },
+          { key: 'updates' as Tab, label: '最近更新', icon: Calendar },
           { key: 'errors' as Tab, label: '每日错题', icon: XCircle },
           { key: 'review' as Tab, label: '复习提醒', icon: Clock },
           { key: 'progress' as Tab, label: '科目进度', icon: TrendingUp },
@@ -52,7 +52,7 @@ export default function Study() {
 
       {/* Tab content */}
       <div className="flex-1 overflow-auto">
-        {tab === 'flashcards' && <FlashcardTab />}
+        {tab === 'updates' && <RecentUpdatesTab />}
         {tab === 'errors' && <DailyErrorTab />}
         {tab === 'review' && <ReviewTab />}
         {tab === 'progress' && <ProgressTab />}
@@ -61,198 +61,146 @@ export default function Study() {
   )
 }
 
-// ─── Flashcard Tab ────────────────────────────────────────────────────────────
+// ─── Recent Updates Tab ─────────────────────────────────────────────────────────
 
-function FlashcardTab() {
+function RecentUpdatesTab() {
   const navigate = useNavigate()
   const [files, setFiles] = useState<FileListItem[]>([])
-  const [selectedFile, setSelectedFile] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState<FlashcardResult | null>(null)
-  const [cardIndex, setCardIndex] = useState(0)
-  const [flipped, setFlipped] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [newCount, setNewCount] = useState(0)
+  const [filter, setFilter] = useState<'all' | 'today' | 'week'>('today')
 
   useEffect(() => {
-    api.getFiles().then(setFiles).catch(() => {})
+    const lastVisitRaw = sessionStorage.getItem('study_last_visit')
+    const lastVisit = lastVisitRaw ? new Date(lastVisitRaw).getTime() : Date.now() - 86400000
+    sessionStorage.setItem('study_last_visit', new Date().toISOString())
+
+    setLoading(true)
+    api.getFiles()
+      .then(allFiles => {
+        const sorted = [...allFiles].sort(
+          (a, b) => new Date(b.modified).getTime() - new Date(a.modified).getTime()
+        )
+        setFiles(sorted)
+        const newOnes = sorted.filter(f => new Date(f.modified).getTime() > lastVisit)
+        setNewCount(newOnes.length)
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
   }, [])
 
-  const filteredFiles = files.filter(f =>
-    !searchQuery || f.title.toLowerCase().includes(searchQuery.toLowerCase()) || f.path.toLowerCase().includes(searchQuery.toLowerCase())
-  ).slice(0, 50)
+  const now = Date.now()
+  const filtered = files.filter(f => {
+    const mod = new Date(f.modified).getTime()
+    if (filter === 'today') return now - mod < 86400000
+    if (filter === 'week') return now - mod < 604800000
+    return true
+  })
 
-  const generateCards = async () => {
-    if (!selectedFile) return
-    setLoading(true)
-    setResult(null)
-    setCardIndex(0)
-    setFlipped(false)
-    try {
-      const res = await api.generateFlashcards(selectedFile)
-      setResult(res)
-    } catch {
-      setResult({ flashcards: [{ q: '生成失败', a: '请检查后端 AI 服务是否正常运行' }], notePath: selectedFile, noteTitle: '错误' })
-    } finally {
-      setLoading(false)
-    }
+  const lastVisitRaw = sessionStorage.getItem('study_last_visit')
+  const lastVisitTime = lastVisitRaw ? new Date(lastVisitRaw).getTime() : now - 86400000
+
+  const formatRelative = (iso: string) => {
+    const diff = now - new Date(iso).getTime()
+    const mins = Math.floor(diff / 60000)
+    if (mins < 1) return '刚刚'
+    if (mins < 60) return `${mins} 分钟前`
+    const hours = Math.floor(mins / 60)
+    if (hours < 24) return `${hours} 小时前`
+    const days = Math.floor(hours / 24)
+    return `${days} 天前`
   }
 
-  const currentCard: Flashcard | null = result?.flashcards[cardIndex] || null
-  const totalCards = result?.flashcards.length || 0
-
-  const nextCard = () => {
-    if (cardIndex < totalCards - 1) { setCardIndex(cardIndex + 1); setFlipped(false) }
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-warm-500 py-8 justify-center">
+        <Loader2 className="w-4 h-4 animate-spin" /> 扫描笔记变化...
+      </div>
+    )
   }
-  const prevCard = () => {
-    if (cardIndex > 0) { setCardIndex(cardIndex - 1); setFlipped(false) }
-  }
-  const resetCards = () => { setCardIndex(0); setFlipped(false) }
 
   return (
-    <div className="flex gap-6 h-full">
-      {/* Note selector */}
-      <div className="w-64 shrink-0 flex flex-col gap-3">
-        <div className="text-xs text-warm-500 font-medium">选择笔记生成卡片</div>
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-          placeholder="搜索笔记..."
-          className="w-full px-3 py-2 bg-surface border border-cream-200 rounded-lg text-xs text-warm-700 placeholder-warm-400 outline-none focus:border-accent-orange"
-        />
-        <div className="flex-1 overflow-auto space-y-1 max-h-[60vh]">
-          {filteredFiles.map(f => (
-            <button
-              key={f.path}
-              onClick={() => setSelectedFile(f.path)}
-              className={`w-full text-left px-3 py-2 rounded-lg text-xs transition-colors ${
-                selectedFile === f.path
-                  ? 'bg-accent-orange/15 text-warm-800 border border-accent-orange/30'
-                  : 'bg-surface text-warm-500 hover:text-warm-700 hover:bg-cream-100 border border-transparent'
-              }`}
-            >
-              <div className="font-medium truncate">{f.title}</div>
-              <div className="text-[10px] text-warm-400 mt-0.5 truncate">{f.path}</div>
-            </button>
-          ))}
+    <div className="space-y-4">
+      {/* New content banner */}
+      {newCount > 0 && (
+        <div className="flex items-center gap-3 px-5 py-3 bg-accent-orange/8 border border-accent-orange/20 rounded-xl">
+          <Sparkles className="w-5 h-5 text-accent-orange shrink-0" />
+          <div className="flex-1">
+            <span className="text-sm font-medium text-warm-800">
+              自上次查看以来，有 {newCount} 篇笔记被更新
+            </span>
+            <span className="text-xs text-warm-400 ml-2">标记为 ✨ 的是新内容</span>
+          </div>
+          <button
+            onClick={() => setFilter('all')}
+            className="text-xs px-3 py-1 rounded-lg bg-accent-orange/15 text-accent-orange hover:bg-accent-orange/25 transition-colors"
+          >
+            查看全部
+          </button>
         </div>
-        <button
-          onClick={generateCards}
-          disabled={!selectedFile || loading}
-          className="w-full py-2.5 rounded-lg bg-accent-orange text-white text-sm font-medium hover:bg-accent-orange/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-        >
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <BookOpen className="w-4 h-4" />}
-          {loading ? '生成中...' : '生成复习卡片'}
-        </button>
+      )}
+
+      {/* Filter tabs */}
+      <div className="flex items-center gap-2">
+        {([
+          { key: 'today' as const, label: '今天' },
+          { key: 'week' as const, label: '本周' },
+          { key: 'all' as const, label: '全部' },
+        ]).map(f => (
+          <button
+            key={f.key}
+            onClick={() => setFilter(f.key)}
+            className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${
+              filter === f.key
+                ? 'bg-accent-orange/15 text-warm-800 font-medium'
+                : 'bg-cream-200 text-warm-500 hover:bg-cream-300'
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+        <span className="ml-auto text-xs text-warm-400">{filtered.length} 篇</span>
       </div>
 
-      {/* Card area */}
-      <div className="flex-1 flex flex-col items-center justify-center">
-        {!result && !loading && (
-          <div className="text-center text-warm-400">
-            <GraduationCap className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <div className="text-sm">选择左侧笔记，点击"生成复习卡片"</div>
-            <div className="text-xs mt-1">AI 将根据笔记内容生成 8 张问答卡片</div>
+      {/* Updates list */}
+      {filtered.length === 0 ? (
+        <div className="text-center text-warm-400 py-12">
+          <FileText className="w-10 h-10 mx-auto mb-3 opacity-30" />
+          <div className="text-sm">
+            {filter === 'today' ? '今天没有笔记被修改' : filter === 'week' ? '本周没有笔记被修改' : '暂无笔记'}
           </div>
-        )}
-
-        {loading && (
-          <div className="text-center">
-            <Loader2 className="w-8 h-8 text-accent-orange animate-spin mx-auto mb-3" />
-            <div className="text-sm text-warm-500">AI 正在分析笔记内容...</div>
-          </div>
-        )}
-
-        {result && currentCard && (
-          <div className="w-full max-w-lg">
-            {/* Card info */}
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-xs text-warm-400">
-                {result.noteTitle} — 卡片 {cardIndex + 1} / {totalCards}
-              </div>
-              <button onClick={resetCards} className="p-1 rounded text-warm-400 hover:text-warm-600" title="重置">
-                <RotateCcw className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* Flashcard */}
-            <div
-              onClick={() => setFlipped(!flipped)}
-              className="relative cursor-pointer"
-              style={{ perspective: '1000px' }}
-            >
-              <div
-                className="transition-transform duration-500"
-                style={{
-                  transformStyle: 'preserve-3d',
-                  transform: flipped ? 'rotateY(180deg)' : 'rotateY(0)',
-                }}
-              >
-                {/* Front (Question) */}
-                <div
-                  className="absolute inset-0 bg-surface border border-cream-300 rounded-2xl p-8 flex flex-col items-center justify-center"
-                  style={{ backfaceVisibility: 'hidden', minHeight: 280 }}
-                >
-                  <div className="text-[10px] text-accent-orange uppercase tracking-wider mb-4">问题</div>
-                  <div className="text-lg text-warm-800 text-center leading-relaxed font-medium">
-                    {currentCard.q}
-                  </div>
-                  <div className="absolute bottom-4 text-[10px] text-warm-400">点击翻转查看答案</div>
-                </div>
-
-                {/* Back (Answer) */}
-                <div
-                  className="bg-cream-100 border border-accent-orange/30 rounded-2xl p-8 flex flex-col items-center justify-center"
-                  style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)', minHeight: 280 }}
-                >
-                  <div className="text-[10px] text-accent-sage uppercase tracking-wider mb-4">答案</div>
-                  <div className="text-sm text-warm-700 text-center leading-relaxed whitespace-pre-wrap">
-                    {currentCard.a}
-                  </div>
-                  <div className="absolute bottom-4 text-[10px] text-warm-400">点击翻回问题</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Navigation */}
-            <div className="flex items-center justify-center gap-4 mt-6">
+        </div>
+      ) : (
+        <div className="space-y-1">
+          {filtered.map(f => {
+            const isNew = new Date(f.modified).getTime() > lastVisitTime
+            return (
               <button
-                onClick={prevCard}
-                disabled={cardIndex === 0}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs bg-cream-200 text-warm-600 hover:bg-cream-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                key={f.path}
+                onClick={() => navigate(`/editor?path=${encodeURIComponent(f.path)}`)}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-cream-100 transition-colors text-left group"
               >
-                <ChevronLeft className="w-3.5 h-3.5" /> 上一张
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-warm-700 font-medium truncate">{f.title}</span>
+                    {isNew && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent-orange/15 text-accent-orange font-medium shrink-0">
+                        ✨ 新
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[10px] text-warm-400 mt-0.5 truncate">{f.path}</div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <div className="text-[10px] text-warm-400">{formatRelative(f.modified)}</div>
+                  <div className="text-[10px] text-warm-300">{f.wordCount} 字</div>
+                </div>
+                <ChevronRight className="w-3.5 h-3.5 text-warm-300 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
               </button>
-              <div className="flex gap-1">
-                {result.flashcards.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => { setCardIndex(i); setFlipped(false) }}
-                    className={`w-2 h-2 rounded-full transition-colors ${
-                      i === cardIndex ? 'bg-accent-orange' : 'bg-cream-300 hover:bg-cream-200'
-                    }`}
-                  />
-                ))}
-              </div>
-              <button
-                onClick={nextCard}
-                disabled={cardIndex === totalCards - 1}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs bg-cream-200 text-warm-600 hover:bg-cream-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              >
-                下一张 <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* Open in editor */}
-            <button
-              onClick={() => navigate(`/editor?path=${encodeURIComponent(result.notePath)}`)}
-              className="mt-4 w-full py-2 rounded-lg text-xs text-warm-500 bg-surface border border-cream-200 hover:text-warm-700 hover:border-cream-300 transition-colors"
-            >
-              在编辑器中打开原笔记
-            </button>
-          </div>
-        )}
-      </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
