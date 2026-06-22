@@ -491,6 +491,13 @@ export const api = {
   fetchAIModels: () =>
     fetchJSON<{ models: { id: string; name: string }[]; current: string; source: string }>('/ai/models'),
 
+  // Obsidian AI plugin config detection
+  detectAIPlugins: () =>
+    fetchJSON<{ plugins: { pluginId: string; displayName: string; apiKey: string; baseURL: string; model: string; hasConfig: boolean }[] }>('/obsidian/plugins/ai-config'),
+
+  importAIPluginConfig: (pluginId: string) =>
+    postJSON<{ ok: boolean; imported: { pluginId: string; displayName: string; baseURL: string; model: string } }>('/obsidian/plugins/import-ai-config', { pluginId }),
+
   // Daily Error Log
   addErrorLog: (data: { notePath?: string; question: string; userAnswer?: string; correctAnswer: string; explanation?: string }) =>
     postJSON<{ ok: boolean; path: string; totalQuestions: number }>('/study/error-log', data),

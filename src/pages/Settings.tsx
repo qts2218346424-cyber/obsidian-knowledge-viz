@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api, type AppSettings } from '../services/api'
-import { Save, RefreshCw, CheckCircle, AlertCircle, Key, FolderOpen, Globe, Cpu, Eye, EyeOff, Folder, AlertTriangle, Zap, ChevronRight, ChevronDown, ArrowUp, Loader2, X, HardDrive, Check } from 'lucide-react'
+import { Save, RefreshCw, CheckCircle, AlertCircle, Key, FolderOpen, Globe, Cpu, Eye, EyeOff, Folder, AlertTriangle, Zap, ChevronRight, ChevronDown, ArrowUp, Loader2, X, HardDrive, Check, Download, Plug } from 'lucide-react'
 
 declare global {
   interface Window {
@@ -32,6 +32,12 @@ export default function Settings() {
   const [showModelList, setShowModelList] = useState(false)
   const [modelFetchError, setModelFetchError] = useState('')
   const [modelSource, setModelSource] = useState('')
+
+  // Obsidian plugin detection state
+  const [detectedPlugins, setDetectedPlugins] = useState<{ pluginId: string; displayName: string; apiKey: string; baseURL: string; model: string; hasConfig: boolean }[]>([])
+  const [scanningPlugins, setScanningPlugins] = useState(false)
+  const [importingPlugin, setImportingPlugin] = useState('')
+  const [importResult, setImportResult] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   // Form state
   const [vaultPath, setVaultPath] = useState('')
@@ -87,6 +93,38 @@ export default function Settings() {
       setAvailableModels([])
     } finally {
       setFetchingModels(false)
+    }
+  }
+
+  async function handleScanPlugins() {
+    setScanningPlugins(true)
+    setImportResult(null)
+    try {
+      const data = await api.detectAIPlugins()
+      setDetectedPlugins(data.plugins || [])
+      if (data.plugins.length === 0) {
+        setImportResult({ type: 'error', text: '未检测到已配置的 AI 插件' })
+      }
+    } catch (err: any) {
+      setImportResult({ type: 'error', text: `扫描失败: ${err.message}` })
+      setDetectedPlugins([])
+    } finally {
+      setScanningPlugins(false)
+    }
+  }
+
+  async function handleImportPlugin(pluginId: string) {
+    setImportingPlugin(pluginId)
+    setImportResult(null)
+    try {
+      const result = await api.importAIPluginConfig(pluginId)
+      setImportResult({ type: 'success', text: `已从 ${result.imported.displayName} 导入配置` })
+      // Reload settings to reflect changes
+      await loadSettings()
+    } catch (err: any) {
+      setImportResult({ type: 'error', text: `导入失败: ${err.message}` })
+    } finally {
+      setImportingPlugin('')
     }
   }
 
@@ -379,6 +417,62 @@ export default function Settings() {
             )}
           </div>
         </div>
+      </section>
+
+      {/* Obsidian Plugin Import */}
+      <section className="bg-cream-200/50 border border-cream-200 rounded-xl p-5 space-y-4">
+        <div className="flex items-center gap-2 text-sm font-medium text-warm-700">
+          <Plug className="w-4 h-4 text-accent-mint" />
+          从 Obsidian 插件导入
+        </div>
+        <p className="text-xs text-warm-500">
+          自动检测知识库中已安装的 AI 插件（如 Copilot、Smart Connections 等），一键导入其 API 配置。
+        </p>
+
+        <button
+          onClick={handleScanPlugins}
+          disabled={scanningPlugins || !vaultPath}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-cream-100 border border-cream-300 text-sm text-warm-600 hover:text-warm-800 hover:border-cream-200 transition-colors disabled:opacity-50"
+        >
+          {scanningPlugins ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+          {scanningPlugins ? '扫描中...' : '扫描已安装插件'}
+        </button>
+
+        {importResult && (
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs ${
+            importResult.type === 'success'
+              ? 'bg-accent-sage/10 border border-accent-sage/20 text-accent-sage'
+              : 'bg-red-500/10 border border-red-500/20 text-red-400'
+          }`}>
+            {importResult.type === 'success' ? <CheckCircle className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+            {importResult.text}
+          </div>
+        )}
+
+        {detectedPlugins.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs text-warm-500 font-medium">检测到以下插件配置：</p>
+            {detectedPlugins.map(plugin => (
+              <div key={plugin.pluginId} className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-cream-100/80 border border-cream-200">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm text-warm-700 font-medium">{plugin.displayName}</div>
+                  <div className="text-[11px] text-warm-400 mt-0.5 truncate">
+                    Key: {plugin.apiKey}
+                    {plugin.baseURL && ` · ${plugin.baseURL}`}
+                    {plugin.model && ` · ${plugin.model}`}
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleImportPlugin(plugin.pluginId)}
+                  disabled={importingPlugin === plugin.pluginId}
+                  className="shrink-0 ml-3 px-3 py-1.5 rounded-lg bg-accent-sage/15 text-accent-sage text-xs font-medium hover:bg-accent-sage/25 transition-colors disabled:opacity-50"
+                >
+                  {importingPlugin === plugin.pluginId ? '导入中...' : '导入'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Config file info */}

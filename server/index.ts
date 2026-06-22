@@ -1185,6 +1185,183 @@ app.get('/api/ai/models', async (req, res) => {
   res.json({ models: fallback, current: config.ai.model || '', source: 'fallback' })
 })
 
+// ===== Obsidian AI Plugin Config Detection =====
+
+// Known Obsidian AI plugins and their config field mappings
+const KNOWN_AI_PLUGINS: Record<string, {
+  displayName: string
+  extractConfig: (data: any) => { apiKey?: string; baseURL?: string; model?: string } | null
+}> = {
+  'copilot': {
+    displayName: 'Copilot',
+    extractConfig: (data: any) => {
+      // Copilot by Logan Ma supports multiple providers
+      if (data.anthropcApiKey || data.anthropicApiKey) {
+        return {
+          apiKey: data.anthropicApiKey || data.anthropcApiKey,
+          baseURL: data.anthropicBaseUrl || '',
+          model: data.anthropicModel || '',
+        }
+      }
+      if (data.openAIApiKey) {
+        return {
+          apiKey: data.openAIApiKey,
+          baseURL: data.openAIProxyBaseUrl || '',
+          model: data.defaultModel || data.openAIModel || '',
+        }
+      }
+      if (data.googleApiKey) {
+        return {
+          apiKey: data.googleApiKey,
+          baseURL: data.googleBaseUrl || '',
+          model: data.googleModel || '',
+        }
+      }
+      return null
+    },
+  },
+  'smart-connections': {
+    displayName: 'Smart Connections',
+    extractConfig: (data: any) => {
+      const key = data.api_key || data.apiKey
+      return key ? { apiKey: key, baseURL: '', model: '' } : null
+    },
+  },
+  'obsidian-textgenerator-plugin': {
+    displayName: 'Text Generator',
+    extractConfig: (data: any) => {
+      const key = data.api_key || data.apiKey || data.openaiApiKey
+      return key ? { apiKey: key, baseURL: data.baseURL || data.customBaseUrl || '', model: data.model || '' } : null
+    },
+  },
+  'obsidian-copilot': {
+    displayName: 'Copilot (Alternative)',
+    extractConfig: (data: any) => {
+      const key = data.apiKey || data.openai_api_key
+      return key ? { apiKey: key, baseURL: data.baseURL || '', model: data.model || '' } : null
+    },
+  },
+  'companion': {
+    displayName: 'Companion',
+    extractConfig: (data: any) => {
+      const key = data.apiKey || data.openaiKey
+      return key ? { apiKey: key, baseURL: data.baseUrl || '', model: data.model || '' } : null
+    },
+  },
+}
+
+app.get('/api/obsidian/plugins/ai-config', (_req, res) => {
+  try {
+    if (!config.vaultPath) {
+      res.status(400).json({ error: 'Vault 路径未配置' })
+      return
+    }
+
+    const pluginsDir = path.join(config.vaultPath, '.obsidian', 'plugins')
+    if (!fs.existsSync(pluginsDir)) {
+      res.json({ plugins: [] })
+      return
+    }
+
+    const found: Array<{
+      pluginId: string
+      displayName: string
+      apiKey: string  // masked
+      baseURL: string
+      model: string
+      hasConfig: boolean
+    }> = []
+
+    for (const [pluginId, pluginDef] of Object.entries(KNOWN_AI_PLUGINS)) {
+      const dataPath = path.join(pluginsDir, pluginId, 'data.json')
+      if (!fs.existsSync(dataPath)) continue
+
+      try {
+        const raw = fs.readFileSync(dataPath, 'utf-8')
+        const data = JSON.parse(raw)
+        const extracted = pluginDef.extractConfig(data)
+        if (extracted && extracted.apiKey) {
+          const key = extracted.apiKey
+          found.push({
+            pluginId,
+            displayName: pluginDef.displayName,
+            apiKey: key.length > 12 ? key.substring(0, 8) + '...' + key.substring(key.length - 4) : '***',
+            baseURL: extracted.baseURL || '',
+            model: extracted.model || '',
+            hasConfig: true,
+          })
+        }
+      } catch {
+        // plugin data.json parse error, skip
+      }
+    }
+
+    res.json({ plugins: found })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+app.post('/api/obsidian/plugins/import-ai-config', (req, res) => {
+  try {
+    const { pluginId } = req.body as { pluginId: string }
+    if (!pluginId) {
+      res.status(400).json({ error: '缺少 pluginId 参数' })
+      return
+    }
+    if (!config.vaultPath) {
+      res.status(400).json({ error: 'Vault 路径未配置' })
+      return
+    }
+
+    const pluginDef = KNOWN_AI_PLUGINS[pluginId]
+    if (!pluginDef) {
+      res.status(400).json({ error: '不支持的插件: ' + pluginId })
+      return
+    }
+
+    const dataPath = path.join(config.vaultPath, '.obsidian', 'plugins', pluginId, 'data.json')
+    if (!fs.existsSync(dataPath)) {
+      res.status(404).json({ error: '未找到插件配置' })
+      return
+    }
+
+    const raw = fs.readFileSync(dataPath, 'utf-8')
+    const data = JSON.parse(raw)
+    const extracted = pluginDef.extractConfig(data)
+    if (!extracted || !extracted.apiKey) {
+      res.status(400).json({ error: '该插件未配置 AI 密钥' })
+      return
+    }
+
+    // Apply to current config
+    config.ai = {
+      apiKey: extracted.apiKey,
+      baseURL: extracted.baseURL || config.ai?.baseURL || 'https://api.anthropic.com',
+      model: extracted.model || config.ai?.model || '',
+    }
+    reinitAnthropic()
+
+    // Persist
+    const savePath = loadedConfigPath || configPaths[0]
+    if (savePath) {
+      fs.writeFileSync(savePath, JSON.stringify(config, null, 2), 'utf-8')
+    }
+
+    res.json({
+      ok: true,
+      imported: {
+        pluginId,
+        displayName: pluginDef.displayName,
+        baseURL: config.ai.baseURL,
+        model: config.ai.model,
+      },
+    })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // ===== Vault Watcher & SSE (Bidirectional Sync) =====
 
 const sseClients: Set<express.Response> = new Set()
