@@ -105,7 +105,8 @@ export default function Settings() {
 
   // Configuration status checks
   const vaultConfigured = !!settings?.vaultPath && settings.vaultPath.length > 0
-  const aiConfigured = !!settings?.ai?.apiKey && settings.ai.apiKey.length > 0 && !settings.ai.apiKey.includes('...')
+  // Server masks the key as "first8...last4", so presence of '...' means a key IS set
+  const aiConfigured = !!settings?.ai?.apiKey && settings.ai.apiKey.length > 0
   const aiModelSet = !!settings?.ai?.model && settings.ai.model.length > 0
 
   if (loading) {
