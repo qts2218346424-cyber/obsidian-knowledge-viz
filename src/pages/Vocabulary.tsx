@@ -58,11 +58,11 @@ export default function Vocabulary() {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-warm-800">📖 考研英语单词</h1>
-          <p className="text-sm text-warm-500 mt-1">语境记忆 · 间隔重复 · 考研核心词库</p>
+          <h1 className="text-2xl font-bold text-warm-800">📖 背单词</h1>
+          <p className="text-sm text-warm-500 mt-1">语境记忆 · 间隔重复 · 核心词库</p>
         </div>
         <div className="hidden sm:flex items-center gap-2 text-xs text-warm-400">
-          <span className="px-2 py-1 rounded-full bg-cream-200">考研 2000+ 词</span>
+          <span className="px-2 py-1 rounded-full bg-cream-200">2000+ 词</span>
         </div>
       </div>
 

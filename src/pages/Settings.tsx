@@ -113,7 +113,7 @@ export default function Settings() {
               type="text"
               value={vaultPath}
               onChange={(e) => setVaultPath(e.target.value)}
-              placeholder="例如: E:\考研\408考研学习"
+              placeholder="例如: E:\我的知识库"
               className="w-full px-3 py-2 rounded-lg bg-cream-100 border border-cream-300 text-warm-700 text-sm placeholder:text-warm-400 focus:outline-none focus:border-accent-orange/40 focus:ring-1 focus:ring-accent-orange/15"
             />
             <p className="text-[11px] text-warm-400 mt-1">你的 Obsidian 笔记所在的文件夹路径</p>

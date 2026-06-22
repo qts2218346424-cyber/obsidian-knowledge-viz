@@ -861,7 +861,7 @@ app.post('/api/vault/lint/fix', async (req, res) => {
   }
 })
 
-// ===== Study (408 Exam Prep) =====
+// ===== Study =====
 
 app.post('/api/study/flashcards', async (req, res) => {
   try {
@@ -909,7 +909,7 @@ ${note.content.substring(0, 4000)}`
     const aiRes = await anthropic.messages.create({
       model: config.ai?.model || 'mimo-v2.5-pro',
       max_tokens: 2048,
-      system: '你是一个考研复习助手，只返回 JSON 格式的问答对数组。',
+      system: '你是一个知识库复习助手，只返回 JSON 格式的问答对数组。',
       messages: [{ role: 'user', content: prompt }],
     })
 
@@ -933,18 +933,22 @@ app.get('/api/study/review-due', (_req, res) => {
   try {
     const notes = getNotes()
     const now = Date.now()
-    // Fixed: reversed order so longest-overdue is checked first
     const intervals = [
       { days: 14, label: '14天未复习', priority: 'low' as const },
       { days: 7, label: '7天未复习', priority: 'medium' as const },
       { days: 3, label: '3天未复习', priority: 'high' as const },
     ]
 
-    const subjectMap: Record<string, string[]> = {
-      '数据结构': ['数据结构', 'data-structure', 'ds', 'data_structure', '算法', '链表', '树', '图', '排序'],
-      '计算机组成': ['计算机组成', '计组', 'computer-organization', 'co', 'cpu', '存储器', '总线'],
-      '计算机网络': ['计算机网络', '网络', 'network', 'tcp', 'ip', 'http', '路由', '协议'],
-      '操作系统': ['操作系统', 'os', 'operating-system', '进程', '线程', '内存', '文件系统'],
+    // Dynamic folder-based categorization — works with any knowledge base
+    const skipCategories = new Set(['wiki', '元数据', '模板', 'template', 'meta', 'config', '.obsidian', '.obsidian-viz', '做题记录', '单词本'])
+
+    const getCategory = (notePath: string): string => {
+      const parts = notePath.replace(/\\/g, '/').split('/')
+      if (parts.length === 1) return '其他'
+      const first = parts[0].toLowerCase()
+      if (skipCategories.has(first) && parts.length > 2) return parts[1]
+      if (skipCategories.has(first)) return '其他'
+      return parts[0]
     }
 
     // Skip template / metadata / index / trivial notes
@@ -952,56 +956,45 @@ app.get('/api/study/review-due', (_req, res) => {
       const pathLower = note.path.toLowerCase()
       const fileName = pathLower.split('/').pop() || ''
 
-      // Skip _index files (folder indexes)
       if (fileName.includes('_index')) return true
 
-      // Skip metadata / template / config directories
       const skipDirs = ['元数据', '模板', 'template', 'meta', 'config', '.obsidian']
       if (skipDirs.some(d => pathLower.includes(`/${d}/`))) return true
 
-      // Skip known meta files
       const skipFiles = ['claude.md', 'hot.md', 'overview.md', 'log.md', 'readme.md', 'todo.md']
       if (skipFiles.some(f => fileName === f)) return true
 
-      // Skip very short notes (< 80 words = likely templates or stubs)
       if (note.wordCount < 80) return true
 
-      // Skip template/meta tags
       const tagsLower = note.tags.map(t => t.toLowerCase())
       if (tagsLower.some(t => t.includes('template') || t.includes('模板') || t === 'meta' || t === '元数据')) return true
 
       return false
     }
 
-    const subjectNotes: Record<string, { due: any[]; total: number; totalWords: number; lastModified: string }> = {}
-    for (const subject of Object.keys(subjectMap)) {
-      subjectNotes[subject] = { due: [], total: 0, totalWords: 0, lastModified: '' }
-    }
-    subjectNotes['其他'] = { due: [], total: 0, totalWords: 0, lastModified: '' }
+    // Build categories dynamically from vault folder structure
+    const categoryNotes: Record<string, { due: any[]; total: number; totalWords: number; lastModified: string }> = {}
 
     for (const note of notes) {
       if (shouldSkip(note)) continue
 
       const modTime = new Date(note.modified).getTime()
       const daysSince = Math.floor((now - modTime) / (1000 * 60 * 60 * 24))
-      const pathLower = note.path.toLowerCase()
-      const tagsLower = note.tags.map(t => t.toLowerCase())
-      const combined = `${pathLower} ${tagsLower.join(' ')}`
+      const category = getCategory(note.path)
 
-      let subject = '其他'
-      for (const [subj, keywords] of Object.entries(subjectMap)) {
-        if (keywords.some(k => combined.includes(k))) { subject = subj; break }
+      if (!categoryNotes[category]) {
+        categoryNotes[category] = { due: [], total: 0, totalWords: 0, lastModified: '' }
       }
 
-      subjectNotes[subject].total++
-      subjectNotes[subject].totalWords += note.wordCount
-      if (!subjectNotes[subject].lastModified || note.modified > subjectNotes[subject].lastModified) {
-        subjectNotes[subject].lastModified = note.modified
+      categoryNotes[category].total++
+      categoryNotes[category].totalWords += note.wordCount
+      if (!categoryNotes[category].lastModified || note.modified > categoryNotes[category].lastModified) {
+        categoryNotes[category].lastModified = note.modified
       }
 
       for (const interval of intervals) {
         if (daysSince >= interval.days) {
-          subjectNotes[subject].due.push({
+          categoryNotes[category].due.push({
             path: note.path, title: note.title, tags: note.tags,
             daysSinceModified: daysSince, priority: interval.priority,
             interval: interval.label, wordCount: note.wordCount,
@@ -1011,18 +1004,18 @@ app.get('/api/study/review-due', (_req, res) => {
       }
     }
 
-    const reviewQueue = Object.entries(subjectNotes).map(([subject, data]) => ({
-      subject,
+    const reviewQueue = Object.entries(categoryNotes).map(([category, data]) => ({
+      subject: category,
       totalNotes: data.total,
       totalWords: data.totalWords,
       lastModified: data.lastModified,
       dueCount: data.due.length,
       dueNotes: data.due.sort((a: any, b: any) => b.daysSinceModified - a.daysSinceModified).slice(0, 10),
-    })).filter(s => s.totalNotes > 0)
+    })).filter(s => s.totalNotes > 0).sort((a, b) => b.totalNotes - a.totalNotes)
 
-    const stats = Object.entries(subjectNotes).map(([subject, data]) => ({
-      subject, totalNotes: data.total, totalWords: data.totalWords, lastModified: data.lastModified,
-    })).filter(s => s.totalNotes > 0)
+    const stats = Object.entries(categoryNotes).map(([category, data]) => ({
+      subject: category, totalNotes: data.total, totalWords: data.totalWords, lastModified: data.lastModified,
+    })).filter(s => s.totalNotes > 0).sort((a, b) => b.totalNotes - a.totalNotes)
 
     res.json({ reviewQueue, stats })
   } catch (err: any) {
@@ -1362,7 +1355,7 @@ app.post('/api/study/review-complete', (req, res) => {
   }
 })
 
-// ===== 考研英语词汇 (Graduate Exam English Vocabulary) =====
+// ===== 词汇 (Vocabulary) =====
 
 interface VocabProgress {
   status: 'known' | 'fuzzy' | 'unknown' | 'new'
@@ -2070,7 +2063,7 @@ app.post('/api/quiz/generate', async (req, res) => {
     const aiRes = await anthropic.messages.create({
       model: config.ai?.model || 'mimo-v2.5-pro',
       max_tokens: 4096,
-      system: '你是一个408考研出题专家。请严格按照用户要求的JSON格式输出题目，不要添加任何额外文字、解释或markdown标记。只输出纯JSON数组。',
+      system: '你是一个专业的出题专家。请严格按照用户要求的JSON格式输出题目，不要添加任何额外文字、解释或markdown标记。只输出纯JSON数组。',
       messages: [{ role: 'user', content: prompt }],
     })
 
@@ -2164,7 +2157,7 @@ app.post('/api/defuddle', async (req, res) => {
 2. 生成清晰的层级结构（标题/要点/细节）
 3. 在 frontmatter 中生成 tags 和 summary
 4. 保持中文输出
-5. 如果内容涉及 408 考研科目，标注相关科目
+5. 如果内容涉及特定学科，标注相关学科
 
 输出格式：直接输出 Markdown 内容（包含 --- frontmatter），不要添加任何解释。`,
       messages: [
@@ -2254,7 +2247,7 @@ app.post('/api/query', async (req, res) => {
     const aiRes = await anthropic.messages.create({
       model: config.ai?.model || 'mimo-v2.5-pro',
       max_tokens: 2048,
-      system: `你是一个 408 考研知识库查询助手。请基于提供的笔记内容回答用户的查询。
+      system: `你是一个知识库查询助手。请基于提供的笔记内容回答用户的查询。
 要求：
 1. 综合分析相关笔记，给出有价值的洞察
 2. 指出知识点之间的联系
@@ -2408,7 +2401,7 @@ app.post('/api/think', async (req, res) => {
 1. 中心是主题本身
 2. 第一层是主要分支（3-6个）
 3. 第二层是每个分支的子节点（每个分支2-4个）
-4. 如果主题与 408 考研相关，融入考研知识点
+4. 如果主题与知识库内容相关，融入已有知识点
 5. 节点之间可以有关联关系
 
 请严格以 JSON 格式输出（不要 markdown 代码块）：

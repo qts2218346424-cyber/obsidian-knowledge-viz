@@ -66,7 +66,7 @@ export default function Layout({ children }: LayoutProps) {
             </div>
             <div>
               <h1 className="text-sm font-bold text-warm-800 leading-tight">Knowledge Viz</h1>
-              <p className="text-[11px] text-warm-400 mt-0.5">考研学习助手</p>
+              <p className="text-[11px] text-warm-400 mt-0.5">知识库助手</p>
             </div>
           </div>
         </div>

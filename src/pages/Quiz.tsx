@@ -290,12 +290,12 @@ export default function Quiz() {
     setIsGenerating(true)
     setImportStatus({ type: 'info', message: 'AI 正在生成题目，请稍候...' })
     try {
-      const subjectHint = aiSubject === 'all' ? '408考研四门科目（数据结构、计算机组成原理、操作系统、计算机网络）' : aiSubject
+      const subjectHint = aiSubject === 'all' ? '综合科目' : aiSubject
       const resp = await fetch('/api/quiz/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: `请根据以下知识点生成10道408考研风格的选择题。科目范围：${subjectHint}。知识点：${aiTopic}。\n\n请严格按以下JSON数组格式输出，不要添加任何额外文字：\n[{"subject":"数据结构","difficulty":"中等","question":"题目内容","options":{"A":"选项A","B":"选项B","C":"选项C","D":"选项D"},"answer":"A","explanation":"解析","tags":["标签1"]}]`,
+          prompt: `请根据以下知识点生成10道选择题。科目范围：${subjectHint}。知识点：${aiTopic}。\n\n请严格按以下JSON数组格式输出，不要添加任何额外文字：\n[{"subject":"数据结构","difficulty":"中等","question":"题目内容","options":{"A":"选项A","B":"选项B","C":"选项C","D":"选项D"},"answer":"A","explanation":"解析","tags":["标签1"]}]`,
         }),
       })
       if (!resp.ok) throw new Error('Server error')
@@ -349,7 +349,7 @@ export default function Quiz() {
       <div className="space-y-6 animate-fade-in-up">
         <div>
           <h1 className="text-2xl font-bold text-warm-800">📝 在线做题</h1>
-          <p className="text-sm text-warm-500 mt-1">408 考研专业课选择题练习</p>
+          <p className="text-sm text-warm-500 mt-1">专业课选择题练习</p>
         </div>
 
         {/* Subject Selection */}
@@ -535,7 +535,7 @@ export default function Quiz() {
               {importTab === 'ai' && (
                 <div className="space-y-3">
                   <p className="text-xs text-warm-500">
-                    输入知识点，AI 将自动生成考研风格的选择题。
+                    输入知识点，AI 将自动生成选择题。
                   </p>
                   <div>
                     <label className="text-xs font-medium text-warm-600 mb-1 block">科目范围</label>

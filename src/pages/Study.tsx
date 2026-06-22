@@ -10,16 +10,34 @@ import { api, type ReviewDueData, type SubjectStats, type FileListItem, type Dai
 
 type Tab = 'updates' | 'review' | 'progress' | 'errors'
 
-const subjectColors: Record<string, string> = {
-  '数据结构': '#8b5cf6',
-  '计算机组成': '#06b6d4',
-  '计算机网络': '#f59e0b',
-  '操作系统': '#10b981',
-  '其他': '#64748b',
+// Dynamic color palette — works with any knowledge base
+const colorPalette = [
+  '#8b5cf6', '#06b6d4', '#f59e0b', '#10b981', '#ec4899',
+  '#6366f1', '#14b8a6', '#f97316', '#84cc16', '#a855f7',
+  '#0ea5e9', '#eab308', '#22c55e', '#e11d48', '#7c3aed',
+]
+
+const categoryColorCache: Record<string, string> = {}
+function getCategoryColor(name: string): string {
+  if (!categoryColorCache[name]) {
+    let hash = 0
+    for (let i = 0; i < name.length; i++) hash = ((hash << 5) - hash + name.charCodeAt(i)) | 0
+    categoryColorCache[name] = colorPalette[Math.abs(hash) % colorPalette.length]
+  }
+  return categoryColorCache[name]
 }
 
 export default function Study() {
   const [tab, setTab] = useState<Tab>('updates')
+  const [vaultName, setVaultName] = useState('知识库')
+
+  useEffect(() => {
+    api.getStats().then(s => {
+      // Extract folder name from vaultPath as display name
+      const name = s.vaultPath.replace(/[\\/]+$/, '').split(/[\\/]/).pop()
+      if (name) setVaultName(name)
+    }).catch(() => {})
+  }, [])
 
   return (
     <div className="h-full flex flex-col gap-4">
@@ -46,7 +64,7 @@ export default function Study() {
         ))}
         <div className="ml-auto flex items-center gap-2 text-[11px] text-warm-400">
           <GraduationCap className="w-3.5 h-3.5" />
-          408 考研学习中心
+          {vaultName}
         </div>
       </div>
 
@@ -275,7 +293,7 @@ function ReviewTab() {
       {data.reviewQueue.map(subject => (
         <div key={subject.subject} className="bg-surface border border-cream-200 rounded-xl overflow-hidden">
           <div className="flex items-center gap-3 px-5 py-3 border-b border-cream-200">
-            <div className="w-3 h-3 rounded-full" style={{ background: subjectColors[subject.subject] || '#64748b' }} />
+            <div className="w-3 h-3 rounded-full" style={{ background: getCategoryColor(subject.subject) }} />
             <span className="text-sm font-medium text-warm-700">{subject.subject}</span>
             <span className="text-xs text-warm-400">{subject.totalNotes} 篇笔记</span>
             {subject.dueCount > 0 ? (
@@ -360,7 +378,7 @@ function ProgressTab() {
         {stats.map(s => (
           <div key={s.subject} className="bg-surface border border-cream-200 rounded-xl px-4 py-3">
             <div className="flex items-center gap-2 mb-2">
-              <div className="w-2.5 h-2.5 rounded-full" style={{ background: subjectColors[s.subject] || '#64748b' }} />
+              <div className="w-2.5 h-2.5 rounded-full" style={{ background: getCategoryColor(s.subject) }} />
               <span className="text-xs text-warm-500">{s.subject}</span>
             </div>
             <div className="text-xl font-bold text-warm-800">{s.totalNotes}</div>
@@ -404,7 +422,7 @@ function ProgressTab() {
             />
             <Bar dataKey="笔记数" radius={[6, 6, 0, 0]}>
               {chartData.map((entry, i) => (
-                <Cell key={i} fill={subjectColors[entry.name] || '#64748b'} />
+                <Cell key={i} fill={getCategoryColor(entry.name)} />
               ))}
             </Bar>
           </BarChart>
@@ -426,7 +444,7 @@ function ProgressTab() {
             />
             <Bar dataKey="字数" radius={[6, 6, 0, 0]}>
               {chartData.map((entry, i) => (
-                <Cell key={i} fill={subjectColors[entry.name] || '#64748b'} />
+                <Cell key={i} fill={getCategoryColor(entry.name)} />
               ))}
             </Bar>
           </BarChart>

@@ -303,7 +303,7 @@ export default function VocabTab() {
               <span className="text-sm text-warm-800">
                 已自动为你推送 <span className="font-bold">{data.autoAdded}</span> 个新单词
               </span>
-              <span className="text-xs text-warm-400 ml-2">来自考研词库</span>
+              <span className="text-xs text-warm-400 ml-2">来自词库</span>
             </div>
           </div>
         )}
