@@ -489,7 +489,7 @@ export const api = {
 
   // AI Models
   fetchAIModels: () =>
-    fetchJSON<{ models: { id: string; name: string }[]; current: string }>('/ai/models'),
+    fetchJSON<{ models: { id: string; name: string }[]; current: string; source: string }>('/ai/models'),
 
   // Daily Error Log
   addErrorLog: (data: { notePath?: string; question: string; userAnswer?: string; correctAnswer: string; explanation?: string }) =>

@@ -1124,50 +1124,65 @@ app.get('/api/fs/exists', async (req, res) => {
 
 // ===== AI Models (auto-fetch available models) =====
 
+// Common models for providers that don't support /v1/models
+const FALLBACK_MODELS = [
+  { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4' },
+  { id: 'claude-opus-4-20250514', name: 'Claude Opus 4' },
+  { id: 'claude-3-7-sonnet-20250219', name: 'Claude 3.7 Sonnet' },
+  { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet' },
+  { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku' },
+  { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus' },
+  { id: 'mimo-v2.5-pro', name: 'MiMo v2.5 Pro' },
+  { id: 'deepseek-v3', name: 'DeepSeek V3' },
+  { id: 'deepseek-r1', name: 'DeepSeek R1' },
+  { id: 'gpt-4o', name: 'GPT-4o' },
+  { id: 'gpt-4o-mini', name: 'GPT-4o Mini' },
+  { id: 'o3-mini', name: 'o3-mini' },
+]
+
 app.get('/api/ai/models', async (req, res) => {
   if (!config.ai?.apiKey || !config.ai?.baseURL) {
     res.status(400).json({ error: 'AI 未配置，请先设置 API Key 和 Base URL' })
     return
   }
-  try {
-    const baseURL = config.ai.baseURL.replace(/\/+$/, '')
-    const modelsURL = `${baseURL}/v1/models`
-    const resp = await fetch(modelsURL, {
-      headers: {
-        'Authorization': `Bearer ${config.ai.apiKey}`,
-        'x-api-key': config.ai.apiKey,
-      },
-    })
-    if (!resp.ok) {
-      // Try without /v1 prefix (some providers use /models directly)
-      const altURL = `${baseURL}/models`
-      const altResp = await fetch(altURL, {
-        headers: {
-          'Authorization': `Bearer ${config.ai.apiKey}`,
-          'x-api-key': config.ai.apiKey,
-        },
-      })
-      if (!altResp.ok) {
-        res.status(resp.status).json({ error: `API 返回 ${resp.status}: 无法获取模型列表` })
-        return
-      }
-      const altData = await altResp.json()
-      const models = (altData.data || altData.models || altData || []).map((m: any) => ({
-        id: m.id || m.model_id || m.name,
-        name: m.name || m.display_name || m.id,
-      })).filter((m: any) => m.id)
-      res.json({ models, current: config.ai.model || '' })
-      return
-    }
-    const data = await resp.json()
-    const models = (data.data || data.models || data || []).map((m: any) => ({
-      id: m.id || m.model_id || m.name,
-      name: m.name || m.display_name || m.id,
-    })).filter((m: any) => m.id)
-    res.json({ models, current: config.ai.model || '' })
-  } catch (err: any) {
-    res.status(500).json({ error: `获取模型列表失败: ${err.message}` })
+
+  const baseURL = config.ai.baseURL.replace(/\/+$/, '')
+  const headers: Record<string, string> = {
+    'Authorization': `Bearer ${config.ai.apiKey}`,
+    'x-api-key': config.ai.apiKey,
   }
+
+  // Try multiple common endpoint patterns
+  const endpoints = [
+    `${baseURL}/v1/models`,
+    `${baseURL}/models`,
+  ]
+
+  for (const url of endpoints) {
+    try {
+      const resp = await fetch(url, { headers, signal: AbortSignal.timeout(8000) })
+      if (resp.ok) {
+        const data = await resp.json()
+        const models = (data.data || data.models || data || []).map((m: any) => ({
+          id: m.id || m.model_id || m.name,
+          name: m.name || m.display_name || m.id,
+        })).filter((m: any) => m.id)
+        if (models.length > 0) {
+          res.json({ models, current: config.ai.model || '', source: 'api' })
+          return
+        }
+      }
+    } catch {
+      // endpoint not available, try next
+    }
+  }
+
+  // Fallback: return curated list + current model if it's not in the list
+  const fallback = [...FALLBACK_MODELS]
+  if (config.ai.model && !fallback.some(m => m.id === config.ai!.model)) {
+    fallback.unshift({ id: config.ai.model!, name: `${config.ai.model} (当前)` })
+  }
+  res.json({ models: fallback, current: config.ai.model || '', source: 'fallback' })
 })
 
 // ===== Vault Watcher & SSE (Bidirectional Sync) =====

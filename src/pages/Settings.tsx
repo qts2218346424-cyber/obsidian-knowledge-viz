@@ -31,6 +31,7 @@ export default function Settings() {
   const [fetchingModels, setFetchingModels] = useState(false)
   const [showModelList, setShowModelList] = useState(false)
   const [modelFetchError, setModelFetchError] = useState('')
+  const [modelSource, setModelSource] = useState('')
 
   // Form state
   const [vaultPath, setVaultPath] = useState('')
@@ -77,6 +78,7 @@ export default function Settings() {
     try {
       const data = await api.fetchAIModels()
       setAvailableModels(data.models || [])
+      setModelSource(data.source || '')
       if (data.models.length === 0) {
         setModelFetchError('未找到可用模型')
       }
@@ -341,6 +343,11 @@ export default function Settings() {
             {/* Model dropdown */}
             {showModelList && availableModels.length > 0 && (
               <div className="mt-1.5 border border-cream-200 rounded-lg bg-surface max-h-48 overflow-auto">
+                {modelSource === 'fallback' && (
+                  <div className="px-3 py-1.5 text-[10px] text-warm-400 bg-cream-100/50 border-b border-cream-200">
+                    API 不支持自动获取，以下为常用模型列表
+                  </div>
+                )}
                 {availableModels.map(m => (
                   <button
                     key={m.id}
