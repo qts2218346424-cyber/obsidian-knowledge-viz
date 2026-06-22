@@ -373,14 +373,9 @@ function FolderPickerModal({
   }, [])
 
   useEffect(() => {
-    // Start from the initial path's parent directory, or root
-    const startDir = initialPath || undefined
-    if (startDir) {
-      browse(startDir)
-    } else {
-      browse()
-    }
-  }, [browse, initialPath])
+    // Always start from root to show all drives, so user can pick any folder on their computer
+    browse()
+  }, [browse])
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
