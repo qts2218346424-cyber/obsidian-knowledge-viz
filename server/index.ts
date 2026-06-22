@@ -2234,28 +2234,49 @@ app.get('/api/quiz/history', (_req, res) => {
 
 // ===== Wiki Skills: Defuddle (网页抓取) =====
 
+// Detect YouTube and other JS-heavy sites that need special handling
+function isYouTubeURL(url: string): boolean {
+  return /youtube\.com\/watch|youtu\.be\//i.test(url)
+}
+
+async function fetchYouTubeInfo(url: string): Promise<{ title: string; description: string; author: string } | null> {
+  try {
+    const oembedURL = `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`
+    const resp = await fetch(oembedURL, { signal: AbortSignal.timeout(8000) })
+    if (resp.ok) {
+      const data = await resp.json()
+      return { title: data.title || '', description: data.author_name || '', author: data.author_name || '' }
+    }
+  } catch { /* ignore */ }
+  return null
+}
+
 app.post('/api/defuddle', async (req, res) => {
   try {
-    if (!anthropic) { res.status(503).json({ error: 'AI 服务未配置' }); return }
+    if (!anthropic) { res.status(503).json({ error: 'AI 服务未配置，请先在设置中配置 API Key' }); return }
     const { url, targetFolder } = req.body as { url: string; targetFolder?: string }
     if (!url) { res.status(400).json({ error: '缺少 url 参数' }); return }
 
     // Fetch the web page content
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 15000)
+    const timeout = setTimeout(() => controller.abort(), 20000)
     let html = ''
     try {
       const resp = await fetch(url, {
         signal: controller.signal,
-        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ObsidianViz/1.1' },
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ObsidianViz/1.2' },
       })
+      if (!resp.ok) {
+        res.status(400).json({ error: `网页请求失败 (HTTP ${resp.status})，请检查 URL 是否正确且可访问` })
+        return
+      }
       html = await resp.text()
     } finally {
       clearTimeout(timeout)
     }
 
     // Extract text content - strip HTML tags, scripts, styles
-    const textContent = html
+    let textContent = html
       .replace(/<script[\s\S]*?<\/script>/gi, '')
       .replace(/<style[\s\S]*?<\/style>/gi, '')
       .replace(/<nav[\s\S]*?<\/nav>/gi, '')
@@ -2265,6 +2286,40 @@ app.post('/api/defuddle', async (req, res) => {
       .replace(/\s+/g, ' ')
       .trim()
       .slice(0, 12000)
+
+    // Try extracting meta description / og:title from HTML <head> for extra context
+    const metaDesc = html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']*)["']/i)?.[1]
+      || html.match(/<meta[^>]*property=["']og:description["'][^>]*content=["']([^"']*)["']/i)?.[1]
+      || ''
+    const ogTitle = html.match(/<meta[^>]*property=["']og:title["'][^>]*content=["']([^"']*)["']/i)?.[1] || ''
+
+    // Handle YouTube and JS-heavy pages
+    let extraContext = ''
+    if (isYouTubeURL(url)) {
+      const ytInfo = await fetchYouTubeInfo(url)
+      if (ytInfo) {
+        extraContext = `\n[视频信息]\n标题: ${ytInfo.title}\n作者: ${ytInfo.author}\n`
+      }
+      if (textContent.length < 500) {
+        textContent = `[这是一个 YouTube 视频页面，网页内容无法直接提取]\n${extraContext}\n${metaDesc ? `描述: ${metaDesc}` : ''}`
+      }
+    }
+
+    // Check if we got enough content
+    if (textContent.length < 100 && !extraContext) {
+      const hint = ogTitle || metaDesc
+        ? `页面标题: ${ogTitle}\n描述: ${metaDesc}`
+        : '页面内容为空或极少，可能是 JS 渲染的动态页面，服务端无法直接获取'
+      res.status(400).json({
+        error: `抓取到的内容太少（${textContent.length} 字）。${hint}。建议抓取文章类网页（如博客、文档），而非视频或动态应用页面。`,
+      })
+      return
+    }
+
+    // Combine text with any extra context
+    const fullContent = extraContext
+      ? `${extraContext}\n\n[网页正文]\n${textContent}`
+      : textContent
 
     // AI: Clean, summarize, and generate structured note
     const aiRes = await anthropic.messages.create({
@@ -2280,15 +2335,24 @@ app.post('/api/defuddle', async (req, res) => {
 
 输出格式：直接输出 Markdown 内容（包含 --- frontmatter），不要添加任何解释。`,
       messages: [
-        { role: 'user', content: `来源 URL: ${url}\n\n网页内容:\n${textContent}` },
+        { role: 'user', content: `来源 URL: ${url}\n\n网页内容:\n${fullContent}` },
       ],
     })
 
     const markdown = aiRes.content[0].type === 'text' ? aiRes.content[0].text : ''
 
+    if (!markdown.trim()) {
+      res.status(500).json({ error: 'AI 未返回有效内容，可能是 AI 服务暂时不可用或模型不支持该请求' })
+      return
+    }
+
     // Generate filename from URL
     const urlObj = new URL(url)
-    const slug = urlObj.pathname.split('/').filter(Boolean).pop() || urlObj.hostname.replace(/\./g, '-')
+    const slug = (ogTitle || urlObj.pathname.split('/').filter(Boolean).pop() || urlObj.hostname.replace(/\./g, '-'))
+      .replace(/[^\w\u4e00-\u9fff-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 60)
     const fileName = `${slug}.md`
     const folder = targetFolder || 'Web-Clippings'
     const filePath = path.join(folder, fileName)
@@ -2299,7 +2363,7 @@ app.post('/api/defuddle', async (req, res) => {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
 
     // Add source link to the markdown
-    const finalContent = markdown + `\n\n---\n> 来源: [${urlObj.hostname}](${url})\n> 抓取时间: ${new Date().toISOString().split('T')[0]}\n`
+    const finalContent = markdown + `\n\n---\n> 来源: [${ogTitle || urlObj.hostname}](${url})\n> 抓取时间: ${new Date().toISOString().split('T')[0]}\n`
     fs.writeFileSync(fullPath, finalContent, 'utf-8')
     invalidateCache()
 
@@ -2320,7 +2384,18 @@ app.post('/api/defuddle', async (req, res) => {
     })
   } catch (err: any) {
     console.error('Defuddle error:', err.message)
-    res.status(500).json({ error: '网页抓取失败: ' + err.message })
+    // Provide more specific error messages based on error type
+    if (err.message?.includes('abort') || err.message?.includes('timeout')) {
+      res.status(504).json({ error: '请求超时，网页响应时间过长' })
+    } else if (err.message?.includes('ECONNREFUSED') || err.message?.includes('ENOTFOUND')) {
+      res.status(502).json({ error: '网络连接失败，请检查网络或代理设置' })
+    } else if (err.status === 429 || err.message?.includes('rate')) {
+      res.status(429).json({ error: 'AI 请求频率过高，请稍后重试' })
+    } else if (err.message?.includes('API') || err.message?.includes('anthropic') || err.message?.includes('model')) {
+      res.status(502).json({ error: `AI 接口调用失败: ${err.message}` })
+    } else {
+      res.status(500).json({ error: `网页抓取失败: ${err.message}` })
+    }
   }
 })
 
