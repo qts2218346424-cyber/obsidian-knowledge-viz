@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell } = require('electron')
+const { app, BrowserWindow, shell, ipcMain, dialog } = require('electron')
 const path = require('path')
 const http = require('http')
 const { pathToFileURL } = require('url')
@@ -34,6 +34,16 @@ function createWindow() {
 
   mainWindow.loadURL('http://localhost:3001')
 }
+
+// IPC: folder picker dialog
+ipcMain.handle('select-folder', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openDirectory'],
+    title: '选择 Obsidian 知识库文件夹',
+  })
+  if (result.canceled || result.filePaths.length === 0) return null
+  return result.filePaths[0]
+})
 
 function waitForServer(maxRetries = 60) {
   return new Promise((resolve) => {
