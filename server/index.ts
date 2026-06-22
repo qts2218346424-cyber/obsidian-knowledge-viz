@@ -3,6 +3,7 @@ import cors from 'cors'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { ProxyAgent, fetch as undiciFetch } from 'undici'
 import Anthropic from '@anthropic-ai/sdk'
 import multer from 'multer'
 import matter from 'gray-matter'
@@ -29,7 +30,7 @@ const configPaths = [
     : '',
 ].filter(Boolean)
 
-let config: { vaultPath: string; port: number; ai?: { apiKey: string; baseURL: string; model?: string } } = {
+let config: { vaultPath: string; port: number; proxy?: string; ai?: { apiKey: string; baseURL: string; model?: string } } = {
   vaultPath: '',
   port: 3001,
 }
@@ -57,6 +58,17 @@ function reinitAnthropic() {
   anthropic = config.ai
     ? new Anthropic({ apiKey: config.ai.apiKey, baseURL: config.ai.baseURL })
     : null
+}
+
+// Proxy-aware fetch helper for accessing external websites (e.g. YouTube in China)
+// Uses undici with ProxyAgent when proxy is configured, otherwise falls back to native fetch
+function proxyFetch(url: string, options?: { signal?: AbortSignal; headers?: Record<string, string> }): Promise<Response> {
+  const proxyUrl = config.proxy || process.env.HTTPS_PROXY || process.env.HTTP_PROXY || ''
+  if (proxyUrl) {
+    const dispatcher = new ProxyAgent(proxyUrl)
+    return undiciFetch(url, { ...options, dispatcher } as any) as unknown as Promise<Response>
+  }
+  return fetch(url, options)
 }
 
 const app = express()
@@ -1044,11 +1056,12 @@ app.get('/api/settings', (_req, res) => {
 
 app.put('/api/settings', (req, res) => {
   try {
-    const { vaultPath, port, ai } = req.body as {
-      vaultPath?: string; port?: number; ai?: { apiKey: string; baseURL: string; model?: string }
+    const { vaultPath, port, proxy, ai } = req.body as {
+      vaultPath?: string; port?: number; proxy?: string; ai?: { apiKey: string; baseURL: string; model?: string }
     }
     if (vaultPath !== undefined) config.vaultPath = vaultPath
     if (port !== undefined) config.port = port
+    if (proxy !== undefined) config.proxy = proxy
     if (ai !== undefined) {
       config.ai = ai
       reinitAnthropic()
@@ -2419,7 +2432,7 @@ function isYouTubeURL(url: string): boolean {
 async function fetchYouTubeInfo(url: string): Promise<{ title: string; description: string; author: string } | null> {
   try {
     const oembedURL = `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`
-    const resp = await fetch(oembedURL, { signal: AbortSignal.timeout(8000) })
+    const resp = await proxyFetch(oembedURL, { signal: AbortSignal.timeout(8000) })
     if (resp.ok) {
       const data = await resp.json()
       return { title: data.title || '', description: data.author_name || '', author: data.author_name || '' }
@@ -2434,12 +2447,12 @@ app.post('/api/defuddle', async (req, res) => {
     const { url, targetFolder } = req.body as { url: string; targetFolder?: string }
     if (!url) { res.status(400).json({ error: '缺少 url 参数' }); return }
 
-    // Fetch the web page content
+    // Fetch the web page content (using proxyFetch for proxy support)
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 20000)
     let html = ''
     try {
-      const resp = await fetch(url, {
+      const resp = await proxyFetch(url, {
         signal: controller.signal,
         headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ObsidianViz/1.2' },
       })
@@ -2560,18 +2573,22 @@ app.post('/api/defuddle', async (req, res) => {
       preview: finalContent.slice(0, 500),
     })
   } catch (err: any) {
-    console.error('Defuddle error:', err.message)
+    console.error('Defuddle error:', err.message, err.code || '', err.status || '')
     // Provide more specific error messages based on error type
-    if (err.message?.includes('abort') || err.message?.includes('timeout')) {
-      res.status(504).json({ error: '请求超时，网页响应时间过长' })
-    } else if (err.message?.includes('ECONNREFUSED') || err.message?.includes('ENOTFOUND')) {
-      res.status(502).json({ error: '网络连接失败，请检查网络或代理设置' })
-    } else if (err.status === 429 || err.message?.includes('rate')) {
+    const msg = err.message || ''
+    const code = err.code || ''
+    if (msg.includes('abort') || msg.includes('timeout') || code === 'ETIMEDOUT') {
+      res.status(504).json({ error: '请求超时，网页响应时间过长（可能需要代理）' })
+    } else if (msg.includes('ECONNREFUSED') || msg.includes('ENOTFOUND') || code === 'ECONNRESET' || code === 'ENETUNREACH' || code === 'EHOSTUNREACH') {
+      res.status(502).json({ error: `网络连接失败 (${code || 'unknown'})，如果是 YouTube 等被限制的站点，请确保服务端可以访问（可能需要代理）` })
+    } else if (err.status === 429 || msg.includes('rate') || msg.includes('Rate')) {
       res.status(429).json({ error: 'AI 请求频率过高，请稍后重试' })
-    } else if (err.message?.includes('API') || err.message?.includes('anthropic') || err.message?.includes('model')) {
-      res.status(502).json({ error: `AI 接口调用失败: ${err.message}` })
+    } else if (err.status >= 400 && err.status < 500) {
+      res.status(err.status).json({ error: `AI 接口返回错误 (${err.status}): ${msg}` })
+    } else if (msg.includes('API') || msg.includes('anthropic') || msg.includes('model') || msg.includes('AnthropicError')) {
+      res.status(502).json({ error: `AI 接口调用失败: ${msg}` })
     } else {
-      res.status(500).json({ error: `网页抓取失败: ${err.message}` })
+      res.status(500).json({ error: `网页抓取失败: ${msg}` })
     }
   }
 })

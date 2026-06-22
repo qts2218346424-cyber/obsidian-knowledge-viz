@@ -45,6 +45,7 @@ export default function Settings() {
   const [apiKey, setApiKey] = useState('')
   const [baseURL, setBaseURL] = useState('')
   const [model, setModel] = useState('')
+  const [proxy, setProxy] = useState('')
 
   useEffect(() => {
     loadSettings()
@@ -59,6 +60,7 @@ export default function Settings() {
       setApiKey(s.ai?.apiKey || '')
       setBaseURL(s.ai?.baseURL || '')
       setModel(s.ai?.model || '')
+      setProxy(s.proxy || '')
       setOriginalVaultPath(s.vaultPath || '')
       setShowRestartHint(false)
     } catch (err: any) {
@@ -132,7 +134,7 @@ export default function Settings() {
     setSaving(true)
     setMessage(null)
     try {
-      const payload: any = { vaultPath, port }
+      const payload: any = { vaultPath, port, proxy: proxy || '' }
       if (apiKey || baseURL || model) {
         const actualKey = apiKey.includes('...') && settings?.ai
           ? settings.ai.apiKey
@@ -289,6 +291,20 @@ export default function Settings() {
               onChange={(e) => setPort(Number(e.target.value))}
               className="w-32 px-3 py-2 rounded-lg bg-cream-100 border border-cream-300 text-warm-700 text-sm focus:outline-none focus:border-accent-orange/40 focus:ring-1 focus:ring-accent-orange/15"
             />
+          </div>
+
+          <div>
+            <label className="block text-xs text-warm-500 mb-1.5">网络代理</label>
+            <input
+              type="text"
+              value={proxy}
+              onChange={(e) => setProxy(e.target.value)}
+              placeholder="例如: http://127.0.0.1:7897"
+              className="w-80 px-3 py-2 rounded-lg bg-cream-100 border border-cream-300 text-warm-700 text-sm placeholder:text-warm-400 focus:outline-none focus:border-accent-orange/40 focus:ring-1 focus:ring-accent-orange/15"
+            />
+            <p className="text-[11px] text-warm-400 mt-1">
+              用于网页抓取（如 YouTube 等需要代理访问的站点）。留空则直接访问。
+            </p>
           </div>
         </div>
 

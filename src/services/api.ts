@@ -2,10 +2,19 @@
 
 const BASE = '/api'
 
+// Extract error message from response body, fall back to status text
+async function extractErrorMessage(res: Response): Promise<string> {
+  try {
+    const body = await res.json()
+    if (body.error) return body.error
+  } catch { /* not JSON */ }
+  return `HTTP ${res.status} ${res.statusText}`
+}
+
 async function fetchJSON<T>(url: string): Promise<T> {
   const res = await fetch(`${BASE}${url}`)
   if (!res.ok) {
-    throw new Error(`API error: ${res.status} ${res.statusText}`)
+    throw new Error(await extractErrorMessage(res))
   }
   return res.json()
 }
@@ -17,7 +26,7 @@ async function postJSON<T>(url: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
   })
   if (!res.ok) {
-    throw new Error(`API error: ${res.status} ${res.statusText}`)
+    throw new Error(await extractErrorMessage(res))
   }
   return res.json()
 }
@@ -29,7 +38,7 @@ async function putJSON<T>(url: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
   })
   if (!res.ok) {
-    throw new Error(`API error: ${res.status} ${res.statusText}`)
+    throw new Error(await extractErrorMessage(res))
   }
   return res.json()
 }
@@ -41,7 +50,7 @@ async function delJSON<T>(url: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
   })
   if (!res.ok) {
-    throw new Error(`API error: ${res.status} ${res.statusText}`)
+    throw new Error(await extractErrorMessage(res))
   }
   return res.json()
 }
@@ -53,7 +62,7 @@ async function patchJSON<T>(url: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
   })
   if (!res.ok) {
-    throw new Error(`API error: ${res.status} ${res.statusText}`)
+    throw new Error(await extractErrorMessage(res))
   }
   return res.json()
 }
@@ -226,6 +235,7 @@ export interface ReviewDueData {
 export interface AppSettings {
   vaultPath: string
   port: number
+  proxy?: string
   ai?: { apiKey: string; baseURL: string; model?: string }
   configPath?: string
 }
