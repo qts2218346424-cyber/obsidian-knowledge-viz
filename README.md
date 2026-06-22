@@ -1,6 +1,6 @@
 # Obsidian Knowledge Viz
 
-> 基于 Obsidian 知识库的可视化学习平台 —— 集知识图谱、AI 编辑、自动整理、408 考研复习于一体。
+> 基于 Obsidian 知识库的可视化学习平台 —— 集知识图谱、AI 编辑、自动整理、智能复习于一体。
 
 ![React](https://img.shields.io/badge/React-19-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-blue)
@@ -76,16 +76,17 @@
 
 #### 科目进度
 
-四科笔记数量和字数的可视化统计。
+按文件夹自动分类的笔记数量和字数可视化统计。
 
 - Recharts 柱状图展示各科对比
 - 总笔记数、总字数、平均每篇字数
+- 分类基于知识库文件夹结构，自动适配任意知识库
 
 ### 在线做题
 
-408 考研专业课选择题练习系统，内置 145+ 道真题。
+专业课选择题练习系统，内置 145+ 道真题。
 
-- 四科选择：数据结构、计算机组成原理、操作系统、计算机网络
+- 科目选择：数据结构、计算机组成原理、操作系统、计算机网络
 - 练习模式（即时反馈 + 解析）和考试模式（批量提交 + 评分）
 - **题库导入**：支持 JSON 文件上传、粘贴导入、AI 自动生成
 - 题目导航、计时、科目正确率统计
@@ -93,7 +94,7 @@
 
 ### 背单词
 
-考研英语词汇学习，1897 词考研核心词库，自动推送新词。
+英语词汇学习，1897 词核心词库，自动推送新词。
 
 - **自动推送**：待复习不足 20 词时自动从词库补充新词，无需手动添加
 - 渐变主题卡片（高频/中频/低频各有配色）
@@ -175,66 +176,15 @@
   pip install markitdown
   ```
 
-### 安装
-
-```bash
-git clone https://github.com/qts2218346424-cyber/obsidian-knowledge-viz.git
-cd obsidian-knowledge-viz
-npm install
-```
-
-### 配置
-
-编辑 `server/config.json`：
-
-```json
-{
-  "vaultPath": "C:\\Users\\YourName\\Documents\\ObsidianVault",
-  "port": 3001,
-  "ai": {
-    "apiKey": "your-api-key",
-    "baseURL": "https://api.anthropic.com",
-    "model": "claude-3-5-sonnet-20241022"
-  }
-}
-```
-
-| 字段 | 说明 |
-|------|------|
-| `vaultPath` | Obsidian 知识库根目录路径 |
-| `port` | 后端服务端口（默认 3001）|
-| `ai.apiKey` | API 密钥 |
-| `ai.baseURL` | API 地址（兼容 Anthropic 格式即可）|
-| `ai.model` | 模型名称 |
-
 ### 开发
 
 ```bash
-# 同时启动前端 + 后端
+npm install
 npm run dev:all
-
-# 或分别启动
-npm run dev          # 前端: http://localhost:5173
-npm run server:dev   # 后端: http://localhost:3001
+# 前端: http://localhost:5173  后端: http://localhost:3001
 ```
 
-### 构建
-
-```bash
-npm run build:all    # 前端 (dist/) + 服务端 (dist-server/server.mjs)
-```
-
-### 打包桌面应用
-
-```bash
-# 开发模式（带热更新）
-npm run electron:dev
-
-# 打包为 Windows 可执行文件
-npm run pack
-```
-
-打包产物在 `release/` 目录下，直接运行 `Knowledge-Viz.exe` 即可。
+详细安装、配置和使用说明请参阅下方 [安装使用](#安装使用) 章节。
 
 ---
 
@@ -289,8 +239,8 @@ obsidian-knowledge-viz/
 │   ├── hooks/                   # 自定义 Hooks
 │   ├── services/                # API 客户端
 │   └── data/
-│       ├── questions/           # 408 题库 (145+ 题)
-│       ├── vocab-part1~4.ts     # 考研词库 (1897 词)
+│       ├── questions/           # 题库 (145+ 题)
+│       ├── vocab-part1~4.ts     # 词库 (1897 词)
 │       └── ambientSounds.ts     # 电台数据
 ├── dist/                        # 前端构建产物
 ├── dist-server/                 # 服务端构建产物
@@ -380,11 +330,74 @@ obsidian-knowledge-viz/
 
 ---
 
-## 下载
+## 安装使用
 
-前往 [Releases](https://github.com/qts2218346424-cyber/obsidian-knowledge-viz/releases) 下载最新版本的 Windows 可执行文件。
+### 方式一：下载预编译版本（推荐普通用户）
 
-解压后直接运行 `Knowledge-Viz.exe`，无需安装 Node.js。
+1. 前往 [Releases](https://github.com/qts2218346424-cyber/obsidian-knowledge-viz/releases) 页面下载最新版本
+2. 解压压缩包到任意目录（例如 `C:\Program Files\Knowledge Viz\`）
+3. 在解压目录中找到 `resources\config.json`，编辑配置（见下方配置说明）
+4. 双击 `Knowledge-Viz.exe` 启动应用
+
+无需安装 Node.js 或任何其他依赖。
+
+### 方式二：从源码构建（推荐开发者）
+
+```bash
+# 1. 克隆仓库
+git clone https://github.com/qts2218346424-cyber/obsidian-knowledge-viz.git
+cd obsidian-knowledge-viz
+
+# 2. 安装依赖
+npm install
+
+# 3. 创建配置文件
+cp server/config.example.json server/config.json
+# 然后编辑 server/config.json（见下方配置说明）
+
+# 4. 开发模式运行（前端热更新 + 后端热重载）
+npm run dev:all
+# 访问 http://localhost:5173
+
+# 5. 打包为桌面应用
+npm run pack
+# 产物在 release/ 目录下
+```
+
+### 配置说明
+
+编辑 `server/config.json`：
+
+```json
+{
+  "vaultPath": "C:\\Users\\YourName\\Documents\\ObsidianVault",
+  "port": 3001,
+  "ai": {
+    "apiKey": "your-api-key",
+    "baseURL": "https://api.anthropic.com",
+    "model": "claude-3-5-sonnet-20241022"
+  }
+}
+```
+
+| 字段 | 必填 | 说明 |
+|------|:----:|------|
+| `vaultPath` | 是 | Obsidian 知识库所在的文件夹路径 |
+| `port` | 否 | 后端服务端口，默认 3001 |
+| `ai.apiKey` | 否 | AI 功能所需的 API 密钥（不填则 AI 相关功能不可用） |
+| `ai.baseURL` | 否 | API 地址，兼容任何 Anthropic 格式的 API |
+| `ai.model` | 否 | 模型名称，默认 `mimo-v2.5-pro` |
+
+> **提示**：`vaultPath` 是唯一必须修改的配置项，将其指向你的 Obsidian 知识库根目录即可。
+
+### 首次使用
+
+启动应用后：
+
+1. **知识图谱**：自动扫描知识库中的所有 Markdown 笔记，构建关联图谱
+2. **学习中心**：按文件夹自动分类科目，显示最近更新和复习提醒
+3. **背单词**：自动推送 20 个新词，开始间隔重复学习
+4. **AI 功能**：在编辑器中使用 AI 润色、在聊天页面向知识库提问（需配置 AI API）
 
 ---
 
