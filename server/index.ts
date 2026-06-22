@@ -1433,16 +1433,47 @@ function writeVocabProgress(progress: Record<string, VocabProgress>) {
 
 app.get('/api/study/vocabulary', (_req, res) => {
   try {
-    const progress = readVocabProgress()
+    let progress = readVocabProgress()
     const todayStr = new Date().toISOString().split('T')[0]
-    const learnedWords = Object.keys(progress)
-    const existingSet = new Set(learnedWords.map(w => w.toLowerCase()))
+    let learnedWords = Object.keys(progress)
+    let existingSet = new Set(learnedWords.map(w => w.toLowerCase()))
 
     // Find words due for review
-    const dueWords = learnedWords.filter(w => {
+    let dueWords = learnedWords.filter(w => {
       const p = progress[w]
       return !p.nextReview || p.nextReview <= todayStr
     })
+
+    // Auto-push: if fewer than 20 due words, add new words from pool
+    const DAILY_TARGET = 20
+    let autoAdded = 0
+    if (dueWords.length < DAILY_TARGET) {
+      const needed = DAILY_TARGET - dueWords.length
+      const newWords = VOCAB_POOL
+        .filter(w => !existingSet.has(w.word.toLowerCase()))
+        .slice(0, needed)
+
+      if (newWords.length > 0) {
+        for (const entry of newWords) {
+          progress[entry.word] = {
+            status: 'new',
+            nextReview: todayStr,
+            reviews: 0,
+            addedDate: todayStr,
+          }
+          existingSet.add(entry.word.toLowerCase())
+          autoAdded++
+        }
+        writeVocabProgress(progress)
+
+        // Re-compute after adding
+        learnedWords = Object.keys(progress)
+        dueWords = learnedWords.filter(w => {
+          const p = progress[w]
+          return !p.nextReview || p.nextReview <= todayStr
+        })
+      }
+    }
 
     // Get due word details from pool
     const dueRecords = dueWords.slice(0, 30).map(w => {
@@ -1480,6 +1511,7 @@ app.get('/api/study/vocabulary', (_req, res) => {
       dueWords: dueWords.length,
       dueRecords,
       suggested,
+      autoAdded,
       stats: { mastered, learning, newWords },
     })
   } catch (err: any) {

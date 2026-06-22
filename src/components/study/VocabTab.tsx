@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
-  Loader2, ChevronLeft, ChevronRight, RefreshCw, Plus,
-  Volume2, Check, Award, BookOpen, Languages, Sparkles,
+  Loader2, ChevronLeft, ChevronRight, RefreshCw,
+  Volume2, Check, Award, BookOpen, Sparkles,
   Quote, X, Star, TrendingUp,
 } from 'lucide-react'
 import { api } from '../../services/api'
@@ -35,6 +35,7 @@ interface VocabData {
   dueWords: number
   dueRecords: VocabRecord[]
   suggested: SuggestedWord[]
+  autoAdded: number
   stats: { mastered: number; learning: number; newWords: number }
 }
 
@@ -85,11 +86,6 @@ export default function VocabTab() {
   })
   const [done, setDone] = useState(false)
   const [slideDir, setSlideDir] = useState<'left' | 'right' | null>(null)
-
-  // Add words state
-  const [addingSuggested, setAddingSuggested] = useState(false)
-  const [generating, setGenerating] = useState(false)
-  const [showAddSection, setShowAddSection] = useState(false)
 
   // ── Data loading ──────────────────────────────────────────────────────────
 
@@ -166,61 +162,6 @@ export default function VocabTab() {
         setSlideDir(null)
       }, 200)
     }
-  }
-
-  // ── Add words ─────────────────────────────────────────────────────────────
-
-  const handleAddSuggested = async () => {
-    if (!data?.suggested.length) return
-    setAddingSuggested(true)
-    try {
-      await api.addVocabulary(
-        data.suggested.map(w => ({
-          word: w.word,
-          definition: w.definition,
-          phonetic: w.phonetic,
-          example: w.example,
-        }))
-      )
-      await loadData()
-    } catch { /* ignore */ }
-    setAddingSuggested(false)
-  }
-
-  const handleAddSingle = async (word: SuggestedWord) => {
-    try {
-      await api.addVocabulary([{
-        word: word.word,
-        definition: word.definition,
-        phonetic: word.phonetic,
-        example: word.example,
-      }])
-      if (data) {
-        setData({
-          ...data,
-          suggested: data.suggested.filter(w => w.word !== word.word),
-        })
-      }
-    } catch { /* ignore */ }
-  }
-
-  const handleGenerate = async () => {
-    setGenerating(true)
-    try {
-      const result = await api.generateVocabulary()
-      if (result.words.length > 0) {
-        await api.addVocabulary(
-          result.words.map((w: any) => ({
-            word: w.word,
-            definition: w.definition,
-            phonetic: w.phonetic,
-            example: w.example,
-          }))
-        )
-        await loadData()
-      }
-    } catch { /* ignore */ }
-    setGenerating(false)
   }
 
   // ── Render: Loading ───────────────────────────────────────────────────────
@@ -354,26 +295,23 @@ export default function VocabTab() {
           ))}
         </div>
 
-        {/* Actions */}
-        <div className="flex gap-3">
-          <WarmButton variant="secondary" onClick={loadData} className="flex-1 flex items-center justify-center gap-2">
-            <RefreshCw className="w-4 h-4" /> 刷新数据
-          </WarmButton>
-          <WarmButton variant="primary" onClick={() => setShowAddSection(s => !s)} className="flex-1 flex items-center justify-center gap-2">
-            <Plus className="w-4 h-4" /> 添加新词
-          </WarmButton>
-        </div>
-
-        {showAddSection && (
-          <AddWordsSection
-            suggested={data.suggested}
-            addingAll={addingSuggested}
-            generating={generating}
-            onAddAll={handleAddSuggested}
-            onAddSingle={handleAddSingle}
-            onGenerate={handleGenerate}
-          />
+        {/* Auto-push notification */}
+        {data.autoAdded > 0 && (
+          <div className="flex items-center gap-3 px-5 py-3 bg-accent-orange/8 border border-accent-orange/20 rounded-xl">
+            <Sparkles className="w-5 h-5 text-accent-orange shrink-0" />
+            <div className="flex-1">
+              <span className="text-sm text-warm-800">
+                已自动为你推送 <span className="font-bold">{data.autoAdded}</span> 个新单词
+              </span>
+              <span className="text-xs text-warm-400 ml-2">来自考研词库</span>
+            </div>
+          </div>
         )}
+
+        {/* Refresh */}
+        <WarmButton variant="secondary" onClick={loadData} className="w-full flex items-center justify-center gap-2">
+          <RefreshCw className="w-4 h-4" /> 刷新数据
+        </WarmButton>
       </div>
     )
   }
@@ -560,126 +498,7 @@ export default function VocabTab() {
           <span className="text-xs text-warm-400">点击释义区域查看后评分</span>
         </div>
       )}
-
-      {/* ── Add Words Section (collapsible) ─────────────────────────────────── */}
-      <div className="pt-2">
-        <button
-          onClick={() => setShowAddSection(s => !s)}
-          className="w-full flex items-center justify-between px-4 py-3 rounded-2xl bg-cream-100 border border-cream-200 text-sm text-warm-600 hover:bg-cream-200 transition-colors"
-        >
-          <span className="flex items-center gap-2">
-            <Plus className="w-4 h-4 text-accent-sage" />
-            添加新词
-            {data.suggested.length > 0 && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent-orange/15 text-accent-orange">
-                {data.suggested.length} 个推荐
-              </span>
-            )}
-          </span>
-          <ChevronRight className={`w-4 h-4 transition-transform duration-200 ${showAddSection ? 'rotate-90' : ''}`} />
-        </button>
-
-        {showAddSection && (
-          <AddWordsSection
-            suggested={data.suggested}
-            addingAll={addingSuggested}
-            generating={generating}
-            onAddAll={handleAddSuggested}
-            onAddSingle={handleAddSingle}
-            onGenerate={handleGenerate}
-          />
-        )}
-      </div>
     </div>
   )
 }
 
-// ─── Add Words Section (shared sub-component) ─────────────────────────────────
-
-function AddWordsSection({
-  suggested,
-  addingAll,
-  generating,
-  onAddAll,
-  onAddSingle,
-  onGenerate,
-}: {
-  suggested: SuggestedWord[]
-  addingAll: boolean
-  generating: boolean
-  onAddAll: () => void
-  onAddSingle: (word: SuggestedWord) => void
-  onGenerate: () => void
-}) {
-  return (
-    <div className="mt-3 bg-cream-100/60 border border-cream-200 rounded-2xl p-5 space-y-4 animate-fade-in-up">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs font-medium text-warm-600">
-          <Languages className="w-3.5 h-3.5 text-accent-sage" />
-          扩充词库
-        </div>
-        <WarmButton
-          variant="primary"
-          size="sm"
-          onClick={onGenerate}
-          disabled={generating}
-          className="flex items-center gap-1.5"
-        >
-          {generating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-          AI 生成新词
-        </WarmButton>
-      </div>
-
-      {suggested.length > 0 ? (
-        <>
-          <div className="text-[11px] text-warm-400">
-            推荐添加的单词 ({suggested.length} 个) - 来自词库分析
-          </div>
-          <div className="space-y-2 max-h-60 overflow-auto">
-            {suggested.map(w => (
-              <div
-                key={w.word}
-                className="flex items-center gap-3 px-3 py-2.5 bg-surface border border-cream-200 rounded-xl"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-warm-800">{w.word}</span>
-                    {w.phonetic && (
-                      <span className="text-[10px] text-warm-400">{w.phonetic}</span>
-                    )}
-                    {frequencyThemes[w.frequency] && (
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${frequencyThemes[w.frequency].badge}`}>
-                        {frequencyThemes[w.frequency].label}
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs text-warm-500 mt-0.5 truncate">{w.definition}</div>
-                </div>
-                <button
-                  onClick={() => onAddSingle(w)}
-                  className="shrink-0 p-1.5 rounded-lg text-accent-sage hover:bg-accent-sage/10 transition-colors"
-                  title="添加此词"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-          <WarmButton variant="secondary" size="sm" onClick={onAddAll} disabled={addingAll} className="w-full">
-            {addingAll ? (
-              <span className="flex items-center justify-center gap-2">
-                <Loader2 className="w-3.5 h-3.5 animate-spin" /> 添加中...
-              </span>
-            ) : (
-              `+ 全部添加到词库 (${suggested.length})`
-            )}
-          </WarmButton>
-        </>
-      ) : (
-        <div className="text-center py-4 text-xs text-warm-400">
-          暂无推荐单词，点击 "AI 生成新词" 让 AI 从笔记中提取专业词汇
-        </div>
-      )}
-    </div>
-  )
-}
