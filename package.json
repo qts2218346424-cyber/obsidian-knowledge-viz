@@ -36,13 +36,30 @@
     "win": {
       "target": [
         {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
           "target": "dir",
           "arch": [
             "x64"
           ]
         }
       ],
-      "icon": "public/favicon.svg"
+      "icon": "public/favicon.svg",
+      "artifactName": "Knowledge-Viz-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Knowledge Viz",
+      "installerIcon": "public/favicon.svg",
+      "uninstallerIcon": "public/favicon.svg"
     }
   },
   "dependencies": {
