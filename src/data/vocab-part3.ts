@@ -11,7 +11,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '该法院对本区所有刑事案件拥有管辖权。',
     frequency: '中频',
     unit: 21,
-    root: 'juris(法律) + dict(说) + ion → 法律上的裁决权',
+    roots: 'juris(法律) + dict(说) + ion → 法律上的裁决权',
     synonyms: 'authority, control, power',
   },
   {
@@ -22,7 +22,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '该公司卷入了专利侵权诉讼。',
     frequency: '中频',
     unit: 21,
-    root: 'litig(争议) + ation → 通过法律解决争议',
+    roots: 'litig(争议) + ation → 通过法律解决争议',
     synonyms: 'lawsuit, legal action, proceedings',
   },
   {
@@ -33,7 +33,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '双方同意通过仲裁解决争端。',
     frequency: '中频',
     unit: 21,
-    root: 'arbitr(裁判) + ation',
+    roots: 'arbitr(裁判) + ation',
     synonyms: 'mediation, adjudication',
   },
   {
@@ -44,7 +44,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '一项新的法规被通过以保护消费者权益。',
     frequency: '中频',
     unit: 21,
-    root: 'stat(站立，确立) + ute → 确立的规则',
+    roots: 'stat(站立，确立) + ute → 确立的规则',
     synonyms: 'law, legislation, act',
   },
   {
@@ -55,7 +55,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '陪审团作出了无罪的裁决。',
     frequency: '中频',
     unit: 21,
-    root: 'ver(真实) + dict(说) → 说出真相',
+    roots: 'ver(真实) + dict(说) → 说出真相',
     synonyms: 'judgment, ruling, decision',
   },
   {
@@ -66,7 +66,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '原告要求超过一百万美元的赔偿。',
     frequency: '中频',
     unit: 21,
-    root: 'plain(抱怨) + tiff → 提出投诉的人',
+    roots: 'plain(抱怨) + tiff → 提出投诉的人',
     synonyms: 'claimant, complainant',
   },
   {
@@ -77,7 +77,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '被告否认了对他的所有指控。',
     frequency: '中频',
     unit: 21,
-    root: 'de(向下) + fend(打击) + ant → 需要辩护的人',
+    roots: 'de(向下) + fend(打击) + ant → 需要辩护的人',
     synonyms: 'accused, respondent',
   },
   {
@@ -88,7 +88,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '国际法庭对领土争端作出了裁决。',
     frequency: '中频',
     unit: 21,
-    root: 'tribun(法官) + al',
+    roots: 'tribun(法官) + al',
     synonyms: 'court, panel, board',
   },
   {
@@ -99,7 +99,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '大陪审团对该官员发出了起诉书。',
     frequency: '中频',
     unit: 21,
-    root: 'in(进入) + dict(说) + ment → 正式宣布指控',
+    roots: 'in(进入) + dict(说) + ment → 正式宣布指控',
     synonyms: 'charge, accusation, prosecution',
   },
   {
@@ -110,7 +110,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '上诉法院推翻了下级法院的判决。',
     frequency: '中频',
     unit: 21,
-    root: 'ap(向) + pel(驱动) + ate → 推动案件向上',
+    roots: 'ap(向) + pel(驱动) + ate → 推动案件向上',
     synonyms: 'appeals, reviewing',
   },
   {
@@ -121,7 +121,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '他在一所著名的法学院学习法学。',
     frequency: '中频',
     unit: 21,
-    root: 'juris(法律) + prud(知识) + ence → 关于法律的知识',
+    roots: 'juris(法律) + prud(知识) + ence → 关于法律的知识',
     synonyms: 'law, legal science, legal theory',
   },
   {
@@ -132,7 +132,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '证人收到了出庭作证的传票。',
     frequency: '中频',
     unit: 21,
-    root: 'sub(在…之下) + poena(惩罚) → 不出庭则受罚',
+    roots: 'sub(在…之下) + poena(惩罚) → 不出庭则受罚',
     synonyms: 'summons, writ, citation',
   },
   {
@@ -143,7 +143,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '她签署了一份宣誓书，确认了她向警方的陈述。',
     frequency: '中频',
     unit: 21,
-    root: 'af(加强) + fid(信任) + avit → 以信任担保的声明',
+    roots: 'af(加强) + fid(信任) + avit → 以信任担保的声明',
     synonyms: 'declaration, sworn statement',
   },
   {
@@ -154,7 +154,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '成立了委员会来裁定两个部门之间的争端。',
     frequency: '中频',
     unit: 21,
-    root: 'ad(向) + judic(判断) + ate → 做出判断',
+    roots: 'ad(向) + judic(判断) + ate → 做出判断',
     synonyms: 'judge, arbitrate, rule on',
   },
   {
@@ -165,7 +165,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '该公司因商标侵权提起诉讼。',
     frequency: '中频',
     unit: 21,
-    root: 'in(进入) + fringe(边缘) + ment → 越过边界',
+    roots: 'in(进入) + fringe(边缘) + ment → 越过边界',
     synonyms: 'violation, breach, encroachment',
   },
   {
@@ -176,7 +176,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '过失是最常见的民事侵权行为之一。',
     frequency: '中频',
     unit: 21,
-    root: '拉丁语 tortus(扭曲，错误)',
+    roots: '拉丁语 tortus(扭曲，错误)',
     synonyms: 'wrong, civil wrong, injury',
   },
   {
@@ -187,7 +187,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '该裁决为未来类似案件开创了先例。',
     frequency: '中频',
     unit: 21,
-    root: 'pre(在前) + ced(走) + ent → 走在前面的案例',
+    roots: 'pre(在前) + ced(走) + ent → 走在前面的案例',
     synonyms: 'example, model, standard',
   },
   {
@@ -198,7 +198,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '法院发出了要求该公司停止运营的命令。',
     frequency: '中频',
     unit: 21,
-    root: 'man(手) + date(给予) → 交到手中的权力',
+    roots: 'man(手) + date(给予) → 交到手中的权力',
     synonyms: 'order, directive, authorization',
   },
   {
@@ -209,7 +209,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '州立法机关通过了一项增加教育拨款的法案。',
     frequency: '中频',
     unit: 21,
-    root: 'leg(法律) + islat(制定) + ure → 制定法律的机构',
+    roots: 'leg(法律) + islat(制定) + ure → 制定法律的机构',
     synonyms: 'parliament, congress, assembly',
   },
   {
@@ -220,7 +220,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '控方在审判中提出了令人信服的证据。',
     frequency: '中频',
     unit: 21,
-    root: 'pro(向前) + secut(跟随) + ion → 追究到底',
+    roots: 'pro(向前) + secut(跟随) + ion → 追究到底',
     synonyms: 'legal action, trial, suit',
   },
   {
@@ -231,7 +231,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '被告在陪审团宣告无罪后松了一口气。',
     frequency: '中频',
     unit: 21,
-    root: 'ac(加强) + quit(免除) + al → 完全免除罪责',
+    roots: 'ac(加强) + quit(免除) + al → 完全免除罪责',
     synonyms: 'exoneration, absolution, discharge',
   },
   {
@@ -242,7 +242,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '他被判两年缓刑，而非入狱。',
     frequency: '中频',
     unit: 21,
-    root: 'prob(测试) + ation → 通过考验期',
+    roots: 'prob(测试) + ation → 通过考验期',
     synonyms: 'suspension, trial period',
   },
   {
@@ -253,7 +253,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '法院命令公司向受害者赔偿。',
     frequency: '中频',
     unit: 21,
-    root: 're(回) + stitut(建立) + ion → 恢复到原来的状态',
+    roots: 're(回) + stitut(建立) + ion → 恢复到原来的状态',
     synonyms: 'compensation, reimbursement, reparation',
   },
   {
@@ -264,7 +264,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '法院发布了禁令以阻止拆除该建筑。',
     frequency: '中频',
     unit: 21,
-    root: 'in(进入) + junct(连接) + ion → 与法律约束力相连',
+    roots: 'in(进入) + junct(连接) + ion → 与法律约束力相连',
     synonyms: 'order, ban, decree',
   },
   {
@@ -275,7 +275,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '律师在审判前录下了证人的证词。',
     frequency: '中频',
     unit: 21,
-    root: 'de(向下) + posit(放置) + ion → 把证言记录下来',
+    roots: 'de(向下) + posit(放置) + ion → 把证言记录下来',
     synonyms: 'testimony, statement, affidavit',
   },
   {
@@ -286,7 +286,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '地方法官决定给予嫌疑人保释。',
     frequency: '中频',
     unit: 21,
-    root: 'magistr(主管) + ate → 主管法律事务的官员',
+    roots: 'magistr(主管) + ate → 主管法律事务的官员',
     synonyms: 'judge, justice, adjudicator',
   },
   {
@@ -297,7 +297,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '政府赦免了政治犯。',
     frequency: '中频',
     unit: 21,
-    root: 'a(无) + mnest(记忆) + y → 不再记住罪行',
+    roots: 'a(无) + mnest(记忆) + y → 不再记住罪行',
     synonyms: 'pardon, forgiveness, reprieve',
   },
   {
@@ -308,7 +308,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '两国签署了引渡条约。',
     frequency: '中频',
     unit: 21,
-    root: 'extra(之外) + dit(给予) + ion → 移交到另一国',
+    roots: 'extra(之外) + dit(给予) + ion → 移交到另一国',
     synonyms: 'surrender, transfer, deportation',
   },
   {
@@ -319,7 +319,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '持械抢劫在大多数司法管辖区被归为重罪。',
     frequency: '中频',
     unit: 21,
-    root: 'felon(重罪犯) + y',
+    roots: 'felon(重罪犯) + y',
     synonyms: 'serious crime, major offence',
   },
   {
@@ -330,7 +330,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '入店行窃通常被指控为轻罪。',
     frequency: '中频',
     unit: 21,
-    root: 'mis(错误) + demeanor(行为) → 错误的行为',
+    roots: 'mis(错误) + demeanor(行为) → 错误的行为',
     synonyms: 'minor offence, petty crime',
   },
   {
@@ -341,7 +341,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '他因在宣誓下撒谎而被判伪证罪。',
     frequency: '中频',
     unit: 21,
-    root: 'per(假) + jur(发誓) + y → 虚假的誓言',
+    roots: 'per(假) + jur(发誓) + y → 虚假的誓言',
     synonyms: 'false testimony, lying under oath',
   },
   {
@@ -352,7 +352,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '公司必须确保遵守环境法规。',
     frequency: '中频',
     unit: 21,
-    root: 'com(完全) + pli(顺从) + ance → 完全顺从',
+    roots: 'com(完全) + pli(顺从) + ance → 完全顺从',
     synonyms: 'conformity, adherence, observance',
   },
   {
@@ -363,7 +363,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '该条约得到了所有成员国的批准。',
     frequency: '中频',
     unit: 21,
-    root: 'rat(固定的) + ify(使) → 使确定',
+    roots: 'rat(固定的) + ify(使) → 使确定',
     synonyms: 'approve, endorse, confirm',
   },
   {
@@ -374,7 +374,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '政府决定废除这部有争议的法律。',
     frequency: '中频',
     unit: 21,
-    root: 're(回) + peal(呼吁) → 收回呼吁',
+    roots: 're(回) + peal(呼吁) → 收回呼吁',
     synonyms: 'revoke, annul, abolish',
   },
   {
@@ -385,7 +385,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '在国际关系中必须尊重国家主权。',
     frequency: '中频',
     unit: 21,
-    root: 'sovereign(最高统治者) + ty',
+    roots: 'sovereign(最高统治者) + ty',
     synonyms: 'autonomy, independence, supremacy',
   },
   {
@@ -396,7 +396,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '合同规定付款必须在30天内完成。',
     frequency: '中频',
     unit: 21,
-    root: 'stipul(约定) + ate',
+    roots: 'stipul(约定) + ate',
     synonyms: 'specify, require, prescribe',
   },
   {
@@ -407,7 +407,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '警方获得了搜查嫌疑人住所的搜查令。',
     frequency: '中频',
     unit: 21,
-    root: 'war(保证) + r + ant → 保证性的文件',
+    roots: 'war(保证) + r + ant → 保证性的文件',
     synonyms: 'authorization, permit, order',
   },
   {
@@ -418,7 +418,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '她的证词对确保定罪至关重要。',
     frequency: '中频',
     unit: 21,
-    root: 'test(证人) + imony → 证人的陈述',
+    roots: 'test(证人) + imony → 证人的陈述',
     synonyms: 'evidence, statement, declaration',
   },
   {
@@ -429,7 +429,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '两国之间的盟约已持续了数十年。',
     frequency: '中频',
     unit: 21,
-    root: 'co(共同) + ven(来) + ant → 共同来达成的协议',
+    roots: 'co(共同) + ven(来) + ant → 共同来达成的协议',
     synonyms: 'agreement, pact, contract',
   },
   {
@@ -440,7 +440,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '总统颁布了禁止进口某些商品的法令。',
     frequency: '中频',
     unit: 21,
-    root: 'de(向下) + cre(决定) + e → 自上而下的决定',
+    roots: 'de(向下) + cre(决定) + e → 自上而下的决定',
     synonyms: 'edict, order, proclamation',
   },
   {
@@ -451,7 +451,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '国会制定了保护个人数据的法律。',
     frequency: '中频',
     unit: 21,
-    root: 'en(使) + act(行动) → 使成为法律行动',
+    roots: 'en(使) + act(行动) → 使成为法律行动',
     synonyms: 'pass, establish, legislate',
   },
   {
@@ -462,7 +462,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '制造商对产品中的任何缺陷负有责任。',
     frequency: '中频',
     unit: 21,
-    root: 'li(绑定) + able → 被法律绑定的',
+    roots: 'li(绑定) + able → 被法律绑定的',
     synonyms: 'responsible, accountable, subject',
   },
   {
@@ -473,7 +473,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '法院为违约行为提供了法律救济。',
     frequency: '中频',
     unit: 21,
-    root: 're(再) + med(治疗) + y → 再次治疗',
+    roots: 're(再) + med(治疗) + y → 再次治疗',
     synonyms: 'cure, solution, redress',
   },
   {
@@ -484,7 +484,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '他在服刑一半后被假释出狱。',
     frequency: '中频',
     unit: 21,
-    root: 'parol(言语，口头承诺)',
+    roots: 'parol(言语，口头承诺)',
     synonyms: 'probation, release, conditional discharge',
   },
   {
@@ -505,7 +505,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '被告的律师建议他保持沉默。',
     frequency: '中频',
     unit: 21,
-    root: 'con(共同) + sel(坐) → 坐在一起商量的人',
+    roots: 'con(共同) + sel(坐) → 坐在一起商量的人',
     synonyms: 'lawyer, attorney, adviser',
   },
   {
@@ -516,7 +516,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '合同包含一条禁止提前终止的条款。',
     frequency: '中频',
     unit: 21,
-    root: 'claus(关闭) + e → 一个封闭的段落',
+    roots: 'claus(关闭) + e → 一个封闭的段落',
     synonyms: 'provision, article, stipulation',
   },
   {
@@ -527,7 +527,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '逃税的处罚可以包括监禁。',
     frequency: '中频',
     unit: 21,
-    root: 'pen(痛苦) + alty → 带来痛苦的后果',
+    roots: 'pen(痛苦) + alty → 带来痛苦的后果',
     synonyms: 'punishment, fine, sanction',
   },
   {
@@ -538,7 +538,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '每个主权国家都有权管理自己的事务。',
     frequency: '中频',
     unit: 21,
-    root: 'sover(在上) + eign → 在最高位置的人',
+    roots: 'sover(在上) + eign → 在最高位置的人',
     synonyms: 'monarch, ruler; independent, supreme',
   },
   {
@@ -549,7 +549,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '一位中立的第三方被邀请仲裁劳动争议。',
     frequency: '中频',
     unit: 21,
-    root: 'arbitr(裁判) + ate',
+    roots: 'arbitr(裁判) + ate',
     synonyms: 'mediate, judge, adjudicate',
   },
 
@@ -562,7 +562,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '病理报告证实了恶性肿瘤的存在。',
     frequency: '中频',
     unit: 22,
-    root: 'patho(疾病) + logy(学科) → 研究疾病的学科',
+    roots: 'patho(疾病) + logy(学科) → 研究疾病的学科',
     synonyms: 'disease study, medical science',
   },
   {
@@ -573,7 +573,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '运动可以帮助加速新陈代谢并燃烧更多卡路里。',
     frequency: '中频',
     unit: 22,
-    root: 'meta(变化) + bol(投掷) + ism → 物质在体内的变化过程',
+    roots: 'meta(变化) + bol(投掷) + ism → 物质在体内的变化过程',
     synonyms: 'biochemical process',
   },
   {
@@ -584,7 +584,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '唐氏综合征是由多一条染色体引起的遗传疾病。',
     frequency: '中频',
     unit: 22,
-    root: 'syn(共同) + drome(跑) → 同时出现的症状',
+    roots: 'syn(共同) + drome(跑) → 同时出现的症状',
     synonyms: 'condition, disorder, complex',
   },
   {
@@ -595,7 +595,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '疾病的早期诊断可以显著改善治疗效果。',
     frequency: '中频',
     unit: 22,
-    root: 'dia(穿过) + gno(知道) + sis → 透过表象了解病因',
+    roots: 'dia(穿过) + gno(知道) + sis → 透过表象了解病因',
     synonyms: 'identification, detection, analysis',
   },
   {
@@ -606,7 +606,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '肥胖流行是全球主要的公共卫生问题。',
     frequency: '中频',
     unit: 22,
-    root: 'epi(在…之中) + dem(人民) + ic → 在人群中传播的',
+    roots: 'epi(在…之中) + dem(人民) + ic → 在人群中传播的',
     synonyms: 'outbreak, plague; widespread, prevalent',
   },
   {
@@ -617,7 +617,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '慢性背痛会严重影响一个人的生活质量。',
     frequency: '中频',
     unit: 22,
-    root: 'chron(时间) + ic → 持续很长时间的',
+    roots: 'chron(时间) + ic → 持续很长时间的',
     synonyms: 'persistent, long-term, lingering',
   },
   {
@@ -628,7 +628,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '幸运的是，活检显示肿瘤是良性的。',
     frequency: '中频',
     unit: 22,
-    root: 'ben(好) + ign → 性质好的',
+    roots: 'ben(好) + ign → 性质好的',
     synonyms: 'harmless, non-malignant; gentle, kind',
   },
   {
@@ -639,7 +639,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '恶性细胞可以通过血液传播到身体其他部位。',
     frequency: '中频',
     unit: 22,
-    root: 'mal(坏) + ign + ant → 性质坏的',
+    roots: 'mal(坏) + ign + ant → 性质坏的',
     synonyms: 'cancerous, deadly; harmful, dangerous',
   },
   {
@@ -650,7 +650,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '手术成功后，医生给出了乐观的预后。',
     frequency: '中频',
     unit: 22,
-    root: 'pro(向前) + gno(知道) + sis → 提前知道结果',
+    roots: 'pro(向前) + gno(知道) + sis → 提前知道结果',
     synonyms: 'prediction, forecast, outlook',
   },
   {
@@ -661,7 +661,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '物理治疗对关节手术后的康复至关重要。',
     frequency: '中频',
     unit: 22,
-    root: 'therap(治疗) + y',
+    roots: 'therap(治疗) + y',
     synonyms: 'treatment, cure, remediation',
   },
   {
@@ -672,7 +672,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '发烧和咳嗽是呼吸道感染的常见症状。',
     frequency: '中频',
     unit: 22,
-    root: 'sym(共同) + ptom(落下) → 伴随疾病出现的表现',
+    roots: 'sym(共同) + ptom(落下) → 伴随疾病出现的表现',
     synonyms: 'sign, indication, manifestation',
   },
   {
@@ -683,7 +683,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '疫苗帮助身体对病毒产生免疫反应。',
     frequency: '中频',
     unit: 22,
-    root: 'im(不) + mun(义务) + e → 免除义务，不受影响',
+    roots: 'im(不) + mun(义务) + e → 免除义务，不受影响',
     synonyms: 'resistant, protected; exempt',
   },
   {
@@ -694,7 +694,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '身体产生抗体来抵御感染。',
     frequency: '中频',
     unit: 22,
-    root: 'anti(对抗) + body(体)',
+    roots: 'anti(对抗) + body(体)',
     synonyms: 'immunoglobulin',
   },
   {
@@ -705,7 +705,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '需要手术干预来切除阑尾。',
     frequency: '中频',
     unit: 22,
-    root: 'surg(手术) + ical',
+    roots: 'surg(手术) + ical',
     synonyms: 'operative, surgical procedure',
   },
   {
@@ -716,7 +716,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '制药行业在药物研究上投入数十亿。',
     frequency: '中频',
     unit: 22,
-    root: 'pharma(药物) + ceutical',
+    roots: 'pharma(药物) + ceutical',
     synonyms: 'drug, medicinal, pharmaceutical product',
   },
   {
@@ -727,7 +727,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '医学生必须在第一年学习人体解剖学。',
     frequency: '中频',
     unit: 22,
-    root: 'ana(向上) + tomy(切割) → 切开研究',
+    roots: 'ana(向上) + tomy(切割) → 切开研究',
     synonyms: 'structure, morphology',
   },
   {
@@ -738,7 +738,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '运动生理学研究身体对体育活动的反应。',
     frequency: '中频',
     unit: 22,
-    root: 'physio(自然，生理) + logy(学科)',
+    roots: 'physio(自然，生理) + logy(学科)',
     synonyms: 'biological function, life processes',
   },
   {
@@ -749,7 +749,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '新药获批前必须进行临床试验。',
     frequency: '中频',
     unit: 22,
-    root: 'clinic(诊所) + al',
+    roots: 'clinic(诊所) + al',
     synonyms: 'medical, practical; detached, objective',
   },
   {
@@ -760,7 +760,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '患者的癌症在化疗后进入缓解期。',
     frequency: '中频',
     unit: 22,
-    root: 're(回) + miss(送) + ion → 症状退回',
+    roots: 're(回) + miss(送) + ion → 症状退回',
     synonyms: 'abatement, alleviation, subsidence',
   },
   {
@@ -771,7 +771,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '该疾病传染性很强，通过空气飞沫传播。',
     frequency: '中频',
     unit: 22,
-    root: 'con(共同) + tag(接触) + ious → 接触即可传播的',
+    roots: 'con(共同) + tag(接触) + ious → 接触即可传播的',
     synonyms: 'infectious, communicable, transmissible',
   },
   {
@@ -782,7 +782,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '医院投资了先进的诊断设备。',
     frequency: '中频',
     unit: 22,
-    root: 'dia(穿过) + gnost(认知) + ic',
+    roots: 'dia(穿过) + gnost(认知) + ic',
     synonyms: 'analytical, identificatory',
   },
   {
@@ -793,7 +793,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '世界卫生组织宣布该疫情为大流行病。',
     frequency: '中频',
     unit: 22,
-    root: 'pan(全部) + dem(人民) + ic → 影响所有人群的',
+    roots: 'pan(全部) + dem(人民) + ic → 影响所有人群的',
     synonyms: 'epidemic, plague; widespread',
   },
   {
@@ -804,7 +804,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '一种新疫苗已被研发用于阻止病毒传播。',
     frequency: '中频',
     unit: 22,
-    root: 'vacc(牛) + ine → 源自牛痘接种',
+    roots: 'vacc(牛) + ine → 源自牛痘接种',
     synonyms: 'immunization, inoculation',
   },
   {
@@ -815,7 +815,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '遗传因素在某些疾病中起重要作用。',
     frequency: '中频',
     unit: 22,
-    root: 'gen(出生) + etic → 与出生时携带的信息有关',
+    roots: 'gen(出生) + etic → 与出生时携带的信息有关',
     synonyms: 'hereditary, inherited, genomic',
   },
   {
@@ -826,7 +826,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '基因突变可导致遗传性疾病。',
     frequency: '中频',
     unit: 22,
-    root: 'mut(变化) + ation',
+    roots: 'mut(变化) + ation',
     synonyms: 'alteration, variation, change',
   },
   {
@@ -837,7 +837,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '细菌是无处不在的单细胞有机体。',
     frequency: '中频',
     unit: 22,
-    root: 'organ(器官) + ism → 有器官系统的实体',
+    roots: 'organ(器官) + ism → 有器官系统的实体',
     synonyms: 'creature, life form, being',
   },
   {
@@ -848,7 +848,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '神经元在整个神经系统中传递电信号。',
     frequency: '中频',
     unit: 22,
-    root: 'neur(神经) + on',
+    roots: 'neur(神经) + on',
     synonyms: 'nerve cell',
   },
   {
@@ -859,7 +859,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '消化酶帮助将食物分解为营养物质。',
     frequency: '中频',
     unit: 22,
-    root: 'en(在…中) + zyme(发酵) → 在发酵中起作用的物质',
+    roots: 'en(在…中) + zyme(发酵) → 在发酵中起作用的物质',
     synonyms: 'catalyst, protein',
   },
   {
@@ -870,7 +870,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '胰岛素是一种调节血糖水平的激素。',
     frequency: '中频',
     unit: 22,
-    root: 'horm(激发) + one → 激发身体活动的物质',
+    roots: 'horm(激发) + one → 激发身体活动的物质',
     synonyms: 'chemical messenger',
   },
   {
@@ -881,7 +881,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '在临床试验中，一些患者接受了安慰剂而非实际药物。',
     frequency: '中频',
     unit: 22,
-    root: '拉丁语 placebo(我将使满意)',
+    roots: '拉丁语 placebo(我将使满意)',
     synonyms: 'dummy pill, inactive substance',
   },
   {
@@ -892,7 +892,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '进行了活检以确定肿块是否为癌性。',
     frequency: '中频',
     unit: 22,
-    root: 'bio(生命) + opsy(观察) → 观察活组织',
+    roots: 'bio(生命) + opsy(观察) → 观察活组织',
     synonyms: 'tissue sample, examination',
   },
   {
@@ -903,7 +903,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '规律运动可以降低心血管疾病的风险。',
     frequency: '中频',
     unit: 22,
-    root: 'cardio(心脏) + vascular(血管的)',
+    roots: 'cardio(心脏) + vascular(血管的)',
     synonyms: 'heart and blood vessel',
   },
   {
@@ -914,7 +914,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '冬季呼吸道疾病的发病率上升。',
     frequency: '中频',
     unit: 22,
-    root: 'morb(疾病) + idity',
+    roots: 'morb(疾病) + idity',
     synonyms: 'disease rate, illness, sickness',
   },
   {
@@ -925,7 +925,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '发展中国家的婴儿死亡率显著下降。',
     frequency: '中频',
     unit: 22,
-    root: 'mort(死亡) + ality',
+    roots: 'mort(死亡) + ality',
     synonyms: 'death rate, fatality',
   },
   {
@@ -936,7 +936,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '该药物在临床试验中显示出显著的治疗效果。',
     frequency: '中频',
     unit: 22,
-    root: 'therapeut(治疗) + ic',
+    roots: 'therapeut(治疗) + ic',
     synonyms: 'curative, healing, medicinal',
   },
   {
@@ -947,7 +947,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '阿尔茨海默病是一种进行性神经系统疾病。',
     frequency: '中频',
     unit: 22,
-    root: 'neuro(神经) + logy(学科) + ical',
+    roots: 'neuro(神经) + logy(学科) + ical',
     synonyms: 'nervous system, brain-related',
   },
   {
@@ -958,7 +958,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '癌症已通过转移扩散到肝脏。',
     frequency: '中频',
     unit: 22,
-    root: 'meta(变化) + stasis(站立) → 改变位置',
+    roots: 'meta(变化) + stasis(站立) → 改变位置',
     synonyms: 'spread, dissemination, transmission',
   },
   {
@@ -969,7 +969,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '免疫学的进步促进了新疫苗的开发。',
     frequency: '中频',
     unit: 22,
-    root: 'immun(免疫) + ology(学科)',
+    roots: 'immun(免疫) + ology(学科)',
     synonyms: 'immune science',
   },
   {
@@ -980,7 +980,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '药理学是研究药物如何与生物系统相互作用的学科。',
     frequency: '中频',
     unit: 22,
-    root: 'pharma(药物) + co + logy(学科)',
+    roots: 'pharma(药物) + co + logy(学科)',
     synonyms: 'drug science, medicinal science',
   },
   {
@@ -991,7 +991,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '流行病学有助于识别人群中疾病的风险因素。',
     frequency: '中频',
     unit: 22,
-    root: 'epi(在…之中) + demi(人民) + ology(学科) → 研究疾病在人群中的分布',
+    roots: 'epi(在…之中) + demi(人民) + ology(学科) → 研究疾病在人群中的分布',
     synonyms: 'disease distribution study',
   },
   {
@@ -1002,7 +1002,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '该实验室研究各种病原体及其对人体的影响。',
     frequency: '中频',
     unit: 22,
-    root: 'patho(疾病) + gen(产生) → 产生疾病的微生物',
+    roots: 'patho(疾病) + gen(产生) → 产生疾病的微生物',
     synonyms: 'germ, microbe, infectious agent',
   },
   {
@@ -1013,7 +1013,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '患者因严重头部创伤被送入医院。',
     frequency: '中频',
     unit: 22,
-    root: '希腊语 trauma(伤口)',
+    roots: '希腊语 trauma(伤口)',
     synonyms: 'injury, wound, shock',
   },
   {
@@ -1024,7 +1024,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '她对花生有严重过敏，可能导致呼吸困难。',
     frequency: '中频',
     unit: 22,
-    root: 'al(异) + erg(反应) + y → 异常反应',
+    roots: 'al(异) + erg(反应) + y → 异常反应',
     synonyms: 'hypersensitivity, intolerance',
   },
   {
@@ -1035,7 +1035,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '久坐不动的生活方式增加了肥胖和心脏病的风险。',
     frequency: '中频',
     unit: 22,
-    root: 'sed(坐) + entary → 长时间坐着的',
+    roots: 'sed(坐) + entary → 长时间坐着的',
     synonyms: 'inactive, stationary, desk-bound',
   },
   {
@@ -1046,7 +1046,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '营地恶劣的卫生条件导致了疾病的传播。',
     frequency: '中频',
     unit: 22,
-    root: 'sanit(健康) + ary → 与健康有关的',
+    roots: 'sanit(健康) + ary → 与健康有关的',
     synonyms: 'hygienic, clean, healthy',
   },
   {
@@ -1057,7 +1057,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '旅行者抵达后被隔离了十四天。',
     frequency: '中频',
     unit: 22,
-    root: 'quarant(四十) + ine → 最初为四十天隔离期',
+    roots: 'quarant(四十) + ine → 最初为四十天隔离期',
     synonyms: 'isolation, confinement, segregation',
   },
   {
@@ -1068,7 +1068,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '一种剧毒的流感病毒株席卷了该社区。',
     frequency: '中频',
     unit: 22,
-    root: 'vir(毒) + ulent → 充满毒性的',
+    roots: 'vir(毒) + ulent → 充满毒性的',
     synonyms: 'toxic, deadly, lethal',
   },
   {
@@ -1079,7 +1079,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '慢性炎症与包括关节炎在内的许多疾病有关。',
     frequency: '中频',
     unit: 22,
-    root: 'in(进入) + flam(火焰) + ation → 像火一样燃烧的反应',
+    roots: 'in(进入) + flam(火焰) + ation → 像火一样燃烧的反应',
     synonyms: 'swelling, irritation, redness',
   },
   {
@@ -1090,7 +1090,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '生物标志物可作为疾病进展的预后指标。',
     frequency: '中频',
     unit: 22,
-    root: 'pro(向前) + gnost(认知) + ic',
+    roots: 'pro(向前) + gnost(认知) + ic',
     synonyms: 'predictive, indicative, foretelling',
   },
 
@@ -1103,7 +1103,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '可持续性已成为现代城市规划的一个关键目标。',
     frequency: '中频',
     unit: 23,
-    root: 'sus(在下面) + tain(持有) + ability → 能持续支撑的能力',
+    roots: 'sus(在下面) + tain(持有) + ability → 能持续支撑的能力',
     synonyms: 'viability, endurance, renewability',
   },
   {
@@ -1114,7 +1114,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '森林砍伐是生物多样性面临的最大威胁之一。',
     frequency: '中频',
     unit: 23,
-    root: 'bio(生命) + diversity(多样性)',
+    roots: 'bio(生命) + diversity(多样性)',
     synonyms: 'species diversity, ecological variety',
   },
   {
@@ -1125,7 +1125,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '政府对碳排放设定了严格的限制。',
     frequency: '中频',
     unit: 23,
-    root: 'e(出) + miss(发送) + ion → 向外释放',
+    roots: 'e(出) + miss(发送) + ion → 向外释放',
     synonyms: 'discharge, release, output',
   },
   {
@@ -1136,7 +1136,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '珊瑚礁是地球上最多样化的生态系统之一。',
     frequency: '中频',
     unit: 23,
-    root: 'eco(环境) + system(系统)',
+    roots: 'eco(环境) + system(系统)',
     synonyms: 'ecological system, biome',
   },
   {
@@ -1147,7 +1147,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '毁林通过减少碳吸收加剧了气候变化。',
     frequency: '中频',
     unit: 23,
-    root: 'de(去除) + forest(森林) + ation → 去除森林',
+    roots: 'de(去除) + forest(森林) + ation → 去除森林',
     synonyms: 'logging, clearing, denudation',
   },
   {
@@ -1158,7 +1158,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '野生动物保护工作帮助拯救了一些濒危物种。',
     frequency: '中频',
     unit: 23,
-    root: 'con(共同) + serv(保存) + ation → 共同保存',
+    roots: 'con(共同) + serv(保存) + ation → 共同保存',
     synonyms: 'preservation, protection, maintenance',
   },
   {
@@ -1169,7 +1169,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '太阳能和风能是最常见的可再生能源形式。',
     frequency: '中频',
     unit: 23,
-    root: 're(再) + new(新) + able → 能够再次变新的',
+    roots: 're(再) + new(新) + able → 能够再次变新的',
     synonyms: 'sustainable, green, inexhaustible',
   },
   {
@@ -1190,7 +1190,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '持续干旱导致该地区严重缺水。',
     frequency: '中频',
     unit: 23,
-    root: 'dry(干燥) + 名词化',
+    roots: 'dry(干燥) + 名词化',
     synonyms: 'aridity, dry spell, water shortage',
   },
   {
@@ -1201,7 +1201,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '毁林和过度放牧加速了土壤侵蚀。',
     frequency: '中频',
     unit: 23,
-    root: 'e(出) + ros(咬) + ion → 被逐渐啃噬掉',
+    roots: 'e(出) + ros(咬) + ion → 被逐渐啃噬掉',
     synonyms: 'wear, corrosion, degradation',
   },
   {
@@ -1212,7 +1212,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '城市扩张破坏了许多物种的自然栖息地。',
     frequency: '中频',
     unit: 23,
-    root: 'habit(居住) + at → 居住的地方',
+    roots: 'habit(居住) + at → 居住的地方',
     synonyms: 'environment, home, dwelling',
   },
   {
@@ -1223,7 +1223,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '大熊猫曾被列为濒危物种。',
     frequency: '中频',
     unit: 23,
-    root: 'en(使) + danger(危险) + ed → 处于危险中的',
+    roots: 'en(使) + danger(危险) + ed → 处于危险中的',
     synonyms: 'threatened, at risk, vulnerable',
   },
   {
@@ -1234,7 +1234,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '臭氧层的消耗是一个严重的环境问题。',
     frequency: '中频',
     unit: 23,
-    root: 'de(完全) + plet(填充) + ion → 完全不填充，即耗尽',
+    roots: 'de(完全) + plet(填充) + ion → 完全不填充，即耗尽',
     synonyms: 'exhaustion, consumption, reduction',
   },
   {
@@ -1245,7 +1245,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '工业废水造成的水污染影响着数百万人。',
     frequency: '中频',
     unit: 23,
-    root: 'con(共同) + tamin(接触，污染) + ation',
+    roots: 'con(共同) + tamin(接触，污染) + ation',
     synonyms: 'pollution, adulteration, impurity',
   },
   {
@@ -1256,7 +1256,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '湿地的生态平衡必须被仔细维护。',
     frequency: '中频',
     unit: 23,
-    root: 'eco(环境) + logy(学科) + ical',
+    roots: 'eco(环境) + logy(学科) + ical',
     synonyms: 'environmental, biological, natural',
   },
   {
@@ -1267,7 +1267,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '回收塑料瓶有助于减少浪费和节约资源。',
     frequency: '中频',
     unit: 23,
-    root: 're(再) + cycle(循环)',
+    roots: 're(再) + cycle(循环)',
     synonyms: 'reuse, reclaim, reprocess',
   },
   {
@@ -1278,7 +1278,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '环境退化是快速工业化的后果。',
     frequency: '中频',
     unit: 23,
-    root: 'de(向下) + grad(步) + ation → 一步步向下',
+    roots: 'de(向下) + grad(步) + ation → 一步步向下',
     synonyms: 'deterioration, decline, decomposition',
   },
   {
@@ -1289,7 +1289,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '煤和石油等化石燃料是二氧化碳的主要来源。',
     frequency: '中频',
     unit: 23,
-    root: 'foss(挖掘) + il → 从地下挖出的',
+    roots: 'foss(挖掘) + il → 从地下挖出的',
     synonyms: 'relic, remnant',
   },
   {
@@ -1310,7 +1310,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '臭氧层保护地球免受有害的紫外线辐射。',
     frequency: '中频',
     unit: 23,
-    root: 'ozein(希腊语：嗅) → 有特殊气味的气体',
+    roots: 'ozein(希腊语：嗅) → 有特殊气味的气体',
     synonyms: 'O3',
   },
   {
@@ -1331,7 +1331,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '工厂的有毒化学物质污染了当地的供水。',
     frequency: '中频',
     unit: 23,
-    root: 'tox(毒) + ic',
+    roots: 'tox(毒) + ic',
     synonyms: 'poisonous, harmful, noxious',
   },
   {
@@ -1342,7 +1342,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '该公司转向使用可生物降解的包装材料。',
     frequency: '中频',
     unit: 23,
-    root: 'bio(生物) + degradable(可降解的)',
+    roots: 'bio(生物) + degradable(可降解的)',
     synonyms: 'compostable, eco-friendly',
   },
   {
@@ -1353,7 +1353,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '许多科学家警告我们正在进入大规模灭绝时期。',
     frequency: '中频',
     unit: 23,
-    root: 'ex(出) + stinct(刺灭) + ion → 完全熄灭',
+    roots: 'ex(出) + stinct(刺灭) + ion → 完全熄灭',
     synonyms: 'elimination, annihilation, disappearance',
   },
   {
@@ -1364,7 +1364,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '该水库为整个城市提供饮用水。',
     frequency: '中频',
     unit: 23,
-    root: 'reserv(保留) + oir → 保留水的地方',
+    roots: 'reserv(保留) + oir → 保留水的地方',
     synonyms: 'lake, dam, storage',
   },
   {
@@ -1375,7 +1375,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '太阳能电池板可以显著降低家庭电费。',
     frequency: '中频',
     unit: 23,
-    root: 'sol(太阳) + ar',
+    roots: 'sol(太阳) + ar',
     synonyms: 'sun-related, photovoltaic',
   },
   {
@@ -1386,7 +1386,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '有机农业避免使用合成杀虫剂和化肥。',
     frequency: '中频',
     unit: 23,
-    root: 'organ(器官) + ic → 与生命器官有关的',
+    roots: 'organ(器官) + ic → 与生命器官有关的',
     synonyms: 'natural, chemical-free, biological',
   },
   {
@@ -1397,7 +1397,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '干旱地区覆盖了地球约三分之一的陆地表面。',
     frequency: '中频',
     unit: 23,
-    root: '拉丁语 aridus(干燥的)',
+    roots: '拉丁语 aridus(干燥的)',
     synonyms: 'dry, parched, barren',
   },
   {
@@ -1408,7 +1408,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '沙漠化威胁着非洲数百万人的生计。',
     frequency: '中频',
     unit: 23,
-    root: 'desert(沙漠) + ification(使成为) → 变成沙漠',
+    roots: 'desert(沙漠) + ification(使成为) → 变成沙漠',
     synonyms: 'land degradation, drought',
   },
   {
@@ -1419,7 +1419,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '过度使用农药会损害益虫和土壤健康。',
     frequency: '中频',
     unit: 23,
-    root: 'pest(害虫) + cide(杀) → 杀害虫的物质',
+    roots: 'pest(害虫) + cide(杀) → 杀害虫的物质',
     synonyms: 'insecticide, herbicide, chemical spray',
   },
   {
@@ -1430,7 +1430,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '工业废水在排入水道之前必须经过处理。',
     frequency: '中频',
     unit: 23,
-    root: 'ef(出) + flu(流) + ent → 流出的东西',
+    roots: 'ef(出) + flu(流) + ent → 流出的东西',
     synonyms: 'discharge, wastewater, outflow',
   },
   {
@@ -1441,7 +1441,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '严重的雾霾迫使该市取消了户外活动。',
     frequency: '中频',
     unit: 23,
-    root: 'smoke(烟) + fog(雾) 的合成词',
+    roots: 'smoke(烟) + fog(雾) 的合成词',
     synonyms: 'haze, pollution, fog',
   },
   {
@@ -1452,7 +1452,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '冰岛严重依赖地热能进行供暖和发电。',
     frequency: '中频',
     unit: 23,
-    root: 'geo(地球) + thermal(热的)',
+    roots: 'geo(地球) + thermal(热的)',
     synonyms: 'earth-heat, underground heat',
   },
   {
@@ -1463,7 +1463,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '该公司采取了可持续的做法以减少对环境的影响。',
     frequency: '中频',
     unit: 23,
-    root: 'sus(在下面) + tain(持有) + able → 能持续支撑的',
+    roots: 'sus(在下面) + tain(持有) + able → 能持续支撑的',
     synonyms: 'viable, eco-friendly, renewable',
   },
   {
@@ -1484,7 +1484,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '空气中的细颗粒物可以深入渗透到肺部。',
     frequency: '中频',
     unit: 23,
-    root: 'particul(微粒) + ate',
+    roots: 'particul(微粒) + ate',
     synonyms: 'particle, fine matter',
   },
   {
@@ -1495,7 +1495,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '重新造林项目旨在恢复被砍伐的森林。',
     frequency: '中频',
     unit: 23,
-    root: 're(再) + forest(森林) + ation',
+    roots: 're(再) + forest(森林) + ation',
     synonyms: 'afforestation, replanting',
   },
   {
@@ -1506,7 +1506,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '现代灌溉系统可以显著减少农业中的水资源浪费。',
     frequency: '中频',
     unit: 23,
-    root: 'ir(向内) + rig(水) + ation → 引水灌溉',
+    roots: 'ir(向内) + rig(水) + ation → 引水灌溉',
     synonyms: 'watering, sprinkling',
   },
   {
@@ -1517,7 +1517,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '降水模式的变化会影响农业生产力。',
     frequency: '中频',
     unit: 23,
-    root: 'pre(前) + cipit(头) + ation → 头朝下落下来',
+    roots: 'pre(前) + cipit(头) + ation → 头朝下落下来',
     synonyms: 'rainfall, rain, snow',
   },
   {
@@ -1528,7 +1528,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '陆地生态系统包括森林、草原和沙漠。',
     frequency: '中频',
     unit: 23,
-    root: 'terr(土地) + estrial → 与土地有关的',
+    roots: 'terr(土地) + estrial → 与土地有关的',
     synonyms: 'land-based, earthly',
   },
   {
@@ -1539,7 +1539,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '水生植物在维持水质方面发挥着重要作用。',
     frequency: '中频',
     unit: 23,
-    root: 'aqua(水) + tic → 与水有关的',
+    roots: 'aqua(水) + tic → 与水有关的',
     synonyms: 'marine, water-dwelling, oceanic',
   },
   {
@@ -1550,7 +1550,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '气候变化的缓解需要减少温室气体排放。',
     frequency: '中频',
     unit: 23,
-    root: 'mit(柔和) + ig + ation → 使变柔和',
+    roots: 'mit(柔和) + ig + ation → 使变柔和',
     synonyms: 'alleviation, reduction, moderation',
   },
   {
@@ -1561,7 +1561,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '物种必须经历适应才能在变化的环境中生存。',
     frequency: '中频',
     unit: 23,
-    root: 'ad(向) + apt(适合) + ation → 使自己适合',
+    roots: 'ad(向) + apt(适合) + ation → 使自己适合',
     synonyms: 'adjustment, acclimatization, modification',
   },
   {
@@ -1572,7 +1572,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '一次性塑料制品产生巨大的环境废物。',
     frequency: '中频',
     unit: 23,
-    root: 'dis(分开) + pos(放置) + able → 可以放置不管的',
+    roots: 'dis(分开) + pos(放置) + able → 可以放置不管的',
     synonyms: 'single-use, throwaway',
   },
   {
@@ -1583,7 +1583,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '有机废物自然分解并将养分归还土壤。',
     frequency: '中频',
     unit: 23,
-    root: 'de(向下) + com(共同) + pose(放置) → 分解开来',
+    roots: 'de(向下) + com(共同) + pose(放置) → 分解开来',
     synonyms: 'decay, rot, break down',
   },
   {
@@ -1594,7 +1594,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '重金属是最危险的水污染物之一。',
     frequency: '中频',
     unit: 23,
-    root: 'pollut(弄脏) + ant → 弄脏环境的东西',
+    roots: 'pollut(弄脏) + ant → 弄脏环境的东西',
     synonyms: 'contaminant, toxin, impurity',
   },
   {
@@ -1605,7 +1605,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '融化的永久冻土释放甲烷，一种强效温室气体。',
     frequency: '中频',
     unit: 23,
-    root: 'perma(永久) + frost(霜冻)',
+    roots: 'perma(永久) + frost(霜冻)',
     synonyms: 'frozen ground, pergelisol',
   },
   {
@@ -1616,7 +1616,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '生物柴油可以从植物油和动物脂肪中生产。',
     frequency: '中频',
     unit: 23,
-    root: 'bio(生物) + diesel(柴油)',
+    roots: 'bio(生物) + diesel(柴油)',
     synonyms: 'biofuel, renewable fuel',
   },
 
@@ -1629,7 +1629,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '认识论考察人类知识的本质和限度。',
     frequency: '中频',
     unit: 24,
-    root: 'episteme(知识) + logy(学科)',
+    roots: 'episteme(知识) + logy(学科)',
     synonyms: 'theory of knowledge, gnoseology',
   },
   {
@@ -1640,7 +1640,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '形而上学探讨存在、现实和存在本质的问题。',
     frequency: '中频',
     unit: 24,
-    root: 'meta(超越) + physics(物理学) → 超越物理的学问',
+    roots: 'meta(超越) + physics(物理学) → 超越物理的学问',
     synonyms: 'philosophy of being, ontology',
   },
   {
@@ -1651,7 +1651,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '这部小说探讨了自由和无意义等存在主义主题。',
     frequency: '中频',
     unit: 24,
-    root: 'ex(出) + sist(站立) + ential → 站出来存在的',
+    roots: 'ex(出) + sist(站立) + ential → 站出来存在的',
     synonyms: 'ontological, being-related',
   },
   {
@@ -1662,7 +1662,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '黑格尔的辩证法涉及正题、反题和合题的相互作用。',
     frequency: '中频',
     unit: 24,
-    root: 'dia(穿过) + lect(说) + ic → 通过对话论证',
+    roots: 'dia(穿过) + lect(说) + ic → 通过对话论证',
     synonyms: 'argumentation, reasoning, logic',
   },
   {
@@ -1673,7 +1673,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '该理论必须得到实验的经验证据支持。',
     frequency: '中频',
     unit: 24,
-    root: 'em(在…中) + pir(尝试) + ical → 基于尝试和经验的',
+    roots: 'em(在…中) + pir(尝试) + ical → 基于尝试和经验的',
     synonyms: 'observational, experimental, practical',
   },
   {
@@ -1684,7 +1684,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '科学革命创造了理解自然的新范式。',
     frequency: '中频',
     unit: 24,
-    root: 'para(旁边) + deigm(展示) → 展示在旁边的模型',
+    roots: 'para(旁边) + deigm(展示) → 展示在旁边的模型',
     synonyms: 'model, framework, pattern',
   },
   {
@@ -1695,7 +1695,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '她采取务实的方法来解决问题，而不是追求完美的解决方案。',
     frequency: '中频',
     unit: 24,
-    root: 'pragma(行为) + tic → 注重行为的',
+    roots: 'pragma(行为) + tic → 注重行为的',
     synonyms: 'practical, realistic, down-to-earth',
   },
   {
@@ -1706,7 +1706,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '该建筑的美学设计赢得了多个建筑奖项。',
     frequency: '中频',
     unit: 24,
-    root: 'aesthet(感觉) + ic → 与感觉、美感有关的',
+    roots: 'aesthet(感觉) + ic → 与感觉、美感有关的',
     synonyms: 'artistic, beautiful, tasteful',
   },
   {
@@ -1717,7 +1717,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '本体论提出关于什么类型的事物存在的基本问题。',
     frequency: '低频',
     unit: 24,
-    root: 'ont(存在) + ology(学科)',
+    roots: 'ont(存在) + ology(学科)',
     synonyms: 'study of being, metaphysics',
   },
   {
@@ -1728,7 +1728,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '康德认为某些概念是经验的先验条件。',
     frequency: '低频',
     unit: 24,
-    root: 'trans(超越) + scend(攀登) + ental → 超越攀登的',
+    roots: 'trans(超越) + scend(攀登) + ental → 超越攀登的',
     synonyms: 'supernatural, metaphysical, sublime',
   },
   {
@@ -1739,7 +1739,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '尼采警告了现代社会中虚无主义的危险。',
     frequency: '低频',
     unit: 24,
-    root: 'nihil(虚无) + ism(主义)',
+    roots: 'nihil(虚无) + ism(主义)',
     synonyms: 'skepticism, pessimism, negation',
   },
   {
@@ -1750,7 +1750,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '功利主义伦理学认为最好的行为是最大化整体幸福。',
     frequency: '中频',
     unit: 24,
-    root: 'util(有用) + itarian → 追求有用的',
+    roots: 'util(有用) + itarian → 追求有用的',
     synonyms: 'practical, pragmatic, functional',
   },
   {
@@ -1761,7 +1761,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '真正的利他主义涉及帮助他人而不期望任何回报。',
     frequency: '中频',
     unit: 24,
-    root: 'alter(他人) + uism → 关注他人的主义',
+    roots: 'alter(他人) + uism → 关注他人的主义',
     synonyms: 'selflessness, benevolence, charity',
   },
   {
@@ -1772,7 +1772,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '决定论认为所有事件都由先前的事件引起。',
     frequency: '低频',
     unit: 24,
-    root: 'de(完全) + termin(边界) + ism → 一切被确定的主义',
+    roots: 'de(完全) + termin(边界) + ism → 一切被确定的主义',
     synonyms: 'fatalism, predestination, causation',
   },
   {
@@ -1783,7 +1783,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '现象学从第一人称视角研究意识经验的结构。',
     frequency: '低频',
     unit: 24,
-    root: 'phenomenon(现象) + logy(学科)',
+    roots: 'phenomenon(现象) + logy(学科)',
     synonyms: 'study of phenomena',
   },
   {
@@ -1794,7 +1794,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '知识就是力量这一公理在历史上被广泛接受。',
     frequency: '中频',
     unit: 24,
-    root: 'axio(价值) + m → 有价值的原则',
+    roots: 'axio(价值) + m → 有价值的原则',
     synonyms: 'principle, postulate, maxim',
   },
   {
@@ -1805,7 +1805,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '笛卡尔二元论认为心灵和身体之间存在根本区别。',
     frequency: '低频',
     unit: 24,
-    root: 'dual(两个) + ism(主义)',
+    roots: 'dual(两个) + ism(主义)',
     synonyms: 'dichotomy, opposition, polarity',
   },
   {
@@ -1816,7 +1816,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '英国经验主义强调所有知识来自感官经验。',
     frequency: '低频',
     unit: 24,
-    root: 'em(在…中) + pir(尝试) + icism → 基于经验的学说',
+    roots: 'em(在…中) + pir(尝试) + icism → 基于经验的学说',
     synonyms: 'experientialism, pragmatism',
   },
   {
@@ -1827,7 +1827,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '理性主义认为理性是知识的首要来源。',
     frequency: '低频',
     unit: 24,
-    root: 'ratio(理性) + nal + ism(主义)',
+    roots: 'ratio(理性) + nal + ism(主义)',
     synonyms: 'intellectualism, logicism',
   },
   {
@@ -1838,7 +1838,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '诠释学关注解释的理论和方法论。',
     frequency: '低频',
     unit: 24,
-    root: 'hermeneuein(希腊语：解释)',
+    roots: 'hermeneuein(希腊语：解释)',
     synonyms: 'interpretation, exegesis, explanation',
   },
   {
@@ -1849,7 +1849,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '目的论考察自然过程是否具有内在的目的或目标。',
     frequency: '低频',
     unit: 24,
-    root: 'telos(目的) + logy(学科)',
+    roots: 'telos(目的) + logy(学科)',
     synonyms: 'purpose-driven philosophy',
   },
   {
@@ -1860,7 +1860,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '哲学怀疑主义质疑绝对确定性是否可能。',
     frequency: '中频',
     unit: 24,
-    root: 'skeptik(思考的，怀疑的) + ism',
+    roots: 'skeptik(思考的，怀疑的) + ism',
     synonyms: 'doubt, disbelief, incredulity',
   },
   {
@@ -1871,7 +1871,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '道德相对主义认为伦理标准是由文化决定的。',
     frequency: '低频',
     unit: 24,
-    root: 'relativ(相对的) + ism(主义)',
+    roots: 'relativ(相对的) + ism(主义)',
     synonyms: 'subjectivism, pluralism',
   },
   {
@@ -1882,7 +1882,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '伟大的艺术可以超越文化和语言的界限。',
     frequency: '中频',
     unit: 24,
-    root: 'trans(跨越) + scend(攀登) → 攀登跨越',
+    roots: 'trans(跨越) + scend(攀登) → 攀登跨越',
     synonyms: 'surpass, exceed, go beyond',
   },
   {
@@ -1893,7 +1893,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '该理论假设所有物质都由原子组成。',
     frequency: '中频',
     unit: 24,
-    root: 'postul(要求) + ate → 要求被接受的假设',
+    roots: 'postul(要求) + ate → 要求被接受的假设',
     synonyms: 'hypothesize, assume, posit',
   },
   {
@@ -1904,7 +1904,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '科学探究不应受到政治教条的约束。',
     frequency: '中频',
     unit: 24,
-    root: '希腊语 dogma(意见，信条)',
+    roots: '希腊语 dogma(意见，信条)',
     synonyms: 'doctrine, creed, tenet',
   },
   {
@@ -1915,7 +1915,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '该论点包含一个逻辑谬误，削弱了其结论。',
     frequency: '中频',
     unit: 24,
-    root: 'fall(犯错) + acy → 错误的推理',
+    roots: 'fall(犯错) + acy → 错误的推理',
     synonyms: 'error, misconception, delusion',
   },
   {
@@ -1926,7 +1926,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '"免费的礼物"是同义反复，因为所有礼物都是免费的。',
     frequency: '低频',
     unit: 24,
-    root: 'tauto(相同) + logy(说) → 重复说相同的内容',
+    roots: 'tauto(相同) + logy(说) → 重复说相同的内容',
     synonyms: 'redundancy, repetition, circularity',
   },
   {
@@ -1937,7 +1937,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '历史唯物主义将经济因素视为社会变革的驱动力。',
     frequency: '低频',
     unit: 24,
-    root: 'material(物质) + ism(主义)',
+    roots: 'material(物质) + ism(主义)',
     synonyms: 'physicalism, consumerism',
   },
   {
@@ -1948,7 +1948,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '哲学唯心主义认为现实在本质上根本是精神的。',
     frequency: '低频',
     unit: 24,
-    root: 'ideal(理想) + ism(主义)',
+    roots: 'ideal(理想) + ism(主义)',
     synonyms: 'utopianism, romanticism',
   },
   {
@@ -1959,7 +1959,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '该哲学家对指控发出了绝对的否认。',
     frequency: '中频',
     unit: 24,
-    root: 'category(类别) + ical → 明确归类的',
+    roots: 'category(类别) + ical → 明确归类的',
     synonyms: 'absolute, unconditional, definitive',
   },
   {
@@ -1970,7 +1970,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '结果取决于几个仍然不确定的因素。',
     frequency: '中频',
     unit: 24,
-    root: 'con(共同) + ting(接触) + ent → 接触在一起偶然发生的',
+    roots: 'con(共同) + ting(接触) + ent → 接触在一起偶然发生的',
     synonyms: 'conditional, dependent; accidental',
   },
   {
@@ -1981,7 +1981,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '辩论提出了关于正义本质的实质性问题。',
     frequency: '中频',
     unit: 24,
-    root: 'sub(在下面) + stant(站立) + ive → 站在底下的实体',
+    roots: 'sub(在下面) + stant(站立) + ive → 站在底下的实体',
     synonyms: 'essential, real, material',
   },
   {
@@ -1992,7 +1992,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '任何投资决策都有固有的风险。',
     frequency: '中频',
     unit: 24,
-    root: 'in(在…内) + her(粘附) + ent → 粘附在内部的',
+    roots: 'in(在…内) + her(粘附) + ent → 粘附在内部的',
     synonyms: 'intrinsic, innate, built-in',
   },
   {
@@ -2003,7 +2003,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '节俭悖论表明个人储蓄可能减少整体经济增长。',
     frequency: '中频',
     unit: 24,
-    root: 'para(旁边) + dox(观点) → 偏离常规的观点',
+    roots: 'para(旁边) + dox(观点) → 偏离常规的观点',
     synonyms: 'contradiction, anomaly, puzzle',
   },
   {
@@ -2014,7 +2014,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '从现有证据可以推论该理论是正确的。',
     frequency: '中频',
     unit: 24,
-    root: 'de(从) + duc(引导) + e → 从已知引导出结论',
+    roots: 'de(从) + duc(引导) + e → 从已知引导出结论',
     synonyms: 'infer, conclude, derive',
   },
   {
@@ -2025,7 +2025,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '后现代哲学质疑绝对真理和宏大叙事的存在。',
     frequency: '低频',
     unit: 24,
-    root: 'post(之后) + modern(现代的)',
+    roots: 'post(之后) + modern(现代的)',
     synonyms: 'contemporary, deconstructionist',
   },
   {
@@ -2036,7 +2036,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '理论与实践的二分法是教育中的常见主题。',
     frequency: '中频',
     unit: 24,
-    root: 'dicho(两个) + tomy(切割) → 切成两半',
+    roots: 'dicho(两个) + tomy(切割) → 切成两半',
     synonyms: 'division, split, opposition',
   },
   {
@@ -2047,7 +2047,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '规范伦理学试图建立正确和错误行为的标准。',
     frequency: '低频',
     unit: 24,
-    root: 'norm(规范) + ative → 与规范有关的',
+    roots: 'norm(规范) + ative → 与规范有关的',
     synonyms: 'prescriptive, standard, regulatory',
   },
   {
@@ -2058,7 +2058,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '定期内省可以帮助个人更好地理解自己的动机。',
     frequency: '中频',
     unit: 24,
-    root: 'intro(向内) + spect(看) + ion → 向内看',
+    roots: 'intro(向内) + spect(看) + ion → 向内看',
     synonyms: 'self-examination, reflection, contemplation',
   },
   {
@@ -2069,7 +2069,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '加缪与荒诞主义和荒诞概念密切相关。',
     frequency: '低频',
     unit: 24,
-    root: 'ab(离开) + surd(聋的) + ism → 不合理、荒诞的主义',
+    roots: 'ab(离开) + surd(聋的) + ism → 不合理、荒诞的主义',
     synonyms: 'existentialism, irrationalism',
   },
   {
@@ -2080,7 +2080,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '该论点基于所有人都是理性的这一前提。',
     frequency: '中频',
     unit: 24,
-    root: 'pre(前) + mise(放置) → 放在前面的命题',
+    roots: 'pre(前) + mise(放置) → 放在前面的命题',
     synonyms: 'assumption, proposition, hypothesis',
   },
   {
@@ -2091,7 +2091,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '他将生活描述为旅程纯粹是比喻性的。',
     frequency: '中频',
     unit: 24,
-    root: 'meta(超越) + phor(携带) + ical → 携带到另一层意思',
+    roots: 'meta(超越) + phor(携带) + ical → 携带到另一层意思',
     synonyms: 'figurative, symbolic, allegorical',
   },
   {
@@ -2102,7 +2102,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '一个连贯的哲学体系必须避免内部矛盾。',
     frequency: '中频',
     unit: 24,
-    root: 'co(共同) + her(粘附) + ent → 粘在一起的',
+    roots: 'co(共同) + her(粘附) + ent → 粘在一起的',
     synonyms: 'logical, consistent, unified',
   },
   {
@@ -2113,7 +2113,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '福柯分析了话语如何塑造社会中的权力关系。',
     frequency: '中频',
     unit: 24,
-    root: 'dis(分开) + course(跑) → 思想展开的过程',
+    roots: 'dis(分开) + course(跑) → 思想展开的过程',
     synonyms: 'discussion, dialogue, treatise',
   },
   {
@@ -2124,7 +2124,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '言论自由是民主社会的基本原则。',
     frequency: '中频',
     unit: 24,
-    root: '拉丁语 tenet(他持有)',
+    roots: '拉丁语 tenet(他持有)',
     synonyms: 'belief, doctrine, principle',
   },
   {
@@ -2135,7 +2135,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '爱通常被认为是恨的对立面。',
     frequency: '中频',
     unit: 24,
-    root: 'anti(反对) + thesis(论题) → 对立的论题',
+    roots: 'anti(反对) + thesis(论题) → 对立的论题',
     synonyms: 'opposite, contrast, reverse',
   },
   {
@@ -2146,7 +2146,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '实证主义认为只有科学可验证的知识才是有效的。',
     frequency: '低频',
     unit: 24,
-    root: 'posit(放置，确定) + ivism → 确定的、可验证的主义',
+    roots: 'posit(放置，确定) + ivism → 确定的、可验证的主义',
     synonyms: 'empiricism, scientism',
   },
   {
@@ -2157,7 +2157,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '该书提供了东西方哲学传统的综合。',
     frequency: '中频',
     unit: 24,
-    root: 'syn(共同) + thesis(放置) → 放在一起',
+    roots: 'syn(共同) + thesis(放置) → 放在一起',
     synonyms: 'combination, integration, fusion',
   },
 
@@ -2170,7 +2170,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '儿童的认知发展受遗传和环境的影响。',
     frequency: '中频',
     unit: 25,
-    root: 'cognit(认知) + ive → 与认知有关的',
+    roots: 'cognit(认知) + ive → 与认知有关的',
     synonyms: 'mental, intellectual, perceptual',
   },
   {
@@ -2181,7 +2181,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '我们的许多决定受到潜意识欲望和恐惧的影响。',
     frequency: '中频',
     unit: 25,
-    root: 'sub(在下面) + conscious(意识的)',
+    roots: 'sub(在下面) + conscious(意识的)',
     synonyms: 'unconscious, subliminal, intuitive',
   },
   {
@@ -2192,7 +2192,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '巨大的噪音作为刺激引发了惊吓反应。',
     frequency: '中频',
     unit: 25,
-    root: 'stimul(刺激) + us → 刺激物',
+    roots: 'stimul(刺激) + us → 刺激物',
     synonyms: 'trigger, provocation, impetus',
   },
   {
@@ -2203,7 +2203,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '我们对现实的感知受到过去经验和文化背景的影响。',
     frequency: '中频',
     unit: 25,
-    root: 'per(完全) + cept(抓住) + ion → 完全抓住信息',
+    roots: 'per(完全) + cept(抓住) + ion → 完全抓住信息',
     synonyms: 'awareness, impression, understanding',
   },
   {
@@ -2214,7 +2214,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '巴甫洛夫的狗实验证明了经典条件反射。',
     frequency: '中频',
     unit: 25,
-    root: 'condition(条件) + ing',
+    roots: 'condition(条件) + ing',
     synonyms: 'training, habituation, learning',
   },
   {
@@ -2225,7 +2225,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '正强化在塑造行为方面比惩罚更有效。',
     frequency: '中频',
     unit: 25,
-    root: 're(再) + in(进入) + force(力量) + ment → 再次加力',
+    roots: 're(再) + in(进入) + force(力量) + ment → 再次加力',
     synonyms: 'strengthening, encouragement, support',
   },
   {
@@ -2236,7 +2236,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '弗洛伊德认为许多神经症源于未解决的童年冲突。',
     frequency: '低频',
     unit: 25,
-    root: 'neur(神经) + osis(状态) → 神经的异常状态',
+    roots: 'neur(神经) + osis(状态) → 神经的异常状态',
     synonyms: 'anxiety, psychological disorder',
   },
   {
@@ -2247,7 +2247,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '作为一个内向的人，她更喜欢安静的活动和小型社交聚会。',
     frequency: '中频',
     unit: 25,
-    root: 'intro(向内) + vert(转) → 向内转的人',
+    roots: 'intro(向内) + vert(转) → 向内转的人',
     synonyms: 'wallflower, loner, shy person',
   },
   {
@@ -2258,7 +2258,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '外向的人倾向于从社交互动和群体活动中获取能量。',
     frequency: '中频',
     unit: 25,
-    root: 'extra(向外) + vert(转) → 向外转的人',
+    roots: 'extra(向外) + vert(转) → 向外转的人',
     synonyms: 'outgoing person, socialite',
   },
   {
@@ -2269,7 +2269,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '共情使我们能够理解和分享他人的感受。',
     frequency: '中频',
     unit: 25,
-    root: 'em(进入) + path(感受) + y → 进入他人的感受',
+    roots: 'em(进入) + path(感受) + y → 进入他人的感受',
     synonyms: 'compassion, understanding, sympathy',
   },
   {
@@ -2280,7 +2280,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '精神病涉及与现实的脱节，可能包括幻觉。',
     frequency: '低频',
     unit: 25,
-    root: 'psych(心灵) + osis(异常状态) → 心灵的异常状态',
+    roots: 'psych(心灵) + osis(异常状态) → 心灵的异常状态',
     synonyms: 'mental illness, delirium, insanity',
   },
   {
@@ -2291,7 +2291,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '在困难的一天后写日记可以给人一种情感宣泄的感觉。',
     frequency: '低频',
     unit: 25,
-    root: '希腊语 katharsis(净化)',
+    roots: '希腊语 katharsis(净化)',
     synonyms: 'purification, release, purge',
   },
   {
@@ -2302,7 +2302,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '心理韧性帮助人们应对压力和逆境。',
     frequency: '中频',
     unit: 25,
-    root: 're(回) + sili(跳) + ence → 弹回来的能力',
+    roots: 're(回) + sili(跳) + ence → 弹回来的能力',
     synonyms: 'toughness, adaptability, strength',
   },
   {
@@ -2313,7 +2313,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '内在动机来自内心，由个人满足感驱动。',
     frequency: '中频',
     unit: 25,
-    root: 'intra(在内部) + 变化 → 在内部的',
+    roots: 'intra(在内部) + 变化 → 在内部的',
     synonyms: 'inherent, innate, essential',
   },
   {
@@ -2324,7 +2324,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '金钱和认可等外在奖励可以激励员工。',
     frequency: '中频',
     unit: 25,
-    root: 'extra(外面) → 在外部的',
+    roots: 'extra(外面) → 在外部的',
     synonyms: 'external, outside, superficial',
   },
   {
@@ -2335,7 +2335,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '认知研究揭示了记忆和注意力如何相互作用。',
     frequency: '中频',
     unit: 25,
-    root: 'cognit(认知) + ion',
+    roots: 'cognit(认知) + ion',
     synonyms: 'thinking, understanding, perception',
   },
   {
@@ -2346,7 +2346,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '考试焦虑会显著削弱学生的学业表现。',
     frequency: '中频',
     unit: 25,
-    root: 'anx(紧缩) + iety → 心理紧缩的感觉',
+    roots: 'anx(紧缩) + iety → 心理紧缩的感觉',
     synonyms: 'worry, nervousness, apprehension',
   },
   {
@@ -2357,7 +2357,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '强迫症涉及反复出现的想法和强迫行为。',
     frequency: '中频',
     unit: 25,
-    root: 'com(完全) + puls(推动) + ion → 被完全推动',
+    roots: 'com(完全) + puls(推动) + ion → 被完全推动',
     synonyms: 'obsession, urge, irresistible impulse',
   },
   {
@@ -2368,7 +2368,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '酒精可以降低社交抑制力，导致鲁莽行为。',
     frequency: '中频',
     unit: 25,
-    root: 'in(进入) + hibit(持有) + ion → 持有不让行动',
+    roots: 'in(进入) + hibit(持有) + ion → 持有不让行动',
     synonyms: 'restraint, suppression, restriction',
   },
   {
@@ -2379,7 +2379,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '心理投射涉及将自己的感受归因于他人。',
     frequency: '中频',
     unit: 25,
-    root: 'pro(向前) + ject(投) + ion → 向前投射',
+    roots: 'pro(向前) + ject(投) + ion → 向前投射',
     synonyms: 'attribution, externalization',
   },
   {
@@ -2390,7 +2390,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '在心理学中，置换指将情绪转移到更安全的目标上。',
     frequency: '中频',
     unit: 25,
-    root: 'dis(分开) + place(放置) + ment → 放到别处',
+    roots: 'dis(分开) + place(放置) + ment → 放到别处',
     synonyms: 'substitution, redirection, transfer',
   },
   {
@@ -2401,7 +2401,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '知觉偏差会影响我们如何解读感官信息。',
     frequency: '低频',
     unit: 25,
-    root: 'per(完全) + cept(抓住) + ual',
+    roots: 'per(完全) + cept(抓住) + ual',
     synonyms: 'sensory, observational',
   },
   {
@@ -2412,7 +2412,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '使用记忆术可以帮助学生记忆复杂信息。',
     frequency: '低频',
     unit: 25,
-    root: 'mnemo(记忆) + nic → 与记忆有关的',
+    roots: 'mnemo(记忆) + nic → 与记忆有关的',
     synonyms: 'memory aid, memory technique',
   },
   {
@@ -2423,7 +2423,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '儿童发展心理图式来组织和解读新经验。',
     frequency: '低频',
     unit: 25,
-    root: '希腊语 schema(形状，形式)',
+    roots: '希腊语 schema(形状，形式)',
     synonyms: 'framework, model, pattern',
   },
   {
@@ -2434,7 +2434,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '人们经常依赖心理启发式来做出快速决策。',
     frequency: '低频',
     unit: 25,
-    root: 'heur(发现) + istic → 帮助发现的',
+    roots: 'heur(发现) + istic → 帮助发现的',
     synonyms: 'rule of thumb, shortcut, practical method',
   },
   {
@@ -2445,7 +2445,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '对焦虑的遗传易感性可能增加患病风险。',
     frequency: '中频',
     unit: 25,
-    root: 'pre(前) + dis(分开) + posit(放置) + ion → 预先放置的倾向',
+    roots: 'pre(前) + dis(分开) + posit(放置) + ion → 预先放置的倾向',
     synonyms: 'tendency, susceptibility, inclination',
   },
   {
@@ -2456,7 +2456,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '血清素是一种调节情绪和睡眠的神经递质。',
     frequency: '低频',
     unit: 25,
-    root: 'neuro(神经) + transmitter(传递者)',
+    roots: 'neuro(神经) + transmitter(传递者)',
     synonyms: 'chemical messenger',
   },
   {
@@ -2467,7 +2467,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '压力可以引起身心症状，如头痛和胃痛。',
     frequency: '低频',
     unit: 25,
-    root: 'psycho(心理) + somatic(身体的)',
+    roots: 'psycho(心理) + somatic(身体的)',
     synonyms: 'mind-body, stress-related',
   },
   {
@@ -2478,7 +2478,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '弗洛伊德将压抑描述为对痛苦记忆的无意识封锁。',
     frequency: '中频',
     unit: 25,
-    root: 're(回) + press(压) + ion → 压回去',
+    roots: 're(回) + press(压) + ion → 压回去',
     synonyms: 'suppression, inhibition, restraint',
   },
   {
@@ -2499,7 +2499,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '解离可以作为对严重创伤的反应发生。',
     frequency: '低频',
     unit: 25,
-    root: 'dis(分开) + soci(伙伴) + ation → 与自我分离',
+    roots: 'dis(分开) + soci(伙伴) + ation → 与自我分离',
     synonyms: 'detachment, disconnection, separation',
   },
   {
@@ -2510,7 +2510,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '对噪音的习惯化使人们能够在嘈杂的环境中入睡。',
     frequency: '低频',
     unit: 25,
-    root: 'habit(习惯) + uation → 形成习惯的过程',
+    roots: 'habit(习惯) + uation → 形成习惯的过程',
     synonyms: 'adaptation, acclimatization, desensitization',
   },
   {
@@ -2521,7 +2521,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '反复暴露于刺激可能导致敏感化而非习惯化。',
     frequency: '低频',
     unit: 25,
-    root: 'sensit(感觉) + ization → 使更敏感的过程',
+    roots: 'sensit(感觉) + ization → 使更敏感的过程',
     synonyms: 'awareness, heightened sensitivity',
   },
   {
@@ -2532,7 +2532,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '婴儿期的安全依恋对健康的情感发展至关重要。',
     frequency: '中频',
     unit: 25,
-    root: 'at(向) + tach(钉) + ment → 被钉在一起的联系',
+    roots: 'at(向) + tach(钉) + ment → 被钉在一起的联系',
     synonyms: 'bond, connection, affection',
   },
   {
@@ -2543,7 +2543,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '自恋涉及过度关注自我和需要被钦佩。',
     frequency: '低频',
     unit: 25,
-    root: 'Narcissus(水仙花，自恋的美少年) + ism',
+    roots: 'Narcissus(水仙花，自恋的美少年) + ism',
     synonyms: 'self-love, vanity, egotism',
   },
   {
@@ -2554,7 +2554,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '她对离开工作感到矛盾，在兴奋和恐惧之间犹豫不决。',
     frequency: '中频',
     unit: 25,
-    root: 'ambi(两个) + val(力量) + ence → 两股力量拉扯',
+    roots: 'ambi(两个) + val(力量) + ence → 两股力量拉扯',
     synonyms: 'indecision, conflict, uncertainty',
   },
   {
@@ -2565,7 +2565,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '他对秩序的强迫性需求使家人的日常生活变得困难。',
     frequency: '中频',
     unit: 25,
-    root: 'com(完全) + puls(推动) + ive → 被完全推动的',
+    roots: 'com(完全) + puls(推动) + ive → 被完全推动的',
     synonyms: 'obsessive, uncontrollable, irresistible',
   },
   {
@@ -2576,7 +2576,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '暴露疗法旨在逐渐使患者对恐惧症脱敏。',
     frequency: '低频',
     unit: 25,
-    root: 'de(去除) + sensit(感觉) + ize → 去除感觉',
+    roots: 'de(去除) + sensit(感觉) + ize → 去除感觉',
     synonyms: 'numb, deaden, habituate',
   },
   {
@@ -2587,7 +2587,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '心理动力疗法探索无意识过程如何影响行为。',
     frequency: '低频',
     unit: 25,
-    root: 'psycho(心理) + dynamic(动力的)',
+    roots: 'psycho(心理) + dynamic(动力的)',
     synonyms: 'psychoanalytic, depth psychology',
   },
   {
@@ -2598,7 +2598,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '幽闭恐惧症是对封闭空间的非理性恐惧。',
     frequency: '中频',
     unit: 25,
-    root: 'phob(恐惧) + ia → 恐惧的状态',
+    roots: 'phob(恐惧) + ia → 恐惧的状态',
     synonyms: 'fear, dread, aversion',
   },
   {
@@ -2629,7 +2629,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '在开某些药物之前需要进行精神科评估。',
     frequency: '中频',
     unit: 25,
-    root: 'psych(心灵) + iatr(治疗) + ic → 治疗心灵的',
+    roots: 'psych(心灵) + iatr(治疗) + ic → 治疗心灵的',
     synonyms: 'mental health, psychological',
   },
   {
@@ -2640,7 +2640,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '阈下信息是低于意识觉知阈限的刺激。',
     frequency: '低频',
     unit: 25,
-    root: 'sub(在下面) + limin(阈限) + al → 在阈限以下的',
+    roots: 'sub(在下面) + limin(阈限) + al → 在阈限以下的',
     synonyms: 'unconscious, subconscious, below threshold',
   },
   {
@@ -2651,7 +2651,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '适应不良的应对策略会随着时间的推移加重心理问题。',
     frequency: '低频',
     unit: 25,
-    root: 'mal(坏) + adaptive(适应的)',
+    roots: 'mal(坏) + adaptive(适应的)',
     synonyms: 'dysfunctional, counterproductive, harmful',
   },
   {
@@ -2662,7 +2662,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '神经可塑性使大脑在受伤后能够自我重组。',
     frequency: '低频',
     unit: 25,
-    root: 'neuro(神经) + plasticity(可塑性)',
+    roots: 'neuro(神经) + plasticity(可塑性)',
     synonyms: 'brain plasticity, neural flexibility',
   },
   {
@@ -2673,7 +2673,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '这部电影为正在处理悲伤的观众提供了一次宣泄的体验。',
     frequency: '低频',
     unit: 25,
-    root: 'catharsis 的形容词形式',
+    roots: 'catharsis 的形容词形式',
     synonyms: 'purifying, cleansing, therapeutic',
   },
   {
@@ -2696,7 +2696,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '作者用风暴的隐喻来代表情感动荡。',
     frequency: '中频',
     unit: 26,
-    root: 'meta(超越) + phor(携带) → 携带到另一层含义',
+    roots: 'meta(超越) + phor(携带) → 携带到另一层含义',
     synonyms: 'figure of speech, analogy, symbol',
   },
   {
@@ -2707,7 +2707,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '乔治·奥威尔的《动物农场》是一部关于极权主义的寓言。',
     frequency: '中频',
     unit: 26,
-    root: 'al(其他) + legory(说话) → 用另一种方式说话',
+    roots: 'al(其他) + legory(说话) → 用另一种方式说话',
     synonyms: 'parable, fable, symbolism',
   },
   {
@@ -2718,7 +2718,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '这部小说采用了具有多条时间线的复杂叙事结构。',
     frequency: '中频',
     unit: 26,
-    root: 'narr(讲述) + ative → 讲述的内容',
+    roots: 'narr(讲述) + ative → 讲述的内容',
     synonyms: 'story, account, tale',
   },
   {
@@ -2729,7 +2729,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '这种情况的讽刺之处在于消防站本身着了火。',
     frequency: '中频',
     unit: 26,
-    root: 'eironeia(希腊语：假装无知)',
+    roots: 'eironeia(希腊语：假装无知)',
     synonyms: 'sarcasm, satire, paradox',
   },
   {
@@ -2740,7 +2740,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '作家使用讽刺来揭露政府中的腐败。',
     frequency: '中频',
     unit: 26,
-    root: '拉丁语 satira(混合菜肴，引申为混合文体)',
+    roots: '拉丁语 satira(混合菜肴，引申为混合文体)',
     synonyms: 'parody, mockery, lampoon',
   },
   {
@@ -2751,7 +2751,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '说"一百万次"是夸张的一个例子。',
     frequency: '中频',
     unit: 26,
-    root: 'hyper(超过) + bole(投掷) → 投掷过头',
+    roots: 'hyper(超过) + bole(投掷) → 投掷过头',
     synonyms: 'exaggeration, overstatement, embellishment',
   },
   {
@@ -2762,7 +2762,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '"去世"是"死了"的常见委婉语。',
     frequency: '中频',
     unit: 26,
-    root: 'eu(好) + phem(说话) + ism → 说好听话的方式',
+    roots: 'eu(好) + phem(说话) + ism → 说好听话的方式',
     synonyms: 'understatement, polite expression',
   },
   {
@@ -2773,7 +2773,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '政治修辞常常掩盖社会面临的真正问题。',
     frequency: '中频',
     unit: 26,
-    root: 'rhetor(演说家) + ic → 演说家的技艺',
+    roots: 'rhetor(演说家) + ic → 演说家的技艺',
     synonyms: 'eloquence, oratory, persuasion',
   },
   {
@@ -2784,7 +2784,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '这首诗包含了许多对希腊神话的典故。',
     frequency: '中频',
     unit: 26,
-    root: 'al(向) + lus(玩耍) + ion → 间接引向',
+    roots: 'al(向) + lus(玩耍) + ion → 间接引向',
     synonyms: 'reference, hint, mention',
   },
   {
@@ -2795,7 +2795,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '莎士比亚写了154首十四行诗，探讨爱情和死亡的主题。',
     frequency: '低频',
     unit: 26,
-    root: 'son(声音) + net(小) → 小的声音，短诗',
+    roots: 'son(声音) + net(小) → 小的声音，短诗',
     synonyms: 'poem, lyric, verse',
   },
   {
@@ -2806,7 +2806,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '小说的主人公经历了深刻的转变。',
     frequency: '中频',
     unit: 26,
-    root: 'prot(第一) + agon(竞争) + ist → 第一个竞争者',
+    roots: 'prot(第一) + agon(竞争) + ist → 第一个竞争者',
     synonyms: 'hero, lead character, main character',
   },
   {
@@ -2817,7 +2817,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '故事中的反派代表了贪婪和腐败的力量。',
     frequency: '中频',
     unit: 26,
-    root: 'ant(反对) + agon(竞争) + ist → 反对的竞争者',
+    roots: 'ant(反对) + agon(竞争) + ist → 反对的竞争者',
     synonyms: 'villain, opponent, adversary',
   },
   {
@@ -2828,7 +2828,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '该剧的结局揭示了神秘陌生人的真实身份。',
     frequency: '低频',
     unit: 26,
-    root: '法语 denouement(解开)',
+    roots: '法语 denouement(解开)',
     synonyms: 'conclusion, resolution, ending',
   },
   {
@@ -2839,7 +2839,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '角色经历了一次改变她世界观的顿悟。',
     frequency: '低频',
     unit: 26,
-    root: 'epi(在上面) + phan(显现) + y → 在上面显现',
+    roots: 'epi(在上面) + phan(显现) + y → 在上面显现',
     synonyms: 'revelation, insight, realization',
   },
   {
@@ -2850,7 +2850,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '小说中财富与贫困的并置突显了社会不平等。',
     frequency: '低频',
     unit: 26,
-    root: 'juxta(靠近) + posit(放置) + ion → 放在旁边',
+    roots: 'juxta(靠近) + posit(放置) + ion → 放在旁边',
     synonyms: 'contrast, comparison, proximity',
   },
   {
@@ -2861,7 +2861,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '将死亡拟人化为披斗篷的形象在文学中很常见。',
     frequency: '低频',
     unit: 26,
-    root: 'person(人) + ification(使成为) → 使人格化',
+    roots: 'person(人) + ification(使成为) → 使人格化',
     synonyms: 'anthropomorphism, embodiment',
   },
   {
@@ -2872,7 +2872,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '像"嗡嗡"和"嘶嘶"这样的词是拟声词的例子。',
     frequency: '低频',
     unit: 26,
-    root: 'onoma(名字) + poeia(制作) → 制作声音的词',
+    roots: 'onoma(名字) + poeia(制作) → 制作声音的词',
     synonyms: 'sound word, echo word',
   },
   {
@@ -2883,7 +2883,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '"苦甜参半"和"震耳欲聋的沉默"是矛盾修辞法的例子。',
     frequency: '低频',
     unit: 26,
-    root: 'oxy(尖锐) + moron(愚蠢) → 尖锐的矛盾',
+    roots: 'oxy(尖锐) + moron(愚蠢) → 尖锐的矛盾',
     synonyms: 'contradiction, paradox',
   },
   {
@@ -2894,7 +2894,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '哈姆雷特著名的独白以"生存还是毁灭"开头。',
     frequency: '低频',
     unit: 26,
-    root: 'solus(独自) + loqu(说话) + y → 独自说话',
+    roots: 'solus(独自) + loqu(说话) + y → 独自说话',
     synonyms: 'monologue, aside, meditation',
   },
   {
@@ -2905,7 +2905,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '中世纪画作中出现时钟将是时代错误。',
     frequency: '低频',
     unit: 26,
-    root: 'ana(反) + chron(时间) + ism → 与时间不符',
+    roots: 'ana(反) + chron(时间) + ism → 与时间不符',
     synonyms: 'historical error, misplacement',
   },
   {
@@ -2916,7 +2916,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '诗人写了一首挽歌来悼念他朋友的逝去。',
     frequency: '低频',
     unit: 26,
-    root: '希腊语 elegeia(哀歌)',
+    roots: '希腊语 elegeia(哀歌)',
     synonyms: 'lament, dirge, requiem',
   },
   {
@@ -2927,7 +2927,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '总统在士兵的葬礼上发表了感人的悼词。',
     frequency: '低频',
     unit: 26,
-    root: 'eu(好) + logy(说) → 说好话',
+    roots: 'eu(好) + logy(说) → 说好话',
     synonyms: 'tribute, praise, commendation',
   },
   {
@@ -2938,7 +2938,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '故事开头的乌云预示着悲剧的伏笔。',
     frequency: '中频',
     unit: 26,
-    root: 'fore(前) + shadowing(影子) → 提前投射的影子',
+    roots: 'fore(前) + shadowing(影子) → 提前投射的影子',
     synonyms: 'hint, prefigure, portent',
   },
   {
@@ -2959,7 +2959,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '许多经典小说是成长小说，跟随角色从青年到成熟。',
     frequency: '低频',
     unit: 26,
-    root: '德语 Bildung(教育) + Roman(小说)',
+    roots: '德语 Bildung(教育) + Roman(小说)',
     synonyms: 'coming-of-age story, novel of formation',
   },
   {
@@ -2970,7 +2970,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '这部历史小说的逼真性给文学评论家留下了深刻印象。',
     frequency: '低频',
     unit: 26,
-    root: 'ver(真实) + simil(相似) + itude → 与真实相似',
+    roots: 'ver(真实) + simil(相似) + itude → 与真实相似',
     synonyms: 'believability, realism, authenticity',
   },
   {
@@ -2981,7 +2981,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '一个词的字面意义是其词典中的字面定义。',
     frequency: '低频',
     unit: 26,
-    root: 'de(完全) + not(标记) + ation → 完全标记出的意义',
+    roots: 'de(完全) + not(标记) + ation → 完全标记出的意义',
     synonyms: 'literal meaning, reference, designation',
   },
   {
@@ -2992,7 +2992,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '"家"这个词除了字面意义外，还有温暖和安全感的内涵意义。',
     frequency: '中频',
     unit: 26,
-    root: 'con(共同) + not(标记) + ation → 共同联想到的意义',
+    roots: 'con(共同) + not(标记) + ation → 共同联想到的意义',
     synonyms: 'implication, association, undertone',
   },
   {
@@ -3003,7 +3003,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '口语在词汇和语法上与正式书面语言不同。',
     frequency: '中频',
     unit: 26,
-    root: 'col(共同) + loqu(说话) + ial → 共同交谈的语言',
+    roots: 'col(共同) + loqu(说话) + ial → 共同交谈的语言',
     synonyms: 'informal, conversational, vernacular',
   },
   {
@@ -3014,7 +3014,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '"生命短暂，艺术永恒"是一句著名的格言。',
     frequency: '低频',
     unit: 26,
-    root: 'aphor(界定) + ism → 简洁界定道理的表达',
+    roots: 'aphor(界定) + ism → 简洁界定道理的表达',
     synonyms: 'maxim, proverb, saying',
   },
   {
@@ -3025,7 +3025,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '好撒马利亚人是圣经中最著名的寓言之一。',
     frequency: '低频',
     unit: 26,
-    root: 'para(旁边) + ble(投掷) → 放在旁边比较的故事',
+    roots: 'para(旁边) + ble(投掷) → 放在旁边比较的故事',
     synonyms: 'fable, allegory, moral story',
   },
   {
@@ -3036,7 +3036,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '英雄是世界文学中最持久的原型之一。',
     frequency: '中频',
     unit: 26,
-    root: 'arche(原始) + type(类型) → 原始的类型',
+    roots: 'arche(原始) + type(类型) → 原始的类型',
     synonyms: 'prototype, model, paradigm',
   },
   {
@@ -3047,7 +3047,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '光与暗的主题贯穿整部小说。',
     frequency: '中频',
     unit: 26,
-    root: '法语 motif(动机)',
+    roots: '法语 motif(动机)',
     synonyms: 'theme, pattern, recurring element',
   },
   {
@@ -3058,7 +3058,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '"被选中的人"是奇幻文学中的常见修辞手法。',
     frequency: '低频',
     unit: 26,
-    root: 'tropos(转向) → 意义的转换',
+    roots: 'tropos(转向) → 意义的转换',
     synonyms: 'figure of speech, motif, cliché',
   },
   {
@@ -3069,7 +3069,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '这部电影的潜台词涉及种族不平等的主题。',
     frequency: '中频',
     unit: 26,
-    root: 'sub(在下面) + text(文本) → 文本下面的含义',
+    roots: 'sub(在下面) + text(文本) → 文本下面的含义',
     synonyms: 'undertone, implication, hidden meaning',
   },
   {
@@ -3080,7 +3080,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '诗人使用呼语法直接对风说话。',
     frequency: '低频',
     unit: 26,
-    root: 'apo(离开) + strophe(转向) → 转向说话',
+    roots: 'apo(离开) + strophe(转向) → 转向说话',
     synonyms: 'direct address, exclamation',
   },
   {
@@ -3091,7 +3091,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '用"轮子"指代"汽车"是提喻法的例子。',
     frequency: '低频',
     unit: 26,
-    root: 'syn(共同) + ekdoche(接受) → 部分代表整体',
+    roots: 'syn(共同) + ekdoche(接受) → 部分代表整体',
     synonyms: 'figure of speech, metonymy',
   },
   {
@@ -3102,7 +3102,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '用"王冠"来指代君主制是转喻。',
     frequency: '低频',
     unit: 26,
-    root: 'meta(变化) + onym(名称) + y → 改变名称来指代',
+    roots: 'meta(变化) + onym(名称) + y → 改变名称来指代',
     synonyms: 'substitution, figure of speech',
   },
   {
@@ -3113,7 +3113,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '行中的休止创造了一个戏剧性的停顿以强调。',
     frequency: '低频',
     unit: 26,
-    root: '拉丁语 caesura(切割)',
+    roots: '拉丁语 caesura(切割)',
     synonyms: 'pause, break, interruption',
   },
   {
@@ -3124,7 +3124,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '跨行允许思想在没有标点的情况下跨行流动。',
     frequency: '低频',
     unit: 26,
-    root: 'en(进入) + jamb(腿) + ment → 跨步行走',
+    roots: 'en(进入) + jamb(腿) + ment → 跨步行走',
     synonyms: 'run-on line, continuation',
   },
   {
@@ -3135,7 +3135,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '反复的"o"音在诗句中创造了元韵。',
     frequency: '低频',
     unit: 26,
-    root: 'as(向) + son(声音) + ance → 相似的声音',
+    roots: 'as(向) + son(声音) + ance → 相似的声音',
     synonyms: 'vowel rhyme, sound pattern',
   },
   {
@@ -3146,7 +3146,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '"Peter Piper picked a peck of pickled peppers"展示了头韵。',
     frequency: '中频',
     unit: 26,
-    root: 'al(向) + liter(字母) + ation → 相同字母开头',
+    roots: 'al(向) + liter(字母) + ation → 相同字母开头',
     synonyms: 'initial rhyme, sound repetition',
   },
   {
@@ -3157,7 +3157,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '田园诗将乡村生活和自然理想化。',
     frequency: '低频',
     unit: 26,
-    root: 'pastor(牧羊人) + al → 与牧羊人有关的',
+    roots: 'pastor(牧羊人) + al → 与牧羊人有关的',
     synonyms: 'rural, bucolic, idyllic',
   },
   {
@@ -3168,7 +3168,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '这部小说以书信体形式写成，完全由信件组成。',
     frequency: '低频',
     unit: 26,
-    root: 'epistle(书信) + ary → 与书信有关的',
+    roots: 'epistle(书信) + ary → 与书信有关的',
     synonyms: 'letter-based, correspondence',
   },
   {
@@ -3179,7 +3179,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '流浪汉小说跟随一个骗子经历一系列冒险。',
     frequency: '低频',
     unit: 26,
-    root: 'picaro(骗子) + esque(风格)',
+    roots: 'picaro(骗子) + esque(风格)',
     synonyms: 'adventurous, roguish, episodic',
   },
   {
@@ -3190,7 +3190,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '马丁·路德·金在他的"我有一个梦想"演讲中使用了首语重复法。',
     frequency: '低频',
     unit: 26,
-    root: 'ana(向上) + phora(携带) → 反复携带同样的开头',
+    roots: 'ana(向上) + phora(携带) → 反复携带同样的开头',
     synonyms: 'repetition, rhetorical repetition',
   },
   {
@@ -3201,7 +3201,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '用"不错"来表达"非常好"是曲言法的一个例子。',
     frequency: '低频',
     unit: 26,
-    root: '希腊语 litotes(简朴)',
+    roots: '希腊语 litotes(简朴)',
     synonyms: 'understatement, meiosis',
   },
   {
@@ -3212,7 +3212,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '"不要问你的国家能为你做什么"使用了交错配列法。',
     frequency: '低频',
     unit: 26,
-    root: 'chiasma(交叉) → 交叉排列',
+    roots: 'chiasma(交叉) → 交叉排列',
     synonyms: 'reversal, inverted parallelism',
   },
 
@@ -3225,7 +3225,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '人类基因组计划绘制了完整的人类基因组图谱。',
     frequency: '中频',
     unit: 22,
-    root: 'gen(基因) + ome(全部) → 全部基因',
+    roots: 'gen(基因) + ome(全部) → 全部基因',
     synonyms: 'genetic material, DNA sequence',
   },
 
@@ -3238,7 +3238,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '森林中的碳封存有助于缓解气候变化。',
     frequency: '中频',
     unit: 23,
-    root: 'se(分开) + questr(放置) + ation → 隔离放置',
+    roots: 'se(分开) + questr(放置) + ation → 隔离放置',
     synonyms: 'isolation, capture, storage',
   },
 
@@ -3251,7 +3251,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '约翰·洛克是西方哲学中最有影响力的经验主义者之一。',
     frequency: '低频',
     unit: 24,
-    root: 'em(在…中) + pir(尝试) + icist → 注重经验的人',
+    roots: 'em(在…中) + pir(尝试) + icist → 注重经验的人',
     synonyms: 'pragmatist, experimentalist',
   },
 
@@ -3264,7 +3264,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '操作性条件反射使用奖励和惩罚来塑造行为。',
     frequency: '低频',
     unit: 25,
-    root: 'oper(工作) + ant → 通过操作产生的',
+    roots: 'oper(工作) + ant → 通过操作产生的',
     synonyms: 'instrumental, behavioral',
   },
   {
@@ -3275,7 +3275,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '格式塔心理学强调整体大于部分之和。',
     frequency: '低频',
     unit: 25,
-    root: '德语 Gestalt(形态，形状)',
+    roots: '德语 Gestalt(形态，形状)',
     synonyms: 'pattern, whole, configuration',
   },
 
@@ -3288,7 +3288,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '《伊利亚特》中对盾牌的描述法是文学中最早的例子之一。',
     frequency: '低频',
     unit: 26,
-    root: 'ek(出) + phrasis(表达) → 详细表达出来',
+    roots: 'ek(出) + phrasis(表达) → 详细表达出来',
     synonyms: 'description, depiction, portrayal',
   },
 
@@ -3301,7 +3301,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '吸烟与肺癌之间存在强相关性。',
     frequency: '低频',
     unit: 27,
-    root: 'co(共同) + relat(关联) + ion → 相互关联',
+    roots: 'co(共同) + relat(关联) + ion → 相互关联',
     synonyms: 'association, relationship, connection',
   },
   {
@@ -3312,7 +3312,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '线性回归用于建模变量之间的关系。',
     frequency: '低频',
     unit: 27,
-    root: 're(回) + gress(走) + ion → 走回去',
+    roots: 're(回) + gress(走) + ion → 走回去',
     synonyms: 'reversion, retreat; statistical modeling',
   },
   {
@@ -3323,7 +3323,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '数据集的方差表明数值的分散程度。',
     frequency: '低频',
     unit: 27,
-    root: 'vari(变化) + ance → 变化的程度',
+    roots: 'vari(变化) + ance → 变化的程度',
     synonyms: 'deviation, dispersion, variability',
   },
   {
@@ -3334,7 +3334,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '相关系数的范围从负一到正一。',
     frequency: '低频',
     unit: 27,
-    root: 'co(共同) + efficient(有效的) → 共同起作用的因素',
+    roots: 'co(共同) + efficient(有效的) → 共同起作用的因素',
     synonyms: 'factor, multiplier, constant',
   },
   {
@@ -3345,7 +3345,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '我们可以从现有数据推断未来趋势。',
     frequency: '低频',
     unit: 27,
-    root: 'extra(之外) + pol(放置) + ate → 放置到已知范围之外',
+    roots: 'extra(之外) + pol(放置) + ate → 放置到已知范围之外',
     synonyms: 'project, predict, infer',
   },
   {
@@ -3356,7 +3356,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '该软件可以在已知数据点之间插值缺失值。',
     frequency: '低频',
     unit: 27,
-    root: 'inter(之间) + pol(放置) + ate → 放置在中间',
+    roots: 'inter(之间) + pol(放置) + ate → 放置在中间',
     synonyms: 'insert, intercalate, fill in',
   },
   {
@@ -3367,7 +3367,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '标准差衡量数据集的离散程度。',
     frequency: '低频',
     unit: 27,
-    root: 'de(离开) + vi(路) + ation → 偏离正常路径',
+    roots: 'de(离开) + vi(路) + ation → 偏离正常路径',
     synonyms: 'divergence, departure, variance',
   },
   {
@@ -3378,7 +3378,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '中位数收入通常比平均值更具代表性。',
     frequency: '低频',
     unit: 27,
-    root: 'medi(中间) + an → 位于中间的',
+    roots: 'medi(中间) + an → 位于中间的',
     synonyms: 'middle value, midpoint',
   },
   {
@@ -3389,7 +3389,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '得分在第90百分位的学生表现优于90%的参考者。',
     frequency: '低频',
     unit: 27,
-    root: 'percent(百分比) + ile',
+    roots: 'percent(百分比) + ile',
     synonyms: 'centile, rank',
   },
   {
@@ -3400,7 +3400,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '二次方程是二阶多项式。',
     frequency: '低频',
     unit: 27,
-    root: 'poly(多) + nomial(项) → 多个项',
+    roots: 'poly(多) + nomial(项) → 多个项',
     synonyms: 'algebraic expression',
   },
   {
@@ -3411,7 +3411,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '函数的导数给出任意一点的变化率。',
     frequency: '低频',
     unit: 27,
-    root: 'de(从) + riv(流) + ative → 从原始函数流出',
+    roots: 'de(从) + riv(流) + ative → 从原始函数流出',
     synonyms: 'rate of change; derived, secondary',
   },
   {
@@ -3422,7 +3422,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '积分是微积分中微分的逆过程。',
     frequency: '低频',
     unit: 27,
-    root: 'integr(完整) + al → 使完整的运算',
+    roots: 'integr(完整) + al → 使完整的运算',
     synonyms: 'antiderivative; essential, necessary',
   },
   {
@@ -3433,7 +3433,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '该搜索算法高效地找到两点之间的最短路径。',
     frequency: '低频',
     unit: 27,
-    root: 'Al-Khwarizmi(数学家名)',
+    roots: 'Al-Khwarizmi(数学家名)',
     synonyms: 'procedure, method, formula',
   },
   {
@@ -3444,7 +3444,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '随机过程用于对随时间变化的随机现象建模。',
     frequency: '低频',
     unit: 27,
-    root: '希腊语 stokhastikos(瞄准，猜测)',
+    roots: '希腊语 stokhastikos(瞄准，猜测)',
     synonyms: 'random, probabilistic, chance',
   },
   {
@@ -3455,7 +3455,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '在确定性模型中，相同的输入总是产生相同的输出。',
     frequency: '低频',
     unit: 27,
-    root: 'de(完全) + termin(边界) + istic → 完全确定的',
+    roots: 'de(完全) + termin(边界) + istic → 完全确定的',
     synonyms: 'predictable, non-random, fixed',
   },
   {
@@ -3466,7 +3466,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '两条平行线永不相交是不言自明的。',
     frequency: '低频',
     unit: 27,
-    root: 'axiom(公理) + atic',
+    roots: 'axiom(公理) + atic',
     synonyms: 'self-evident, fundamental, obvious',
   },
   {
@@ -3477,7 +3477,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '微分方程描述数量如何随时间变化。',
     frequency: '低频',
     unit: 27,
-    root: 'differ(不同) + ential → 关于差异的',
+    roots: 'differ(不同) + ential → 关于差异的',
     synonyms: 'calculus, derivative; distinguishing',
   },
   {
@@ -3488,7 +3488,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '该级数的收敛性使用比值检验法得到了证明。',
     frequency: '低频',
     unit: 27,
-    root: 'con(共同) + verg(倾斜) + ence → 向同一点倾斜',
+    roots: 'con(共同) + verg(倾斜) + ence → 向同一点倾斜',
     synonyms: 'meeting, union, approach',
   },
   {
@@ -3499,7 +3499,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '专家之间意见的分歧使决策变得复杂。',
     frequency: '低频',
     unit: 27,
-    root: 'di(分开) + verg(倾斜) + ence → 向不同方向倾斜',
+    roots: 'di(分开) + verg(倾斜) + ence → 向不同方向倾斜',
     synonyms: 'separation, deviation, difference',
   },
   {
@@ -3510,7 +3510,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '微积分处理数量的无穷小变化。',
     frequency: '低频',
     unit: 27,
-    root: 'infinite(无限) + esim(最) + al → 无限小的',
+    roots: 'infinite(无限) + esim(最) + al → 无限小的',
     synonyms: 'minute, tiny, vanishingly small',
   },
   {
@@ -3521,7 +3521,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '曲线趋近渐近线但永远不到达。',
     frequency: '低频',
     unit: 27,
-    root: 'a(不) + sym(共同) + ptote(落下) → 不相交的线',
+    roots: 'a(不) + sym(共同) + ptote(落下) → 不相交的线',
     synonyms: 'limit line, boundary',
   },
   {
@@ -3532,7 +3532,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '二项式定理简化了和的幂的展开。',
     frequency: '低频',
     unit: 27,
-    root: 'bi(两个) + nomial(项) → 两个项',
+    roots: 'bi(两个) + nomial(项) → 两个项',
     synonyms: 'two-term expression',
   },
   {
@@ -3543,7 +3543,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '求根公式给出任何二次方程的解。',
     frequency: '低频',
     unit: 27,
-    root: 'quadr(四，方) + atic → 与平方有关的',
+    roots: 'quadr(四，方) + atic → 与平方有关的',
     synonyms: 'second-degree, squared',
   },
   {
@@ -3554,7 +3554,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '自然对数以数学常数e为底数。',
     frequency: '低频',
     unit: 27,
-    root: 'logo(比率) + arithm(数) → 比率数',
+    roots: 'logo(比率) + arithm(数) → 比率数',
     synonyms: 'log, power, exponent (inverse)',
   },
   {
@@ -3565,7 +3565,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '在x的立方表达式中，3是指数。',
     frequency: '低频',
     unit: 27,
-    root: 'ex(出) + pon(放置) + ent → 放在外面的数',
+    roots: 'ex(出) + pon(放置) + ent → 放在外面的数',
     synonyms: 'power, index; advocate, proponent',
   },
   {
@@ -3576,7 +3576,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '递归函数调用自身来解决更小的问题实例。',
     frequency: '低频',
     unit: 27,
-    root: 're(再) + curs(跑) + ive → 反复跑',
+    roots: 're(再) + curs(跑) + ive → 反复跑',
     synonyms: 'iterative, self-referential, repeating',
   },
   {
@@ -3587,7 +3587,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '参数统计假设数据遵循特定的分布。',
     frequency: '低频',
     unit: 27,
-    root: 'para(旁边) + metr(测量) + ic → 用参数衡量的',
+    roots: 'para(旁边) + metr(测量) + ic → 用参数衡量的',
     synonyms: 'variable-based, distributional',
   },
   {
@@ -3598,7 +3598,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '正交向量的点积为零。',
     frequency: '低频',
     unit: 27,
-    root: 'ortho(正确，直) + gonal(角) → 直角的',
+    roots: 'ortho(正确，直) + gonal(角) → 直角的',
     synonyms: 'perpendicular, independent, uncorrelated',
   },
   {
@@ -3609,7 +3609,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '正态分布围绕其均值对称。',
     frequency: '低频',
     unit: 27,
-    root: 'sym(共同) + metr(测量) + ic → 两边测量相同',
+    roots: 'sym(共同) + metr(测量) + ic → 两边测量相同',
     synonyms: 'balanced, even, proportionate',
   },
   {
@@ -3620,7 +3620,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '离散数学处理可数集而非连续集。',
     frequency: '低频',
     unit: 27,
-    root: 'dis(分开) + cret(区分) + e → 可区分开的',
+    roots: 'dis(分开) + cret(区分) + e → 可区分开的',
     synonyms: 'separate, distinct, individual',
   },
   {
@@ -3631,7 +3631,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '连续函数的图像没有断裂或间隙。',
     frequency: '低频',
     unit: 27,
-    root: 'con(共同) + tinu(持有) + ous → 一直持有的',
+    roots: 'con(共同) + tinu(持有) + ous → 一直持有的',
     synonyms: 'unbroken, uninterrupted, smooth',
   },
   {
@@ -3642,7 +3642,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '温度是标量，而速度是矢量。',
     frequency: '低频',
     unit: 27,
-    root: 'scala(阶梯) + ar → 只有大小没有方向',
+    roots: 'scala(阶梯) + ar → 只有大小没有方向',
     synonyms: 'magnitude, quantity, number',
   },
   {
@@ -3653,7 +3653,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '向量既有大小又有方向。',
     frequency: '低频',
     unit: 27,
-    root: 'vect(携带) + or → 携带方向和大小',
+    roots: 'vect(携带) + or → 携带方向和大小',
     synonyms: 'arrow, directed quantity',
   },
   {
@@ -3664,7 +3664,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '矩阵乘法是线性代数中的基本运算。',
     frequency: '低频',
     unit: 27,
-    root: '拉丁语 matrix(母亲，子宫) → 产生事物的母体',
+    roots: '拉丁语 matrix(母亲，子宫) → 产生事物的母体',
     synonyms: 'grid, array, table',
   },
   {
@@ -3675,7 +3675,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '勾股定理指出斜边的平方等于其他两边平方之和。',
     frequency: '低频',
     unit: 27,
-    root: 'theor(观察) + em → 通过观察证明的命题',
+    roots: 'theor(观察) + em → 通过观察证明的命题',
     synonyms: 'proposition, principle, law',
   },
   {
@@ -3686,7 +3686,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '哥德巴赫猜想仍然是数学中最古老的未解问题之一。',
     frequency: '低频',
     unit: 27,
-    root: 'con(共同) + ject(投掷) + ure → 把想法投到一起',
+    roots: 'con(共同) + ject(投掷) + ure → 把想法投到一起',
     synonyms: 'hypothesis, speculation, guess',
   },
   {
@@ -3697,7 +3697,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '该引理被用作证明主定理的垫脚石。',
     frequency: '低频',
     unit: 27,
-    root: '希腊语 lemma(假设，前提)',
+    roots: '希腊语 lemma(假设，前提)',
     synonyms: 'auxiliary theorem, proposition',
   },
   {
@@ -3708,7 +3708,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '这个定理的一个推论是所有直角相等。',
     frequency: '低频',
     unit: 27,
-    root: 'corol(小花冠) + lary → 定理的小花，附属结果',
+    roots: 'corol(小花冠) + lary → 定理的小花，附属结果',
     synonyms: 'consequence, deduction, result',
   },
   {
@@ -3719,7 +3719,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '在分数四分之三中，3是分子。',
     frequency: '低频',
     unit: 27,
-    root: 'numer(数) + ator → 计数的部分',
+    roots: 'numer(数) + ator → 计数的部分',
     synonyms: 'top number',
   },
   {
@@ -3730,7 +3730,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '分数的分母不能为零。',
     frequency: '低频',
     unit: 27,
-    root: 'de(向下) + nomin(名称) + ator → 命名的部分',
+    roots: 'de(向下) + nomin(名称) + ator → 命名的部分',
     synonyms: 'bottom number, divisor',
   },
   {
@@ -3741,7 +3741,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '基本算术运算包括加、减、乘、除。',
     frequency: '低频',
     unit: 27,
-    root: 'arithm(数) + etic → 关于数的',
+    roots: 'arithm(数) + etic → 关于数的',
     synonyms: 'calculation, computation, mathematics',
   },
   {
@@ -3752,7 +3752,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '拓扑学研究在连续变换下保持不变的性质。',
     frequency: '低频',
     unit: 27,
-    root: 'topo(位置) + logy(学科)',
+    roots: 'topo(位置) + logy(学科)',
     synonyms: 'geometric study, spatial analysis',
   },
   {
@@ -3763,7 +3763,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '在公平骰子上掷出6的概率是六分之一。',
     frequency: '低频',
     unit: 27,
-    root: 'prob(证明) + ability → 可以证明的可能性',
+    roots: 'prob(证明) + ability → 可以证明的可能性',
     synonyms: 'likelihood, chance, odds',
   },
   {
@@ -3774,7 +3774,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '超出数据范围的推断可能导致不可靠的预测。',
     frequency: '低频',
     unit: 27,
-    root: 'extra(之外) + pol(放置) + ation',
+    roots: 'extra(之外) + pol(放置) + ation',
     synonyms: 'projection, prediction, estimation',
   },
   {
@@ -3785,7 +3785,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '双变量分析考察两个变量之间的关系。',
     frequency: '低频',
     unit: 27,
-    root: 'bi(两个) + vari(变化) + ate → 涉及两个变量',
+    roots: 'bi(两个) + vari(变化) + ate → 涉及两个变量',
     synonyms: 'two-variable, paired',
   },
   {
@@ -3796,7 +3796,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '齐次方程组的所有常数项都为零。',
     frequency: '低频',
     unit: 27,
-    root: 'homo(相同) + gen(种类) + eous → 相同种类的',
+    roots: 'homo(相同) + gen(种类) + eous → 相同种类的',
     synonyms: 'uniform, consistent, similar',
   },
   {
@@ -3807,7 +3807,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '如果两个群之间存在双射同态，则它们是同构的。',
     frequency: '低频',
     unit: 27,
-    root: 'iso(相同) + morph(形态) + ic → 相同形态的',
+    roots: 'iso(相同) + morph(形态) + ic → 相同形态的',
     synonyms: 'structurally equivalent, identical in form',
   },
   {
@@ -3818,7 +3818,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '微分同胚是具有光滑逆的光滑双射映射。',
     frequency: '低频',
     unit: 27,
-    root: 'diffeo(微分) + morph(形态) + ism → 微分保持形态的映射',
+    roots: 'diffeo(微分) + morph(形态) + ism → 微分保持形态的映射',
     synonyms: 'smooth mapping, bijection',
   },
 
@@ -3831,7 +3831,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '文艺复兴标志着对古典艺术和学术兴趣的复兴。',
     frequency: '低频',
     unit: 28,
-    root: 're(再) + naiss(出生) + ance → 再次出生',
+    roots: 're(再) + naiss(出生) + ance → 再次出生',
     synonyms: 'revival, rebirth, renewal',
   },
   {
@@ -3842,7 +3842,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '中世纪城堡主要为防御入侵者而建。',
     frequency: '低频',
     unit: 28,
-    root: 'medi(中间) + ev(时代) + al → 中间时代的',
+    roots: 'medi(中间) + ev(时代) + al → 中间时代的',
     synonyms: 'Middle Ages, feudal, pre-modern',
   },
   {
@@ -3853,7 +3853,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '原住民拥有独特的文化传统和知识体系。',
     frequency: '低频',
     unit: 28,
-    root: 'indi(在内) + gen(出生) + ous → 在此地出生的',
+    roots: 'indi(在内) + gen(出生) + ous → 在此地出生的',
     synonyms: 'native, aboriginal, autochthonous',
   },
   {
@@ -3864,7 +3864,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '殖民时期对许多国家的文化认同产生了深远影响。',
     frequency: '低频',
     unit: 28,
-    root: 'colon(殖民) + ial',
+    roots: 'colon(殖民) + ial',
     synonyms: 'imperial, settler, overseas',
   },
   {
@@ -3875,7 +3875,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '许多古典古代的文物在博物馆中展出。',
     frequency: '低频',
     unit: 28,
-    root: 'antiq(古老) + uity',
+    roots: 'antiq(古老) + uity',
     synonyms: 'ancient times, oldness, relics',
   },
   {
@@ -3886,7 +3886,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '明朝以其精美的瓷器和建筑成就闻名。',
     frequency: '低频',
     unit: 28,
-    root: 'dynast(统治者) + y',
+    roots: 'dynast(统治者) + y',
     synonyms: 'reign, regime, ruling family',
   },
   {
@@ -3897,7 +3897,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '帝国的霸权受到崛起的邻国的挑战。',
     frequency: '低频',
     unit: 28,
-    root: 'hegemon(领导者) + y',
+    roots: 'hegemon(领导者) + y',
     synonyms: 'dominance, supremacy, authority',
   },
   {
@@ -3908,7 +3908,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '封建社会围绕领主和附庸之间的关系组织。',
     frequency: '低频',
     unit: 28,
-    root: 'feud(封地) + al',
+    roots: 'feud(封地) + al',
     synonyms: 'medieval, manorial, hierarchical',
   },
   {
@@ -3919,7 +3919,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '帝国主义导致对殖民地资源的剥削。',
     frequency: '低频',
     unit: 28,
-    root: 'imperi(命令，帝国) + alism',
+    roots: 'imperi(命令，帝国) + alism',
     synonyms: 'colonialism, expansionism, domination',
   },
   {
@@ -3930,7 +3930,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '启蒙运动强调理性、科学和个人权利。',
     frequency: '低频',
     unit: 28,
-    root: 'en(使) + light(光) + en + ment → 使之有光',
+    roots: 'en(使) + light(光) + en + ment → 使之有光',
     synonyms: 'awakening, illumination, education',
   },
   {
@@ -3941,7 +3941,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '工业革命将社会从农业社会转变为工业社会。',
     frequency: '低频',
     unit: 28,
-    root: 're(回) + volut(滚动) + ion → 滚回来，彻底改变',
+    roots: 're(回) + volut(滚动) + ion → 滚回来，彻底改变',
     synonyms: 'uprising, rebellion, transformation',
   },
   {
@@ -3952,7 +3952,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '新教改革从根本上改变了欧洲的基督教。',
     frequency: '低频',
     unit: 28,
-    root: 're(再) + form(形成) + ation → 重新形成',
+    roots: 're(再) + form(形成) + ation → 重新形成',
     synonyms: 'reform, renewal, transformation',
   },
   {
@@ -3963,7 +3963,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '封建等级制度将国王置于顶层，农民置于底层。',
     frequency: '低频',
     unit: 28,
-    root: 'hier(神圣) + arch(统治) + y → 神圣的统治秩序',
+    roots: 'hier(神圣) + arch(统治) + y → 神圣的统治秩序',
     synonyms: 'ranking, order, stratification',
   },
   {
@@ -3974,7 +3974,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '考古学家发现了可追溯到数千年前的古代文物。',
     frequency: '低频',
     unit: 28,
-    root: 'arti(技术) + fact(制作) → 用技术制作的东西',
+    roots: 'arti(技术) + fact(制作) → 用技术制作的东西',
     synonyms: 'relic, object, antiquity',
   },
   {
@@ -3985,7 +3985,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '修女详细记录了国王统治期间的事件编年史。',
     frequency: '低频',
     unit: 28,
-    root: 'chron(时间) + icle(小) → 按时间记录',
+    roots: 'chron(时间) + icle(小) → 按时间记录',
     synonyms: 'annals, record, history',
   },
   {
@@ -3996,7 +3996,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '犹太散居将社区散布到许多大陆。',
     frequency: '低频',
     unit: 28,
-    root: 'dia(穿过) + spor(播种) + a → 播种到各处',
+    roots: 'dia(穿过) + spor(播种) + a → 播种到各处',
     synonyms: 'dispersion, scattering, migration',
   },
   {
@@ -4007,7 +4007,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '印刷术的发明标志着人类历史的新纪元。',
     frequency: '低频',
     unit: 28,
-    root: '希腊语 epoche(暂停，时代)',
+    roots: '希腊语 epoche(暂停，时代)',
     synonyms: 'era, period, age',
   },
   {
@@ -4018,7 +4018,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '中世纪艺术的图像学富含宗教象征。',
     frequency: '低频',
     unit: 28,
-    root: 'icon(图像) + graphy(书写) → 关于图像的学问',
+    roots: 'icon(图像) + graphy(书写) → 关于图像的学问',
     synonyms: 'imagery, symbolism, visual representation',
   },
   {
@@ -4029,7 +4029,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '富裕家族的艺术赞助推动了文艺复兴。',
     frequency: '低频',
     unit: 28,
-    root: 'patron(赞助人) + age',
+    roots: 'patron(赞助人) + age',
     synonyms: 'sponsorship, support, backing',
   },
   {
@@ -4040,7 +4040,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '古文物研究者收集了各个历史时期的稀有手稿。',
     frequency: '低频',
     unit: 28,
-    root: 'antiqu(古老) + arian → 研究古物的人',
+    roots: 'antiqu(古老) + arian → 研究古物的人',
     synonyms: 'collector, historian, antiquary',
   },
   {
@@ -4051,18 +4051,18 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '民族志涉及对人群和文化的系统研究。',
     frequency: '低频',
     unit: 28,
-    root: 'ethno(民族) + graphy(描述) → 描述民族',
+    roots: 'ethno(民族) + graphy(描述) → 描述民族',
     synonyms: 'cultural study, anthropology',
   },
   {
     word: 'heritage',
     phonetic: '/ˈherɪtɪdʒ/',
     definition: '遗产；传统；继承物',
-    example: 'The Great Wall is an important part of China's cultural heritage.',
+    example: "The Great Wall is an important part of China's cultural heritage.",
     exampleCn: '长城是中国文化遗产的重要组成部分。',
     frequency: '低频',
     unit: 28,
-    root: 'herit(继承) + age → 继承下来的东西',
+    roots: 'herit(继承) + age → 继承下来的东西',
     synonyms: 'legacy, inheritance, tradition',
   },
   {
@@ -4073,7 +4073,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '考古学通过物质遗存帮助我们了解古代文明。',
     frequency: '低频',
     unit: 28,
-    root: 'archaeo(古老) + logy(学科)',
+    roots: 'archaeo(古老) + logy(学科)',
     synonyms: 'excavation study, antiquities',
   },
   {
@@ -4084,7 +4084,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '这座古庙是一个曾经伟大文明的遗迹。',
     frequency: '低频',
     unit: 28,
-    root: 'reliqu(留下) → 留下来的东西',
+    roots: 'reliqu(留下) → 留下来的东西',
     synonyms: 'remnant, artifact, remains',
   },
   {
@@ -4095,7 +4095,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '基督教之前的欧洲以各种形式的异教为特征。',
     frequency: '低频',
     unit: 28,
-    root: 'pagan(异教徒) + ism',
+    roots: 'pagan(异教徒) + ism',
     synonyms: 'polytheism, heathenism, nature worship',
   },
   {
@@ -4106,7 +4106,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '世俗化导致许多国家政教分离。',
     frequency: '低频',
     unit: 28,
-    root: 'secul(时代，世俗) + ar + ization',
+    roots: 'secul(时代，世俗) + ar + ization',
     synonyms: 'worldliness, laicization, modernization',
   },
   {
@@ -4117,7 +4117,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '极权政权压制个人自由并控制生活的方方面面。',
     frequency: '低频',
     unit: 28,
-    root: 'total(全部) + itarian → 控制全部的',
+    roots: 'total(全部) + itarian → 控制全部的',
     synonyms: 'authoritarian, dictatorial, oppressive',
   },
   {
@@ -4128,7 +4128,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '该领土的吞并遭到国际社会的谴责。',
     frequency: '低频',
     unit: 28,
-    root: 'ad(向) + nex(连接) + ation → 连接到一起',
+    roots: 'ad(向) + nex(连接) + ation → 连接到一起',
     synonyms: 'incorporation, seizure, acquisition',
   },
   {
@@ -4139,7 +4139,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '1918年签署的停战协定结束了第一次世界大战的战斗。',
     frequency: '低频',
     unit: 28,
-    root: 'arm(武器) + istice(停止) → 放下武器',
+    roots: 'arm(武器) + istice(停止) → 放下武器',
     synonyms: 'ceasefire, truce, peace agreement',
   },
   {
@@ -4150,7 +4150,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '十字军东征是基督教徒和穆斯林之间的一系列宗教战争。',
     frequency: '低频',
     unit: 28,
-    root: 'crux(十字) + ade → 十字行动',
+    roots: 'crux(十字) + ade → 十字行动',
     synonyms: 'campaign, holy war, reform movement',
   },
   {
@@ -4161,7 +4161,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '在寡头政治中，权力集中在少数精英集团手中。',
     frequency: '低频',
     unit: 28,
-    root: 'olig(少数) + arch(统治) + y → 少数人的统治',
+    roots: 'olig(少数) + arch(统治) + y → 少数人的统治',
     synonyms: 'plutocracy, elite rule, aristocracy',
   },
   {
@@ -4172,7 +4172,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '过度的官僚主义会减缓政府决策过程。',
     frequency: '低频',
     unit: 28,
-    root: 'bureau(办公桌) + cracy(统治) → 坐在办公桌前的人统治',
+    roots: 'bureau(办公桌) + cracy(统治) → 坐在办公桌前的人统治',
     synonyms: 'red tape, administration, officialdom',
   },
   {
@@ -4183,7 +4183,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '战时宣传被用来鼓舞士气和妖魔化敌人。',
     frequency: '低频',
     unit: 28,
-    root: 'propag(传播) + anda → 需要传播的信息',
+    roots: 'propag(传播) + anda → 需要传播的信息',
     synonyms: 'publicity, promotion, indoctrination',
   },
   {
@@ -4194,7 +4194,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '文化同化可能导致本土语言和传统的丧失。',
     frequency: '低频',
     unit: 28,
-    root: 'as(向) + simil(相似) + ation → 使变得相似',
+    roots: 'as(向) + simil(相似) + ation → 使变得相似',
     synonyms: 'absorption, integration, acculturation',
   },
   {
@@ -4205,7 +4205,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '民族中心主义可能导致对其他文化的偏见。',
     frequency: '低频',
     unit: 28,
-    root: 'ethno(民族) + centr(中心) + ism → 以自己民族为中心',
+    roots: 'ethno(民族) + centr(中心) + ism → 以自己民族为中心',
     synonyms: 'cultural bias, chauvinism',
   },
   {
@@ -4216,7 +4216,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '古文字学帮助学者破译古代手稿和铭文。',
     frequency: '低频',
     unit: 28,
-    root: 'paleo(古老) + graphy(书写)',
+    roots: 'paleo(古老) + graphy(书写)',
     synonyms: 'ancient writing study, calligraphy',
   },
   {
@@ -4227,7 +4227,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '反对殖民统治的起义最终导致了独立。',
     frequency: '低频',
     unit: 28,
-    root: 'in(向上) + surrect(起来) + ion → 站起来反抗',
+    roots: 'in(向上) + surrect(起来) + ion → 站起来反抗',
     synonyms: 'rebellion, revolt, uprising',
   },
   {
@@ -4238,7 +4238,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '古希腊哲学是许多西方思想的先驱。',
     frequency: '低频',
     unit: 28,
-    root: 'ante(前) + ced(走) + ent → 走在前面的',
+    roots: 'ante(前) + ced(走) + ent → 走在前面的',
     synonyms: 'predecessor, forerunner, ancestor',
   },
   {
@@ -4249,7 +4249,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '纪念碑是为后代保存英雄的记忆而建的。',
     frequency: '低频',
     unit: 28,
-    root: 'post(后) + erity → 后面的人',
+    roots: 'post(后) + erity → 后面的人',
     synonyms: 'descendants, future generations, offspring',
   },
   {
@@ -4260,7 +4260,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '文化主义强调文化在塑造个人认同中的作用。',
     frequency: '低频',
     unit: 28,
-    root: 'cultur(文化) + alism',
+    roots: 'cultur(文化) + alism',
     synonyms: 'cultural theory, cultural relativism',
   },
   {
@@ -4271,7 +4271,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '新古典主义建筑从古典古代的艺术和文化中汲取灵感。',
     frequency: '低频',
     unit: 28,
-    root: 'neo(新) + classical(古典的)',
+    roots: 'neo(新) + classical(古典的)',
     synonyms: 'classical revival, traditional',
   },
   {
@@ -4282,7 +4282,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '这部小说是对极权主义危险的警告。',
     frequency: '低频',
     unit: 28,
-    root: 'total(全部) + itarian + ism',
+    roots: 'total(全部) + itarian + ism',
     synonyms: 'authoritarianism, dictatorship, fascism',
   },
   {
@@ -4293,7 +4293,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '奴隶的解放是美国历史上的关键时刻。',
     frequency: '低频',
     unit: 28,
-    root: 'e(出) + mancip(手) + ation → 从手中释放',
+    roots: 'e(出) + mancip(手) + ation → 从手中释放',
     synonyms: 'liberation, freedom, release',
   },
   {
@@ -4304,7 +4304,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '重商主义在17和18世纪主导了欧洲的经济政策。',
     frequency: '低频',
     unit: 28,
-    root: 'merchant(商人) + ilism',
+    roots: 'merchant(商人) + ilism',
     synonyms: 'trade-based economics, protectionism',
   },
   {
@@ -4315,7 +4315,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '平等主义社会努力缩小财富和地位差距。',
     frequency: '低频',
     unit: 28,
-    root: 'egal(平等) + itarian → 追求平等的人',
+    roots: 'egal(平等) + itarian → 追求平等的人',
     synonyms: 'equalitarian, democratic, fair',
   },
   {
@@ -4326,7 +4326,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '帝国声称对邻近王国拥有宗主权。',
     frequency: '低频',
     unit: 28,
-    root: 'suzerain(宗主) + ty',
+    roots: 'suzerain(宗主) + ty',
     synonyms: 'overlordship, supremacy, dominance',
   },
   {
@@ -4337,7 +4337,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '这位艺术家因挑战传统艺术规范而被认为是打破旧习的人。',
     frequency: '低频',
     unit: 28,
-    root: 'icon(图像) + clast(打破) → 打破偶像的人',
+    roots: 'icon(图像) + clast(打破) → 打破偶像的人',
     synonyms: 'rebel, nonconformist, revolutionary',
   },
 
@@ -4350,7 +4350,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '自动驾驶汽车使用传感器和算法在无需人工输入的情况下导航。',
     frequency: '低频',
     unit: 29,
-    root: 'auto(自我) + nom(法则) + ous → 自我制定法则的',
+    roots: 'auto(自我) + nom(法则) + ous → 自我制定法则的',
     synonyms: 'self-governing, independent, self-driving',
   },
   {
@@ -4361,7 +4361,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '端到端加密确保只有发送者和接收者能阅读消息。',
     frequency: '低频',
     unit: 29,
-    root: 'en(使) + crypt(隐藏) + ion → 使信息隐藏',
+    roots: 'en(使) + crypt(隐藏) + ion → 使信息隐藏',
     synonyms: 'encoding, ciphering, scrambling',
   },
   {
@@ -4372,7 +4372,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '增加带宽可以通过互联网实现更快的数据传输。',
     frequency: '低频',
     unit: 29,
-    root: 'band(频带) + width(宽度)',
+    roots: 'band(频带) + width(宽度)',
     synonyms: 'capacity, throughput, data rate',
   },
   {
@@ -4383,7 +4383,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '低延迟对于视频会议等实时应用至关重要。',
     frequency: '低频',
     unit: 29,
-    root: 'lat(隐藏) + ency → 隐藏的时间',
+    roots: 'lat(隐藏) + ency → 隐藏的时间',
     synonyms: 'delay, lag, response time',
   },
   {
@@ -4394,7 +4394,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: 'HTTP协议规定网络浏览器如何与服务器通信。',
     frequency: '低频',
     unit: 29,
-    root: 'proto(第一) + col(粘) → 首先粘在一起的规则',
+    roots: 'proto(第一) + col(粘) → 首先粘在一起的规则',
     synonyms: 'standard, convention, procedure',
   },
   {
@@ -4405,7 +4405,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '用户友好的界面对任何软件产品的成功都至关重要。',
     frequency: '低频',
     unit: 29,
-    root: 'inter(之间) + face(面) → 两个系统之间的面',
+    roots: 'inter(之间) + face(面) → 两个系统之间的面',
     synonyms: 'connection, boundary, interaction point',
   },
   {
@@ -4416,7 +4416,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '中间件促进不同软件应用程序之间的通信。',
     frequency: '低频',
     unit: 29,
-    root: 'middle(中间) + ware(软件)',
+    roots: 'middle(中间) + ware(软件)',
     synonyms: 'bridge software, connector',
   },
   {
@@ -4427,7 +4427,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '云计算提供随需求增长的可扩展资源。',
     frequency: '低频',
     unit: 29,
-    root: 'scale(规模) + able → 能够改变规模的',
+    roots: 'scale(规模) + able → 能够改变规模的',
     synonyms: 'expandable, flexible, adaptable',
   },
   {
@@ -4438,7 +4438,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '服务器虚拟化允许多个操作系统在一台机器上运行。',
     frequency: '低频',
     unit: 29,
-    root: 'virtual(虚拟的) + ization',
+    roots: 'virtual(虚拟的) + ization',
     synonyms: 'simulation, emulation, abstraction',
   },
   {
@@ -4449,7 +4449,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '网络安全措施保护组织免受数字威胁和攻击。',
     frequency: '低频',
     unit: 29,
-    root: 'cyber(网络) + security(安全)',
+    roots: 'cyber(网络) + security(安全)',
     synonyms: 'digital security, information security',
   },
   {
@@ -4460,7 +4460,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '指纹和面部识别等生物识别技术广泛用于身份验证。',
     frequency: '低频',
     unit: 29,
-    root: 'bio(生命) + metrics(测量)',
+    roots: 'bio(生命) + metrics(测量)',
     synonyms: 'biological identification, body metrics',
   },
   {
@@ -4471,7 +4471,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '纳米技术使在原子和分子尺度上操纵物质成为可能。',
     frequency: '低频',
     unit: 29,
-    root: 'nano(十亿分之一) + technology(技术)',
+    roots: 'nano(十亿分之一) + technology(技术)',
     synonyms: 'molecular engineering, microtechnology',
   },
   {
@@ -4482,7 +4482,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '量子计算有望解决经典计算机无法解决的问题。',
     frequency: '低频',
     unit: 29,
-    root: '拉丁语 quantum(多少)',
+    roots: '拉丁语 quantum(多少)',
     synonyms: 'unit, amount, particle',
   },
   {
@@ -4493,7 +4493,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '来自卫星的遥测数据帮助科学家监测天气模式。',
     frequency: '低频',
     unit: 29,
-    root: 'tele(远) + metry(测量)',
+    roots: 'tele(远) + metry(测量)',
     synonyms: 'remote sensing, data collection',
   },
   {
@@ -4504,7 +4504,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '固件更新可以改善设备性能并修复安全漏洞。',
     frequency: '低频',
     unit: 29,
-    root: 'firm(固定) + ware(软件) → 固定的软件',
+    roots: 'firm(固定) + ware(软件) → 固定的软件',
     synonyms: 'embedded software, system software',
   },
   {
@@ -4515,7 +4515,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '新处理器显著提高了数据吞吐量。',
     frequency: '低频',
     unit: 29,
-    root: 'through(通过) + put(放置) → 通过处理的量',
+    roots: 'through(通过) + put(放置) → 通过处理的量',
     synonyms: 'output, capacity, rate',
   },
   {
@@ -4526,7 +4526,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '不同系统之间的互操作性对无缝数据交换至关重要。',
     frequency: '低频',
     unit: 29,
-    root: 'inter(之间) + oper(工作) + ability → 之间能共同工作的能力',
+    roots: 'inter(之间) + oper(工作) + ability → 之间能共同工作的能力',
     synonyms: 'compatibility, integration, connectivity',
   },
   {
@@ -4537,7 +4537,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '区块链技术提供了去中心化和防篡改的账本。',
     frequency: '低频',
     unit: 29,
-    root: 'block(区块) + chain(链)',
+    roots: 'block(区块) + chain(链)',
     synonyms: 'distributed ledger, DLT',
   },
   {
@@ -4548,7 +4548,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '网络钓鱼攻击诱骗用户透露密码等敏感信息。',
     frequency: '低频',
     unit: 29,
-    root: 'fish(钓鱼) + ing → 像钓鱼一样诱骗',
+    roots: 'fish(钓鱼) + ing → 像钓鱼一样诱骗',
     synonyms: 'social engineering, cyber fraud',
   },
   {
@@ -4559,7 +4559,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '恶意软件包括病毒、蠕虫、木马和勒索软件。',
     frequency: '低频',
     unit: 29,
-    root: 'mal(坏) + ware(软件) → 有害的软件',
+    roots: 'mal(坏) + ware(软件) → 有害的软件',
     synonyms: 'virus, malicious software, spyware',
   },
   {
@@ -4570,7 +4570,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '去中心化网络对单点故障更具韧性。',
     frequency: '低频',
     unit: 29,
-    root: 'de(去除) + central(中心) + ized',
+    roots: 'de(去除) + central(中心) + ized',
     synonyms: 'distributed, dispersed, non-centralized',
   },
   {
@@ -4581,7 +4581,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '密码学协议确保在线交易的机密性。',
     frequency: '低频',
     unit: 29,
-    root: 'crypto(隐藏) + graphic(书写)',
+    roots: 'crypto(隐藏) + graphic(书写)',
     synonyms: 'encoded, secure, ciphered',
   },
   {
@@ -4592,7 +4592,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '系统冗余确保即使一个组件故障也能继续运行。',
     frequency: '低频',
     unit: 29,
-    root: 're(再) + und(波浪) + ancy → 多余的波浪',
+    roots: 're(再) + und(波浪) + ancy → 多余的波浪',
     synonyms: 'backup, surplus, excess',
   },
   {
@@ -4603,7 +4603,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '异步通信允许参与者在方便时回复。',
     frequency: '低频',
     unit: 29,
-    root: 'a(不) + syn(同时) + chron(时间) + ous → 不同时的',
+    roots: 'a(不) + syn(同时) + chron(时间) + ous → 不同时的',
     synonyms: 'non-simultaneous, deferred, independent',
   },
   {
@@ -4614,7 +4614,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '同步数据传输要求两个系统同时运行。',
     frequency: '低频',
     unit: 29,
-    root: 'syn(同时) + chron(时间) + ous → 同时的',
+    roots: 'syn(同时) + chron(时间) + ous → 同时的',
     synonyms: 'simultaneous, real-time, coordinated',
   },
   {
@@ -4625,7 +4625,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: 'GitHub是软件开发者常用的代码仓库。',
     frequency: '低频',
     unit: 29,
-    root: 're(回) + posit(放置) + ory → 放回去的地方',
+    roots: 're(回) + posit(放置) + ory → 放回去的地方',
     synonyms: 'store, archive, database',
   },
   {
@@ -4636,7 +4636,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '编译过程将源代码转换为可执行的机器码。',
     frequency: '低频',
     unit: 29,
-    root: 'com(共同) + pil(堆积) + ation → 堆积在一起',
+    roots: 'com(共同) + pil(堆积) + ation → 堆积在一起',
     synonyms: 'building, translation, assembly',
   },
   {
@@ -4647,7 +4647,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '虚拟现实为用户创造沉浸式数字环境。',
     frequency: '低频',
     unit: 29,
-    root: 'virtu(效力) + al → 具有效力的，近似真实的',
+    roots: 'virtu(效力) + al → 具有效力的，近似真实的',
     synonyms: 'simulated, digital, artificial',
   },
   {
@@ -4658,7 +4658,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '双因素认证为在线账户增加了额外的安全层。',
     frequency: '低频',
     unit: 29,
-    root: 'auth(真实) + ent + ication → 确认真实性',
+    roots: 'auth(真实) + ent + ication → 确认真实性',
     synonyms: 'verification, validation, identification',
   },
   {
@@ -4669,7 +4669,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '旧API的弃用鼓励开发者采用更新的标准。',
     frequency: '低频',
     unit: 29,
-    root: 'de(向下) + prec(祈祷) + ation → 祈求远离',
+    roots: 'de(向下) + prec(祈祷) + ation → 祈求远离',
     synonyms: 'disapproval, obsolescence, phase-out',
   },
   {
@@ -4680,7 +4680,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '代码重构在不改变外部行为的情况下改善内部结构。',
     frequency: '低频',
     unit: 29,
-    root: 're(再) + factor(构建) + ing',
+    roots: 're(再) + factor(构建) + ing',
     synonyms: 'restructuring, reorganization, improvement',
   },
   {
@@ -4691,7 +4691,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '现代微处理器在单个芯片上包含数十亿个晶体管。',
     frequency: '低频',
     unit: 29,
-    root: 'micro(微小) + processor(处理器)',
+    roots: 'micro(微小) + processor(处理器)',
     synonyms: 'CPU, chip, processor',
   },
   {
@@ -4702,7 +4702,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '硅是电子产品中使用最广泛的半导体材料。',
     frequency: '低频',
     unit: 29,
-    root: 'semi(半) + conductor(导体)',
+    roots: 'semi(半) + conductor(导体)',
     synonyms: 'transistor material, chip material',
   },
   {
@@ -4713,7 +4713,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '更高的像素密度使屏幕上的图像更清晰、更详细。',
     frequency: '低频',
     unit: 29,
-    root: 'pix(图片) + el(元素) → 图片元素',
+    roots: 'pix(图片) + el(元素) → 图片元素',
     synonyms: 'picture element, dot',
   },
   {
@@ -4724,7 +4724,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '开发者花费大量时间调试代码。',
     frequency: '低频',
     unit: 29,
-    root: 'de(去除) + bug(虫子，故障) → 去除故障',
+    roots: 'de(去除) + bug(虫子，故障) → 去除故障',
     synonyms: 'troubleshoot, fix, correct',
   },
   {
@@ -4735,7 +4735,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '编译器将源代码编译为可执行程序。',
     frequency: '低频',
     unit: 29,
-    root: 'com(共同) + pile(堆积) → 堆积到一起',
+    roots: 'com(共同) + pile(堆积) → 堆积到一起',
     synonyms: 'build, translate, assemble',
   },
   {
@@ -4746,7 +4746,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '团队计划下周将新应用程序部署到生产服务器。',
     frequency: '低频',
     unit: 29,
-    root: 'de(展开) + ploy(折叠) → 展开',
+    roots: 'de(展开) + ploy(折叠) → 展开',
     synonyms: 'release, launch, implement',
   },
   {
@@ -4757,7 +4757,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '开发团队根据用户反馈对设计进行迭代。',
     frequency: '低频',
     unit: 29,
-    root: 'iter(再次) + ate → 再次做',
+    roots: 'iter(再次) + ate → 再次做',
     synonyms: 'repeat, cycle, loop',
   },
   {
@@ -4768,7 +4768,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '搜索引擎优化帮助网站在搜索结果中获得更高排名。',
     frequency: '低频',
     unit: 29,
-    root: 'optim(最好) + ization → 使达到最好',
+    roots: 'optim(最好) + ization → 使达到最好',
     synonyms: 'improvement, enhancement, tuning',
   },
   {
@@ -4779,7 +4779,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '容器化使应用程序能够在不同环境中一致运行。',
     frequency: '低频',
     unit: 29,
-    root: 'container(容器) + ization',
+    roots: 'container(容器) + ization',
     synonyms: 'encapsulation, packaging, isolation',
   },
   {
@@ -4790,7 +4790,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '容器编排工具管理应用程序的部署和扩展。',
     frequency: '低频',
     unit: 29,
-    root: 'orchestr(管弦乐) + ation → 像指挥管弦乐一样协调',
+    roots: 'orchestr(管弦乐) + ation → 像指挥管弦乐一样协调',
     synonyms: 'coordination, management, automation',
   },
   {
@@ -4801,7 +4801,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '网络数据包的有效载荷包含实际传输的数据。',
     frequency: '低频',
     unit: 29,
-    root: 'pay(支付) + load(负载) → 有价值的负载',
+    roots: 'pay(支付) + load(负载) → 有价值的负载',
     synonyms: 'cargo, data, content',
   },
   {
@@ -4812,7 +4812,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '性能基准测试有助于比较不同算法的效率。',
     frequency: '低频',
     unit: 29,
-    root: 'bench(长凳) + mark(标记) → 作为参考的标记',
+    roots: 'bench(长凳) + mark(标记) → 作为参考的标记',
     synonyms: 'standard, reference, test',
   },
   {
@@ -4823,7 +4823,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '视频编解码器压缩和解压数字视频流。',
     frequency: '低频',
     unit: 29,
-    root: 'coder(编码器) + decoder(解码器) → 编解码器',
+    roots: 'coder(编码器) + decoder(解码器) → 编解码器',
     synonyms: 'encoder-decoder, compressor',
   },
   {
@@ -4834,7 +4834,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '多线程允许程序同时执行多个操作。',
     frequency: '低频',
     unit: 29,
-    root: 'multi(多) + thread(线程) + ing',
+    roots: 'multi(多) + thread(线程) + ing',
     synonyms: 'concurrency, parallel processing',
   },
   {
@@ -4845,7 +4845,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '多态性允许不同类型的对象通过公共接口进行处理。',
     frequency: '低频',
     unit: 29,
-    root: 'poly(多) + morph(形态) + ism → 多种形态',
+    roots: 'poly(多) + morph(形态) + ism → 多种形态',
     synonyms: 'multiple forms, flexibility, versatility',
   },
 
@@ -4858,7 +4858,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '讲座涵盖了只有专家才能理解的深奥话题。',
     frequency: '低频',
     unit: 30,
-    root: 'eso(内部) + teric → 只有内部人懂的',
+    roots: 'eso(内部) + teric → 只有内部人懂的',
     synonyms: 'obscure, arcane, abstruse',
   },
   {
@@ -4869,7 +4869,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '这个村庄是英国乡村生活的典型例子。',
     frequency: '低频',
     unit: 30,
-    root: 'quint(第五) + essential(本质) → 第五元素，最纯粹的',
+    roots: 'quint(第五) + essential(本质) → 第五元素，最纯粹的',
     synonyms: 'typical, archetypal, classic',
   },
   {
@@ -4880,7 +4880,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '智能手机在现代社会中已变得无处不在。',
     frequency: '低频',
     unit: 30,
-    root: 'ubique(到处) + itous → 到处存在的',
+    roots: 'ubique(到处) + itous → 到处存在的',
     synonyms: 'omnipresent, universal, pervasive',
   },
   {
@@ -4891,7 +4891,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '樱花之美是短暂的，只持续几天。',
     frequency: '低频',
     unit: 30,
-    root: 'epi(在…上) + hemer(日) + al → 只有一天的',
+    roots: 'epi(在…上) + hemer(日) + al → 只有一天的',
     synonyms: 'transient, fleeting, short-lived',
   },
   {
@@ -4902,7 +4902,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '他偷偷地看了一眼机密文件。',
     frequency: '低频',
     unit: 30,
-    root: 'sub(在下面) + rept(爬行) + itious → 在下面偷偷爬行的',
+    roots: 'sub(在下面) + rept(爬行) + itious → 在下面偷偷爬行的',
     synonyms: 'secret, covert, stealthy',
   },
   {
@@ -4913,7 +4913,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '青霉素的发现是科学意外发现的结果。',
     frequency: '低频',
     unit: 30,
-    root: 'Serendip(斯里兰卡旧名) + ity → 意外发现的幸运',
+    roots: 'Serendip(斯里兰卡旧名) + ity → 意外发现的幸运',
     synonyms: 'luck, chance, happy accident',
   },
   {
@@ -4924,7 +4924,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '她反传统的观点挑战了学术界既定的规范。',
     frequency: '低频',
     unit: 30,
-    root: 'icon(图像) + clast(打破) + ic',
+    roots: 'icon(图像) + clast(打破) + ic',
     synonyms: 'rebellious, nonconformist, revolutionary',
   },
   {
@@ -4935,7 +4935,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '国王被赞美他每个决定的谄媚者包围。',
     frequency: '低频',
     unit: 30,
-    root: 'syko(无花果) + phant(显示) → 古希腊告密者',
+    roots: 'syko(无花果) + phant(显示) → 古希腊告密者',
     synonyms: 'flatterer, toady, lackey',
   },
   {
@@ -4946,7 +4946,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '她敏锐的分析揭示了经济危机的根本原因。',
     frequency: '低频',
     unit: 30,
-    root: 'per(完全) + spic(看) + acious → 能完全看穿的',
+    roots: 'per(完全) + spic(看) + acious → 能完全看穿的',
     synonyms: 'shrewd, astute, insightful',
   },
   {
@@ -4957,18 +4957,18 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '这位宽宏大量的领导人在内战后原谅了他的政治对手。',
     frequency: '低频',
     unit: 30,
-    root: 'magn(大) + anim(心灵) + ous → 心灵伟大的',
+    roots: 'magn(大) + anim(心灵) + ous → 心灵伟大的',
     synonyms: 'generous, noble, benevolent',
   },
   {
     word: 'obsequious',
     phonetic: '/əbˈsiːkwiəs/',
     definition: '谄媚的；奉承的',
-    example: 'The obsequious waiter hovered around the celebrity's table.',
+    example: "The obsequious waiter hovered around the celebrity's table.",
     exampleCn: '谄媚的服务员在名人桌子周围转来转去。',
     frequency: '低频',
     unit: 30,
-    root: 'ob(向) + sequ(跟随) + ious → 跟着别人的',
+    roots: 'ob(向) + sequ(跟随) + ious → 跟着别人的',
     synonyms: 'servile, fawning, sycophantic',
   },
   {
@@ -4979,7 +4979,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '吝啬的公司拒绝投资新设备。',
     frequency: '低频',
     unit: 30,
-    root: 'parsimon(节约) + ious → 过于节约的',
+    roots: 'parsimon(节约) + ious → 过于节约的',
     synonyms: 'stingy, miserly, frugal',
   },
   {
@@ -4990,18 +4990,18 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '健谈的教授经常把课讲到计划时间之后。',
     frequency: '低频',
     unit: 30,
-    root: 'loqu(说话) + acious → 喜欢说话的',
+    roots: 'loqu(说话) + acious → 喜欢说话的',
     synonyms: 'talkative, garrulous, verbose',
   },
   {
     word: 'inscrutable',
     phonetic: '/ɪnˈskruːtəbl/',
     definition: '不可理解的；高深莫测的',
-    example: 'The Mona Lisa's inscrutable smile has fascinated viewers for centuries.',
+    example: "The Mona Lisa's inscrutable smile has fascinated viewers for centuries.",
     exampleCn: '蒙娜丽莎高深莫测的微笑几个世纪以来一直吸引着观众。',
     frequency: '低频',
     unit: 30,
-    root: 'in(不) + scrut(检查) + able → 无法检查的',
+    roots: 'in(不) + scrut(检查) + able → 无法检查的',
     synonyms: 'mysterious, enigmatic, impenetrable',
   },
   {
@@ -5012,7 +5012,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '反复无常的天气使户外活动计划变得困难。',
     frequency: '低频',
     unit: 30,
-    root: 'capr(山羊) + icious → 像山羊一样跳来跳去',
+    roots: 'capr(山羊) + icious → 像山羊一样跳来跳去',
     synonyms: 'unpredictable, fickle, volatile',
   },
   {
@@ -5023,7 +5023,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '一丝不苟的编辑找出了手稿中的每个语法错误。',
     frequency: '低频',
     unit: 30,
-    root: 'fastid(厌恶) + ious → 对不完美感到厌恶的',
+    roots: 'fastid(厌恶) + ious → 对不完美感到厌恶的',
     synonyms: 'meticulous, particular, fussy',
   },
   {
@@ -5034,18 +5034,18 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '检查员只对建筑进行了敷衍的检查。',
     frequency: '低频',
     unit: 30,
-    root: 'per(完全) + funct(执行) + ory → 只是完成形式',
+    roots: 'per(完全) + funct(执行) + ory → 只是完成形式',
     synonyms: 'cursory, superficial, careless',
   },
   {
     word: 'recalcitrant',
     phonetic: '/rɪˈkælsɪtrənt/',
     definition: '顽抗的；不服从的',
-    example: 'The recalcitrant student refused to follow the school's dress code.',
+    example: "The recalcitrant student refused to follow the school's dress code.",
     exampleCn: '不服从的学生拒绝遵守学校的着装规定。',
     frequency: '低频',
     unit: 30,
-    root: 're(反) + calcitr(踢) + ant → 反着踢的',
+    roots: 're(反) + calcitr(踢) + ant → 反着踢的',
     synonyms: 'stubborn, defiant, uncooperative',
   },
   {
@@ -5056,7 +5056,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '撤退的懦弱决定受到军事历史学家的批评。',
     frequency: '低频',
     unit: 30,
-    root: 'pusill(很小) + anim(心灵) + ous → 心灵很小的',
+    roots: 'pusill(很小) + anim(心灵) + ous → 心灵很小的',
     synonyms: 'cowardly, timid, fearful',
   },
   {
@@ -5067,7 +5067,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '人生的沧桑教会他在逆境中保持韧性。',
     frequency: '低频',
     unit: 30,
-    root: 'vicis(变化) + itude → 变化的状态',
+    roots: 'vicis(变化) + itude → 变化的状态',
     synonyms: 'change, fluctuation, upheaval',
   },
   {
@@ -5078,7 +5078,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '爱抱怨的老人对社区里的一切都不满。',
     frequency: '低频',
     unit: 30,
-    root: 'quer(抱怨) + ulous → 喜欢抱怨的',
+    roots: 'quer(抱怨) + ulous → 喜欢抱怨的',
     synonyms: 'complaining, peevish, fretful',
   },
   {
@@ -5089,7 +5089,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '睿智的投资者提前数月预测到了市场崩盘。',
     frequency: '低频',
     unit: 30,
-    root: 'sag(感知) + acious → 能敏锐感知的',
+    roots: 'sag(感知) + acious → 能敏锐感知的',
     synonyms: 'wise, shrewd, astute',
   },
   {
@@ -5100,7 +5100,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '该记者因发布虚假报道而被解雇。',
     frequency: '低频',
     unit: 30,
-    root: 'mendac(谎言) + ious → 充满谎言的',
+    roots: 'mendac(谎言) + ious → 充满谎言的',
     synonyms: 'dishonest, deceitful, untruthful',
   },
   {
@@ -5111,7 +5111,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '提案中初期的想法需要进一步发展。',
     frequency: '低频',
     unit: 30,
-    root: 'in(进入) + cho(开始) + ate → 刚开始的',
+    roots: 'in(进入) + cho(开始) + ate → 刚开始的',
     synonyms: 'incipient, nascent, embryonic',
   },
   {
@@ -5122,7 +5122,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '她傲慢的态度疏远了同事们。',
     frequency: '低频',
     unit: 30,
-    root: 'super(上面) + cili(眉毛) + ous → 扬眉毛看人的',
+    roots: 'super(上面) + cili(眉毛) + ous → 扬眉毛看人的',
     synonyms: 'arrogant, haughty, disdainful',
   },
   {
@@ -5133,18 +5133,18 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '尽管一再呼吁，顽固的房东拒绝进行维修。',
     frequency: '低频',
     unit: 30,
-    root: 'ob(加强) + dur(硬) + ate → 非常硬的',
+    roots: 'ob(加强) + dur(硬) + ate → 非常硬的',
     synonyms: 'stubborn, unyielding, inflexible',
   },
   {
     word: 'sanguine',
     phonetic: '/ˈsæŋɡwɪn/',
     definition: '乐观的；自信的；血红色的',
-    example: 'Despite the setbacks, she remained sanguine about the project's success.',
+    example: "Despite the setbacks, she remained sanguine about the project's success.",
     exampleCn: '尽管遇到挫折，她对项目的成功仍然保持乐观。',
     frequency: '低频',
     unit: 30,
-    root: 'sanguin(血) + e → 血液充盈的，面色红润的',
+    roots: 'sanguin(血) + e → 血液充盈的，面色红润的',
     synonyms: 'optimistic, hopeful, confident',
   },
   {
@@ -5155,7 +5155,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '缺乏自信的学生很少在课堂讨论中发言。',
     frequency: '低频',
     unit: 30,
-    root: 'dif(不) + fid(信任) + ent → 不信任自己的',
+    roots: 'dif(不) + fid(信任) + ent → 不信任自己的',
     synonyms: 'shy, timid, insecure',
   },
   {
@@ -5166,7 +5166,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '他简洁的回答表明他没有兴趣继续对话。',
     frequency: '低频',
     unit: 30,
-    root: 'Laconia(斯巴达地区) + ic → 斯巴达人以言简意赅著称',
+    roots: 'Laconia(斯巴达地区) + ic → 斯巴达人以言简意赅著称',
     synonyms: 'concise, terse, brief',
   },
   {
@@ -5177,7 +5177,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '她在做任何重大决定之前都有仔细计划的倾向。',
     frequency: '低频',
     unit: 30,
-    root: 'pro(向前) + cliv(倾斜) + ity → 向前倾斜的倾向',
+    roots: 'pro(向前) + cliv(倾斜) + ity → 向前倾斜的倾向',
     synonyms: 'inclination, tendency, propensity',
   },
   {
@@ -5188,7 +5188,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '干旱加剧了该地区已经严重的粮食短缺。',
     frequency: '低频',
     unit: 30,
-    root: 'ex(加强) + acerb(尖酸) + ate → 使之更尖锐',
+    roots: 'ex(加强) + acerb(尖酸) + ate → 使之更尖锐',
     synonyms: 'worsen, aggravate, intensify',
   },
   {
@@ -5199,7 +5199,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '新政策旨在改善贫困地区的生活条件。',
     frequency: '低频',
     unit: 30,
-    root: 'a(向) + melior(更好) + ate → 使变得更好',
+    roots: 'a(向) + melior(更好) + ate → 使变得更好',
     synonyms: 'improve, enhance, better',
   },
   {
@@ -5210,7 +5210,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '幼儿有模仿成人行为的天然倾向。',
     frequency: '低频',
     unit: 30,
-    root: 'pro(向前) + pens(悬挂) + ity → 悬挂在某方向',
+    roots: 'pro(向前) + pens(悬挂) + ity → 悬挂在某方向',
     synonyms: 'inclination, tendency, predisposition',
   },
   {
@@ -5221,7 +5221,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '他在性别角色上的古老观点被认为是过时的。',
     frequency: '低频',
     unit: 30,
-    root: 'ante(前) + diluv(洪水) + ian → 大洪水之前的',
+    roots: 'ante(前) + diluv(洪水) + ian → 大洪水之前的',
     synonyms: 'ancient, archaic, prehistoric',
   },
   {
@@ -5232,7 +5232,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '这位政治家以回避难题时的迂回说法而闻名。',
     frequency: '低频',
     unit: 30,
-    root: 'circum(围绕) + locut(说话) + ion → 绕着说',
+    roots: 'circum(围绕) + locut(说话) + ion → 绕着说',
     synonyms: 'roundabout, verbosity, periphrasis',
   },
   {
@@ -5243,7 +5243,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '不妥协的谈判者拒绝做出任何让步。',
     frequency: '低频',
     unit: 30,
-    root: 'in(不) + transig(达成) + ent → 不愿达成一致的',
+    roots: 'in(不) + transig(达成) + ent → 不愿达成一致的',
     synonyms: 'uncompromising, stubborn, inflexible',
   },
   {
@@ -5254,7 +5254,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '她热情洋溢的个性使她成为每次聚会的焦点。',
     frequency: '低频',
     unit: 30,
-    root: 'e(出) + bull(冒泡) + ient → 冒泡出来的热情',
+    roots: 'e(出) + bull(冒泡) + ient → 冒泡出来的热情',
     synonyms: 'enthusiastic, exuberant, vivacious',
   },
   {
@@ -5265,7 +5265,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '错误信息对公共健康的有害影响不容小觑。',
     frequency: '低频',
     unit: 30,
-    root: 'per(完全) + nic(毁灭) + ious → 完全毁灭性的',
+    roots: 'per(完全) + nic(毁灭) + ious → 完全毁灭性的',
     synonyms: 'harmful, destructive, damaging',
   },
   {
@@ -5276,7 +5276,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '有益健康的山间空气被推荐给康复中的患者。',
     frequency: '低频',
     unit: 30,
-    root: 'salubr(健康) + ious → 健康的',
+    roots: 'salubr(健康) + ious → 健康的',
     synonyms: 'healthy, wholesome, beneficial',
   },
   {
@@ -5287,7 +5287,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '作为一个积习难改的旅行者，她已访问过五十多个国家。',
     frequency: '低频',
     unit: 30,
-    root: 'in(进入) + veter(老) + ate → 变老的',
+    roots: 'in(进入) + veter(老) + ate → 变老的',
     synonyms: 'chronic, habitual, deep-rooted',
   },
   {
@@ -5298,7 +5298,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '喧闹的人群使演讲者无法被听到。',
     frequency: '低频',
     unit: 30,
-    root: 'ob(反) + strep(吵闹) + erous → 反着吵闹的',
+    roots: 'ob(反) + strep(吵闹) + erous → 反着吵闹的',
     synonyms: 'rowdy, unruly, boisterous',
   },
   {
@@ -5309,7 +5309,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '这份手稿似乎早于之前已知的最早副本。',
     frequency: '低频',
     unit: 30,
-    root: 'ante(前) + date(日期)',
+    roots: 'ante(前) + date(日期)',
     synonyms: 'precede, predate, come before',
   },
   {
@@ -5320,7 +5320,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '他辞职的冲动决定使他陷入经济困难。',
     frequency: '低频',
     unit: 30,
-    root: 'im(向内) + pet(冲) + uous → 向里冲的',
+    roots: 'im(向内) + pet(冲) + uous → 向里冲的',
     synonyms: 'impulsive, rash, hasty',
   },
   {
@@ -5331,7 +5331,7 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '沉默寡言的农民很少对陌生人说几句话。',
     frequency: '低频',
     unit: 30,
-    root: 'tacit(沉默) + urn → 沉默的人',
+    roots: 'tacit(沉默) + urn → 沉默的人',
     synonyms: 'quiet, reserved, reticent',
   },
   {
@@ -5342,18 +5342,18 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '好斗的少年经常在学校打架。',
     frequency: '低频',
     unit: 30,
-    root: 'truc(凶猛) + ulent → 充满凶猛的',
+    roots: 'truc(凶猛) + ulent → 充满凶猛的',
     synonyms: 'aggressive, belligerent, combative',
   },
   {
     word: 'soporific',
     phonetic: '/ˌsɒpəˈrɪfɪk/',
     definition: '催眠的；令人昏昏欲睡的',
-    example: 'The professor's soporific lecture caused several students to fall asleep.',
+    example: "The professor's soporific lecture caused several students to fall asleep.",
     exampleCn: '教授令人昏昏欲睡的讲座让几个学生睡着了。',
     frequency: '低频',
     unit: 30,
-    root: 'sopor(睡眠) + ific(使) → 使人入睡的',
+    roots: 'sopor(睡眠) + ific(使) → 使人入睡的',
     synonyms: 'sleep-inducing, drowsy, sedative',
   },
   {
@@ -5364,22 +5364,21 @@ export const VOCAB_PART3: VocabEntry[] = [
     exampleCn: '清澈的湖水让我们能看到下面游动的鱼。',
     frequency: '低频',
     unit: 30,
-    root: 'per(穿过) + lucid(明亮的) → 光可以穿过的',
+    roots: 'per(穿过) + lucid(明亮的) → 光可以穿过的',
     synonyms: 'clear, transparent, lucid',
   },
-]
-  { word: 'palimpsest', phonetic: "/'pælɪmpsest/", definition: 'n. 重写本；留有旧迹的新作', example: 'The city is a palimpsest of different architectural styles.', exampleCn: '这座城市是不同建筑风格层叠交融的重写本。', frequency: '中频', unit: 26, root: 'palin (再次) + psest (刮擦)', synonyms: 'overwrite, revision' },
-  { word: 'eigenvalue', phonetic: "/'aɪɡənˌvæljuː/", definition: 'n. 特征值', example: 'The eigenvalues of the matrix determine its stability.', exampleCn: '矩阵的特征值决定了其稳定性。', frequency: '低频', unit: 27, root: 'eigen (自身的，德语) + value (值)' },
-  { word: 'feudalism', phonetic: "/'fjuːdəlɪzəm/", definition: 'n. 封建制度', example: 'Feudalism dominated European society throughout the Middle Ages.', exampleCn: '封建制度在整个中世纪主导了欧洲社会。', frequency: '低频', unit: 28, root: 'feud (封地) + -al + -ism (制度)', synonyms: 'feudal system, manorialism' },
-  { word: 'cuneiform', phonetic: "/'kjuːnɪfɔːrm/", definition: 'n./adj. 楔形文字（的）', example: 'Cuneiform is one of the earliest known writing systems.', exampleCn: '楔形文字是已知最早的书写系统之一。', frequency: '低频', unit: 28, root: 'cuneus (楔子) + form (形状)' },
-  { word: 'sesquipedalian', phonetic: "/ˌseskwɪpɪ'deɪliən/", definition: 'adj. 冗长的；使用长词的', example: 'His sesquipedalian writing style alienated casual readers.', exampleCn: '他冗长的写作风格疏远了普通读者。', frequency: '低频', unit: 30, root: 'sesqui (一又半) + ped (脚)，指一英尺半长的词' },
-  { word: 'mellifluous', phonetic: "/me'lɪfluəs/", definition: 'adj. 甜美的；流畅动听的', example: 'Her mellifluous voice captivated the entire audience.', exampleCn: '她甜美流畅的声音吸引了全场观众。', frequency: '低频', unit: 30, root: 'melli (蜜) + flu (流) + -ous', synonyms: 'dulcet, euphonious, melodious' },
-  { word: 'watershed', phonetic: "/'wɔːtərʃed/", definition: 'n. 分水岭；流域；转折点', example: 'The treaty marked a watershed in international environmental policy.', exampleCn: '该条约标志着国际环境政策的转折点。', frequency: '中频', unit: 23, root: 'water (水) + shed (分水)', synonyms: 'turning point, basin' },
-  { word: 'bijection', phonetic: "/baɪ'dʒekʃən/", definition: 'n. 双射；一一对应', example: 'A bijection between two sets proves they have the same cardinality.', exampleCn: '两个集合之间的双射证明它们具有相同的基数。', frequency: '低频', unit: 27, root: 'bi- (双) + jection (映射)', synonyms: 'one-to-one correspondence' },
-  { word: 'heliocentric', phonetic: "/ˌhiːlioʊ'sentrɪk/", definition: 'adj. 日心说的；以太阳为中心的', example: 'The heliocentric model replaced the geocentric view of the universe.', exampleCn: '日心说模型取代了宇宙的地心说观点。', frequency: '低频', unit: 28, root: 'helio (太阳) + centr (中心) + -ic', synonyms: 'sun-centered' },
-  { word: 'microkernel', phonetic: "/'maɪkroʊˌkɜːrnl/", definition: 'n. 微内核', example: 'A microkernel architecture minimizes the code running in kernel mode.', exampleCn: '微内核架构将内核模式下运行的代码减到最少。', frequency: '低频', unit: 29, root: 'micro- (微小) + kernel (内核)' },
-  { word: 'hypervisor', phonetic: "/'haɪpərvaɪzər/", definition: 'n. 虚拟机管理程序', example: 'The hypervisor manages multiple virtual machines on a single host.', exampleCn: '虚拟机管理程序在单个主机上管理多个虚拟机。', frequency: '低频', unit: 29, root: 'hyper- (超) + visor (监视者)', synonyms: 'virtual machine monitor' },
-  { word: 'transpile', phonetic: "/træns'paɪl/", definition: 'v. 转译（源代码）', example: 'TypeScript is transpiled to JavaScript before execution.', exampleCn: 'TypeScript在执行前被转译为JavaScript。', frequency: '低频', unit: 29, root: 'trans- (转换) + (com)pile (编译)', synonyms: 'source-to-source compile' },
-  { word: 'idempotent', phonetic: "/aɪ'dempotənt/", definition: 'adj. 幂等的', example: 'An idempotent operation produces the same result regardless of repetition.', exampleCn: '幂等操作无论重复多少次都产生相同的结果。', frequency: '低频', unit: 29, root: 'idem (相同) + potent (有力的)', synonyms: 'repeatable' },
-  { word: 'sesquicentennial', phonetic: "/ˌseskwɪsen'teniəl/", definition: 'n./adj. 一百五十周年（的）', example: 'The university celebrated its sesquicentennial with a grand ceremony.', exampleCn: '该大学举行了盛大的150周年校庆典礼。', frequency: '低频', unit: 30, root: 'sesqui- (一又半) + cent (百) + -ennial (年的)' },
+  { word: 'palimpsest', phonetic: "/'pælɪmpsest/", definition: 'n. 重写本；留有旧迹的新作', example: 'The city is a palimpsest of different architectural styles.', exampleCn: '这座城市是不同建筑风格层叠交融的重写本。', frequency: '中频', unit: 26, roots: 'palin (再次) + psest (刮擦)', synonyms: 'overwrite, revision' },
+  { word: 'eigenvalue', phonetic: "/'aɪɡənˌvæljuː/", definition: 'n. 特征值', example: 'The eigenvalues of the matrix determine its stability.', exampleCn: '矩阵的特征值决定了其稳定性。', frequency: '低频', unit: 27, roots: 'eigen (自身的，德语) + value (值)' },
+  { word: 'feudalism', phonetic: "/'fjuːdəlɪzəm/", definition: 'n. 封建制度', example: 'Feudalism dominated European society throughout the Middle Ages.', exampleCn: '封建制度在整个中世纪主导了欧洲社会。', frequency: '低频', unit: 28, roots: 'feud (封地) + -al + -ism (制度)', synonyms: 'feudal system, manorialism' },
+  { word: 'cuneiform', phonetic: "/'kjuːnɪfɔːrm/", definition: 'n./adj. 楔形文字（的）', example: 'Cuneiform is one of the earliest known writing systems.', exampleCn: '楔形文字是已知最早的书写系统之一。', frequency: '低频', unit: 28, roots: 'cuneus (楔子) + form (形状)' },
+  { word: 'sesquipedalian', phonetic: "/ˌseskwɪpɪ'deɪliən/", definition: 'adj. 冗长的；使用长词的', example: 'His sesquipedalian writing style alienated casual readers.', exampleCn: '他冗长的写作风格疏远了普通读者。', frequency: '低频', unit: 30, roots: 'sesqui (一又半) + ped (脚)，指一英尺半长的词' },
+  { word: 'mellifluous', phonetic: "/me'lɪfluəs/", definition: 'adj. 甜美的；流畅动听的', example: 'Her mellifluous voice captivated the entire audience.', exampleCn: '她甜美流畅的声音吸引了全场观众。', frequency: '低频', unit: 30, roots: 'melli (蜜) + flu (流) + -ous', synonyms: 'dulcet, euphonious, melodious' },
+  { word: 'watershed', phonetic: "/'wɔːtərʃed/", definition: 'n. 分水岭；流域；转折点', example: 'The treaty marked a watershed in international environmental policy.', exampleCn: '该条约标志着国际环境政策的转折点。', frequency: '中频', unit: 23, roots: 'water (水) + shed (分水)', synonyms: 'turning point, basin' },
+  { word: 'bijection', phonetic: "/baɪ'dʒekʃən/", definition: 'n. 双射；一一对应', example: 'A bijection between two sets proves they have the same cardinality.', exampleCn: '两个集合之间的双射证明它们具有相同的基数。', frequency: '低频', unit: 27, roots: 'bi- (双) + jection (映射)', synonyms: 'one-to-one correspondence' },
+  { word: 'heliocentric', phonetic: "/ˌhiːlioʊ'sentrɪk/", definition: 'adj. 日心说的；以太阳为中心的', example: 'The heliocentric model replaced the geocentric view of the universe.', exampleCn: '日心说模型取代了宇宙的地心说观点。', frequency: '低频', unit: 28, roots: 'helio (太阳) + centr (中心) + -ic', synonyms: 'sun-centered' },
+  { word: 'microkernel', phonetic: "/'maɪkroʊˌkɜːrnl/", definition: 'n. 微内核', example: 'A microkernel architecture minimizes the code running in kernel mode.', exampleCn: '微内核架构将内核模式下运行的代码减到最少。', frequency: '低频', unit: 29, roots: 'micro- (微小) + kernel (内核)' },
+  { word: 'hypervisor', phonetic: "/'haɪpərvaɪzər/", definition: 'n. 虚拟机管理程序', example: 'The hypervisor manages multiple virtual machines on a single host.', exampleCn: '虚拟机管理程序在单个主机上管理多个虚拟机。', frequency: '低频', unit: 29, roots: 'hyper- (超) + visor (监视者)', synonyms: 'virtual machine monitor' },
+  { word: 'transpile', phonetic: "/træns'paɪl/", definition: 'v. 转译（源代码）', example: 'TypeScript is transpiled to JavaScript before execution.', exampleCn: 'TypeScript在执行前被转译为JavaScript。', frequency: '低频', unit: 29, roots: 'trans- (转换) + (com)pile (编译)', synonyms: 'source-to-source compile' },
+  { word: 'idempotent', phonetic: "/aɪ'dempotənt/", definition: 'adj. 幂等的', example: 'An idempotent operation produces the same result regardless of repetition.', exampleCn: '幂等操作无论重复多少次都产生相同的结果。', frequency: '低频', unit: 29, roots: 'idem (相同) + potent (有力的)', synonyms: 'repeatable' },
+  { word: 'sesquicentennial', phonetic: "/ˌseskwɪsen'teniəl/", definition: 'n./adj. 一百五十周年（的）', example: 'The university celebrated its sesquicentennial with a grand ceremony.', exampleCn: '该大学举行了盛大的150周年校庆典礼。', frequency: '低频', unit: 30, roots: 'sesqui- (一又半) + cent (百) + -ennial (年的)' },
 ];

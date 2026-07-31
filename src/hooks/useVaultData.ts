@@ -132,6 +132,7 @@ interface UseVaultTreeResult {
   tree: TreeNode[]
   loading: boolean
   error: string | null
+  reload: () => void
 }
 
 export function useVaultTree(): UseVaultTreeResult {
@@ -139,7 +140,9 @@ export function useVaultTree(): UseVaultTreeResult {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true)
+    setError(null)
     api.getTree()
       .then(setTree)
       .catch((err) => {
@@ -149,7 +152,9 @@ export function useVaultTree(): UseVaultTreeResult {
       .finally(() => setLoading(false))
   }, [])
 
-  return { tree, loading, error }
+  useEffect(() => { load() }, [load])
+
+  return { tree, loading, error, reload: load }
 }
 
 // Check API connection status

@@ -4,9 +4,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import {
-  FileInput, Cog, Search, Link, Binary, CheckCircle,
-  Lightbulb, Globe, Puzzle, Archive,
-  FolderSearch, ShieldCheck, FileText, Wrench,
+  Search, Wrench,
   Upload, Play, Loader2, AlertTriangle, Check
 } from 'lucide-react'
 import { api, type IngestResult, type ResearchGap, type LintFixResult } from '../services/api'
@@ -15,8 +13,7 @@ import { DefuddlePanel, QueryPanel, FoldPanel, ThinkPanel } from '../components/
 import TagManager from '../components/workflow/TagManager'
 import DuplicatesPanel from '../components/workflow/DuplicatesPanel'
 import {
-  type PipelineStep, iconMap, statusStyles, nodeTypes,
-  getLayoutedElements, delay, PipelineFlow,
+  type PipelineStep, nodeTypes, getLayoutedElements, delay,
 } from '../components/workflow/shared'
 
 // ─── Ingestion Pipeline ───────────────────────────────────────────────────────

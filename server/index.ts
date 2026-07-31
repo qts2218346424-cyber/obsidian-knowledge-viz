@@ -4,7 +4,6 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { ProxyAgent, fetch as undiciFetch } from 'undici'
-import Anthropic from '@anthropic-ai/sdk'
 import multer from 'multer'
 import matter from 'gray-matter'
 import { scanVault, getFile, getTree, createFile, updateFile, deleteFile, renameFile, walkDir, type VaultNote } from './vault-parser.js'
@@ -18,11 +17,15 @@ import { VaultBackup, executeSuggestionsBatch, rollback as rollbackBackup } from
 import { detectDuplicates, mergeNotes } from './duplicate-detector.js'
 import { loadScheduleConfig, saveScheduleConfig } from './schedule-store.js'
 import { VaultScheduler } from './scheduler.js'
+import { createAiClient, getAiProvider, type AiClient, type AiConfig } from './ai-client.js'
+import { detectLocalAgents, runLocalAgent, type LocalAgentConfig, type LocalAgentProvider } from './local-agent-bridge.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const runtimeDataDir = process.env.KNOWLEDGE_VIZ_DATA_DIR || path.join(__dirname, '..')
 
 // Load config - support both development and Electron packaged paths
 const configPaths = [
+  process.env.KNOWLEDGE_VIZ_CONFIG_PATH || '',
   path.join(__dirname, 'config.json'),                              // dev: next to server
   path.join(__dirname, '..', 'server', 'config.json'),              // bundled: dist-server/../server/
   typeof process !== 'undefined' && (process as any).resourcesPath
@@ -30,7 +33,15 @@ const configPaths = [
     : '',
 ].filter(Boolean)
 
-let config: { vaultPath: string; port: number; proxy?: string; ai?: { apiKey: string; baseURL: string; model?: string } } = {
+let config: {
+  vaultPath: string
+  port: number
+  host?: string
+  allowedOrigins?: string[]
+  proxy?: string
+  ai?: AiConfig
+  localAgents?: LocalAgentConfig
+} = {
   vaultPath: '',
   port: 3001,
 }
@@ -50,13 +61,13 @@ for (const cp of configPaths) {
 }
 
 // Anthropic client (mutable — can be re-initialized via settings)
-let anthropic: Anthropic | null = config.ai
-  ? new Anthropic({ apiKey: config.ai.apiKey, baseURL: config.ai.baseURL })
+let anthropic: AiClient | null = config.ai
+  ? createAiClient(config.ai)
   : null
 
 function reinitAnthropic() {
   anthropic = config.ai
-    ? new Anthropic({ apiKey: config.ai.apiKey, baseURL: config.ai.baseURL })
+    ? createAiClient(config.ai)
     : null
 }
 
@@ -72,11 +83,33 @@ function proxyFetch(url: string, options?: { signal?: AbortSignal; headers?: Rec
 }
 
 const app = express()
-app.use(cors())
+app.disable('x-powered-by')
+
+const developmentOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173']
+const allowedOrigins = new Set([...(config.allowedOrigins || []), ...developmentOrigins])
+app.use(cors({
+  origin(origin, callback) {
+    // Electron and same-origin requests do not include Origin headers.
+    const isLocalOrigin = Boolean(origin && /^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/.test(origin))
+    if (!origin || isLocalOrigin || allowedOrigins.has(origin)) {
+      callback(null, true)
+      return
+    }
+    callback(new Error('Origin is not allowed'))
+  },
+  methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+}))
 app.use(express.json({ limit: '50mb' }))
+app.use((err: unknown, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err instanceof Error && err.message === 'Origin is not allowed') {
+    res.status(403).json({ error: err.message })
+    return
+  }
+  next(err)
+})
 
 // File upload directory for ingest
-const uploadDir = path.join(__dirname, '..', 'uploads')
+const uploadDir = path.join(runtimeDataDir, 'uploads')
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true })
 const upload = multer({ dest: uploadDir, limits: { fileSize: 100 * 1024 * 1024 } })
 
@@ -108,6 +141,130 @@ function invalidateCache() {
 }
 
 // ===== API Routes =====
+
+app.get('/api/health', (_req, res) => {
+  res.json({
+    status: 'ok',
+    vaultConfigured: Boolean(config.vaultPath),
+    vaultAvailable: Boolean(config.vaultPath && fs.existsSync(config.vaultPath)),
+    aiConfigured: Boolean(anthropic),
+    aiProvider: getAiProvider(config.ai),
+  })
+})
+
+app.get('/api/local-agents/status', (_req, res) => {
+  res.json({
+    agents: detectLocalAgents(config.localAgents),
+    defaultCwd: config.localAgents?.defaultCwd || config.vaultPath,
+  })
+})
+
+app.post('/api/local-agents/chat', async (req, res) => {
+  const body = req.body as {
+    provider?: LocalAgentProvider
+    prompt?: string
+    cwd?: string
+    sessionId?: string
+    model?: string
+    projectName?: string
+    projectDescription?: string
+    pageContext?: string
+    skillPrompt?: string
+  }
+  if (!body.prompt?.trim()) {
+    res.status(400).json({ error: 'Missing prompt' })
+    return
+  }
+  if (body.provider !== 'claude-code' && body.provider !== 'codex') {
+    res.status(400).json({ error: 'Unsupported local agent provider' })
+    return
+  }
+
+  const requestedCwd = body.cwd || config.localAgents?.defaultCwd || config.vaultPath
+  const cwd = fs.existsSync(requestedCwd) && fs.statSync(requestedCwd).isDirectory()
+    ? path.resolve(requestedCwd)
+    : path.resolve(config.vaultPath)
+  const context = [
+    `项目：${body.projectName || 'Knowledge Viz'}`,
+    `项目说明：${body.projectDescription || '当前 Obsidian 知识库项目'}`,
+    `工作目录：${cwd}`,
+    body.pageContext ? `当前页面：${body.pageContext}` : '',
+    body.skillPrompt ? `已启用 Skill：\n${body.skillPrompt}` : '',
+    '',
+    `用户请求：${body.prompt.trim()}`,
+  ].filter(Boolean).join('\n')
+
+  res.setHeader('Content-Type', 'text/event-stream')
+  res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('Connection', 'keep-alive')
+  res.flushHeaders()
+
+  const sendEvent = (event: unknown) => {
+    res.write(`data: ${JSON.stringify(event)}\n\n`)
+  }
+  const abortController = new AbortController()
+  const abortRun = () => abortController.abort()
+  req.on('aborted', abortRun)
+  req.on('close', abortRun)
+  res.on('close', abortRun)
+
+  try {
+    for await (const event of runLocalAgent({
+      provider: body.provider,
+      prompt: context,
+      cwd,
+      sessionId: body.sessionId,
+      model: body.model,
+      config: config.localAgents,
+      signal: abortController.signal,
+    })) {
+      sendEvent(event)
+      if (event.type === 'error') break
+    }
+  } catch (error: any) {
+    sendEvent({ type: 'error', content: error?.message || 'Local agent failed' })
+  } finally {
+    res.end()
+  }
+})
+
+function summarizeAiError(err: any) {
+  const status = Number(err?.status || err?.statusCode || 0) || undefined
+  let message = String(err?.message || 'AI 请求失败')
+  if (message.includes('<!DOCTYPE') || message.includes('Just a moment') || message.includes('Cloudflare')) {
+    message = '上游网关返回了网页防护页面，请检查 Base URL、代理或服务商访问限制'
+  }
+  if (message.length > 240) message = `${message.slice(0, 240)}…`
+  return { status, message }
+}
+
+app.post('/api/ai/test', async (req, res) => {
+  if (!anthropic || !config.ai) {
+    res.status(503).json({ ok: false, error: 'AI 尚未配置' })
+    return
+  }
+
+  const model = String(req.body?.model || config.ai.model || 'mimo-v2.5-pro')
+  try {
+    const response = await anthropic.messages.create({
+      model,
+      max_tokens: 128,
+      system: '只回复 OK，不要添加其他内容。',
+      messages: [{ role: 'user', content: '连接测试' }],
+    })
+    const reply = response.content.find(block => block.type === 'text')?.text || '已收到模型响应'
+    res.json({ ok: true, provider: config.ai.provider || (config.ai.apiFormat === 'openai' ? 'openai-compatible' : 'anthropic'), model, reply })
+  } catch (err: any) {
+    const detail = summarizeAiError(err)
+    res.status(detail.status && detail.status >= 400 ? detail.status : 502).json({
+      ok: false,
+      provider: config.ai.provider || (config.ai.apiFormat === 'openai' ? 'openai-compatible' : 'anthropic'),
+      model,
+      error: detail.message,
+      status: detail.status,
+    })
+  }
+})
 
 app.get('/api/vault/stats', (_req, res) => {
   try {
@@ -1057,7 +1214,7 @@ app.get('/api/settings', (_req, res) => {
 app.put('/api/settings', (req, res) => {
   try {
     const { vaultPath, port, proxy, ai } = req.body as {
-      vaultPath?: string; port?: number; proxy?: string; ai?: { apiKey: string; baseURL: string; model?: string }
+      vaultPath?: string; port?: number; proxy?: string; ai?: AiConfig
     }
     if (vaultPath !== undefined) config.vaultPath = vaultPath
     if (port !== undefined) config.port = port
@@ -2836,7 +2993,7 @@ app.post('/api/think', async (req, res) => {
         canvasEdges.push({ id: `e-root-${branch.id}`, fromNode: 'root', toNode: branch.id })
 
         // Children
-        (branch.children || []).forEach((child: any, ci: number) => {
+        ;(branch.children || []).forEach((child: any, ci: number) => {
           const cx = bx - 40 + ci * 100
           const cy = by + 120
           canvasNodes.push({ id: child.id, x: cx, y: cy, width: 160, height: 40, text: child.label })
@@ -3163,9 +3320,10 @@ app.use((_req, res) => {
 // Export for Electron or standalone
 export function startServer(port?: number) {
   const p = port || config.port || 3001
+  const host = config.host || '127.0.0.1'
   return new Promise<void>((resolve) => {
-    app.listen(p, () => {
-      console.log(`\n  Obsidian Viz API running on http://localhost:${p}`)
+    app.listen(p, host, () => {
+      console.log(`\n  Obsidian Viz API running on http://${host}:${p}`)
       console.log(`  Vault path: ${config.vaultPath}`)
       console.log(`  AI: ${anthropic ? 'Connected' : 'Not configured'}`)
       console.log(`  Status: ${fs.existsSync(config.vaultPath) ? 'Connected' : 'Vault not found'}\n`)

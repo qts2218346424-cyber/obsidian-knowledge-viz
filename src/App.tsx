@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AudioProvider } from './contexts/AudioContext'
 import Layout from './components/Layout'
 import MiniPlayer from './components/music/MiniPlayer'
+import Dashboard from './pages/Dashboard'
 import KnowledgeGraph from './pages/KnowledgeGraph'
 import Workflow from './pages/Workflow'
 import Chat from './pages/Chat'
@@ -19,8 +20,8 @@ function App() {
       <BrowserRouter>
         <Layout>
           <Routes>
-            <Route path="/" element={<Navigate to="/graph" replace />} />
-            <Route path="/dashboard" element={<Navigate to="/graph" replace />} />
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/graph" element={<KnowledgeGraph />} />
             <Route path="/workflow" element={<Workflow />} />
             <Route path="/editor" element={<Editor />} />

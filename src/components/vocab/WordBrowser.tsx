@@ -53,13 +53,15 @@ export default function WordBrowser() {
   const [expanded, setExpanded] = useState<string | null>(null)
   const [addingBatch, setAddingBatch] = useState(false)
   const [addedWords, setAddedWords] = useState<Set<string>>(new Set())
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const size = 50
 
   // Debounce search
   useEffect(() => {
     debounceRef.current = setTimeout(() => setDebounced(search), 300)
-    return () => clearTimeout(debounceRef.current)
+    return () => {
+      if (debounceRef.current !== null) clearTimeout(debounceRef.current)
+    }
   }, [search])
 
   // Reset page on filter change

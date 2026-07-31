@@ -1,177 +1,244 @@
-import { useState, useEffect } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
-import { type ReactNode } from 'react'
-import { Network, Workflow, MessageCircle, BookOpen, ExternalLink, FileEdit, GraduationCap, Search, Settings, AlertCircle, Music, ClipboardList, Languages, Timer } from 'lucide-react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { Link, NavLink, useLocation } from 'react-router-dom'
+import {
+  AlertCircle,
+  BookOpen,
+  ClipboardList,
+  ChevronDown,
+  FileEdit,
+  GraduationCap,
+  Home,
+  Languages,
+  MessageCircle,
+  MoreHorizontal,
+  Music,
+  Network,
+  Search,
+  Settings,
+  Sparkles,
+  Timer,
+  Workflow,
+  X,
+} from 'lucide-react'
 import { useVaultStats, useApiHealth } from '../hooks/useVaultData'
 import { useVaultEvents } from '../hooks/useVaultEvents'
 import SearchModal from './SearchModal'
-import { getDailyQuote } from '../data/quotes'
+import AIAssistantModal from './AIAssistantModal'
 
-const navItems = [
-  { to: '/graph', label: '知识库', icon: Network, emoji: '🧠' },
-  { to: '/workflow', label: '工作流', icon: Workflow, emoji: '⚙️' },
-  { to: '/editor', label: '笔记编辑', icon: FileEdit, emoji: '✏️' },
-  { to: '/study', label: '学习中心', icon: GraduationCap, emoji: '📚' },
-  { to: '/quiz', label: '在线做题', icon: ClipboardList, emoji: '📝' },
-  { to: '/vocabulary', label: '背单词', icon: Languages, emoji: '📖' },
-  { to: '/music', label: '音乐', icon: Music, emoji: '🎵' },
-  { to: '/pomodoro', label: '番茄钟', icon: Timer, emoji: '🍅' },
-  { to: '/chat', label: 'AI 聊天', icon: MessageCircle, emoji: '💬' },
-  { to: '/settings', label: '设置', icon: Settings, emoji: '⚙️' },
+const navGroups = [
+  {
+    label: '知识工作',
+    items: [
+      { to: '/dashboard', label: '首页', icon: Home, emoji: '🏠' },
+      { to: '/graph', label: '图谱', icon: Network, emoji: '🕸️' },
+      { to: '/editor', label: '编辑', icon: FileEdit, emoji: '✏️' },
+      { to: '/workflow', label: '整理', icon: Workflow, emoji: '🧭' },
+      { to: '/chat', label: 'AI 对话', icon: MessageCircle, emoji: '💬' },
+    ],
+  },
+  {
+    label: '学习工具',
+    items: [
+      { to: '/study', label: '学习中心', icon: GraduationCap, emoji: '📚' },
+      { to: '/quiz', label: '在线做题', icon: ClipboardList, emoji: '📝' },
+      { to: '/vocabulary', label: '背单词', icon: Languages, emoji: '📖' },
+      { to: '/pomodoro', label: '番茄钟', icon: Timer, emoji: '🍅' },
+      { to: '/music', label: '专注音乐', icon: Music, emoji: '🎵' },
+    ],
+  },
+  {
+    label: '系统',
+    items: [
+      { to: '/settings', label: '设置', icon: Settings, emoji: '⚙️' },
+    ],
+  },
 ]
+
+const allNavItems = navGroups.flatMap(group => group.items)
+const primaryNavItems = allNavItems.filter(item =>
+  ['/dashboard', '/editor', '/workflow', '/study'].includes(item.to)
+)
+const moreNavItems = allNavItems.filter(item => !primaryNavItems.some(primary => primary.to === item.to))
 
 interface LayoutProps {
   children: ReactNode
 }
 
+function navClass(isActive: boolean) {
+  return `inline-flex items-center rounded-full px-3 py-1.5 text-[13px] transition-colors ${
+    isActive
+      ? 'bg-slate-100 font-medium text-warm-900'
+      : 'text-warm-500 hover:bg-slate-100/80 hover:text-warm-900'
+  }`
+}
+
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation()
-  const currentPage = navItems.find(n => location.pathname.startsWith(n.to))
+  const currentPage = allNavItems.find(item => location.pathname === item.to)
   const apiHealthy = useApiHealth()
   const { stats } = useVaultStats()
   const [searchOpen, setSearchOpen] = useState(false)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
+  const [assistantOpen, setAssistantOpen] = useState(false)
   const [syncNotice, setSyncNotice] = useState<string | null>(null)
-  const [quote] = useState(getDailyQuote)
 
   const noteCount = stats?.totalNotes ?? null
   const connected = apiHealthy === true
+  const vaultName = stats?.vaultPath.split(/[\\/]/).filter(Boolean).pop() || '本地知识系统'
 
-  // SSE vault events for bidirectional sync
   useVaultEvents((event) => {
-    setSyncNotice(`${event.type === 'file-changed' ? '文件已更新' : event.type === 'file-added' ? '新文件' : '文件已删除'}: ${event.path.split('/').pop()}`)
+    const action = event.type === 'file-changed' ? '文件已更新' : event.type === 'file-added' ? '新文件已加入' : '文件已删除'
+    setSyncNotice(`${action}：${event.path.split('/').pop()}`)
     setTimeout(() => setSyncNotice(null), 3000)
   })
 
-  // Global Ctrl+K shortcut
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        e.preventDefault()
-        setSearchOpen(prev => !prev)
+    const handler = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        setSearchOpen(previous => !previous)
+      }
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'a') {
+        event.preventDefault()
+        setAssistantOpen(previous => !previous)
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
+  useEffect(() => {
+    document.title = `${currentPage?.label || '首页'} · ${vaultName} | Knowledge Viz`
+    setMobileNavOpen(false)
+    setMoreOpen(false)
+  }, [currentPage?.label, vaultName])
+
   return (
-    <div className="flex min-h-screen bg-cream-50">
-      {/* Sidebar */}
-      <aside className="w-64 shrink-0 border-r border-cream-200 bg-cream-100 flex flex-col">
-        {/* Logo */}
-        <div className="px-5 py-5 border-b border-cream-200">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-accent-orange to-accent-peach flex items-center justify-center text-white font-bold text-sm shadow-sm">
-              KV
+    <div className="min-h-screen bg-cream-50 text-warm-900">
+      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/85 backdrop-blur-xl">
+        <div className="mx-auto flex h-14 max-w-[1440px] items-center gap-3 px-4 sm:px-6">
+          <Link to="/dashboard" className="flex shrink-0 items-center gap-2.5 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-accent-orange/50">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-warm-900 text-[10px] font-semibold tracking-tight text-white">KV</span>
+            <span className="hidden text-[14px] font-semibold tracking-[-0.02em] text-warm-900 sm:inline">Knowledge Viz</span>
+          </Link>
+
+          <nav className="ml-4 hidden flex-1 items-center justify-center gap-0.5 xl:flex" aria-label="主导航">
+            {primaryNavItems.map(item => (
+              <NavLink key={item.to} to={item.to} className={({ isActive }) => navClass(isActive)}>
+                {item.label}
+              </NavLink>
+            ))}
+            <div className="relative">
+              <button
+                onClick={() => setMoreOpen(previous => !previous)}
+                className={navClass(moreOpen || moreNavItems.some(item => item.to === location.pathname))}
+                aria-expanded={moreOpen}
+              >
+                更多
+                <ChevronDown className={`ml-1 h-3.5 w-3.5 transition-transform ${moreOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {moreOpen && (
+                <div className="absolute right-0 top-full z-50 mt-2 w-52 rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_16px_40px_rgba(0,0,0,0.12)]">
+                  <p className="px-3 pb-1.5 pt-1 text-[10px] font-medium tracking-wide text-warm-400">扩展工具</p>
+                  {moreNavItems.map(item => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      onClick={() => setMoreOpen(false)}
+                      className={({ isActive }) => `flex items-center gap-2 rounded-xl px-3 py-2 text-sm ${isActive ? 'bg-slate-100 font-medium text-warm-900' : 'text-warm-600 hover:bg-slate-100'}`}
+                    >
+                      <item.icon className="h-4 w-4 text-warm-400" />
+                      {item.label}
+                    </NavLink>
+                  ))}
+                </div>
+              )}
             </div>
-            <div>
-              <h1 className="text-sm font-bold text-warm-800 leading-tight">Knowledge Viz</h1>
-              <p className="text-[11px] text-warm-400 mt-0.5">知识库助手</p>
-            </div>
-          </div>
-        </div>
+          </nav>
 
-        {/* Daily Quote */}
-        <div className="px-4 pt-3 pb-1">
-          <div className="px-3 py-2.5 rounded-xl bg-accent-peach/10 border border-accent-peach/20">
-            <p className="text-[11px] text-warm-600 leading-relaxed">{quote}</p>
-          </div>
-        </div>
-
-        {/* Search trigger */}
-        <div className="px-3 pt-2">
-          <button
-            onClick={() => setSearchOpen(true)}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-warm-400 bg-surface border border-cream-200 hover:text-warm-600 hover:border-cream-300 transition-colors"
-          >
-            <Search className="w-3.5 h-3.5" />
-            搜索笔记...
-            <kbd className="ml-auto text-[9px] px-1.5 py-0.5 rounded bg-cream-200 text-warm-400 font-mono">Ctrl+K</kbd>
-          </button>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-auto">
-          {navItems.map(item => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-150 group ${
-                  isActive
-                    ? 'bg-accent-orange/15 text-warm-800 font-medium shadow-sm'
-                    : 'text-warm-500 hover:text-warm-700 hover:bg-cream-200/60'
-                }`
-              }
+          <div className="ml-auto flex items-center gap-1.5">
+            <button
+              onClick={() => setSearchOpen(true)}
+              aria-label="搜索知识"
+              title="搜索知识（Ctrl+K）"
+              className="inline-flex h-8 items-center gap-2 rounded-full px-2.5 text-warm-500 transition-colors hover:bg-slate-100 hover:text-warm-900 sm:px-3"
             >
-              <item.icon className="w-4 h-4 shrink-0 opacity-70 group-hover:opacity-100" />
-              <span>{item.label}</span>
-              {item.to === '/vocabulary' && (
-                <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded-full bg-accent-orange/20 text-accent-orange border border-accent-orange/20">
-                  NEW
-                </span>
-              )}
-              {item.to === '/quiz' && (
-                <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded-full bg-accent-orange/20 text-accent-orange border border-accent-orange/20">
-                  NEW
-                </span>
-              )}
-            </NavLink>
-          ))}
-        </nav>
-
-        {/* Footer */}
-        <div className="px-4 py-4 border-t border-cream-200 space-y-2">
-          <a
-            href="https://github.com/qts2218346424-cyber/obsidian-knowledge-viz"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-warm-400 hover:text-warm-600 hover:bg-cream-200/60 transition-colors"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-            GitHub 仓库
-          </a>
-          <div className="flex items-center gap-2 px-3 py-2 text-[11px] text-warm-400">
-            <BookOpen className="w-3.5 h-3.5" />
-            {noteCount !== null ? `${noteCount} 篇笔记` : '未连接'}
+              <Search className="h-4 w-4" />
+              <span className="hidden text-xs lg:inline">搜索</span>
+              <kbd className="hidden rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[9px] text-warm-400 2xl:inline">Ctrl K</kbd>
+            </button>
+            <div className="hidden items-center gap-2 rounded-full px-2.5 py-1.5 text-xs text-warm-500 sm:flex" title={vaultName}>
+              <span className={`h-1.5 w-1.5 rounded-full ${connected ? 'bg-accent-sage' : 'bg-accent-rose'}`} />
+              <span className="hidden max-w-28 truncate md:inline">{connected ? '已连接' : apiHealthy === null ? '连接中' : '离线'}</span>
+            </div>
+            <Link to="/settings" aria-label="设置" title="设置" className="hidden h-8 w-8 items-center justify-center rounded-full text-warm-500 transition-colors hover:bg-slate-100 hover:text-warm-900 sm:inline-flex">
+              <Settings className="h-4 w-4" />
+            </Link>
+            <button
+              onClick={() => setMobileNavOpen(previous => !previous)}
+              aria-label={mobileNavOpen ? '关闭导航' : '打开导航'}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-warm-600 transition-colors hover:bg-slate-100 xl:hidden"
+            >
+              {mobileNavOpen ? <X className="h-5 w-5" /> : <MoreHorizontal className="h-5 w-5" />}
+            </button>
           </div>
         </div>
-      </aside>
 
-      {/* Main content */}
-      <main className="flex-1 flex flex-col overflow-hidden">
-        {/* Top bar */}
-        <header className="h-14 shrink-0 border-b border-cream-200 bg-surface/80 backdrop-blur-sm flex items-center px-6">
-          <h2 className="text-sm font-medium text-warm-700">
-            {currentPage?.emoji} {currentPage?.label || '首页'}
-          </h2>
-          <div className="ml-auto flex items-center gap-3">
-            {/* Sync notification */}
-            {syncNotice && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-accent-sage/10 border border-accent-sage/20 text-[11px] text-accent-sage animate-pulse">
-                <AlertCircle className="w-3 h-3" />
-                {syncNotice}
+        {mobileNavOpen && (
+          <div className="border-t border-slate-200/80 bg-white px-4 pb-4 pt-3 xl:hidden">
+            <div className="mx-auto max-w-[1440px]">
+              {navGroups.map(group => (
+                <div key={group.label} className="mb-4 last:mb-0">
+                  <p className="mb-1.5 px-2 text-[11px] font-medium text-warm-400">{group.label}</p>
+                  <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
+                    {group.items.map(item => (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        onClick={() => setMobileNavOpen(false)}
+                        className={({ isActive }) => `flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm ${isActive ? 'bg-slate-100 font-medium text-warm-900' : 'text-warm-600 hover:bg-slate-100'}`}
+                      >
+                        <item.icon className="h-4 w-4 text-warm-400" />
+                        {item.label}
+                      </NavLink>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <div className="flex items-center gap-2 border-t border-slate-200 pt-3 text-xs text-warm-400">
+                <BookOpen className="h-3.5 w-3.5" />
+                {noteCount !== null ? `${noteCount} 篇笔记 · ${vaultName}` : '尚未读取笔记'}
               </div>
-            )}
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs ${
-              connected
-                ? 'bg-cream-100 border-cream-200 text-warm-500'
-                : 'bg-accent-rose/10 border-accent-rose/20 text-accent-rose'
-            }`}>
-              <div className={`w-2 h-2 rounded-full ${connected ? 'bg-accent-sage animate-pulse' : 'bg-accent-rose'}`} />
-              {connected ? '已连接' : '离线'}
             </div>
           </div>
-        </header>
+        )}
+      </header>
 
-        {/* Page content */}
-        <div className="flex-1 overflow-auto p-6 pb-24 animate-fade-in-up">
-          {children}
-        </div>
+      <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-[1600px]">
+        {syncNotice && (
+          <div className="fixed right-5 top-[4.5rem] z-30 flex items-center gap-2 rounded-full border border-accent-sage/20 bg-white/90 px-4 py-2 text-xs text-accent-sage shadow-[0_8px_30px_rgba(0,0,0,0.08)] backdrop-blur-xl">
+            <AlertCircle className="h-3.5 w-3.5" />
+            {syncNotice}
+          </div>
+        )}
+        <div className="min-w-0 px-4 py-7 sm:px-6 lg:px-10 lg:py-10">{children}</div>
       </main>
 
-      {/* Global Search Modal */}
+      {!assistantOpen && (
+        <button
+          onClick={() => setAssistantOpen(true)}
+          aria-label="打开 AI 助手"
+          title="打开 AI 助手（Ctrl/⌘ + Shift + A）"
+          className="fixed bottom-5 right-5 z-50 inline-flex items-center gap-2 rounded-full bg-warm-900 px-4 py-3 text-xs font-medium text-white shadow-[0_12px_30px_rgba(15,23,42,0.22)] transition-transform hover:-translate-y-0.5 hover:bg-warm-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-orange/60"
+        >
+          <Sparkles className="h-4 w-4 text-accent-orange" />
+          <span className="hidden sm:inline">问 AI</span>
+        </button>
+      )}
+
       <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+      <AIAssistantModal isOpen={assistantOpen} onClose={() => setAssistantOpen(false)} pagePath={location.pathname} />
     </div>
   )
 }

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from 'recharts'
 import {
   GraduationCap, Clock, RefreshCw, Loader2,
-  ChevronLeft, ChevronRight, AlertTriangle, TrendingUp,
+  ChevronRight, AlertTriangle, TrendingUp,
   XCircle, Check, ThumbsUp, ThumbsDown, Minus, Calendar, FileText, Sparkles
 } from 'lucide-react'
 import { api, type ReviewDueData, type SubjectStats, type FileListItem, type DailyReviewData } from '../services/api'
@@ -624,4 +624,3 @@ function DailyErrorTab() {
     </div>
   )
 }
-

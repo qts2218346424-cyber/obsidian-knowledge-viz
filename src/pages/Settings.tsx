@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api, type AppSettings } from '../services/api'
-import { Save, RefreshCw, CheckCircle, AlertCircle, Key, FolderOpen, Globe, Cpu, Eye, EyeOff, Folder, AlertTriangle, Zap, ChevronRight, ChevronDown, ArrowUp, Loader2, X, HardDrive, Check, Download, Plug } from 'lucide-react'
+import { Save, RefreshCw, CheckCircle, AlertCircle, FolderOpen, Globe, Cpu, Eye, EyeOff, Folder, AlertTriangle, Zap, ChevronRight, ArrowUp, Loader2, X, HardDrive, Check, Download, Plug } from 'lucide-react'
 
 declare global {
   interface Window {
@@ -17,6 +17,7 @@ export default function Settings() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [testing, setTesting] = useState(false)
+  const [aiTesting, setAiTesting] = useState(false)
   const [showApiKey, setShowApiKey] = useState(false)
 
   // Track original vaultPath for restart hint
@@ -45,6 +46,7 @@ export default function Settings() {
   const [apiKey, setApiKey] = useState('')
   const [baseURL, setBaseURL] = useState('')
   const [model, setModel] = useState('')
+  const [provider, setProvider] = useState<'anthropic' | 'openai-compatible'>('anthropic')
   const [proxy, setProxy] = useState('')
 
   useEffect(() => {
@@ -60,6 +62,7 @@ export default function Settings() {
       setApiKey(s.ai?.apiKey || '')
       setBaseURL(s.ai?.baseURL || '')
       setModel(s.ai?.model || '')
+      setProvider(s.ai?.provider || (s.ai?.apiFormat === 'openai' ? 'openai-compatible' : 'anthropic'))
       setProxy(s.proxy || '')
       setOriginalVaultPath(s.vaultPath || '')
       setShowRestartHint(false)
@@ -139,7 +142,13 @@ export default function Settings() {
         const actualKey = apiKey.includes('...') && settings?.ai
           ? settings.ai.apiKey
           : apiKey
-        payload.ai = { apiKey: actualKey, baseURL: baseURL || 'https://api.anthropic.com', model: model || 'claude-3-5-sonnet-20241022' }
+        payload.ai = {
+          apiKey: actualKey,
+          baseURL: baseURL || (provider === 'openai-compatible' ? 'https://api.openai.com/v1' : 'https://api.anthropic.com'),
+          model: model || (provider === 'openai-compatible' ? 'gpt-4o-mini' : 'claude-3-5-sonnet-20241022'),
+          provider,
+          apiFormat: provider === 'openai-compatible' ? 'openai' : 'anthropic',
+        }
       }
       const result = await api.updateSettings(payload)
       setMessage({ type: 'success', text: `设置已保存！Vault: ${result.vaultPath}` })
@@ -166,6 +175,20 @@ export default function Settings() {
       setMessage({ type: 'error', text: `连接测试失败: ${err.message}` })
     } finally {
       setTesting(false)
+    }
+  }
+
+  async function handleTestAI() {
+    setAiTesting(true)
+    setMessage(null)
+    try {
+      const result = await api.testAI(model || undefined)
+      if (!result.ok) throw new Error(result.error || 'AI 测试失败')
+      setMessage({ type: 'success', text: `AI 连接成功：${result.provider || provider} / ${result.model || model}` })
+    } catch (err: any) {
+      setMessage({ type: 'error', text: `AI 测试失败：${err.message}` })
+    } finally {
+      setAiTesting(false)
     }
   }
 
@@ -262,6 +285,20 @@ export default function Settings() {
 
         <div className="space-y-3">
           <div>
+            <label className="block text-xs text-warm-500 mb-1.5">API 格式</label>
+            <select
+              value={provider}
+              onChange={(e) => setProvider(e.target.value as 'anthropic' | 'openai-compatible')}
+              className="w-full px-3 py-2 rounded-lg bg-cream-100 border border-cream-300 text-warm-700 text-sm focus:outline-none focus:border-accent-orange/40 focus:ring-1 focus:ring-accent-orange/15"
+            >
+              <option value="anthropic">Anthropic Messages API</option>
+              <option value="openai-compatible">OpenAI 兼容 Chat Completions API</option>
+            </select>
+            <p className="text-[11px] text-warm-400 mt-1">
+              OpenAI 兼容模式支持 OpenAI、DeepSeek、Moonshot、硅基流动及其他提供 /v1/chat/completions 的服务。
+            </p>
+          </div>
+          <div>
             <label className="block text-xs text-warm-500 mb-1.5">Obsidian Vault 路径</label>
             <div className="flex items-center gap-2">
               <input
@@ -354,12 +391,14 @@ export default function Settings() {
                 type="text"
                 value={baseURL}
                 onChange={(e) => setBaseURL(e.target.value)}
-                placeholder="https://api.anthropic.com"
+                placeholder={provider === 'openai-compatible' ? 'https://api.openai.com/v1' : 'https://api.anthropic.com'}
                 className="flex-1 px-3 py-2 rounded-lg bg-cream-100 border border-cream-300 text-warm-700 text-sm placeholder:text-warm-400 focus:outline-none focus:border-accent-orange/40 focus:ring-1 focus:ring-accent-orange/15"
               />
             </div>
             <p className="text-[11px] text-warm-400 mt-1">
-              支持 Anthropic、小米 MiMo、或其他兼容 Anthropic API 格式的服务
+              {provider === 'openai-compatible'
+                ? '填写服务商的 OpenAI 兼容 Base URL，可填写到 /v1。'
+                : '支持 Anthropic、小米 MiMo、或其他兼容 Anthropic API 格式的服务。'}
             </p>
           </div>
 
@@ -433,6 +472,14 @@ export default function Settings() {
             )}
           </div>
         </div>
+        <button
+          onClick={handleTestAI}
+          disabled={aiTesting || !apiKey || !baseURL || !model}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-accent-sage/10 border border-accent-sage/20 text-sm text-accent-sage hover:bg-accent-sage/15 transition-colors disabled:opacity-50"
+        >
+          <Zap className={`w-3.5 h-3.5 ${aiTesting ? 'animate-pulse' : ''}`} />
+          {aiTesting ? '正在测试 AI…' : '测试 AI 连接'}
+        </button>
       </section>
 
       {/* Obsidian Plugin Import */}
@@ -515,7 +562,6 @@ export default function Settings() {
       {/* Folder Picker Modal */}
       {showPicker && (
         <FolderPickerModal
-          initialPath={vaultPath}
           onSelect={handlePickerSelect}
           onClose={() => setShowPicker(false)}
         />
@@ -532,11 +578,9 @@ interface FsEntry {
 }
 
 function FolderPickerModal({
-  initialPath,
   onSelect,
   onClose,
 }: {
-  initialPath: string
   onSelect: (path: string) => void
   onClose: () => void
 }) {

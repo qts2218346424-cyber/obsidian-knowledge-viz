@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { scanVault, getFile, getTree, createFile, updateFile, type VaultNote } from './vault-parser.js'
+import type { AiClient, AiMessageCreateParams } from './ai-client.js'
 
 // ===== Tool Definitions =====
 
@@ -185,7 +186,7 @@ const SYSTEM_PROMPT = `你是 Knowledge Viz 知识库 AI 助手，一个专门�
 请主动使用工具来帮助用户完成任务，不要只是建议用户自己操作。`
 
 export async function* runAgentLoop(
-  anthropic: Anthropic,
+  anthropic: AiClient,
   model: string,
   messages: { role: 'user' | 'assistant'; content: any }[],
   vaultPath: string,
@@ -193,14 +194,35 @@ export async function* runAgentLoop(
   const systemPrompt = SYSTEM_PROMPT
 
   // Convert tool definitions to Anthropic format
-  const tools: Anthropic.Tool[] = AGENT_TOOLS.map(t => ({
+  const tools: NonNullable<AiMessageCreateParams['tools']> = AGENT_TOOLS.map(t => ({
     name: t.name,
     description: t.description,
-    input_schema: t.input_schema as Anthropic.Tool.InputSchema,
+    input_schema: t.input_schema,
   }))
 
   let conversationMessages = [...messages]
-  let maxIterations = 10 // Prevent infinite loops
+  const maxIterations = 12 // Allow multi-step research without allowing unbounded loops
+  let lastToolSignature = ''
+  let repeatedToolBatchCount = 0
+
+  const finishWithCollectedContext = async function* () {
+    const finalResponse = await anthropic.messages.create({
+      model,
+      max_tokens: 2048,
+      system: `${systemPrompt}
+
+你已经收集到足够的知识库信息。现在停止调用工具，直接基于已经返回的工具结果给用户一个完整、简洁、可执行的总结。
+如果信息不完整，请明确说明已经确认的内容和还需要补充的内容。不要再次调用工具。`,
+      messages: conversationMessages as Anthropic.MessageParam[],
+    })
+    const finalText = finalResponse.content
+      .filter(block => block.type === 'text')
+      .map(block => block.text)
+      .join('\n')
+      .trim()
+    if (finalText) yield { type: 'text' as const, content: finalText }
+    yield { type: 'done' as const }
+  }
 
   for (let iteration = 0; iteration < maxIterations; iteration++) {
     try {
@@ -238,6 +260,28 @@ export async function* runAgentLoop(
       // If no tool use, we're done
       if (!hasToolUse) {
         yield { type: 'done' }
+        return
+      }
+
+      const toolSignature = toolCalls
+        .map(call => `${call.name}:${JSON.stringify(call.input || {})}`)
+        .join('|')
+      if (toolSignature && toolSignature === lastToolSignature) {
+        repeatedToolBatchCount += 1
+      } else {
+        lastToolSignature = toolSignature
+        repeatedToolBatchCount = 1
+      }
+
+      // Some OpenAI-compatible models repeat the same tool batch after receiving
+      // valid results. Stop the loop and ask for a final answer instead of
+      // showing the user an iteration-limit message.
+      if (repeatedToolBatchCount >= 2) {
+        try {
+          for await (const event of finishWithCollectedContext()) yield event
+        } catch (finalErr: any) {
+          yield { type: 'error', content: finalErr.message }
+        }
         return
       }
 
@@ -296,6 +340,9 @@ export async function* runAgentLoop(
     }
   }
 
-  yield { type: 'text', content: '\n\n(已达到最大交互轮次)' }
-  yield { type: 'done' }
+  try {
+    for await (const event of finishWithCollectedContext()) yield event
+  } catch (finalErr: any) {
+    yield { type: 'error', content: finalErr.message }
+  }
 }

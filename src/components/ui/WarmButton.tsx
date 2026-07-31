@@ -5,6 +5,7 @@ interface WarmButtonProps {
   size?: 'sm' | 'md' | 'lg'
   disabled?: boolean
   className?: string
+  style?: React.CSSProperties
 }
 
 const variants = {
@@ -20,12 +21,13 @@ const sizes = {
 }
 
 export default function WarmButton({
-  children, onClick, variant = 'primary', size = 'md', disabled = false, className = '',
+  children, onClick, variant = 'primary', size = 'md', disabled = false, className = '', style,
 }: WarmButtonProps) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
+      style={style}
       className={`rounded-xl font-medium transition-all duration-200 ${variants[variant]} ${sizes[size]} ${
         disabled ? 'opacity-40 cursor-not-allowed' : ''
       } ${className}`}

@@ -236,8 +236,17 @@ export interface AppSettings {
   vaultPath: string
   port: number
   proxy?: string
-  ai?: { apiKey: string; baseURL: string; model?: string }
+  ai?: { apiKey: string; baseURL: string; model?: string; provider?: 'anthropic' | 'openai-compatible'; apiFormat?: 'anthropic' | 'openai' }
   configPath?: string
+}
+
+export interface LocalAgentStatus {
+  provider: 'claude-code' | 'codex'
+  available: boolean
+  command: string
+  resolvedPath?: string
+  version?: string
+  detail?: string
 }
 
 export interface ErrorQuestion {
@@ -485,7 +494,7 @@ export const api = {
   // Settings
   getSettings: () => fetchJSON<AppSettings>('/settings'),
 
-  updateSettings: (settings: Partial<AppSettings> & { ai?: { apiKey: string; baseURL: string; model?: string } }) =>
+  updateSettings: (settings: Partial<AppSettings> & { ai?: { apiKey: string; baseURL: string; model?: string; provider?: 'anthropic' | 'openai-compatible'; apiFormat?: 'anthropic' | 'openai' } }) =>
     putJSON<{ ok: boolean; vaultPath: string; aiConfigured: boolean }>('/settings', settings),
 
   // Filesystem browse (for folder picker)
@@ -500,6 +509,11 @@ export const api = {
   // AI Models
   fetchAIModels: () =>
     fetchJSON<{ models: { id: string; name: string }[]; current: string; source: string }>('/ai/models'),
+  testAI: (model?: string) =>
+    postJSON<{ ok: boolean; provider?: string; model?: string; reply?: string; error?: string; status?: number }>('/ai/test', model ? { model } : {}),
+
+  getLocalAgentStatus: () =>
+    fetchJSON<{ agents: LocalAgentStatus[]; defaultCwd: string }>('/local-agents/status'),
 
   // Obsidian AI plugin config detection
   detectAIPlugins: () =>

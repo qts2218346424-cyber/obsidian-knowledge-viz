@@ -3,6 +3,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const runtimeDataDir = process.env.KNOWLEDGE_VIZ_DATA_DIR || path.join(__dirname, 'data')
 
 export interface ScheduleConfig {
   enabled: boolean
@@ -12,7 +13,7 @@ export interface ScheduleConfig {
   lastRun: string | null
 }
 
-const CONFIG_PATH = path.join(__dirname, 'data', 'schedule-config.json')
+const CONFIG_PATH = path.join(runtimeDataDir, 'schedule-config.json')
 
 const DEFAULT_CONFIG: ScheduleConfig = {
   enabled: false,

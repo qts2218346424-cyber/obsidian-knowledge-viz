@@ -1,18 +1,18 @@
-import { useMemo, useState, useCallback, useRef } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import {
   ReactFlow, Background, Controls, MiniMap,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import {
   Globe, Search, FolderTree, Sparkles, Download, Play,
-  Loader2, AlertTriangle, Check, ExternalLink, Tag,
+  Loader2, AlertTriangle, Check, Tag,
   GitMerge, ArrowRightLeft, Plus, Link2, FileText,
-  Brain, Network, Save, Send, MessageSquare, Lightbulb,
+  Brain, Network, Save, Send, Lightbulb,
   FolderOpen,
 } from 'lucide-react'
 import {
   api,
-  type DefuddleResult, type QueryResult, type FoldResult, type ThinkResult, type FoldSuggestion,
+  type DefuddleResult, type QueryResult, type FoldResult, type ThinkResult,
 } from '../../services/api'
 import {
   type PipelineStep, nodeTypes,
@@ -911,9 +911,9 @@ export function ThinkPanel() {
                   <div key={b.id}>
                     <div className="text-sm font-bold text-warm-700 mb-1">{b.label}</div>
                     <div className="text-[11px] text-warm-500">{b.children?.length || 0} 个子节点</div>
-                    {b.children?.length > 0 && (
+                    {(b.children?.length || 0) > 0 && (
                       <div className="mt-2 space-y-1">
-                        {b.children.map(c => (
+                        {(b.children || []).map(c => (
                           <div key={c.id} className="text-[10px] text-warm-500 pl-2 border-l border-cream-300">
                             {c.label}
                             {c.note && <span className="text-warm-400"> → {c.note}</span>}

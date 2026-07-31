@@ -14,6 +14,45 @@ import { api, type FileDetail, type IngestStatus, type IngestResult } from '../s
 import { useVaultTree } from '../hooks/useVaultData'
 import FileExplorer from '../components/FileExplorer'
 
+type NoteTemplateKey = 'blank' | 'learning' | 'wrong-question' | 'idea'
+
+const noteTemplates: Array<{
+  key: NoteTemplateKey
+  label: string
+  description: string
+  tags: string
+  content: (title: string) => string
+}> = [
+  {
+    key: 'blank',
+    label: '空白笔记',
+    description: '从一句话或一个想法开始',
+    tags: '',
+    content: (title) => title ? `# ${title}\n\n` : '',
+  },
+  {
+    key: 'learning',
+    label: '学习卡片',
+    description: '适合概念、课程和复习',
+    tags: '学习, 待整理',
+    content: (title) => `# ${title || '学习卡片'}\n\n## 核心概念\n\n\n## 用自己的话解释\n\n\n## 例子\n\n\n## 还没理解\n\n\n## 关联笔记\n- [[]]\n`,
+  },
+  {
+    key: 'wrong-question',
+    label: '错题复盘',
+    description: '记录错误、原因和下次提醒',
+    tags: '错题, 复习',
+    content: (title) => `# ${title || '错题复盘'}\n\n## 题目\n\n\n## 我的答案\n\n\n## 正确思路\n\n\n## 错因\n\n\n## 下次提醒\n`,
+  },
+  {
+    key: 'idea',
+    label: '灵感速记',
+    description: '先记下来，再慢慢整理',
+    tags: '灵感, 待整理',
+    content: (title) => `# ${title || '灵感速记'}\n\n## 一句话\n\n\n## 细节\n\n\n## 下一步\n`,
+  },
+]
+
 // ─── Toolbar Helpers ──────────────────────────────────────────────────────────
 
 function insertAtCursor(
@@ -73,6 +112,160 @@ function insertBlock(
   }, 0)
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
+
+function inlineMarkdownToHtml(value: string) {
+  let html = escapeHtml(value)
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>')
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+  html = html.replace(/\[\[([^\]]+)\]\]/g, '<span class="wiki-link">[[$1]]</span>')
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+  html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>')
+  html = html.replace(/~~([^~]+)~~/g, '<del>$1</del>')
+  html = html.replace(/(^|[^\*])\*([^*]+)\*(?!\*)/g, '$1<em>$2</em>')
+  html = html.replace(/(^|[^_])_([^_]+)_(?!_)/g, '$1<em>$2</em>')
+  return html
+}
+
+function markdownToRichHtml(markdown: string) {
+  const lines = markdown.replace(/^---\n[\s\S]*?\n---\n?/, '').split(/\r?\n/)
+  const html: string[] = []
+  let inCode = false
+  let codeBuffer: string[] = []
+  let listType: 'ul' | 'ol' | null = null
+
+  const closeList = () => {
+    if (listType) {
+      html.push(`</${listType}>`)
+      listType = null
+    }
+  }
+
+  for (const line of lines) {
+    if (line.trim().startsWith('```')) {
+      if (inCode) {
+        html.push(`<pre><code>${escapeHtml(codeBuffer.join('\n'))}</code></pre>`)
+        codeBuffer = []
+        inCode = false
+      } else {
+        closeList()
+        inCode = true
+      }
+      continue
+    }
+    if (inCode) {
+      codeBuffer.push(line)
+      continue
+    }
+    if (!line.trim()) {
+      closeList()
+      continue
+    }
+
+    const heading = line.match(/^(#{1,3})\s+(.+)$/)
+    if (heading) {
+      closeList()
+      html.push(`<h${heading[1].length}>${inlineMarkdownToHtml(heading[2])}</h${heading[1].length}>`)
+      continue
+    }
+    const unordered = line.match(/^\s*[-*]\s+(.+)$/)
+    const ordered = line.match(/^\s*\d+\.\s+(.+)$/)
+    if (unordered || ordered) {
+      const nextType = unordered ? 'ul' : 'ol'
+      if (listType !== nextType) {
+        closeList()
+        listType = nextType
+        html.push(`<${nextType}>`)
+      }
+      html.push(`<li>${inlineMarkdownToHtml((unordered || ordered)![1])}</li>`)
+      continue
+    }
+    if (/^\s*>\s?/.test(line)) {
+      closeList()
+      html.push(`<blockquote>${inlineMarkdownToHtml(line.replace(/^\s*>\s?/, ''))}</blockquote>`)
+      continue
+    }
+    if (/^\s*---+\s*$/.test(line)) {
+      closeList()
+      html.push('<hr />')
+      continue
+    }
+    closeList()
+    html.push(`<p>${inlineMarkdownToHtml(line)}</p>`)
+  }
+
+  if (inCode) html.push(`<pre><code>${escapeHtml(codeBuffer.join('\n'))}</code></pre>`)
+  closeList()
+  return html.join('')
+}
+
+function htmlToMarkdown(html: string) {
+  if (typeof document === 'undefined') return html
+  const root = document.createElement('div')
+  root.innerHTML = html
+
+  const render = (node: Node): string => {
+    if (node.nodeType === Node.TEXT_NODE) return node.textContent || ''
+    if (node.nodeType !== Node.ELEMENT_NODE) return ''
+    const element = node as HTMLElement
+    const children = Array.from(element.childNodes).map(render).join('')
+    switch (element.tagName.toLowerCase()) {
+      case 'strong':
+      case 'b':
+        return `**${children}**`
+      case 'em':
+      case 'i':
+        return `*${children}*`
+      case 'del':
+      case 's':
+        return `~~${children}~~`
+      case 'code':
+        return element.parentElement?.tagName.toLowerCase() === 'pre' ? children : `\`${children}\``
+      case 'pre':
+        return `\`\`\`\n${element.textContent || ''}\n\`\`\`
+`
+      case 'br':
+        return '\n'
+      case 'h1':
+        return `# ${children}\n\n`
+      case 'h2':
+        return `## ${children}\n\n`
+      case 'h3':
+        return `### ${children}\n\n`
+      case 'blockquote':
+        return `${children.split('\n').filter(Boolean).map(line => `> ${line}`).join('\n')}\n\n`
+      case 'hr':
+        return '---\n\n'
+      case 'a': {
+        const href = element.getAttribute('href') || ''
+        return href ? `[${children}](${href})` : children
+      }
+      case 'li':
+        return children
+      case 'ul':
+        return `${Array.from(element.children).map(item => `- ${render(item)}`).join('\n')}\n\n`
+      case 'ol':
+        return `${Array.from(element.children).map((item, index) => `${index + 1}. ${render(item)}`).join('\n')}\n\n`
+      case 'p':
+      case 'div':
+        return `${children}\n\n`
+      default:
+        return children
+    }
+  }
+
+  return Array.from(root.childNodes).map(render).join('')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Editor() {
@@ -91,6 +284,8 @@ export default function Editor() {
   const [showRenameDialog, setShowRenameDialog] = useState(false)
   const [newFilePath, setNewFilePath] = useState('')
   const [newFileName, setNewFileName] = useState('')
+  const [newFileFolder, setNewFileFolder] = useState('')
+  const [newTemplateKey, setNewTemplateKey] = useState<NoteTemplateKey>('blank')
   const [renamePath, setRenamePath] = useState('')
 
   // Import state
@@ -105,7 +300,9 @@ export default function Editor() {
   const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null)
 
   // Preview
-  const [showPreview, setShowPreview] = useState(true)
+  const [showPreview, setShowPreview] = useState(false)
+  const [editorMode, setEditorMode] = useState<'write' | 'markdown'>('write')
+  const [richHtml, setRichHtml] = useState('')
 
   // AI Edit state
   const [showAiMenu, setShowAiMenu] = useState(false)
@@ -115,7 +312,9 @@ export default function Editor() {
   const [showAiResult, setShowAiResult] = useState(false)
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const { tree } = useVaultTree()
+  const richEditorRef = useRef<HTMLDivElement>(null)
+  const richEditorFocusedRef = useRef(false)
+  const { tree, reload: reloadTree } = useVaultTree()
 
   // Load ingest status
   useEffect(() => {
@@ -126,6 +325,16 @@ export default function Editor() {
   useEffect(() => {
     setDirty(content !== originalContent || tags !== (currentFile?.tags.join(', ') || '') || title !== (currentFile?.title || ''))
   }, [content, originalContent, tags, title, currentFile])
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!dirty) return
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [dirty])
 
   // Check URL params for file to open (from graph click)
   useEffect(() => {
@@ -143,17 +352,21 @@ export default function Editor() {
       const note = await api.getFile(filePath)
       setCurrentFile(note)
       setContent(note.content)
+      setRichHtml(markdownToRichHtml(note.content))
       setOriginalContent(note.content)
       setTags(note.tags.join(', '))
       setTitle(note.title)
       setSaveMsg('')
       setImportResult(null)
+      setShowNewDialog(false)
     } catch {
-      setSaveMsg('Failed to load file')
+      setSaveMsg('加载笔记失败')
     }
   }, [])
 
   const handleFileClick = (filePath: string) => {
+    if (currentFile?.path === filePath) return
+    if (dirty && !window.confirm('当前笔记有未保存修改，切换后这些修改会丢失。继续切换吗？')) return
     loadFile(filePath)
   }
 
@@ -166,12 +379,16 @@ export default function Editor() {
         const note = await api.createFile(newFilePath, content, fm)
         setCurrentFile(note)
         setOriginalContent(content)
-        setSaveMsg('Created!')
+        setSaveMsg('已创建')
         setShowNewDialog(false)
         setNewFilePath('')
         setNewFileName('')
+        setNewFileFolder('')
+        setNewTemplateKey('blank')
+        await reloadTree()
+        setTimeout(() => setSaveMsg(''), 2000)
       } catch (err: any) {
-        setSaveMsg(`Error: ${err.message}`)
+        setSaveMsg(`保存失败：${err.message}`)
       } finally {
         setSaving(false)
       }
@@ -184,10 +401,10 @@ export default function Editor() {
       const note = await api.updateFile(currentFile.path, content, fm)
       setCurrentFile(note)
       setOriginalContent(content)
-      setSaveMsg('Saved!')
+      setSaveMsg('已保存')
       setTimeout(() => setSaveMsg(''), 2000)
     } catch (err: any) {
-      setSaveMsg(`Error: ${err.message}`)
+      setSaveMsg(`保存失败：${err.message}`)
     } finally {
       setSaving(false)
     }
@@ -205,7 +422,7 @@ export default function Editor() {
       setSaveMsg('已移入回收站')
       setShowDeleteConfirm(false)
     } catch (err: any) {
-      setSaveMsg(`Delete error: ${err.message}`)
+      setSaveMsg(`删除失败：${err.message}`)
     }
   }
 
@@ -213,12 +430,13 @@ export default function Editor() {
     if (!currentFile || !renamePath) return
     try {
       const result = await api.renameFile(currentFile.path, renamePath)
-      setSaveMsg(`Renamed! ${result.linksUpdated > 0 ? `Updated ${result.linksUpdated} links.` : ''}`)
+      setSaveMsg(`已重命名${result.linksUpdated > 0 ? `，同步更新 ${result.linksUpdated} 条链接` : ''}`)
       await loadFile(result.newPath)
+      await reloadTree()
       setShowRenameDialog(false)
       setRenamePath('')
     } catch (err: any) {
-      setSaveMsg(`Rename error: ${err.message}`)
+      setSaveMsg(`重命名失败：${err.message}`)
     }
   }
 
@@ -245,9 +463,9 @@ export default function Editor() {
     if (succeeded.length > 0) {
       setImportResult(succeeded[0])
       await loadFile(succeeded[0].markdownPath)
-      setSaveMsg(`导入完成: ${succeeded.length} 成功${failed > 0 ? `, ${failed} 失败` : ''}`)
+      setSaveMsg(`导入完成：${succeeded.length} 个成功${failed > 0 ? `，${failed} 个失败` : ''}`)
     } else {
-      setImportError('All imports failed')
+      setImportError('导入失败，请检查文件格式或服务状态')
     }
 
     setImporting(false)
@@ -268,15 +486,29 @@ export default function Editor() {
   }
 
   const handleNewFile = () => {
+    if (dirty && !window.confirm('当前笔记有未保存修改，新建后这些修改会丢失。继续新建吗？')) return
     setCurrentFile(null)
-    setContent('# New Note\n\nStart writing here...\n')
+    setContent('')
+    setRichHtml('')
     setOriginalContent('')
     setTags('')
     setTitle('')
     setShowNewDialog(true)
     setNewFilePath('')
     setNewFileName('')
+    setNewFileFolder('')
+    setNewTemplateKey('blank')
     setSaveMsg('')
+    setShowPreview(false)
+  }
+
+  const applyNewTemplate = (key: NoteTemplateKey, nextTitle = newFileName) => {
+    const template = noteTemplates.find(item => item.key === key) || noteTemplates[0]
+    setNewTemplateKey(key)
+    setTags(template.tags)
+    const nextContent = template.content(nextTitle)
+    setContent(nextContent)
+    setRichHtml(markdownToRichHtml(nextContent))
   }
 
   const buildFrontmatter = (): Record<string, unknown> => {
@@ -290,21 +522,49 @@ export default function Editor() {
   // ─── Formatting Actions ─────────────────────────────────────────────────────
 
   const ta = () => textareaRef.current
+  const syncRichContent = () => {
+    const html = richEditorRef.current?.innerHTML || ''
+    setRichHtml(html)
+    setContent(htmlToMarkdown(html))
+  }
+  const execRich = (command: string, value?: string) => {
+    richEditorRef.current?.focus()
+    document.execCommand(command, false, value)
+    syncRichContent()
+  }
+  const switchEditorMode = (nextMode: 'write' | 'markdown') => {
+    if (nextMode === editorMode) return
+    if (nextMode === 'write') {
+      const nextHtml = markdownToRichHtml(content)
+      setRichHtml(nextHtml)
+      setEditorMode('write')
+      window.setTimeout(() => {
+        if (richEditorRef.current) richEditorRef.current.innerHTML = nextHtml
+      }, 0)
+      return
+    }
+    syncRichContent()
+    setEditorMode('markdown')
+  }
   const fmt = {
-    bold: () => ta() && insertAtCursor(ta()!, '**', '**', content, setContent),
-    italic: () => ta() && insertAtCursor(ta()!, '*', '*', content, setContent),
-    strike: () => ta() && insertAtCursor(ta()!, '~~', '~~', content, setContent),
-    h1: () => ta() && insertAtLine(ta()!, '# ', content, setContent),
-    h2: () => ta() && insertAtLine(ta()!, '## ', content, setContent),
-    h3: () => ta() && insertAtLine(ta()!, '### ', content, setContent),
-    list: () => ta() && insertAtLine(ta()!, '- ', content, setContent),
-    olist: () => ta() && insertAtLine(ta()!, '1. ', content, setContent),
-    quote: () => ta() && insertAtLine(ta()!, '> ', content, setContent),
-    hr: () => ta() && insertBlock(ta()!, '---', content, setContent),
-    code: () => ta() && insertBlock(ta()!, '```\ncode here\n```', content, setContent),
-    link: () => ta() && insertAtCursor(ta()!, '[', '](url)', content, setContent),
-    wiki: () => ta() && insertAtCursor(ta()!, '[[', ']]', content, setContent),
-    table: () => ta() && insertBlock(ta()!, '| Col 1 | Col 2 | Col 3 |\n|-------|-------|-------|\n| cell  | cell  | cell  |', content, setContent),
+    bold: () => editorMode === 'write' ? execRich('bold') : ta() && insertAtCursor(ta()!, '**', '**', content, setContent),
+    italic: () => editorMode === 'write' ? execRich('italic') : ta() && insertAtCursor(ta()!, '*', '*', content, setContent),
+    strike: () => editorMode === 'write' ? execRich('strikeThrough') : ta() && insertAtCursor(ta()!, '~~', '~~', content, setContent),
+    h1: () => editorMode === 'write' ? execRich('formatBlock', '<h1>') : ta() && insertAtLine(ta()!, '# ', content, setContent),
+    h2: () => editorMode === 'write' ? execRich('formatBlock', '<h2>') : ta() && insertAtLine(ta()!, '## ', content, setContent),
+    h3: () => editorMode === 'write' ? execRich('formatBlock', '<h3>') : ta() && insertAtLine(ta()!, '### ', content, setContent),
+    list: () => editorMode === 'write' ? execRich('insertUnorderedList') : ta() && insertAtLine(ta()!, '- ', content, setContent),
+    olist: () => editorMode === 'write' ? execRich('insertOrderedList') : ta() && insertAtLine(ta()!, '1. ', content, setContent),
+    quote: () => editorMode === 'write' ? execRich('formatBlock', '<blockquote>') : ta() && insertAtLine(ta()!, '> ', content, setContent),
+    hr: () => editorMode === 'write' ? execRich('insertHorizontalRule') : ta() && insertBlock(ta()!, '---', content, setContent),
+    code: () => editorMode === 'write' ? execRich('formatBlock', '<pre>') : ta() && insertBlock(ta()!, '```\ncode here\n```', content, setContent),
+    link: () => editorMode === 'write'
+      ? execRich('createLink', window.prompt('链接地址', 'https://') || 'https://')
+      : ta() && insertAtCursor(ta()!, '[', '](url)', content, setContent),
+    wiki: () => editorMode === 'write' ? execRich('insertText', '[[]]') : ta() && insertAtCursor(ta()!, '[[', ']]', content, setContent),
+    table: () => editorMode === 'write'
+      ? execRich('insertHTML', '<table><tbody><tr><td>内容</td><td>补充说明</td></tr></tbody></table>')
+      : ta() && insertBlock(ta()!, '| Col 1 | Col 2 | Col 3 |\n|-------|-------|-------|\n| cell  | cell  | cell  |', content, setContent),
   }
 
   // ─── AI Edit Actions ──────────────────────────────────────────────────────────
@@ -337,29 +597,19 @@ export default function Editor() {
     }
 
     try {
-      const resp = await fetch('/api/ai/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: `${prompts[actionKey] || prompts.polish}\n\n${content}`,
-        }),
-      })
-      if (resp.ok) {
-        const data = await resp.json()
-        setAiResult(data.reply || 'AI 暂无返回结果')
-      } else {
-        setAiResult('AI 服务暂时不可用，请稍后再试')
-      }
-    } catch {
-      setAiResult('网络连接失败，请检查服务是否运行中')
+      const response = await api.sendMessage(`${prompts[actionKey] || prompts.polish}\n\n${content}`)
+      setAiResult(response.reply || 'AI 暂时没有返回结果')
+    } catch (error: any) {
+      setAiResult(`AI 编辑失败：${error?.message || '请检查 AI 服务连接'}`)
     } finally {
       setAiEditing(false)
     }
   }
 
   const applyAiResult = () => {
-    if (aiResult && aiResult !== 'AI 服务暂时不可用，请稍后再试' && aiResult !== '网络连接失败，请检查服务是否运行中') {
+    if (aiResult && !aiResult.startsWith('AI 编辑失败：')) {
       setContent(aiResult)
+      setRichHtml(markdownToRichHtml(aiResult))
       setShowAiResult(false)
       setAiResult('')
       setSaveMsg('AI 编辑已应用')
@@ -367,7 +617,7 @@ export default function Editor() {
     }
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
       e.preventDefault(); handleSave()
     } else if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
@@ -404,7 +654,7 @@ export default function Editor() {
     >
       {/* File Explorer Sidebar */}
       <div className={`shrink-0 transition-all duration-200 ${showFiles ? 'w-56' : 'w-0'} overflow-hidden border-r border-cream-200`}>
-        <FileExplorer tree={tree} onFileClick={handleFileClick} />
+        <FileExplorer tree={tree} onFileClick={handleFileClick} selectedPath={currentFile?.path} />
       </div>
 
       {/* Main Editor Area */}
@@ -413,12 +663,12 @@ export default function Editor() {
         <div className="flex items-center gap-2 px-4 py-2 border-b border-cream-200 bg-cream-100/80 shrink-0">
           <button onClick={() => setShowFiles(!showFiles)}
             className={`p-1.5 rounded-lg text-xs transition-colors ${showFiles ? 'bg-cream-200 text-warm-600' : 'text-warm-400 hover:text-warm-600'}`}
-            title="Toggle file explorer">
+            title={showFiles ? '隐藏文件列表' : '显示文件列表'}>
             <FolderTree className="w-4 h-4" />
           </button>
           <div className="w-px h-5 bg-cream-200" />
           <button onClick={handleNewFile}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-cream-200 text-warm-600 hover:bg-cream-300 transition-colors">
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-slate-100 text-warm-700 hover:bg-slate-200 transition-colors">
             <FilePlus className="w-3.5 h-3.5" /> 新建
           </button>
           <button onClick={handleSave} disabled={saving || (!dirty && !!currentFile)}
@@ -428,11 +678,11 @@ export default function Editor() {
           {currentFile && (
             <>
               <button onClick={() => setShowRenameDialog(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-cream-200 text-warm-600 hover:bg-cream-300 transition-colors">
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-slate-100 text-warm-700 hover:bg-slate-200 transition-colors">
                 <FileEdit className="w-3.5 h-3.5" /> 重命名
               </button>
               <button onClick={() => setShowDeleteConfirm(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-cream-200 text-rose-400 hover:bg-rose-500/20 transition-colors">
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-slate-100 text-accent-rose hover:bg-accent-rose/10 transition-colors">
                 <Trash2 className="w-3.5 h-3.5" /> 删除
               </button>
             </>
@@ -444,7 +694,7 @@ export default function Editor() {
               accept={ingestStatus?.supportedFormats?.join(',') || '.pdf,.docx,.xlsx,.pptx,.html,.csv'}
               onChange={handleImport} className="hidden" />
             <button onClick={() => fileInputRef.current?.click()} disabled={importing}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-accent-sage text-white hover:bg-accent-sage/90 disabled:opacity-40 transition-colors">
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-accent-orange text-white hover:bg-accent-orange/90 disabled:opacity-40 transition-colors">
               {importing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
               导入{importing && batchProgress ? ` (${batchProgress.done}/${batchProgress.total})` : ''}
             </button>
@@ -452,7 +702,7 @@ export default function Editor() {
 
           <div className="ml-auto flex items-center gap-2">
             {saveMsg && (
-              <div className={`text-xs px-2 py-1 rounded-lg ${saveMsg.startsWith('Error') || saveMsg.includes('error') ? 'text-rose-400 bg-rose-500/10' : 'text-accent-sage bg-accent-sage/10'}`}>
+              <div className={`text-xs px-2 py-1 rounded-lg ${saveMsg.includes('失败') ? 'text-accent-rose bg-accent-rose/10' : 'text-accent-sage bg-accent-sage/10'}`}>
                 {saveMsg}
               </div>
             )}
@@ -470,6 +720,20 @@ export default function Editor() {
 
         {/* Formatting Toolbar */}
         <div className="flex items-center gap-0.5 px-4 py-1.5 border-b border-cream-200 bg-surface/50 shrink-0 flex-wrap">
+          <div className="mr-2 flex items-center rounded-lg border border-cream-300 bg-cream-100 p-0.5">
+            <button
+              onClick={() => switchEditorMode('write')}
+              className={`rounded-md px-2.5 py-1 text-[11px] transition-colors ${editorMode === 'write' ? 'bg-white font-medium text-warm-800 shadow-sm' : 'text-warm-400 hover:text-warm-700'}`}
+            >
+              写作
+            </button>
+            <button
+              onClick={() => switchEditorMode('markdown')}
+              className={`rounded-md px-2.5 py-1 text-[11px] transition-colors ${editorMode === 'markdown' ? 'bg-white font-medium text-warm-800 shadow-sm' : 'text-warm-400 hover:text-warm-700'}`}
+            >
+              Markdown
+            </button>
+          </div>
           <ToolBtn icon={Bold} label="粗体 (Ctrl+B)" onClick={fmt.bold} />
           <ToolBtn icon={Italic} label="斜体 (Ctrl+I)" onClick={fmt.italic} />
           <ToolBtn icon={Strikethrough} label="删除线" onClick={fmt.strike} />
@@ -532,7 +796,7 @@ export default function Editor() {
         )}
 
         {/* Editor + Preview */}
-        <div className="flex-1 flex overflow-hidden relative">
+        <div className="flex flex-1 flex-col overflow-hidden relative lg:flex-row">
           {/* Drag overlay */}
           {dragOver && (
             <div className="absolute inset-0 z-40 bg-accent-orange/10 border-2 border-dashed border-accent-orange rounded-lg flex items-center justify-center pointer-events-none">
@@ -543,68 +807,94 @@ export default function Editor() {
           )}
 
           {/* Editor Panel with line numbers */}
-          <div className={`flex-1 flex flex-col overflow-hidden ${showPreview ? 'border-r border-cream-200' : ''}`}>
-            {currentFile && (
-              <div className="px-4 py-1.5 border-b border-cream-200 bg-surface/30 flex items-center gap-3 text-[11px] text-warm-400">
-                <span className="font-mono text-warm-500">{currentFile.path}</span>
-                <span>{currentFile.wordCount} words</span>
-                <span>{currentFile.links.length} links</span>
-                <span>{new Date(currentFile.modified).toLocaleDateString('zh-CN')}</span>
+          <div className={`flex min-h-0 flex-1 flex-col overflow-hidden ${showPreview ? 'border-b border-cream-200 lg:border-b-0 lg:border-r' : ''}`}>
+            {/* Note title */}
+            <div className="border-b border-cream-200 bg-surface px-5 py-4">
+              <input
+                type="text"
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                placeholder="无标题笔记"
+                aria-label="笔记标题"
+                className="w-full bg-transparent text-xl font-semibold tracking-tight text-warm-900 outline-none placeholder:text-warm-300"
+              />
+              <div className="mt-2 flex items-center gap-2 text-[11px] text-warm-400">
+                {currentFile ? (
+                  <>
+                    <span className="max-w-[60%] truncate font-mono">{currentFile.path}</span>
+                    <span>·</span>
+                    <span>{currentFile.wordCount} 字</span>
+                    <span>·</span>
+                    <span>{currentFile.links.length} 条链接</span>
+                  </>
+                ) : (
+                  <span>新笔记 · 写下你的想法，保存后会进入 Vault</span>
+                )}
               </div>
-            )}
+            </div>
 
             {/* Frontmatter editor */}
             <div className="border-b border-cream-200">
               <button onClick={() => setShowFm(!showFm)}
                 className="w-full flex items-center gap-2 px-4 py-1.5 text-xs text-warm-500 hover:text-warm-700 transition-colors">
                 {showFm ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-                Frontmatter
+                笔记属性
               </button>
               {showFm && (
                 <div className="px-4 pb-3 space-y-2">
                   <div className="flex items-center gap-2">
-                    <label className="text-[11px] text-warm-400 w-12 shrink-0">Title</label>
-                    <input type="text" value={title} onChange={e => setTitle(e.target.value)}
-                      className="flex-1 bg-cream-200 border border-cream-300 rounded px-2 py-1 text-xs text-warm-700 outline-none focus:border-accent-orange" />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-[11px] text-warm-400 w-12 shrink-0">Tags</label>
+                    <label className="text-[11px] text-warm-400 w-12 shrink-0">标签</label>
                     <input type="text" value={tags} onChange={e => setTags(e.target.value)}
-                      placeholder="tag1, tag2, tag3"
+                      placeholder="用逗号分隔，例如：数据结构, 复习"
                       className="flex-1 bg-cream-200 border border-cream-300 rounded px-2 py-1 text-xs text-warm-700 outline-none focus:border-accent-orange" />
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Textarea with line numbers */}
-            <div className="flex-1 flex overflow-hidden">
-              {/* Line numbers */}
-              <div className="w-10 shrink-0 bg-surface/50 border-r border-cream-200 overflow-hidden select-none">
-                <div className="py-3 pr-2 text-right">
-                  {Array.from({ length: lineCount }, (_, i) => (
-                    <div key={i} className="text-[11px] leading-relaxed text-warm-400 font-mono" style={{ height: '1.625em' }}>
-                      {i + 1}
-                    </div>
-                  ))}
-                </div>
+            {editorMode === 'write' ? (
+              <div className="flex-1 overflow-y-auto bg-white px-5 py-5">
+                <div
+                  ref={richEditorRef}
+                  contentEditable
+                  suppressContentEditableWarning
+                  onFocus={() => { richEditorFocusedRef.current = true }}
+                  onBlur={() => { richEditorFocusedRef.current = false }}
+                  onInput={syncRichContent}
+                  onKeyDown={handleKeyDown}
+                  dangerouslySetInnerHTML={{ __html: richHtml }}
+                  data-placeholder={currentFile || showNewDialog ? '从这里开始写作…' : '从左侧选择一篇笔记，或点击“新建”开始写作…'}
+                  className="rich-note-editor min-h-full text-[16px] leading-8 text-warm-700 outline-none"
+                />
               </div>
-              <textarea
-                ref={textareaRef}
-                value={content}
-                onChange={e => setContent(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={showNewDialog ? 'Enter content for new note...' : 'Select a file from the sidebar to edit, or create a new one...'}
-                className="flex-1 bg-transparent text-sm text-warm-700 py-3 px-4 resize-none outline-none font-mono leading-relaxed placeholder-warm-400"
-                spellCheck={false}
-              />
-            </div>
+            ) : (
+              <div className="flex flex-1 overflow-hidden">
+                <div className="w-10 shrink-0 overflow-hidden border-r border-cream-200 bg-surface/50 select-none">
+                  <div className="py-3 pr-2 text-right">
+                    {Array.from({ length: lineCount }, (_, i) => (
+                      <div key={i} className="font-mono text-[11px] leading-relaxed text-warm-400" style={{ height: '1.625em' }}>
+                        {i + 1}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <textarea
+                  ref={textareaRef}
+                  value={content}
+                  onChange={e => setContent(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={currentFile || showNewDialog ? '从这里开始写作…' : '从左侧选择一篇笔记，或点击“新建”开始写作…'}
+                  className="flex-1 resize-none bg-transparent px-4 py-4 font-sans text-[15px] leading-7 text-warm-700 outline-none placeholder:text-warm-300"
+                  spellCheck
+                />
+              </div>
+            )}
           </div>
 
           {/* Preview Panel — Professional Markdown Rendering */}
           {showPreview && (
-            <div className="w-[45%] overflow-auto p-5 bg-cream-100">
-              <div className="text-[10px] text-warm-400 uppercase tracking-wider mb-3">Preview</div>
+            <div className="max-h-[45%] w-full overflow-auto bg-cream-100 p-5 lg:max-h-none lg:w-[45%]">
+              <div className="mb-3 text-[10px] uppercase tracking-wider text-warm-400">实时预览</div>
               <div className="md-preview">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
@@ -651,29 +941,73 @@ export default function Editor() {
       {/* New File Dialog */}
       {showNewDialog && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-surface border border-cream-300 rounded-xl p-6 w-96 shadow-2xl">
+          <div className="bg-surface border border-cream-300 rounded-2xl p-6 w-[min(92vw,30rem)] shadow-2xl">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-warm-700">新建笔记</h3>
+            <div>
+              <h3 className="text-base font-semibold tracking-tight text-warm-900">创建一篇新笔记</h3>
+              <p className="mt-1 text-xs text-warm-400">先选一个起点，内容之后随时可以调整。</p>
+            </div>
               <button onClick={() => setShowNewDialog(false)} className="p-1 rounded hover:bg-cream-200 text-warm-400"><X className="w-4 h-4" /></button>
             </div>
             <div className="space-y-3">
               <div>
-                <label className="text-[11px] text-warm-500 mb-1 block">文件名</label>
+                <label className="text-[11px] text-warm-500 mb-1.5 block">从模板开始</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {noteTemplates.map(template => (
+                    <button
+                      key={template.key}
+                      type="button"
+                      onClick={() => applyNewTemplate(template.key)}
+                      className={`rounded-xl border px-3 py-2 text-left transition-colors ${
+                        newTemplateKey === template.key
+                          ? 'border-accent-orange bg-accent-orange/8'
+                          : 'border-cream-300 hover:border-cream-400 hover:bg-cream-100'
+                      }`}
+                    >
+                      <span className="block text-xs font-medium text-warm-700">{template.label}</span>
+                      <span className="mt-0.5 block text-[10px] leading-4 text-warm-400">{template.description}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-[11px] text-warm-500 mb-1 block">笔记名称</label>
                 <input type="text" value={newFileName}
-                  onChange={e => { setNewFileName(e.target.value); setNewFilePath(e.target.value ? `${e.target.value}.md` : '') }}
-                  placeholder="My New Note" autoFocus
+                  onChange={e => {
+                    const value = e.target.value
+                    setNewFileName(value)
+                    setTitle(value)
+                    setNewFilePath(value ? `${newFileFolder ? `${newFileFolder.replace(/[\\/]+$/, '')}/` : ''}${value}.md` : '')
+                    if (newTemplateKey !== 'blank') {
+                      const template = noteTemplates.find(item => item.key === newTemplateKey)
+                      if (template) {
+                        const nextContent = template.content(value)
+                        setContent(nextContent)
+                        setRichHtml(markdownToRichHtml(nextContent))
+                      }
+                    }
+                  }}
+                  placeholder="例如：二叉树遍历" autoFocus
                   className="w-full bg-cream-200 border border-cream-300 rounded-lg px-3 py-2 text-sm text-warm-700 outline-none focus:border-accent-orange" />
               </div>
               <div>
-                <label className="text-[11px] text-warm-500 mb-1 block">路径</label>
-                <input type="text" value={newFilePath} onChange={e => setNewFilePath(e.target.value)}
-                  placeholder="folder/note.md"
+                <label className="text-[11px] text-warm-500 mb-1 block">放入文件夹（可选）</label>
+                <input type="text" value={newFileFolder}
+                  onChange={e => {
+                    const value = e.target.value
+                    setNewFileFolder(value)
+                    setNewFilePath(newFileName ? `${value.replace(/[\\/]+$/, '') ? `${value.replace(/[\\/]+$/, '')}/` : ''}${newFileName}.md` : '')
+                  }}
+                  placeholder="例如：课程笔记"
                   className="w-full bg-cream-200 border border-cream-300 rounded-lg px-3 py-2 text-sm text-warm-700 outline-none focus:border-accent-orange" />
+                <p className="mt-1 text-[10px] text-warm-400">
+                  将保存为：<span className="font-mono text-warm-500">{newFilePath || '笔记名称.md'}</span>
+                </p>
               </div>
               <div className="flex gap-2 pt-2">
-                <button onClick={() => setShowNewDialog(false)} className="flex-1 px-3 py-2 rounded-lg text-xs bg-cream-200 text-warm-600 hover:bg-cream-300">取消</button>
+                <button onClick={() => setShowNewDialog(false)} className="flex-1 px-3 py-2 rounded-lg text-xs bg-cream-200 text-warm-600 hover:bg-cream-300">先不创建</button>
                 <button onClick={handleSave} disabled={!newFilePath || saving}
-                  className="flex-1 px-3 py-2 rounded-lg text-xs bg-accent-orange text-white hover:bg-accent-orange/90 disabled:opacity-40">{saving ? 'Creating...' : 'Create'}</button>
+                  className="flex-1 px-3 py-2 rounded-lg text-xs bg-accent-orange text-white hover:bg-accent-orange/90 disabled:opacity-40">{saving ? '创建中…' : '创建并开始写作'}</button>
               </div>
             </div>
           </div>

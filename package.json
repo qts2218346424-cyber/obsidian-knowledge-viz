@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.2.0",
   "type": "module",
-  "main": "electron/main.js",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "server:dev": "tsx watch server/index.ts",
@@ -25,7 +25,8 @@
       "dist/**/*",
       "dist-server/**/*",
       "electron/**/*",
-      "public/**/*"
+      "public/**/*",
+      "src/data/**/*"
     ],
     "extraResources": [
       {
@@ -48,7 +49,7 @@
           ]
         }
       ],
-      "icon": "public/favicon.svg",
+      "icon": "build/icon.ico",
       "artifactName": "Knowledge-Viz-Setup-${version}.${ext}"
     },
     "nsis": {
@@ -58,9 +59,10 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Knowledge Viz",
-      "installerIcon": "public/favicon.svg",
-      "uninstallerIcon": "public/favicon.svg"
-    }
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico"
+    },
+    "icon": "build/icon.ico"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.105.0",
@@ -109,5 +111,7 @@
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
     "vite": "^8.0.12"
-  }
+  },
+  "description": "Local-first Obsidian knowledge base visualizer and learning companion",
+  "author": "qts2218346424-cyber"
 }

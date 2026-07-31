@@ -52,7 +52,7 @@ function buildLayout(root: VocabRootEntry): { nodes: Node[]; edges: Edge[] } {
   const rootId = `root-${root.root}`
   g.setNode(rootId, { width: 180, height: 70 })
 
-  root.words.forEach((w, i) => {
+  root.words.forEach((_, i) => {
     g.setNode(`word-${i}`, { width: 160, height: 55 })
     g.setEdge(rootId, `word-${i}`)
   })
@@ -98,8 +98,8 @@ export default function WordRelations() {
   const [graphSearch, setGraphSearch] = useState('')
   const [selectedRoot, setSelectedRoot] = useState<VocabRootEntry | null>(null)
   const [selectedWord, setSelectedWord] = useState<any>(null)
-  const [nodes, setNodes, onNodesChange] = useNodesState([])
-  const [edges, setEdges, onEdgesChange] = useEdgesState([])
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
 
   // Fetch data
   useEffect(() => {

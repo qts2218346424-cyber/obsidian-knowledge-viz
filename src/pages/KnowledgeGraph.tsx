@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import * as d3 from 'd3'
 import { useVaultGraph, useVaultHealth, useVaultStats } from '../hooks/useVaultData'
 import { graphNodes as mockNodes, graphLinks as mockLinks, groupColors, groupLabels } from '../data/mockData'
 import { api, type FileDetail } from '../services/api'
-import { RefreshCw, Loader2, Search, X, Heart, FileText, Link2, AlertCircle, Tag } from 'lucide-react'
+import { RefreshCw, Loader2, Search, X, FileText, Maximize2, RotateCcw } from 'lucide-react'
 
 const allGroupColors: Record<string, string> = {
   ...groupColors,
@@ -43,6 +43,7 @@ interface SimNode extends d3.SimulationNodeDatum {
 export default function KnowledgeGraph() {
   const svgRef = useRef<SVGSVGElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null)
   const navigate = useNavigate()
   const [hoveredNode, setHoveredNode] = useState<SimNode | null>(null)
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set())
@@ -50,7 +51,6 @@ export default function KnowledgeGraph() {
   const [previewNode, setPreviewNode] = useState<FileDetail | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [dimensions, setDimensions] = useState({ width: 900, height: 600 })
-  const [showStats, setShowStats] = useState(true)
 
   // Data hooks (merged from Dashboard)
   const { data, loading, error, reload } = useVaultGraph()
@@ -59,7 +59,7 @@ export default function KnowledgeGraph() {
 
   // Use real data if available, else fallback to mock
   const { nodes: rawNodes, links: rawLinks, groups } = useMemo(() => {
-    if (data && data.nodes.length > 0) {
+    if (data) {
       const groups = [...new Set(data.nodes.map(n => n.group))]
       return { nodes: data.nodes, links: data.links, groups }
     }
@@ -100,10 +100,7 @@ export default function KnowledgeGraph() {
   // ── Floating stats data (from Dashboard) ────────────────────────────────────
   const overallScore = report?.overallScore ?? 0
   const scoreColor = overallScore >= 80 ? 'text-accent-sage' : overallScore >= 60 ? 'text-accent-amber' : 'text-accent-rose'
-  const totalNotes = stats?.totalNotes ?? 0
-  const totalLinks = stats?.totalLinks ?? 0
   const orphanNotes = stats?.orphanNotes ?? 0
-  const totalTags = stats?.totalTags ?? 0
 
   // Resize observer
   useEffect(() => {
@@ -139,6 +136,7 @@ export default function KnowledgeGraph() {
       .scaleExtent([0.2, 5])
       .on('zoom', (event) => g.attr('transform', event.transform))
     svg.call(zoom)
+    zoomRef.current = zoom
 
     const link = g.append('g')
       .selectAll('line')
@@ -203,7 +201,14 @@ export default function KnowledgeGraph() {
     node.append('text')
       .text((d: SimNode) => d.label)
       .attr('dy', (d: SimNode) => d.r + 15)
-      .attr('text-anchor', 'middle')
+      .attr('text-anchor', (d: SimNode) => {
+        const x = d.x ?? width / 2
+        return x < 110 ? 'start' : x > width - 110 ? 'end' : 'middle'
+      })
+      .attr('dx', (d: SimNode) => {
+        const x = d.x ?? width / 2
+        return x < 110 ? d.r + 8 : x > width - 110 ? -(d.r + 8) : 0
+      })
       .attr('fill', '#8B7355')
       .attr('font-size', '10px')
       .attr('font-family', 'system-ui, sans-serif')
@@ -240,16 +245,24 @@ export default function KnowledgeGraph() {
       link.attr('stroke-opacity', 0.4).attr('stroke-width', 1.5).attr('stroke', '#D4B896')
     })
 
-    simulation.on('tick', () => {
-      link
+      simulation.on('tick', () => {
+        link
         .attr('x1', (d: any) => d.source.x)
         .attr('y1', (d: any) => d.source.y)
         .attr('x2', (d: any) => d.target.x)
         .attr('y2', (d: any) => d.target.y)
-      node.attr('transform', (d: SimNode) => `translate(${d.x},${d.y})`)
+      node.attr('transform', (d: SimNode) => {
+        const padding = Math.max(28, d.r + 20)
+        const x = Math.max(padding, Math.min(width - padding, d.x ?? width / 2))
+        const y = Math.max(padding, Math.min(height - padding, d.y ?? height / 2))
+        return `translate(${x},${y})`
+      })
     })
 
-    return () => { simulation.stop() }
+    return () => {
+      simulation.stop()
+      zoomRef.current = null
+    }
   }, [dimensions, simNodes, rawLinks, navigate])
 
   // Update node/link opacity based on search + group filter
@@ -284,12 +297,67 @@ export default function KnowledgeGraph() {
   }
 
   const totalNodes = rawNodes.length
-  const isRealData = data && data.nodes.length > 0
+  const isRealData = Boolean(data)
+  const clearFilters = () => {
+    setSearchQuery('')
+    setSelectedGroups(new Set())
+  }
+  const resetView = () => {
+    if (!svgRef.current || !zoomRef.current) return
+    d3.select(svgRef.current)
+      .transition()
+      .duration(350)
+      .call(zoomRef.current.transform, d3.zoomIdentity)
+  }
 
   return (
-    <div className="h-full flex gap-4">
+    <div className="flex min-h-full flex-col gap-4">
+      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-semibold tracking-tight text-warm-800">知识图谱</h1>
+            {isRealData && (
+              <span className="rounded-full bg-accent-sage/12 px-2 py-1 text-[10px] font-medium text-accent-sage">来自 Vault</span>
+            )}
+          </div>
+          <p className="mt-1 text-sm text-warm-500">从笔记之间的连接开始，发现主题、孤立内容和下一步整理方向。</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={resetView}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-cream-300 bg-surface px-3 py-2 text-xs font-medium text-warm-600 transition-colors hover:bg-cream-100"
+          >
+            <Maximize2 className="h-3.5 w-3.5" />
+            适配视图
+          </button>
+          <button
+            onClick={clearFilters}
+            disabled={!hasFilter}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-cream-300 bg-surface px-3 py-2 text-xs font-medium text-warm-600 transition-colors hover:bg-cream-100 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            清除筛选
+          </button>
+          <button
+            onClick={reload}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-cream-300 bg-surface px-3 py-2 text-xs font-medium text-warm-600 transition-colors hover:bg-cream-100"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            刷新
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <GraphMetric label="节点" value={totalNodes} color="text-accent-orange" />
+        <GraphMetric label="连接" value={rawLinks.length} color="text-accent-sage" />
+        <GraphMetric label="孤立笔记" value={orphanNotes} color="text-accent-rose" />
+        <GraphMetric label="健康度" value={overallScore || '—'} color={scoreColor} suffix={overallScore ? '/100' : undefined} />
+      </div>
+
+      <div className="flex flex-col gap-4 lg:flex-row">
       {/* Main graph area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {/* Loading / Error */}
         {loading && (
           <div className="flex items-center gap-2 text-sm text-warm-500 px-2 mb-2">
@@ -304,61 +372,8 @@ export default function KnowledgeGraph() {
         )}
 
         {/* Graph container (fills remaining space) */}
-        <div ref={containerRef} className="flex-1 relative bg-cream-100 rounded-2xl border border-cream-200 overflow-hidden" style={{ minHeight: 500 }}>
-          <svg ref={svgRef} width={dimensions.width} height={dimensions.height} className="block" />
-
-          {/* ── Floating Stats Panel (top-left) ──────────────────────────────── */}
-          <div className={`absolute top-4 left-4 transition-all duration-300 ${showStats ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-            <div className="bg-surface/90 backdrop-blur-md border border-cream-200 rounded-2xl p-4 shadow-lg w-64">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-xs font-semibold text-warm-600 uppercase tracking-wider">Vault 概览</h3>
-                <button
-                  onClick={() => setShowStats(false)}
-                  className="p-1 rounded hover:bg-cream-200 text-warm-400 hover:text-warm-600 transition-colors"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-
-              {/* Health Score */}
-              <div className="flex items-center gap-3 mb-3 pb-3 border-b border-cream-200">
-                <div className={`text-3xl font-bold ${scoreColor}`}>
-                  {overallScore || '—'}
-                </div>
-                <div>
-                  <div className="text-[10px] text-warm-400">健康评分</div>
-                  <div className={`text-xs font-medium ${scoreColor}`}>
-                    {overallScore >= 80 ? '优秀' : overallScore >= 60 ? '一般' : '需关注'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Stat grid */}
-              <div className="grid grid-cols-2 gap-2">
-                <StatItem icon={FileText} label="笔记" value={totalNotes} color="text-accent-orange" />
-                <StatItem icon={Link2} label="引用" value={totalLinks} color="text-accent-sage" />
-                <StatItem icon={AlertCircle} label="孤立" value={orphanNotes} color="text-accent-rose" />
-                <StatItem icon={Tag} label="标签" value={totalTags} color="text-accent-amber" />
-              </div>
-
-              {/* Graph info */}
-              <div className="mt-3 pt-3 border-t border-cream-200 flex items-center justify-between text-[10px] text-warm-400">
-                <span>节点 {totalNodes} · 边 {rawLinks.length}</span>
-                <span>{isRealData ? '来自 Vault' : '示例数据'}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Toggle stats button (when hidden) */}
-          {!showStats && (
-            <button
-              onClick={() => setShowStats(true)}
-              className="absolute top-4 left-4 p-2 bg-surface/90 backdrop-blur-md border border-cream-200 rounded-xl shadow-md hover:bg-cream-100 transition-colors"
-              title="显示统计面板"
-            >
-              <Heart className="w-4 h-4 text-accent-orange" />
-            </button>
-          )}
+        <div ref={containerRef} className="relative min-h-[520px] flex-1 overflow-hidden rounded-2xl border border-cream-200 bg-cream-100">
+          <svg ref={svgRef} width={dimensions.width} height={dimensions.height} className="block h-full w-full" />
 
           {/* Search + controls (top-right) */}
           <div className="absolute top-4 right-4 flex items-center gap-2">
@@ -380,19 +395,28 @@ export default function KnowledgeGraph() {
                 </button>
               )}
             </div>
-            <button
-              onClick={reload}
-              className="p-2 rounded-xl bg-surface/90 backdrop-blur-md border border-cream-200 text-warm-500 hover:text-warm-700 transition-colors"
-              title="刷新数据"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-            </button>
           </div>
 
           {/* Info text (top-center, when filter active) */}
           {hasFilter && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full bg-surface/90 backdrop-blur-md border border-cream-200 text-[11px] text-warm-500 shadow-sm">
               {activeNodeIds.size} / {totalNodes} 节点匹配
+            </div>
+          )}
+
+          {data && data.nodes.length === 0 && !loading && (
+            <div className="absolute inset-0 flex items-center justify-center p-6">
+              <div className="max-w-sm rounded-2xl border border-cream-200 bg-surface/95 p-6 text-center shadow-xl backdrop-blur-sm">
+                <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-accent-orange/12 text-accent-orange">
+                  <FileText className="h-5 w-5" />
+                </div>
+                <h2 className="mt-4 text-base font-semibold text-warm-800">知识库还没有可连接的笔记</h2>
+                <p className="mt-2 text-xs leading-5 text-warm-500">先创建一篇笔记，或回到设置连接正确的 Obsidian Vault，图谱会在这里自动生成。</p>
+                <div className="mt-4 flex justify-center gap-2">
+                  <Link to="/editor" className="rounded-xl bg-accent-orange px-3 py-2 text-xs font-medium text-white">创建笔记</Link>
+                  <Link to="/settings" className="rounded-xl border border-cream-300 px-3 py-2 text-xs font-medium text-warm-600">检查连接</Link>
+                </div>
+              </div>
             </div>
           )}
 
@@ -459,7 +483,7 @@ export default function KnowledgeGraph() {
 
       {/* Preview panel */}
       {(previewNode || previewLoading) && (
-        <div className="w-80 shrink-0 bg-surface border border-cream-200 rounded-xl p-4 overflow-auto">
+        <div className="w-full shrink-0 overflow-auto rounded-xl border border-cream-200 bg-surface p-4 lg:w-80">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-warm-700 truncate flex-1">
               {previewLoading ? '加载中...' : previewNode?.title}
@@ -508,25 +532,26 @@ export default function KnowledgeGraph() {
           )}
         </div>
       )}
+      </div>
     </div>
   )
 }
 
 // ── Stat item sub-component ────────────────────────────────────────────────────
 
-function StatItem({ icon: Icon, label, value, color }: {
-  icon: typeof FileText
+function GraphMetric({ label, value, color, suffix }: {
   label: string
-  value: number
+  value: number | string
   color: string
+  suffix?: string
 }) {
   return (
-    <div className="bg-cream-100/60 rounded-xl px-3 py-2">
-      <div className="flex items-center gap-1.5 mb-0.5">
-        <Icon className={`w-3 h-3 ${color}`} />
-        <span className="text-[10px] text-warm-400">{label}</span>
+    <div className="rounded-2xl border border-cream-200 bg-surface px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.04)]">
+      <div className="text-[11px] text-warm-400">{label}</div>
+      <div className={`mt-1 text-xl font-semibold ${color}`}>
+        {value}
+        {suffix && <span className="ml-1 text-[10px] font-normal text-warm-400">{suffix}</span>}
       </div>
-      <div className={`text-lg font-bold ${color}`}>{value}</div>
     </div>
   )
 }

@@ -139,7 +139,7 @@
 
 ### AI 聊天
 
-- 基于 Anthropic API（兼容任何 Anthropic 格式的服务）
+- 基于 Anthropic Messages API 或 OpenAI 兼容 Chat Completions API
 - 自动检索相关笔记作为上下文
 - 回答引用笔记卡片（可点击跳转）
 - 一键保存回答为笔记
@@ -157,12 +157,12 @@
 | 层级 | 技术 |
 |------|------|
 | 前端 | React 19 + TypeScript 6 + Vite 8 + Tailwind CSS v4 |
-| 后端 | Express 5 + Anthropic SDK + esbuild |
+| 后端 | Express 5 + AI 适配层 + Anthropic SDK + esbuild |
 | 可视化 | D3.js (力导向图) + Recharts (图表) |
 | Markdown | react-markdown + remark-gfm + rehype-highlight |
 | 桌面 | Electron 42 + @electron/packager |
 | 文档转换 | markitdown (Python) |
-| AI | Xiaomi MiMo (Anthropic-compatible API) |
+| AI | Xiaomi MiMo、Anthropic、OpenAI-compatible 服务 |
 
 ---
 
@@ -372,10 +372,13 @@ npm run pack
 {
   "vaultPath": "C:\\Users\\YourName\\Documents\\ObsidianVault",
   "port": 3001,
+  "host": "127.0.0.1",
   "ai": {
     "apiKey": "your-api-key",
     "baseURL": "https://api.anthropic.com",
-    "model": "claude-3-5-sonnet-20241022"
+    "model": "claude-3-5-sonnet-20241022",
+    "provider": "anthropic",
+    "apiFormat": "anthropic"
   }
 }
 ```
@@ -384,9 +387,26 @@ npm run pack
 |------|:----:|------|
 | `vaultPath` | 是 | Obsidian 知识库所在的文件夹路径 |
 | `port` | 否 | 后端服务端口，默认 3001 |
+| `host` | 否 | 服务监听地址，默认 `127.0.0.1`，仅允许本机访问 |
 | `ai.apiKey` | 否 | AI 功能所需的 API 密钥（不填则 AI 相关功能不可用） |
-| `ai.baseURL` | 否 | API 地址，兼容任何 Anthropic 格式的 API |
+| `ai.baseURL` | 否 | API 地址；OpenAI 兼容服务可填写服务商根地址或 `/v1` 地址 |
 | `ai.model` | 否 | 模型名称，默认 `mimo-v2.5-pro` |
+| `ai.provider` | 否 | `anthropic` 或 `openai-compatible`，默认 `anthropic` |
+| `ai.apiFormat` | 否 | `anthropic` 或 `openai`，用于兼容旧配置 |
+
+OpenAI 兼容配置示例：
+
+```json
+{
+  "apiKey": "your-api-key",
+  "baseURL": "https://api.openai.com/v1",
+  "model": "gpt-4o-mini",
+  "provider": "openai-compatible",
+  "apiFormat": "openai"
+}
+```
+
+兼容服务只需提供标准的 `POST /v1/chat/completions` 接口，并使用 Bearer Token。
 
 > **提示**：`vaultPath` 是唯一必须修改的配置项，将其指向你的 Obsidian 知识库根目录即可。
 

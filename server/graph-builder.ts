@@ -30,19 +30,39 @@ export function buildGraph(notes: VaultNote[]): GraphData {
   const linkSet = new Set<string>()
   const links: GraphLink[] = []
 
-  // Create a lookup map: title (lowercase) → note path
+  // Obsidian resolves a wikilink by title, filename, or relative path.
+  // Keep all three indexes so links such as [[数据结构/_index]] resolve
+  // to wiki/数据结构/_index.md instead of being counted as dangling.
   const titleToPath = new Map<string, string>()
+  const pathToPath = new Map<string, string>()
+  const fileNameToPaths = new Map<string, string[]>()
   for (const note of notes) {
-    titleToPath.set(note.title.toLowerCase(), note.path)
-    // Also map filename without extension
-    const fileName = note.path.split('/').pop()?.replace('.md', '').toLowerCase() || ''
-    if (fileName) {
-      titleToPath.set(fileName, note.path)
-    }
+    const normalizedPath = normalizeLinkTarget(note.path)
+    const fileName = normalizedPath.split('/').pop() || ''
+    titleToPath.set(normalizeLinkTarget(note.title), note.path)
+    pathToPath.set(normalizedPath, note.path)
+    const matches = fileNameToPaths.get(fileName) || []
+    matches.push(note.path)
+    fileNameToPaths.set(fileName, matches)
   }
 
-  // Build nodes
-  for (const note of notes) {
+  const resolveTarget = (link: string): string | undefined => {
+    const normalizedLink = normalizeLinkTarget(link)
+    if (pathToPath.has(normalizedLink)) return pathToPath.get(normalizedLink)
+    if (titleToPath.has(normalizedLink)) return titleToPath.get(normalizedLink)
+
+    const suffixMatches = [...pathToPath.entries()]
+      .filter(([candidate]) => candidate.endsWith(`/${normalizedLink}`))
+      .map(([, targetPath]) => targetPath)
+    if (suffixMatches.length === 1) return suffixMatches[0]
+
+    const fileNameMatches = fileNameToPaths.get(normalizedLink.split('/').pop() || '')
+    if (fileNameMatches?.length === 1) return fileNameMatches[0]
+    return undefined
+  }
+
+  const ensureNode = (note: VaultNote) => {
+    if (nodeMap.has(note.path)) return
     const group = inferGroup(note)
     nodeMap.set(note.path, {
       id: note.path,
@@ -55,33 +75,25 @@ export function buildGraph(notes: VaultNote[]): GraphData {
     })
   }
 
-  // Build links from wikilinks
+  for (const note of notes) {
+    ensureNode(note)
+  }
+
+  // Build links from resolved wikilinks. Dangling links stay in health checks,
+  // while the visual graph only renders relationships between real notes.
   for (const note of notes) {
     for (const link of note.links) {
-      const targetPath = titleToPath.get(link.toLowerCase())
-      if (targetPath && targetPath !== note.path) {
-        const linkKey = `${note.path}→${targetPath}`
-        if (!linkSet.has(linkKey)) {
-          linkSet.add(linkKey)
-          links.push({
-            source: note.path,
-            target: targetPath,
-            value: 1,
-          })
-        }
+      const targetPath = resolveTarget(link)
+      if (!targetPath || targetPath === note.path) continue
 
-        // If target doesn't have a note (dangling link), create a ghost node
-        if (!nodeMap.has(targetPath)) {
-          nodeMap.set(targetPath, {
-            id: targetPath,
-            label: link,
-            group: 'orphan',
-            size: 2,
-            path: targetPath,
-            tags: [],
-            linkCount: 0,
-          })
-        }
+      const linkKey = `${note.path}→${targetPath}`
+      if (!linkSet.has(linkKey)) {
+        linkSet.add(linkKey)
+        links.push({
+          source: note.path,
+          target: targetPath,
+          value: 1,
+        })
       }
     }
   }
@@ -99,6 +111,16 @@ export function buildGraph(notes: VaultNote[]): GraphData {
     nodes: Array.from(nodeMap.values()),
     links,
   }
+}
+
+function normalizeLinkTarget(value: string): string {
+  return value
+    .trim()
+    .replace(/\\/g, '/')
+    .replace(/^\.\/+/, '')
+    .replace(/^\/+/, '')
+    .replace(/\.md$/i, '')
+    .toLowerCase()
 }
 
 /**
