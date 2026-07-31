@@ -1,447 +1,208 @@
-# Obsidian Knowledge Viz
+# Knowledge Viz
 
-> 基于 Obsidian 知识库的可视化学习平台 —— 集知识图谱、AI 编辑、自动整理、智能复习于一体。
+> 面向 Obsidian Vault 的本地知识库、学习复习和 AI 工作台。
 
-![React](https://img.shields.io/badge/React-19-blue)
-![TypeScript](https://img.shields.io/badge/TypeScript-6-blue)
-![Vite](https://img.shields.io/badge/Vite-8-purple)
-![Electron](https://img.shields.io/badge/Electron-42-cyan)
-![Version](https://img.shields.io/badge/Version-1.2.0-orange)
+[![React](https://img.shields.io/badge/React-19-149eca)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6-3178c6)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-8-646cff)](https://vite.dev/)
+[![Electron](https://img.shields.io/badge/Electron-42-47848f)](https://www.electronjs.org/)
+[![Version](https://img.shields.io/badge/Version-1.3.0-orange)](https://github.com/qts2218346424-cyber/obsidian-knowledge-viz/releases)
 
----
+## 产品定位
 
-## 功能一览
+Knowledge Viz 将知识整理、笔记编辑、学习复习和 AI 助手放在同一个工作区中。它优先读取本地 Obsidian Vault，适合个人学习、考研复习、研究记录和长期知识管理。
 
-### 知识图谱 + 仪表盘
+当前版本同时支持：
 
-力导向图可视化展示笔记之间的关联网络，同时悬浮显示知识库健康评分、笔记数、标签统计等关键指标。
+- 网页 AI：通过 Anthropic Messages API 或 OpenAI-compatible API 调用云端模型。
+- Claude Code：在本机项目目录中运行本地 Claude Code。
+- Codex：在本机项目目录中运行 Codex CLI，并保留 Agent 会话 ID。
 
-- D3.js 力导向图，节点可拖拽、搜索、过滤
-- 单击节点跳转编辑器，双击预览内容
-- 文件夹 / 标签颜色编码
-- 悬浮面板显示知识库统计（可收起）
-- 知识库健康评分（8 项指标）+ 一键自动修复
+## 1.3.0 版本更新
 
-### 笔记编辑器 + AI 编辑
+### AI 工作区
 
-全功能 Markdown 编辑器，带实时预览和 AI 智能编辑。
+- 统一的 AI 弹窗工作区。
+- 项目管理、会话管理和本地持久化。
+- 每个项目可以配置独立的本地工作目录。
+- Skill 选择、页面上下文和项目说明会自动传递给 AI。
+- 支持网页 AI、Claude Code、Codex 三种运行模式。
+- 支持本地 Agent 状态检测、SSE 流式输出和会话续接。
 
-- 格式化工具栏：粗体、斜体、删除线、标题(H1-H3)、有序/无序列表、引用、代码块、链接、Wiki 链接、表格、分隔线
-- 键盘快捷键：`Ctrl+B` 粗体、`Ctrl+I` 斜体、`Ctrl+1/2/3` 标题
-- **AI 编辑**：一键调用 AI 进行润色优化、简化内容、扩展补充、整理结构、修正语法、生成摘要
-- 实时 Markdown 预览（GFM + 代码高亮）
-- 文件管理：新建、保存、重命名、删除（回收站）
-- 拖拽导入 PDF / DOCX / XLSX / PPTX 文档
-- Frontmatter 编辑器
-- 行号显示
+### 知识库与编辑器
 
-### 笔记自动整理系统 (v1.2.0)
+- 首页仪表盘，展示 Vault 健康度、最近修改和下一步建议。
+- Markdown 编辑与预览模式。
+- 更适合普通用户的写作模式和 AI 编辑入口。
+- 知识图谱、孤立笔记、断链、标签和重复内容分析。
+- Fold、Lint、重复笔记、标签管理和定时整理工作流。
+- 学习中心、错题复习、词汇学习、专注计时和题库功能。
 
-智能笔记管理工具集，帮助保持知识库整洁有序。
+### AI 接口
 
-- **Fold 建议执行**：AI 分析笔记结构，给出移动/合并/添加标签/补充链接等优化建议，支持单条和批量一键执行
-- **AI 自动文件夹重排**：智能分析笔记内容和主题，推荐文件归类方案并预览移动计划
-- **定时自动整理**：可配置间隔的自动健康检查与修复，后台静默运行
-- **重复内容检测**：多信号（标题相似度 + Jaccard + 标签重叠）检测重复笔记，支持一键合并
-- **批量标签管理**：标签搜索、重命名、合并、删除，实时反馈操作结果
-- 所有破坏性操作前自动备份到 `.obsidian-viz/backups/`
-
-### 学习中心
-
-#### 最近更新
-
-替代传统复习卡片，按修改时间展示笔记变化。
-
-- 按最近修改时间排序所有笔记
-- 时间筛选：今天 / 本周 / 全部
-- 自动检测自上次访问以来的新内容，标记提示
-- 点击直接跳转编辑器
-
-#### 每日错题
-
-基于间隔重复的错题复习系统。
-
-- 自动收集做题中的错误答案
-- 三档评分：还是不会 / 模糊 / 已掌握
-- 间隔重复算法自动安排复习时间
-- 科目分类统计
-
-#### 复习提醒
-
-智能识别需要复习的笔记（自动排除模板、索引、说明性等非学习类笔记）。
-
-- 按科目分组显示待复习笔记
-- 优先级分级：3天（高）/ 7天（中）/ 14天（低）
-- 排除规则：`_index` 文件、元数据/模板目录、少于80字的笔记、含 template 标签的笔记
-
-#### 科目进度
-
-按文件夹自动分类的笔记数量和字数可视化统计。
-
-- Recharts 柱状图展示各科对比
-- 总笔记数、总字数、平均每篇字数
-- 分类基于知识库文件夹结构，自动适配任意知识库
-
-### 在线做题
-
-专业课选择题练习系统，内置 145+ 道真题。
-
-- 科目选择：数据结构、计算机组成原理、操作系统、计算机网络
-- 练习模式（即时反馈 + 解析）和考试模式（批量提交 + 评分）
-- **题库导入**：支持 JSON 文件上传、粘贴导入、AI 自动生成
-- 题目导航、计时、科目正确率统计
-- 做题记录自动保存到知识库 `做题记录/` 目录
-
-### 背单词
-
-英语词汇学习，1897 词核心词库，自动推送新词。
-
-- **自动推送**：待复习不足 20 词时自动从词库补充新词，无需手动添加
-- 渐变主题卡片（高频/中频/低频各有配色）
-- 例句作为核心展示元素，配引号装饰
-- 点击揭示释义，滑动过渡动画
-- 三档评分：认识 / 模糊 / 不认识
-- 间隔重复复习算法（认识+7天、模糊+3天、不认识+1天）
-- 环形图统计面板（掌握率、认识/模糊/不认识分布）
-- 词库浏览：分页搜索全部 1897 词，按词频/单元筛选
-- 词根关系图：可视化词根、前缀、后缀关系
-- 单元进度统计：各单元掌握/学习/新词分布
-- 词汇导入：支持 CSV / JSON 格式
-
-### 番茄钟
-
-专注学习计时器，支持倒计时和正计时两种模式。
-
-- **倒计时模式**：三种模式 —— 专注 (25min)、短休 (5min)、长休 (15min)
-- **正计时模式**：从 0 开始计时，记录实际专注时长
-- SVG 圆环进度指示器
-- 可配置时长（15/20/25/30/45/60 分钟）
-- 自动切换：专注 → 短休（每 4 轮 → 长休）
-- Web Audio API 完成提示音
-- 当日统计：番茄数、专注分钟数、轮次数
-
-### 在线电台
-
-内置多个网络电台，营造学习氛围。
-
-- **Lo-fi 电台**：SomaFM Groove Salad / Fluid / Beat Blender 等
-- **英语学习电台**：KEXP 90.3 / Radio Paradise 等
-- **环境音电台**：SomaFM Drone Zone / Deep Space One / Sleepscapes 等
-- 本地音乐扫描播放
-- 分类卡片展示，播放动画
-
-### 工作流引擎
-
-- **文档导入**：PDF/DOCX/XLSX/PPTX → Markdown（基于 markitdown）
-- **AI 实体提取**：自动识别概念、生成标签、创建 wikilinks
-- **自动研究**：发现知识缺口，AI 生成结构化笔记
-- **Lint 修复**：链接完整性、元数据覆盖率、标签一致性、孤立笔记
-
-### AI 聊天
-
-- 基于 Anthropic Messages API 或 OpenAI 兼容 Chat Completions API
-- 自动检索相关笔记作为上下文
-- 回答引用笔记卡片（可点击跳转）
-- 一键保存回答为笔记
-
-### 全局搜索
-
-- `Ctrl+K` 快捷键触发
-- 加权多词搜索（标题×5、标签×3、路径×2、内容×1）
-- 内容片段高亮 + 键盘导航
-
----
-
-## 技术栈
-
-| 层级 | 技术 |
-|------|------|
-| 前端 | React 19 + TypeScript 6 + Vite 8 + Tailwind CSS v4 |
-| 后端 | Express 5 + AI 适配层 + Anthropic SDK + esbuild |
-| 可视化 | D3.js (力导向图) + Recharts (图表) |
-| Markdown | react-markdown + remark-gfm + rehype-highlight |
-| 桌面 | Electron 42 + @electron/packager |
-| 文档转换 | markitdown (Python) |
-| AI | Xiaomi MiMo、Anthropic、OpenAI-compatible 服务 |
-
----
+- Anthropic Messages API。
+- OpenAI Chat Completions-compatible API。
+- Tool Call 与 Tool Result 连续对话。
+- OpenAI-compatible 文本、工具调用和工具结果冒烟测试。
 
 ## 快速开始
 
-### 前置要求
+### 环境要求
 
-- **Node.js** >= 20
-- **Python 3** + markitdown（用于文档导入功能，可选）
-  ```bash
-  pip install markitdown
-  ```
+- Node.js 20 或更高版本
+- Windows、macOS 或 Linux
+- Python 3（文档导入功能可选）
 
-### 开发
+### 安装与开发
 
 ```bash
 npm install
 npm run dev:all
-# 前端: http://localhost:5173  后端: http://localhost:3001
 ```
 
-详细安装、配置和使用说明请参阅下方 [安装使用](#安装使用) 章节。
+- 前端：`http://localhost:5173`
+- API：`http://127.0.0.1:3001`
 
----
+### 配置
 
-## 项目结构
-
-```
-obsidian-knowledge-viz/
-├── electron/                    # Electron 主进程
-│   ├── main.js                  # 启动内嵌服务器 + 创建窗口
-│   └── preload.js
-├── server/                      # Express 后端
-│   ├── index.ts                 # API 路由（2700+ 行）
-│   ├── vault-parser.ts          # Vault 文件解析 + CRUD
-│   ├── vault-ops.ts             # 备份/回滚/建议执行器
-│   ├── tag-utils.ts             # Frontmatter 解析 + 标签操作
-│   ├── duplicate-detector.ts    # 多信号重复检测 + 合并
-│   ├── scheduler.ts             # 定时自动整理引擎
-│   ├── schedule-store.ts        # 定时配置持久化
-│   ├── graph-builder.ts         # 知识图谱构建
-│   ├── health-checker.ts        # 知识库健康检查
-│   ├── agent.ts                 # AI Agent 循环（SSE）
-│   ├── quiz-summary.ts          # 做题报告生成
-│   └── config.json              # 配置文件
-├── src/                         # React 前端
-│   ├── App.tsx                  # 路由配置
-│   ├── components/
-│   │   ├── Layout.tsx           # 侧边栏导航
-│   │   ├── FileExplorer.tsx     # 文件树
-│   │   ├── SearchModal.tsx      # 全局搜索
-│   │   ├── study/
-│   │   │   └── VocabTab.tsx     # 背单词组件
-│   │   ├── vocab/
-│   │   │   ├── WordBrowser.tsx  # 词库浏览
-│   │   │   ├── VocabStats.tsx   # 单元进度统计
-│   │   │   ├── WordRelations.tsx # 词根关系图
-│   │   │   └── ImportPanel.tsx  # 词汇导入
-│   │   └── workflow/
-│   │       ├── SkillPanels.tsx  # Fold/Think/Lint 面板
-│   │       ├── TagManager.tsx   # 标签管理 UI
-│   │       └── DuplicatesPanel.tsx # 重复检测 UI
-│   ├── pages/
-│   │   ├── KnowledgeGraph.tsx   # 知识图谱 + 悬浮统计
-│   │   ├── Workflow.tsx         # 工作流引擎（含定时整理控制）
-│   │   ├── Editor.tsx           # 笔记编辑 + AI 编辑
-│   │   ├── Study.tsx            # 学习中心（最近更新/错题/复习/进度）
-│   │   ├── Quiz.tsx             # 在线做题 + 导入
-│   │   ├── Vocabulary.tsx       # 背单词页面（5个标签页）
-│   │   ├── Music.tsx            # 在线电台
-│   │   ├── Pomodoro.tsx         # 番茄钟（倒计时+正计时）
-│   │   ├── Chat.tsx             # AI 聊天
-│   │   └── Settings.tsx         # 设置
-│   ├── hooks/                   # 自定义 Hooks
-│   ├── services/                # API 客户端
-│   └── data/
-│       ├── questions/           # 题库 (145+ 题)
-│       ├── vocab-part1~4.ts     # 词库 (1897 词)
-│       └── ambientSounds.ts     # 电台数据
-├── dist/                        # 前端构建产物
-├── dist-server/                 # 服务端构建产物
-├── release/                     # Electron 打包产物
-├── package.json
-├── vite.config.ts
-└── tsconfig.json
-```
-
----
-
-## API 端点
-
-### 知识库管理
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/vault/stats` | 知识库统计 |
-| GET | `/api/vault/graph` | 图谱数据 |
-| GET | `/api/vault/health` | 健康检查 |
-| GET | `/api/vault/files?q=` | 搜索笔记 |
-| GET | `/api/vault/file?path=` | 获取笔记详情 |
-| GET | `/api/vault/tree` | 文件树 |
-| POST | `/api/vault/file` | 创建笔记 |
-| PUT | `/api/vault/file` | 更新笔记 |
-| DELETE | `/api/vault/file` | 删除笔记 |
-| PATCH | `/api/vault/file/rename` | 重命名笔记 |
-| POST | `/api/vault/lint/fix` | Lint 自动修复 |
-| POST | `/api/vault/reorganize` | AI 自动文件夹重排 |
-| POST | `/api/vault/rollback` | 回滚到备份版本 |
-
-### 笔记整理
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/api/fold` | AI 分析笔记结构（建议） |
-| POST | `/api/fold/apply` | 执行 Fold 建议 |
-| GET | `/api/vault/tags` | 获取全部标签 |
-| POST | `/api/vault/tags/rename` | 重命名标签 |
-| POST | `/api/vault/tags/merge` | 合并标签 |
-| POST | `/api/vault/tags/delete` | 删除标签 |
-| GET | `/api/vault/duplicates` | 检测重复笔记 |
-| POST | `/api/vault/duplicates/merge` | 合并重复笔记 |
-
-### 定时整理
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/schedule/status` | 定时整理状态 |
-| POST | `/api/schedule/config` | 更新定时配置 |
-| POST | `/api/schedule/run-now` | 立即执行一次 |
-
-### 学习中心
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/study/review-due` | 复习提醒（自动排除模板笔记） |
-| GET | `/api/study/daily-review` | 每日错题复习 |
-| POST | `/api/study/review-complete` | 标记错题复习完成 |
-| POST | `/api/study/error-log` | 添加错题记录 |
-| GET | `/api/study/error-log` | 获取错题记录 |
-| GET | `/api/study/vocabulary` | 词汇复习数据（含自动推送） |
-| POST | `/api/study/vocabulary/add` | 添加单词 |
-| POST | `/api/study/vocabulary/review` | 提交单词复习结果 |
-| POST | `/api/study/vocabulary/generate` | 生成新词 |
-
-### 词汇库
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/vocab/all` | 全部词汇（分页） |
-| GET | `/api/vocab/stats` | 单元/词频统计 |
-| GET | `/api/vocab/relations` | 词根关系图 |
-| POST | `/api/vocab/import` | 导入词汇（CSV/JSON） |
-
-### 其他
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/api/chat` | AI 聊天 |
-| POST | `/api/agent/chat` | Agent 聊天 (SSE) |
-| POST | `/api/quiz/submit` | 提交做题结果 |
-| POST | `/api/quiz/generate` | AI 生成题目 |
-| GET | `/api/quiz/history` | 做题历史 |
-| POST | `/api/ingest/upload` | 上传文档 |
-| POST | `/api/research` | AI 自动研究 |
-
----
-
-## 安装使用
-
-### 方式一：下载预编译版本（推荐普通用户）
-
-1. 前往 [Releases](https://github.com/qts2218346424-cyber/obsidian-knowledge-viz/releases) 页面下载最新版本
-2. 解压压缩包到任意目录（例如 `C:\Program Files\Knowledge Viz\`）
-3. 在解压目录中找到 `resources\config.json`，编辑配置（见下方配置说明）
-4. 双击 `Knowledge-Viz.exe` 启动应用
-
-无需安装 Node.js 或任何其他依赖。
-
-### 方式二：从源码构建（推荐开发者）
+复制配置模板：
 
 ```bash
-# 1. 克隆仓库
-git clone https://github.com/qts2218346424-cyber/obsidian-knowledge-viz.git
-cd obsidian-knowledge-viz
-
-# 2. 安装依赖
-npm install
-
-# 3. 创建配置文件
-cp server/config.example.json server/config.json
-# 然后编辑 server/config.json（见下方配置说明）
-
-# 4. 开发模式运行（前端热更新 + 后端热重载）
-npm run dev:all
-# 访问 http://localhost:5173
-
-# 5. 打包为桌面应用
-npm run pack
-# 产物在 release/ 目录下
+copy server\config.example.json server\config.json
 ```
 
-### 配置说明
-
-编辑 `server/config.json`：
+然后填写：
 
 ```json
 {
   "vaultPath": "C:\\Users\\YourName\\Documents\\ObsidianVault",
   "port": 3001,
   "host": "127.0.0.1",
+  "localAgents": {
+    "claudeCommand": "claude",
+    "codexCommand": "codex",
+    "defaultCwd": ""
+  },
   "ai": {
     "apiKey": "your-api-key",
-    "baseURL": "https://api.anthropic.com",
-    "model": "claude-3-5-sonnet-20241022",
-    "provider": "anthropic",
-    "apiFormat": "anthropic"
+    "baseURL": "https://api.openai.com/v1",
+    "model": "gpt-4o-mini",
+    "provider": "openai-compatible",
+    "apiFormat": "openai"
   }
 }
 ```
 
-| 字段 | 必填 | 说明 |
-|------|:----:|------|
-| `vaultPath` | 是 | Obsidian 知识库所在的文件夹路径 |
-| `port` | 否 | 后端服务端口，默认 3001 |
-| `host` | 否 | 服务监听地址，默认 `127.0.0.1`，仅允许本机访问 |
-| `ai.apiKey` | 否 | AI 功能所需的 API 密钥（不填则 AI 相关功能不可用） |
-| `ai.baseURL` | 否 | API 地址；OpenAI 兼容服务可填写服务商根地址或 `/v1` 地址 |
-| `ai.model` | 否 | 模型名称，默认 `mimo-v2.5-pro` |
-| `ai.provider` | 否 | `anthropic` 或 `openai-compatible`，默认 `anthropic` |
-| `ai.apiFormat` | 否 | `anthropic` 或 `openai`，用于兼容旧配置 |
+`server/config.json` 包含本地路径和密钥，已加入 `.gitignore`，不要提交到仓库。
 
-OpenAI 兼容配置示例：
+## 本地 Agent 使用方式
 
-```json
-{
-  "apiKey": "your-api-key",
-  "baseURL": "https://api.openai.com/v1",
-  "model": "gpt-4o-mini",
-  "provider": "openai-compatible",
-  "apiFormat": "openai"
-}
+打开页面右下角的 AI 助手，在顶部切换：
+
+```text
+网页 AI
+Claude Code
+Codex
 ```
 
-兼容服务只需提供标准的 `POST /v1/chat/completions` 接口，并使用 Bearer Token。
+选择 Claude Code 或 Codex 后，项目的本地工作目录会作为 Agent 的工作目录。项目、会话、Skill 和 Agent 会话 ID 会保存在浏览器本地工作区中。
 
-> **提示**：`vaultPath` 是唯一必须修改的配置项，将其指向你的 Obsidian 知识库根目录即可。
+检查本机 Agent：
 
-### 首次使用
+```text
+GET /api/local-agents/status
+```
 
-启动应用后：
+本地 Agent 桥接接口：
 
-1. **知识图谱**：自动扫描知识库中的所有 Markdown 笔记，构建关联图谱
-2. **学习中心**：按文件夹自动分类科目，显示最近更新和复习提醒
-3. **背单词**：自动推送 20 个新词，开始间隔重复学习
-4. **AI 功能**：在编辑器中使用 AI 润色、在聊天页面向知识库提问（需配置 AI API）
+```text
+POST /api/local-agents/chat
+```
 
----
+> 当前 1.3.0 版本适合桌面端或本机运行的 Knowledge Viz。面向公网用户时，推荐将本地 Agent 桥接层打包成独立的 Local Connector，让每位用户连接自己的电脑，而不是让公共服务器直接启动 Agent。
 
-## 更新日志
+## 常用命令
 
-### v1.2.0 (2026-06-22)
+```bash
+# 前端开发服务器
+npm run dev
 
-- 新增笔记自动整理系统：Fold 建议执行、AI 文件夹重排、定时整理、重复检测、标签管理
-- 学习中心优化：最近更新面板替代复习卡片、复习提醒自动排除模板笔记
-- 番茄钟新增正计时模式
-- 背单词自动推送新词
-- 词汇库扩展至 1897 词，新增词库浏览/统计/关系图/导入
+# API 开发服务器
+npm run server:dev
 
-### v1.1.0
+# 同时启动前端和 API
+npm run dev:all
 
-- Electron 桌面应用打包
-- 在线电台、番茄钟、背单词功能
+# 生产构建
+npm run build:all
 
-### v1.0.0
+# 打包 Electron 应用
+npm run pack
 
-- 知识图谱、笔记编辑器、AI 聊天、在线做题
+# OpenAI-compatible 适配层冒烟测试
+npx tsx scripts/openai-compatible-smoke.ts
+```
 
----
+## 项目结构
+
+```text
+obsidian-viz/
+├─ electron/                 Electron 主进程和 preload
+├─ server/
+│  ├─ index.ts                Express API
+│  ├─ ai-client.ts            Anthropic/OpenAI-compatible 适配层
+│  ├─ local-agent-bridge.ts   Claude Code/Codex 本地桥接
+│  ├─ agent.ts                网页 AI Agent
+│  └─ vault-parser.ts         Vault 解析与文件操作
+├─ src/
+│  ├─ components/
+│  │  └─ AIAssistantModal.tsx AI 工作区弹窗
+│  ├─ pages/                  首页、编辑、图谱、整理、学习
+│  ├─ services/               API 与 AI 工作区状态
+│  └─ data/                   Skill、题库和词汇数据
+├─ scripts/                   本地测试脚本
+└─ docs/                      设计与实施计划
+```
+
+## 主要 API
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| GET | `/api/health` | 服务和 AI 配置状态 |
+| GET | `/api/local-agents/status` | 检查 Claude Code/Codex |
+| POST | `/api/local-agents/chat` | 调用本地 Agent |
+| POST | `/api/agent/chat` | 网页 AI Agent 对话 |
+| GET | `/api/vault/stats` | Vault 统计 |
+| GET | `/api/vault/graph` | 知识图谱数据 |
+| GET | `/api/vault/files` | 笔记搜索 |
+| POST | `/api/vault/file` | 新建笔记 |
+| PUT | `/api/vault/file` | 更新笔记 |
+| POST | `/api/fold` | 分析笔记整理建议 |
+| POST | `/api/vault/lint/fix` | 执行结构修复 |
+
+## 构建与验证
+
+发布前执行：
+
+```bash
+npm run build:all
+npx tsx scripts/openai-compatible-smoke.ts
+```
+
+本地运行时还应检查：
+
+```text
+GET http://127.0.0.1:3001/api/health
+GET http://127.0.0.1:3001/api/local-agents/status
+```
+
+## 安全与数据
+
+- 默认使用本地 Vault 路径，不上传整个知识库。
+- `server/config.json`、API 密钥和本地路径不进入 Git。
+- 本地 Agent 的文件访问范围由项目工作目录和 Agent 自身权限控制。
+- 生产环境建议使用本地回环地址、短期配对凭据和明确的文件修改确认。
 
 ## 许可证
 
-MIT
+当前项目处于持续开发阶段，许可证和正式发布渠道将在稳定版发布前补充。
