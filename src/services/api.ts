@@ -199,6 +199,22 @@ export interface Flashcard {
   a: string
 }
 
+export interface BookItem {
+  id: string
+  name: string
+  relativePath: string
+  fullPath: string
+  domain: 'cs_408' | 'math'
+  category: string
+  size: number
+  ext: string
+  lastModified: string
+  isTextReadable: boolean
+  isPdf?: boolean
+  isHtml?: boolean
+  fileType?: 'pdf' | 'html' | 'handout' | 'paper' | 'text'
+}
+
 export interface FlashcardResult {
   flashcards: Flashcard[]
   notePath: string
@@ -650,6 +666,10 @@ export const api = {
 
   runScheduleNow: () =>
     postJSON<{ ok: boolean; fixed: number; message: string }>('/schedule/run-now', {}),
+
+  // Books & Materials
+  getBooks: () => fetchJSON<{ books: BookItem[] }>('/books/list'),
+  readBook: (relativePath: string) => postJSON<{ content: string; name: string }>('/books/read', { relativePath }),
 }
 
 // Check if the API is available
