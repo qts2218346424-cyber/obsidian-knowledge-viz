@@ -10,9 +10,14 @@ import {
   CheckCircle2,
   XCircle,
   Flame,
+  BookOpen,
+  BarChart3,
+  Database,
+  Save,
 } from 'lucide-react'
 import WarmButton from '../components/ui/WarmButton'
 import MarkdownRenderer from '../components/MarkdownRenderer'
+import ImportResourceModal from '../components/ImportResourceModal'
 import { QUESTION_BANK, type QuizQuestion } from '../data/questions'
 import { MATH_QUESTION_BANK } from '../data/questions/math'
 import type { MathCategory, MathSubject, CsSubject, UnifiedQuestion } from '../types/subject'
@@ -188,16 +193,104 @@ export default function Quiz() {
   // Results state
   const [result, setResult] = useState<QuizResult | null>(null)
 
-  // Custom import state
+  // Custom import state & Modal
   const [customQuestions, setCustomQuestions] = useState<ActiveQuizQuestion[]>([])
-  const [showImportPanel, setShowImportPanel] = useState(false)
-  const [importTab, setImportTab] = useState<'file' | 'text' | 'ai'>('file')
-  const [importText, setImportText] = useState('')
-  const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null)
-  const [aiTopic, setAiTopic] = useState('')
-  const [aiSubject, setAiSubject] = useState<string>('all')
-  const [isGenerating, setIsGenerating] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [importModalOpen, setImportModalOpen] = useState(false)
+  const [defaultModalTab, setDefaultModalTab] = useState<'books' | 'import_quiz' | 'analytics'>('books')
+  const [savingError, setSavingError] = useState(false)
+  const [savedErrorMsg, setSavedErrorMsg] = useState<string | null>(null)
+  const [generatingVariants, setGeneratingVariants] = useState(false)
+
+  const fetchCustomQuestions = useCallback(async () => {
+    try {
+      const res = await fetch('/api/quiz/custom')
+      const data = await res.json()
+      if (data.questions && Array.isArray(data.questions)) {
+        setCustomQuestions(data.questions.map((q: any) => ({
+          id: q.id,
+          domain: q.domain || 'math',
+          subject: q.subject,
+          chapter: q.chapter,
+          type: q.type || 'choice',
+          difficulty: q.difficulty || '中等',
+          question: q.question,
+          options: q.options,
+          answer: q.answer,
+          explanation: q.explanation,
+          tags: q.tags || ['用户导入'],
+        })))
+      }
+    } catch (err) {
+      console.error('Failed to load custom questions:', err)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchCustomQuestions()
+  }, [fetchCustomQuestions])
+
+  const handleSaveToErrorBook = async (currentQ: ActiveQuizQuestion) => {
+    setSavingError(true)
+    setSavedErrorMsg(null)
+    try {
+      const res = await fetch('/api/quiz/save-error', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: currentQ,
+          userAnswer: answers[currentQ.id] || selectedOption || blankInput,
+          errorType: errorReasons[currentQ.id] || '概念不清',
+          notes: scratchpads[currentQ.id] || '',
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setSavedErrorMsg(`已自动生成知识库错题笔记: ${data.fileName}`)
+        setTimeout(() => setSavedErrorMsg(null), 4000)
+      } else {
+        alert(data.error || '保存失败')
+      }
+    } catch (err: any) {
+      alert('保存失败: ' + err.message)
+    } finally {
+      setSavingError(false)
+    }
+  }
+
+  const handleGenerateVariants = async (currentQ: ActiveQuizQuestion) => {
+    setGeneratingVariants(true)
+    try {
+      const res = await fetch('/api/quiz/variant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: currentQ }),
+      })
+      const data = await res.json()
+      if (data.variants && data.variants.length > 0) {
+        const formatted: ActiveQuizQuestion[] = data.variants.map((v: any) => ({
+          id: v.id,
+          domain: v.domain || currentQ.domain,
+          subject: v.subject || currentQ.subject,
+          chapter: v.chapter || currentQ.chapter,
+          type: v.type || 'choice',
+          difficulty: v.difficulty || '中等',
+          question: v.question,
+          options: v.options,
+          answer: v.answer,
+          explanation: v.explanation,
+          tags: v.tags || ['变式强化'],
+        }))
+        setQuestions(prev => [...prev, ...formatted])
+        alert(`已成功生成 ${formatted.length} 道针对考点「${currentQ.chapter || currentQ.subject}」的举一反三变式题，已加入当前答题卡！`)
+      } else {
+        alert(data.error || '未生成有效变式题')
+      }
+    } catch (err: any) {
+      alert('生成变式题失败: ' + err.message)
+    } finally {
+      setGeneratingVariants(false)
+    }
+  }
 
   // ── Unified Question Pool ───────────────────────────────────────────────────
 
@@ -441,136 +534,7 @@ export default function Quiz() {
     }
   }, [answers, questions, timeElapsed, mode, errorReasons])
 
-  // ── Import Handlers ────────────────────────────────────────────────────────
 
-  const VALID_SUBJECTS: AllSubject[] = [
-    '数据结构', '计算机组成原理', '操作系统', '计算机网络',
-    '高等数学', '线性代数', '概率论与数理统计',
-  ]
-  const VALID_DIFFICULTIES = ['简单', '中等', '困难'] as const
-
-  const validateAndImport = useCallback((data: unknown): number => {
-    if (!Array.isArray(data)) return 0
-    let count = 0
-    const newQs: ActiveQuizQuestion[] = []
-    for (const q of data) {
-      if (q && typeof q === 'object' && q.question && (q.options || q.correctAnswer || q.answer)) {
-        const isMathSubj = ['高等数学', '线性代数', '概率论与数理统计'].includes(q.subject)
-        const subj: AllSubject = VALID_SUBJECTS.includes(q.subject) ? q.subject : '高等数学'
-        const diff = VALID_DIFFICULTIES.includes(q.difficulty) ? q.difficulty : '中等'
-
-        let optObj: { A: string; B: string; C: string; D: string } | undefined = undefined
-        if (Array.isArray(q.options) && q.options.length >= 2) {
-          optObj = {
-            A: String(q.options[0]).replace(/^[A-D][.、\s]+/, '').trim(),
-            B: String(q.options[1]).replace(/^[A-D][.、\s]+/, '').trim(),
-            C: String(q.options[2] || '').replace(/^[A-D][.、\s]+/, '').trim(),
-            D: String(q.options[3] || '').replace(/^[A-D][.、\s]+/, '').trim(),
-          }
-        } else if (q.options && typeof q.options === 'object') {
-          optObj = {
-            A: String(q.options.A || ''),
-            B: String(q.options.B || ''),
-            C: String(q.options.C || ''),
-            D: String(q.options.D || ''),
-          }
-        }
-
-        newQs.push({
-          id: `imp-${Date.now()}-${count}`,
-          domain: isMathSubj ? 'math' : 'cs_408',
-          subject: subj,
-          type: q.type || (optObj ? 'choice' : 'blank'),
-          difficulty: diff,
-          question: String(q.question),
-          options: optObj,
-          answer: String(q.answer || q.correctAnswer || 'A'),
-          explanation: String(q.explanation || '暂无解析'),
-          steps: Array.isArray(q.steps) ? q.steps.map(String) : undefined,
-          tags: Array.isArray(q.tags) ? q.tags.map(String) : ['自定义导入'],
-        })
-        count++
-      }
-    }
-    if (count > 0) {
-      setCustomQuestions(prev => [...prev, ...newQs])
-    }
-    return count
-  }, [])
-
-  const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      try {
-        const data = JSON.parse(ev.target?.result as string)
-        const count = validateAndImport(data)
-        if (count > 0) {
-          setImportStatus({ type: 'success', message: `成功导入 ${count} 道试题` })
-        } else {
-          setImportStatus({ type: 'error', message: '未找到有效试题，请核对 JSON 格式' })
-        }
-      } catch {
-        setImportStatus({ type: 'error', message: 'JSON 解析失败，请检查文件格式' })
-      }
-    }
-    reader.readAsText(file)
-    e.target.value = ''
-  }, [validateAndImport])
-
-  const handleTextImport = useCallback(() => {
-    try {
-      const data = JSON.parse(importText)
-      const count = validateAndImport(data)
-      if (count > 0) {
-        setImportStatus({ type: 'success', message: `成功导入 ${count} 道试题` })
-        setImportText('')
-      } else {
-        setImportStatus({ type: 'error', message: '未找到有效试题，请核对 JSON 格式' })
-      }
-    } catch {
-      setImportStatus({ type: 'error', message: 'JSON 格式解析失败' })
-    }
-  }, [importText, validateAndImport])
-
-  const handleAiGenerate = useCallback(async () => {
-    if (!aiTopic.trim() || isGenerating) return
-    setIsGenerating(true)
-    setImportStatus({ type: 'info', message: 'AI 正在编写高质量真题与分步推导，请稍候...' })
-    try {
-      const subjectHint = aiSubject === 'all' ? '考研数学或408专业课' : aiSubject
-      const resp = await fetch('/api/quiz/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: `请根据以下知识点生成5-10道选择题（如有数学公式，必须使用标准LaTeX格式，如 $\\lim_{x \\to 0}$）。科目范围：${subjectHint}。知识点：${aiTopic}。\n\n请严格按以下JSON数组格式输出：\n[{"subject":"高等数学","difficulty":"中等","question":"题目内容","options":{"A":"选项A","B":"选项B","C":"选项C","D":"选项D"},"answer":"A","explanation":"解析","steps":["步骤1","步骤2"],"tags":["标签1"]}]`,
-        }),
-      })
-      if (!resp.ok) throw new Error('Server error')
-      const resData = await resp.json()
-      let parsed: unknown
-      if (typeof resData.questions === 'string') {
-        const text = resData.questions.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
-        const start = text.indexOf('[')
-        const end = text.lastIndexOf(']')
-        if (start >= 0 && end > start) parsed = JSON.parse(text.slice(start, end + 1))
-      } else if (Array.isArray(resData.questions)) {
-        parsed = resData.questions
-      }
-      const count = validateAndImport(parsed)
-      if (count > 0) {
-        setImportStatus({ type: 'success', message: `AI 成功生成了 ${count} 道专业试题！` })
-        setAiTopic('')
-      } else {
-        setImportStatus({ type: 'error', message: 'AI 返回的格式有偏差，请重试' })
-      }
-    } catch {
-      setImportStatus({ type: 'error', message: 'AI 出题失败，请检查服务配置' })
-    } finally {
-      setIsGenerating(false)
-    }
-  }, [aiTopic, aiSubject, isGenerating, validateAndImport])
 
   const toggleSubject = (subject: AllSubject) => {
     setSelectedSubjects((prev) => {
@@ -785,127 +749,58 @@ export default function Quiz() {
           </div>
         </div>
 
-        {/* Custom Question & AI Generation Collapsible */}
-        <div className="glass-panel rounded-3xl p-6 space-y-3">
-          <button
-            onClick={() => setShowImportPanel(!showImportPanel)}
-            className="w-full flex items-center justify-between text-sm font-semibold text-slate-700 hover:text-accent-orange transition-colors"
-          >
-            <div className="flex items-center gap-2">
-              <Upload size={16} className="text-accent-orange" />
-              <span>导入自有试题 / AI 智能生成考点题</span>
-              {customQuestions.length > 0 && (
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold">
-                  已加载 {customQuestions.length} 题
-                </span>
-              )}
+        {/* Resource Ingestion & Student Analytics Banner Card */}
+        <div className="glass-panel rounded-3xl p-5 border border-indigo-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 bg-gradient-to-r from-indigo-50/70 via-white to-blue-50/60">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-md shadow-indigo-500/20">
+              <BookOpen className="h-5 w-5" />
             </div>
-            {showImportPanel ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-          </button>
-
-          {showImportPanel && (
-            <div className="pt-4 border-t border-slate-200 space-y-4 animate-fade-in-up">
-              <div className="flex gap-2 border-b border-slate-200 pb-2">
-                <button
-                  onClick={() => setImportTab('ai')}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-                    importTab === 'ai' ? 'bg-accent-orange text-white' : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  ✨ AI 智能出题
-                </button>
-                <button
-                  onClick={() => setImportTab('text')}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-                    importTab === 'text' ? 'bg-accent-orange text-white' : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  粘贴 JSON 试题
-                </button>
-                <button
-                  onClick={() => setImportTab('file')}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
-                    importTab === 'file' ? 'bg-accent-orange text-white' : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  上传 JSON 文件
-                </button>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-slate-900">智能资料与题库导入中心</span>
+                {customQuestions.length > 0 && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                    已入库 {customQuestions.length} 道自定义真题
+                  </span>
+                )}
               </div>
-
-              {importTab === 'ai' && (
-                <div className="space-y-3">
-                  <div className="flex gap-2">
-                    <select
-                      value={aiSubject}
-                      onChange={(e) => setAiSubject(e.target.value)}
-                      className="text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800 outline-none"
-                    >
-                      <option value="all">全学科综合</option>
-                      <option value="高等数学">高等数学</option>
-                      <option value="线性代数">线性代数</option>
-                      <option value="概率论与数理统计">概率论与数理统计</option>
-                      <option value="数据结构">数据结构</option>
-                      <option value="计算机组成原理">计算机组成原理</option>
-                      <option value="操作系统">操作系统</option>
-                      <option value="计算机网络">计算机网络</option>
-                    </select>
-                    <input
-                      type="text"
-                      value={aiTopic}
-                      onChange={(e) => setAiTopic(e.target.value)}
-                      placeholder="输入需要攻克的考点（如：泰勒展开式求极限、矩阵伴随特征值、红黑树插入...）"
-                      className="flex-1 text-xs bg-white border border-slate-200 rounded-xl px-3.5 py-2 text-slate-800 outline-none focus:border-accent-orange"
-                    />
-                  </div>
-                  <WarmButton
-                    size="sm"
-                    onClick={handleAiGenerate}
-                    disabled={!aiTopic.trim() || isGenerating}
-                    className="bg-accent-orange text-white"
-                  >
-                    <Sparkles size={14} className="mr-1.5" />
-                    {isGenerating ? 'AI 出题中...' : '开始生成高质量试题'}
-                  </WarmButton>
-                </div>
-              )}
-
-              {importTab === 'text' && (
-                <div className="space-y-2">
-                  <textarea
-                    value={importText}
-                    onChange={(e) => setImportText(e.target.value)}
-                    placeholder='[{"subject":"高等数学","difficulty":"中等","question":"题目内容","options":{"A":"选项A","B":"选项B","C":"选项C","D":"选项D"},"answer":"A","explanation":"解析"}]'
-                    rows={4}
-                    className="w-full text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 outline-none focus:border-accent-orange"
-                  />
-                  <WarmButton size="sm" onClick={handleTextImport} disabled={!importText.trim()}>
-                    解析并导入
-                  </WarmButton>
-                </div>
-              )}
-
-              {importTab === 'file' && (
-                <div>
-                  <input ref={fileInputRef} type="file" accept=".json" onChange={handleFileUpload} className="hidden" />
-                  <WarmButton size="sm" variant="secondary" onClick={() => fileInputRef.current?.click()}>
-                    <Upload size={14} className="mr-1.5" />
-                    选择 JSON 题库文件
-                  </WarmButton>
-                </div>
-              )}
-
-              {importStatus && (
-                <div className={`text-xs rounded-xl px-3.5 py-2 ${
-                  importStatus.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
-                  importStatus.type === 'error' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
-                  'bg-blue-50 text-blue-700 border border-blue-200'
-                }`}>
-                  {importStatus.message}
-                </div>
-              )}
+              <p className="text-xs text-slate-500 mt-0.5">
+                支持导入手头教材参考书（PDF/MD）、智能文本识别题库、学情画像诊断
+              </p>
             </div>
-          )}
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => {
+                setDefaultModalTab('analytics')
+                setImportModalOpen(true)
+              }}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-semibold shadow-2xs hover:bg-slate-50 transition-all cursor-pointer"
+            >
+              <BarChart3 className="h-4 w-4 text-indigo-600" />
+              <span>学情画像</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setDefaultModalTab('books')
+                setImportModalOpen(true)
+              }}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold shadow-md shadow-indigo-500/20 hover:bg-indigo-500 transition-all cursor-pointer"
+            >
+              <Upload className="h-4 w-4" />
+              <span>导入参考书 / 题库</span>
+            </button>
+          </div>
         </div>
+
+        <ImportResourceModal
+          isOpen={importModalOpen}
+          onClose={() => setImportModalOpen(false)}
+          onQuestionsUpdated={fetchCustomQuestions}
+          defaultTab={defaultModalTab}
+        />
       </div>
     )
   }
@@ -950,7 +845,18 @@ export default function Quiz() {
             )}
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                setDefaultModalTab('books')
+                setImportModalOpen(true)
+              }}
+              className="text-xs px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center gap-1.5 cursor-pointer shadow-2xs"
+            >
+              <Database size={13} className="text-indigo-600" />
+              <span>题库与书架</span>
+            </button>
+            <div className="h-4 w-px bg-slate-200" />
             <div className="text-xs font-mono text-slate-500 flex items-center gap-1.5 tabular-nums">
               <span>⏱</span>
               <span className="font-semibold text-slate-800">{formatTime(timeElapsed)}</span>
@@ -1177,6 +1083,36 @@ export default function Quiz() {
                     })}
                   </div>
                 </div>
+
+                {/* Actions: Save to Vault Error Notebook & AI Variant Generator */}
+                <div className="pt-3 border-t border-slate-200/80 flex flex-wrap items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleSaveToErrorBook(currentQ)}
+                      disabled={savingError}
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold hover:bg-rose-100 transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      <Save size={13} />
+                      <span>{savingError ? '正在写入知识库...' : '💾 沉淀到错题本 (生成Markdown)'}</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleGenerateVariants(currentQ)}
+                      disabled={generatingVariants}
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-semibold hover:bg-indigo-100 transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      <Sparkles size={13} className="text-indigo-600" />
+                      <span>{generatingVariants ? 'AI 正在命题...' : '🔄 举一反三：AI 变式题强化'}</span>
+                    </button>
+                  </div>
+
+                  {savedErrorMsg && (
+                    <span className="text-xs text-emerald-600 font-medium flex items-center gap-1 animate-in fade-in">
+                      <CheckCircle2 size={13} />
+                      {savedErrorMsg}
+                    </span>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -1365,6 +1301,13 @@ export default function Quiz() {
             )}
           </div>
         </div>
+
+        <ImportResourceModal
+          isOpen={importModalOpen}
+          onClose={() => setImportModalOpen(false)}
+          onQuestionsUpdated={fetchCustomQuestions}
+          defaultTab={defaultModalTab}
+        />
       </div>
     )
   }
@@ -1487,6 +1430,13 @@ export default function Quiz() {
             返回首页工作台
           </WarmButton>
         </div>
+
+        <ImportResourceModal
+          isOpen={importModalOpen}
+          onClose={() => setImportModalOpen(false)}
+          onQuestionsUpdated={fetchCustomQuestions}
+          defaultTab={defaultModalTab}
+        />
       </div>
     )
   }

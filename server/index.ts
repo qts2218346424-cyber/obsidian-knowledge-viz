@@ -17,6 +17,7 @@ import { studyRouter } from './routes/study.js'
 import { workflowRouter } from './routes/workflow.js'
 import { vaultRouter } from './routes/vault.js'
 import { aiRouter } from './routes/ai.js'
+import { booksRouter } from './routes/books.js'
 
 const app = express()
 app.disable('x-powered-by')
@@ -61,6 +62,7 @@ app.use('/api', studyRouter)
 app.use('/api', workflowRouter)
 app.use('/api', vaultRouter)
 app.use('/api', aiRouter)
+app.use('/api', booksRouter)
 
 // ===== Background Services =====
 startWatcher()

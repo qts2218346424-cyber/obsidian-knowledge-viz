@@ -19,11 +19,13 @@ import {
   Timer,
   Workflow,
   X,
+  Database,
 } from 'lucide-react'
 import { useVaultStats, useApiHealth } from '../hooks/useVaultData'
 import { useVaultEvents } from '../hooks/useVaultEvents'
 import SearchModal from './SearchModal'
 import AIAssistantModal from './AIAssistantModal'
+import ImportResourceModal from './ImportResourceModal'
 
 interface NavItem {
   to: string
@@ -74,6 +76,7 @@ export default function Layout({ children }: LayoutProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [assistantOpen, setAssistantOpen] = useState(false)
+  const [importModalOpen, setImportModalOpen] = useState(false)
   const [syncNotice, setSyncNotice] = useState<string | null>(null)
 
   const noteCount = stats?.totalNotes ?? null
@@ -184,6 +187,16 @@ export default function Layout({ children }: LayoutProps) {
           {/* Right utility toolbar */}
           <div className="ml-auto flex items-center gap-2">
             <button
+              onClick={() => setImportModalOpen(true)}
+              aria-label="导入资料与题库"
+              title="导入资料与题库 (PDF/教材/真题/学情)"
+              className="inline-flex h-8 items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200/80 px-2.5 text-indigo-700 text-xs font-semibold shadow-2xs hover:from-indigo-100 hover:to-blue-100 transition-all cursor-pointer"
+            >
+              <Database className="h-3.5 w-3.5 text-indigo-600" />
+              <span className="hidden sm:inline">导入资料/题库</span>
+            </button>
+
+            <button
               onClick={() => setSearchOpen(true)}
               aria-label="搜索知识"
               title="搜索知识（Ctrl+K）"
@@ -284,6 +297,7 @@ export default function Layout({ children }: LayoutProps) {
 
       <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
       <AIAssistantModal isOpen={assistantOpen} onClose={() => setAssistantOpen(false)} pagePath={location.pathname} />
+      <ImportResourceModal isOpen={importModalOpen} onClose={() => setImportModalOpen(false)} />
     </div>
   )
 }
