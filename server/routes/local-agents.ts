@@ -31,6 +31,7 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
     projectDescription?: string
     pageContext?: string
     skillPrompt?: string
+    agentPrompt?: string
   }
   if (!body.prompt?.trim()) {
     res.status(400).json({ error: 'Missing prompt' })
@@ -50,6 +51,7 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
     `项目：${body.projectName || 'Knowledge Viz'}`,
     `项目说明：${body.projectDescription || '当前 Obsidian 知识库项目'}`,
     `工作目录：${cwd}`,
+    body.agentPrompt ? `【当前研学智能体定位与人设要求】：\n${body.agentPrompt}` : '',
     body.pageContext ? `当前页面：${body.pageContext}` : '',
     body.skillPrompt ? `已启用 Skill：\n${body.skillPrompt}` : '',
     '',

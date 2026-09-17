@@ -1,12 +1,17 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Send, Loader2, BookOpen, FolderTree, X, Wrench, ChevronDown, ChevronRight, Plus, Trash2, MessageSquare, Save, Sparkles, CheckCircle2 } from 'lucide-react'
+import {
+  Send, Loader2, FolderTree, X, Wrench, ChevronDown,
+  Plus, Trash2, MessageSquare, Save, Sparkles, CheckCircle2, Target,
+  Copy, Check, Bot, FileText
+} from 'lucide-react'
 import MarkdownRenderer from '../components/MarkdownRenderer'
-import { api, type FileDetail } from '../services/api'
+import { api, type FileDetail, type LocalAgentStatus } from '../services/api'
 import { useVaultTree } from '../hooks/useVaultData'
 import FileExplorer from '../components/FileExplorer'
 import LuluAvatar from '../components/Pet/LuluAvatar'
 import { STUDY_SKILLS, type StudySkill } from '../data/studySkills'
+import { STUDY_AGENTS, type StudyAgent } from '../data/studyAgents'
+import QuickPracticeModal from '../components/QuickPracticeModal'
 
 interface ToolCallInfo {
   tool: string
@@ -19,13 +24,14 @@ export interface AgentMessage {
   id: string
   role: 'user' | 'assistant'
   content: string
+  agentName?: string
+  agentIcon?: string
   toolCalls: ToolCallInfo[]
   citedNotes?: { title: string; path: string; excerpt: string; tags: string[] }[]
   timestamp: Date
   streaming?: boolean
 }
 
-// Conversation session stored in memory
 interface Conversation {
   id: string
   title: string
@@ -33,16 +39,53 @@ interface Conversation {
   createdAt: Date
 }
 
+type ProviderType = 'codex' | 'claude-code' | 'web'
+
+const PROVIDER_PRESET_MODELS: Record<ProviderType, string[]> = {
+  codex: ['gpt-4o', 'o3-mini', 'o1', 'gpt-4o-mini', 'codex'],
+  'claude-code': ['claude-3-7-sonnet', 'claude-3-5-sonnet', 'claude-3-5-haiku'],
+  web: ['deepseek-v4-pro', 'deepseek-reasoner', 'deepseek-chat', 'claude-3-7-sonnet', 'gpt-4o'],
+}
+
 export default function Chat() {
-  const navigate = useNavigate()
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [activeConvId, setActiveConvId] = useState<string>('')
   const [input, setInput] = useState('')
+
+  // Agent Selection state
+  const [activeAgent, setActiveAgent] = useState<StudyAgent>(() => STUDY_AGENTS[0])
+
+  // Model & Provider Selection state
+  const [provider, setProvider] = useState<ProviderType>(() => {
+    return (localStorage.getItem('coreforge_active_provider') as ProviderType) || 'codex'
+  })
+  const [agents, setAgents] = useState<LocalAgentStatus[]>([])
+  const [selectedModel, setSelectedModel] = useState<string>('')
+  const [customModelInput, setCustomModelInput] = useState('')
+  const [isCustomModel, setIsCustomModel] = useState(false)
+  const [loadingAgents, setLoadingAgents] = useState(false)
+
+  // Skill state
   const [activeSkill, setActiveSkill] = useState<StudySkill | null>(null)
+  const [showSkillsMenu, setShowSkillsMenu] = useState(false)
+
+  // Study Tone / Mode
+  const [studyTone, setStudyTone] = useState<'rigorous' | 'vivid' | 'exam'>('rigorous')
+
+  // UI state
   const [loading, setLoading] = useState(false)
+  const [currentToolStatus, setCurrentToolStatus] = useState<string | null>(null)
   const [showFiles, setShowFiles] = useState(false)
   const [showSessions, setShowSessions] = useState(true)
   const [selectedNote, setSelectedNote] = useState<FileDetail | null>(null)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  // Quick Practice Modal state
+  const [practiceModalOpen, setPracticeModalOpen] = useState(false)
+  const [practiceData, setPracticeData] = useState<{ title: string; content: string }>({
+    title: '', content: ''
+  })
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const { tree } = useVaultTree()
@@ -58,16 +101,91 @@ export default function Chat() {
 
   useEffect(() => { scrollToBottom() }, [messages, scrollToBottom])
 
+  // Fetch agent status & auto-select models
+  const fetchAgentStatus = useCallback(async () => {
+    setLoadingAgents(true)
+    try {
+      const data = await api.getLocalAgentStatus()
+      setAgents(data.agents)
+
+      const codexAgent = data.agents.find(a => a.provider === 'codex')
+      const claudeAgent = data.agents.find(a => a.provider === 'claude-code')
+
+      let currentProv = provider
+      if (currentProv === 'codex' && !codexAgent?.available && claudeAgent?.available) {
+        currentProv = 'claude-code'
+        setProvider('claude-code')
+      } else if (!codexAgent?.available && !claudeAgent?.available) {
+        currentProv = 'web'
+        setProvider('web')
+      }
+
+      const savedModel = localStorage.getItem(`coreforge_model_${currentProv}`)
+      const presets = PROVIDER_PRESET_MODELS[currentProv]
+      if (savedModel) {
+        setSelectedModel(savedModel)
+        setIsCustomModel(!presets.includes(savedModel))
+        if (!presets.includes(savedModel)) setCustomModelInput(savedModel)
+      } else {
+        setSelectedModel(presets[0])
+        setIsCustomModel(false)
+      }
+    } catch {
+      setSelectedModel(PROVIDER_PRESET_MODELS[provider][0])
+    } finally {
+      setLoadingAgents(false)
+    }
+  }, [provider])
+
+  useEffect(() => {
+    fetchAgentStatus()
+  }, [fetchAgentStatus])
+
+  const handleProviderChange = (newProv: ProviderType) => {
+    setProvider(newProv)
+    localStorage.setItem('coreforge_active_provider', newProv)
+    const savedModel = localStorage.getItem(`coreforge_model_${newProv}`)
+    const presets = PROVIDER_PRESET_MODELS[newProv]
+    if (savedModel) {
+      setSelectedModel(savedModel)
+      setIsCustomModel(!presets.includes(savedModel))
+      if (!presets.includes(savedModel)) setCustomModelInput(savedModel)
+    } else {
+      setSelectedModel(presets[0])
+      setIsCustomModel(false)
+    }
+  }
+
+  const handleModelSelect = (model: string) => {
+    if (model === '__custom__') {
+      setIsCustomModel(true)
+      setSelectedModel(customModelInput || '')
+    } else {
+      setIsCustomModel(false)
+      setSelectedModel(model)
+      localStorage.setItem(`coreforge_model_${provider}`, model)
+    }
+  }
+
+  const handleCustomModelConfirm = () => {
+    if (customModelInput.trim()) {
+      setSelectedModel(customModelInput.trim())
+      localStorage.setItem(`coreforge_model_${provider}`, customModelInput.trim())
+    }
+  }
+
   // Create new conversation
-  const createConversation = useCallback(() => {
+  const createConversation = useCallback((initialAgent = activeAgent) => {
     const id = `conv-${Date.now()}`
     const newConv: Conversation = {
       id,
-      title: '新对话',
+      title: `${initialAgent.name} 专属伴学`,
       messages: [{
         id: 'welcome',
         role: 'assistant',
-        content: '你好呀！我是你的考研 AI 伴学精灵「噜噜」🐾。\n\n无论是在桌面悬浮陪伴，还是在这里进行深度研学，我都随时为你守候！我可以帮你：\n\n- **📖 考研重点精析** — 深度剖析 408 计算机与考研数学各科定理与难点\n- **📝 真题命制与错题诊断** — 针对你的薄弱点一键生成变式训练题\n- **✏️ 知识库笔记管家** — 直接在知识库中读取、修改或新建整理笔记\n- **🎯 考研倒计时督学** — 规划每日复习节奏与番茄钟专注\n\n试试问我关于考研高数或 408 的任何问题，或者让我帮你整理笔记吧！',
+        agentName: initialAgent.name,
+        agentIcon: initialAgent.icon,
+        content: `你好！我是你的 ${initialAgent.title}「${initialAgent.name}」${initialAgent.icon}。\n\n${initialAgent.description}\n\n💡 **已为你量身就绪**：\n- **智能体定位**：${initialAgent.role}\n- **模型引擎**：自由切换 Codex / Claude Code / 云端双核\n- **免插件研学技能**：支持直接一键调用大纲重构、图谱双链、定理挖空、错题诊断！\n\n试着向我提问，或点击下方快捷考点直接开始研学！`,
         toolCalls: [],
         timestamp: new Date(),
       }],
@@ -75,11 +193,18 @@ export default function Chat() {
     }
     setConversations(prev => [newConv, ...prev])
     setActiveConvId(id)
-  }, [])
+  }, [activeAgent])
 
-  // Initialize with first conversation
+  // Handle prefilled prompt from Study center or other pages
   useEffect(() => {
-    if (conversations.length === 0) {
+    const prefilled = sessionStorage.getItem('prefilled_chat_prompt')
+    if (prefilled) {
+      sessionStorage.removeItem('prefilled_chat_prompt')
+      setInput(prefilled)
+      if (conversations.length === 0) {
+        createConversation()
+      }
+    } else if (conversations.length === 0) {
       createConversation()
     }
   }, [conversations.length, createConversation])
@@ -100,8 +225,8 @@ export default function Chat() {
     })
   }, [activeConvId])
 
-  const handleSend = async () => {
-    const text = input.trim()
+  const handleSend = async (overridePrompt?: string) => {
+    const text = (overridePrompt || input).trim()
     if (!text || loading || !activeConvId) return
 
     const userMsg: AgentMessage = {
@@ -112,125 +237,126 @@ export default function Chat() {
       timestamp: new Date(),
     }
 
-    // Add user message and create streaming assistant message
     const assistantMsgId = `assistant-${Date.now()}`
     const assistantMsg: AgentMessage = {
       id: assistantMsgId,
       role: 'assistant',
+      agentName: activeAgent.name,
+      agentIcon: activeAgent.icon,
       content: '',
       toolCalls: [],
       timestamp: new Date(),
       streaming: true,
     }
 
-    updateConversation(activeConvId, conv => {
-      const updated = {
-        ...conv,
-        messages: [...conv.messages, userMsg, assistantMsg],
-        title: conv.messages.length <= 2 ? text.substring(0, 30) : conv.title,
-      }
-      return updated
-    })
+    updateConversation(activeConvId, conv => ({
+      ...conv,
+      messages: [...conv.messages, userMsg, assistantMsg],
+      title: conv.messages.length <= 1 ? text.substring(0, 26) : conv.title,
+    }))
 
     setInput('')
     setLoading(true)
+    setCurrentToolStatus('正在调取智能体与模型进行深度思考...')
 
     const convId = activeConvId
     const controller = new AbortController()
     abortRef.current = controller
 
+    // Construct tone instruction
+    let toneInstruction = ''
+    if (studyTone === 'rigorous') toneInstruction = '【作答风格要求】：学术严谨模式，考纲对齐，公式推导严谨规范，杜绝一切幻觉。'
+    else if (studyTone === 'vivid') toneInstruction = '【作答风格要求】：通俗直观模式，多打比方与生动类比，帮助快速构建底层脑海图景。'
+    else toneInstruction = '【作答风格要求】：考场冲刺模式，直击采分点与答题模板，快速提炼考场必背避坑口诀。'
+
     try {
-      // Build history from current conversation
-      const currentConv = conversations.find(c => c.id === convId)
-      const history = (currentConv?.messages || [])
-        .filter(m => m.id !== 'welcome' && !m.streaming)
-        .slice(-10)
-        .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
+      const endpoint = '/api/local-agents/chat'
+      const body = {
+        provider,
+        prompt: text,
+        model: selectedModel || undefined,
+        skillPrompt: activeSkill?.prompt || undefined,
+        agentPrompt: `${activeAgent.systemPrompt}\n${toneInstruction}`,
+        projectName: '考研 408 & 数学研学工作台',
+        pageContext: `AI 伴学主页面 (${activeAgent.name})`,
+      }
 
-      const messageToSend = activeSkill
-        ? `${activeSkill.prompt}\n\n【用户具体指令/考点】：\n${text}`
-        : text
-
-      const response = await fetch('/api/agent/chat', {
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: messageToSend, history }),
+        body: JSON.stringify(body),
         signal: controller.signal,
       })
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`)
+      if (!res.ok) {
+        throw new Error(`服务响应异常: HTTP ${res.status}`)
       }
 
-      const contentType = response.headers.get('content-type') || ''
+      const reader = res.body?.getReader()
+      if (!reader) throw new Error('流式传输不可用')
 
-      if (contentType.includes('text/event-stream')) {
-        // SSE streaming mode
-        const reader = response.body?.getReader()
-        const decoder = new TextDecoder()
-        let buffer = ''
+      const decoder = new TextDecoder()
+      let buffer = ''
 
-        while (reader) {
-          const { done, value } = await reader.read()
-          if (done) break
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
 
-          buffer += decoder.decode(value, { stream: true })
-          const lines = buffer.split('\n')
-          buffer = lines.pop() || ''
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n\n')
+        buffer = lines.pop() || ''
 
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const event = JSON.parse(line.slice(6))
-                updateConversation(convId, conv => {
-                  const msgs = [...conv.messages]
-                  const idx = msgs.findIndex(m => m.id === assistantMsgId)
-                  if (idx === -1) return conv
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (!trimmed.startsWith('data: ')) continue
+          const jsonStr = trimmed.slice(6)
 
-                  const msg = { ...msgs[idx] }
+          try {
+            const event = JSON.parse(jsonStr)
 
-                  switch (event.type) {
-                    case 'text':
-                      msg.content += event.content
-                      break
-                    case 'tool_call':
-                      msg.toolCalls = [...msg.toolCalls, { tool: event.tool, input: event.input }]
-                      break
-                    case 'tool_result':
-                      const lastTool = msg.toolCalls[msg.toolCalls.length - 1]
-                      if (lastTool && lastTool.tool === event.tool) {
-                        msg.toolCalls = [...msg.toolCalls.slice(0, -1), { ...lastTool, output: event.output, success: event.success }]
-                      }
-                      break
-                    case 'done':
-                      msg.streaming = false
-                      break
-                    case 'error':
-                      msg.content += `\n\n**错误**: ${event.content}`
-                      msg.streaming = false
-                      break
-                  }
+            updateConversation(convId, conv => {
+              const msgs = [...conv.messages]
+              const idx = msgs.findIndex(m => m.id === assistantMsgId)
+              if (idx === -1) return conv
 
-                  msgs[idx] = msg
-                  return { ...conv, messages: msgs }
-                })
-              } catch {
-                // ignore parse errors
+              const msg = { ...msgs[idx] }
+
+              switch (event.type) {
+                case 'text':
+                  msg.content += event.content || ''
+                  break
+                case 'status':
+                  setCurrentToolStatus(event.content || '智能体执行中...')
+                  break
+                case 'tool_call':
+                  setCurrentToolStatus(`调用知识库工具: ${event.tool}`)
+                  msg.toolCalls = [
+                    ...msg.toolCalls,
+                    { tool: event.tool, input: event.input || {}, success: true },
+                  ]
+                  break
+                case 'tool_result':
+                  setCurrentToolStatus(`已完成: ${event.tool}`)
+                  msg.toolCalls = msg.toolCalls.map(tc =>
+                    tc.tool === event.tool ? { ...tc, output: event.output, success: event.success } : tc
+                  )
+                  break
+                case 'done':
+                  msg.streaming = false
+                  break
+                case 'error':
+                  msg.content += `\n\n❌ **执行异常**: ${event.content}`
+                  msg.streaming = false
+                  break
               }
-            }
+
+              msgs[idx] = msg
+              return { ...conv, messages: msgs }
+            })
+          } catch {
+            // ignore chunk parse errors
           }
         }
-      } else {
-        // JSON fallback mode
-        const data = await response.json()
-        updateConversation(convId, conv => {
-          const msgs = [...conv.messages]
-          const idx = msgs.findIndex(m => m.id === assistantMsgId)
-          if (idx !== -1) {
-            msgs[idx] = { ...msgs[idx], content: data.reply, streaming: false }
-          }
-          return { ...conv, messages: msgs }
-        })
       }
     } catch (err: any) {
       if (err.name !== 'AbortError') {
@@ -238,13 +364,16 @@ export default function Chat() {
           const msgs = [...conv.messages]
           const idx = msgs.findIndex(m => m.id === assistantMsgId)
           if (idx !== -1) {
-            msgs[idx] = { ...msgs[idx], content: '抱歉，无法连接到知识库。请确保后端服务已启动。', streaming: false }
+            msgs[idx] = {
+              ...msgs[idx],
+              content: `抱歉，模型响应异常: ${err.message}。请检查服务或切换模型重试。`,
+              streaming: false
+            }
           }
           return { ...conv, messages: msgs }
         })
       }
     } finally {
-      // Mark streaming as done
       updateConversation(convId, conv => {
         const msgs = [...conv.messages]
         const idx = msgs.findIndex(m => m.id === assistantMsgId)
@@ -254,6 +383,7 @@ export default function Chat() {
         return { ...conv, messages: msgs }
       })
       setLoading(false)
+      setCurrentToolStatus(null)
       abortRef.current = null
       setActiveSkill(null)
     }
@@ -270,321 +400,497 @@ export default function Chat() {
     try {
       const note = await api.getFile(notePath)
       setSelectedNote(note)
+      setInput(prev => {
+        const citation = `【请结合知识库笔记《${note.title || notePath}》进行精讲/重构】：\n${note.content.slice(0, 1500)}`
+        return prev ? prev + '\n\n' + citation : citation
+      })
     } catch { /* silent */ }
   }
 
+  // Practical Tool 1: Save message as Obsidian Markdown Note
   const handleSaveMessage = async (msg: AgentMessage) => {
     if (!msg.content) return
-    const title = msg.content.split('\n')[0].replace(/^#+\s*/, '').substring(0, 50) || 'AI 回复'
-    const safeName = title.replace(/[<>:"/\\|?*]/g, '_')
+    const firstLine = msg.content.split('\n')[0].replace(/^#+\s*/, '').replace(/[<>:"/\\|?*]/g, '_').substring(0, 40)
+    const title = firstLine || `AI伴学精析_${new Date().toLocaleDateString('zh-CN')}`
+    const destPath = `wiki/AI伴学笔记/${title}.md`
     try {
-      await api.createFile(`AI笔记/${safeName}.md`, msg.content, {
-        title, tags: ['ai-generated'], created: new Date().toISOString().split('T')[0],
+      await api.createFile(destPath, msg.content, {
+        title,
+        tags: ['ai-study', activeAgent.domain, provider],
+        created: new Date().toISOString().split('T')[0],
       })
-      alert(`已保存为笔记: AI笔记/${safeName}.md`)
+      alert(`✅ 已成功沉淀为真实知识库笔记：\n${destPath}`)
     } catch (err: any) {
       alert(`保存失败: ${err.message}`)
     }
   }
 
+  // Practical Tool 2: Launch Quick Practice from conversation
+  const handleTriggerPracticeFromChat = (msg: AgentMessage) => {
+    setPracticeData({
+      title: `${activeAgent.name} · 考点随堂测验`,
+      content: msg.content.slice(0, 3000),
+    })
+    setPracticeModalOpen(true)
+  }
+
+  // Copy Markdown
+  const handleCopy = (id: string, text: string) => {
+    navigator.clipboard.writeText(text)
+    setCopiedId(id)
+    setTimeout(() => setCopiedId(null), 2000)
+  }
+
+  const presetModels = PROVIDER_PRESET_MODELS[provider] || []
+  const activeAgentStatus = agents.find(a => a.provider === provider)
+
   return (
-    <div className="h-full flex gap-3">
-      {/* Session sidebar */}
-      <div className={`shrink-0 transition-all duration-200 ${showSessions ? 'w-52' : 'w-0'} overflow-hidden`}>
-        <div className="h-full flex flex-col bg-cream-100 border border-cream-200 rounded-xl">
-          <div className="flex items-center justify-between px-3 py-2.5 border-b border-cream-200">
-            <span className="text-xs font-medium text-warm-500">对话历史</span>
-            <button
-              onClick={createConversation}
-              className="p-1 rounded hover:bg-cream-200 text-warm-400 hover:text-warm-600"
-              title="新建对话"
-            >
-              <Plus className="w-3.5 h-3.5" />
-            </button>
+    <div className="h-full flex flex-col gap-3 overflow-hidden">
+      {/* Top Section 1: Agent Persona Switcher */}
+      <div className="bg-surface border border-cream-200 rounded-2xl p-3 shadow-2xs shrink-0 flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+          <div className="flex items-center gap-1.5 shrink-0 pr-2 border-r border-cream-200 mr-1">
+            <Bot className="w-4 h-4 text-accent-orange" />
+            <span className="text-xs font-bold text-warm-700">切换智能体:</span>
           </div>
-          <div className="flex-1 overflow-auto py-1">
-            {conversations.map(conv => (
-              <div
-                key={conv.id}
-                className={`group flex items-center gap-2 px-3 py-2 mx-1 rounded-lg cursor-pointer text-xs transition-colors ${
-                  activeConvId === conv.id
-                    ? 'bg-accent-orange/15 text-warm-800'
-                    : 'text-warm-500 hover:bg-cream-200 hover:text-warm-700'
+          {STUDY_AGENTS.map(agent => {
+            const isSelected = activeAgent.id === agent.id
+            return (
+              <button
+                key={agent.id}
+                onClick={() => {
+                  setActiveAgent(agent)
+                  createConversation(agent)
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all flex items-center gap-2 cursor-pointer ${
+                  isSelected
+                    ? 'bg-accent-orange text-white shadow-sm scale-102 font-bold'
+                    : 'bg-cream-100 hover:bg-cream-200 text-warm-700 border border-cream-200 hover:border-accent-orange/40'
                 }`}
-                onClick={() => setActiveConvId(conv.id)}
               >
-                <MessageSquare className="w-3 h-3 shrink-0" />
-                <span className="truncate flex-1">{conv.title}</span>
-                <button
-                  onClick={(e) => { e.stopPropagation(); deleteConversation(conv.id) }}
-                  className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-cream-300 text-warm-400 hover:text-red-400 transition-all"
-                >
-                  <Trash2 className="w-2.5 h-2.5" />
-                </button>
-              </div>
-            ))}
-          </div>
+                <span>{agent.icon}</span>
+                <span>{agent.name}</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-md ${
+                  isSelected ? 'bg-white/20 text-white' : 'bg-cream-200 text-warm-500'
+                }`}>
+                  {agent.title.split(' ')[0]}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Current Agent Mini-Description & Tone Selector */}
+        <div className="flex items-center gap-2 shrink-0">
+          <select
+            value={studyTone}
+            onChange={e => setStudyTone(e.target.value as any)}
+            className="text-xs bg-cream-100 border border-cream-200 rounded-lg px-2.5 py-1 text-warm-700 focus:outline-hidden focus:border-accent-orange"
+            title="调节智能体伴学风格"
+          >
+            <option value="rigorous">📐 学术严谨模式</option>
+            <option value="vivid">💡 通俗直观模式</option>
+            <option value="exam">⚡ 考场冲刺模式</option>
+          </select>
         </div>
       </div>
 
-      {/* File Explorer */}
-      <div className={`shrink-0 transition-all duration-200 ${showFiles ? 'w-52' : 'w-0'} overflow-hidden`}>
-        <FileExplorer tree={tree} onFileClick={handleNoteClick} />
-      </div>
-
-      {/* Main chat area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Toolbar */}
-        <div className="flex items-center gap-2 pb-3 border-b border-cream-200 dark:border-slate-800 mb-3">
-          <button
-            onClick={() => setShowSessions(!showSessions)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ${
-              showSessions ? 'bg-accent-orange/15 text-warm-800 border border-accent-orange/30' : 'bg-cream-200/60 text-warm-500 hover:text-warm-700 border border-cream-300/50'
-            }`}
-          >
-            <MessageSquare className="w-3 h-3" /> 对话
-          </button>
-          <button
-            onClick={() => setShowFiles(!showFiles)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ${
-              showFiles ? 'bg-accent-orange/15 text-warm-800 border border-accent-orange/30' : 'bg-cream-200/60 text-warm-500 hover:text-warm-700 border border-cream-300/50'
-            }`}
-          >
-            <FolderTree className="w-3 h-3" /> 文件
-          </button>
-
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-xl bg-amber-500/10 border border-amber-400/30 text-amber-900 dark:text-amber-200 text-xs font-medium">
-            <LuluAvatar size="xs" mood="idle" theme="yellow" />
-            <span>噜噜 · 考研 408 & 数学深度伴学中</span>
-          </div>
-
-          <div className="ml-auto text-[11px] text-warm-400">
-            Shift+Enter 换行 / Enter 发送
-          </div>
-        </div>
-
-        {/* Messages */}
-        <div className="flex-1 overflow-auto space-y-4 pb-4 pr-1">
-          {messages.map(msg => (
-            <AgentMessageBubble
-              key={msg.id}
-              message={msg}
-              onSave={() => handleSaveMessage(msg)}
-            />
-          ))}
-          {loading && messages[messages.length - 1]?.streaming === false && (
-            <div className="flex items-start gap-3">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-accent-orange to-accent-peach flex items-center justify-center shrink-0">
-                <BookOpen className="w-3.5 h-3.5 text-white" />
-              </div>
-              <div className="bg-cream-200/50 border border-cream-300/50 rounded-xl px-4 py-3">
-                <Loader2 className="w-4 h-4 text-accent-orange animate-spin" />
-              </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Built-in Study Skills chips */}
-        <div className="shrink-0 border-t border-cream-200 dark:border-slate-800 pt-2 pb-1">
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 custom-scrollbar">
-            <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 shrink-0 flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-amber-500" />
-              考研专属技能:
-            </span>
-            {STUDY_SKILLS.map(skill => {
-              const isCur = activeSkill?.id === skill.id
+      {/* Top Section 2: Model & Engine Switcher + Skills Bar */}
+      <div className="bg-surface border border-cream-200 rounded-xl px-4 py-2 flex flex-wrap items-center justify-between gap-3 shrink-0">
+        {/* Left: Provider & Model Selector */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Provider Tabs */}
+          <div className="flex items-center gap-1 bg-cream-200/70 p-1 rounded-xl">
+            {[
+              { key: 'codex' as const, label: '🤖 Codex' },
+              { key: 'claude-code' as const, label: '⚡ Claude Code' },
+              { key: 'web' as const, label: '☁️ 云端双核' },
+            ].map(tab => {
+              const tabAgent = agents.find(a => a.provider === tab.key)
+              const isAvail = tab.key === 'web' || tabAgent?.available
               return (
                 <button
-                  key={skill.id}
-                  onClick={() => {
-                    if (isCur) {
-                      setActiveSkill(null)
-                    } else {
-                      setActiveSkill(skill)
-                      setInput(skill.placeholder)
-                      inputRef.current?.focus()
-                    }
-                  }}
-                  title={skill.desc}
-                  className={`px-2 py-0.5 rounded-lg text-xs transition-all flex items-center gap-1 shrink-0 cursor-pointer ${
-                    isCur
-                      ? 'bg-amber-500 text-white font-bold shadow-xs'
-                      : 'bg-cream-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-cream-200 dark:border-slate-700 hover:border-amber-300 hover:bg-amber-50/40'
+                  key={tab.key}
+                  onClick={() => handleProviderChange(tab.key)}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                    provider === tab.key
+                      ? 'bg-surface text-warm-800 shadow-xs'
+                      : 'text-warm-500 hover:text-warm-700'
                   }`}
                 >
-                  <span>{skill.emoji}</span>
-                  <span>{skill.shortName}</span>
+                  <span>{tab.label}</span>
+                  {isAvail && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" title="已就绪" />
+                  )}
                 </button>
               )
             })}
           </div>
 
-          {activeSkill && (
-            <div className="mb-2 p-1.5 px-2.5 rounded-xl bg-amber-500/15 border border-amber-400/40 flex items-center justify-between text-xs animate-in fade-in">
-              <div className="flex items-center gap-1.5 text-amber-900 dark:text-amber-200 font-medium text-[11px]">
-                <CheckCircle2 className="w-3.5 h-3.5 text-amber-500" />
-                <span>已激活考研专属 Skill：<b>{activeSkill.name}</b></span>
+          {/* Model Dropdown */}
+          <div className="flex items-center gap-1.5">
+            <select
+              value={isCustomModel ? '__custom__' : selectedModel}
+              onChange={e => handleModelSelect(e.target.value)}
+              className="text-xs bg-cream-100 border border-cream-200 rounded-lg px-2.5 py-1 text-warm-800 font-medium focus:outline-hidden focus:border-accent-orange"
+            >
+              {presetModels.map(m => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+              <option value="__custom__">⚙️ 自定义模型名称...</option>
+            </select>
+
+            {isCustomModel && (
+              <div className="flex items-center gap-1">
+                <input
+                  type="text"
+                  placeholder="如 deepseek-reasoner"
+                  value={customModelInput}
+                  onChange={e => setCustomModelInput(e.target.value)}
+                  className="w-36 text-xs bg-cream-100 border border-cream-200 rounded-lg px-2 py-1 text-warm-800 focus:outline-hidden focus:border-accent-orange"
+                />
+                <button
+                  onClick={handleCustomModelConfirm}
+                  className="px-2 py-1 rounded-lg bg-accent-orange text-white text-xs font-semibold"
+                >
+                  确认
+                </button>
               </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right: 6 Exam Skills Button & Dropdown */}
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <button
+              onClick={() => setShowSkillsMenu(!showSkillsMenu)}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold border transition-all ${
+                activeSkill
+                  ? 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-400/40 shadow-xs'
+                  : 'bg-cream-100 text-warm-600 border-cream-200 hover:border-purple-300 hover:bg-purple-50'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+              <span>{activeSkill ? `Skill: ${activeSkill.shortName}` : '⚡ 考研专属 Skills (免插件)'}</span>
+              <ChevronDown className="w-3 h-3 text-warm-400" />
+            </button>
+
+            {showSkillsMenu && (
+              <div className="absolute right-0 top-full mt-2 w-72 bg-surface border border-cream-200 rounded-xl shadow-xl p-2 z-40 space-y-1 animate-in fade-in zoom-in-95 duration-150">
+                <div className="text-[10px] font-bold text-warm-400 uppercase tracking-wider px-2 py-1 border-b border-cream-200">
+                  选择考研自动化技能
+                </div>
+                {STUDY_SKILLS.map(skill => (
+                  <button
+                    key={skill.id}
+                    onClick={() => {
+                      setActiveSkill(skill)
+                      setShowSkillsMenu(false)
+                      setInput(skill.placeholder)
+                    }}
+                    className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-cream-200/70 transition-colors group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-warm-800 flex items-center gap-1.5">
+                        <span>{skill.emoji}</span>
+                        <span>{skill.shortName}</span>
+                      </span>
+                      <span className="text-[10px] text-purple-600 font-mono">{skill.command}</span>
+                    </div>
+                    <p className="text-[10px] text-warm-500 mt-0.5 leading-relaxed">
+                      {skill.desc}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={() => createConversation(activeAgent)}
+            className="flex items-center gap-1 px-3 py-1 rounded-xl bg-accent-orange text-white text-xs font-semibold hover:bg-accent-orange/90 transition-all shadow-xs"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            新建对话
+          </button>
+        </div>
+      </div>
+
+      {/* Main Body: Sidebar + Chat Stream */}
+      <div className="flex-1 flex gap-3 min-h-0 overflow-hidden">
+        {/* Session sidebar */}
+        <div className={`shrink-0 transition-all duration-200 ${showSessions ? 'w-52' : 'w-0'} overflow-hidden`}>
+          <div className="h-full flex flex-col bg-surface border border-cream-200 rounded-xl">
+            <div className="flex items-center justify-between px-3 py-2.5 border-b border-cream-200">
+              <span className="text-xs font-medium text-warm-500">对话历史</span>
               <button
-                onClick={() => setActiveSkill(null)}
-                className="text-amber-600 hover:text-amber-800 dark:text-amber-400 text-xs font-bold cursor-pointer"
+                onClick={() => createConversation(activeAgent)}
+                className="p-1 rounded hover:bg-cream-200 text-warm-400 hover:text-warm-600"
+                title="新建对话"
               >
-                取消
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto py-1">
+              {conversations.map(conv => (
+                <div
+                  key={conv.id}
+                  className={`group flex items-center gap-2 px-3 py-2 mx-1 rounded-lg cursor-pointer text-xs transition-colors ${
+                    activeConvId === conv.id
+                      ? 'bg-accent-orange/15 text-warm-800 font-medium'
+                      : 'text-warm-500 hover:bg-cream-200 hover:text-warm-700'
+                  }`}
+                  onClick={() => setActiveConvId(conv.id)}
+                >
+                  <MessageSquare className="w-3 h-3 shrink-0" />
+                  <span className="truncate flex-1">{conv.title}</span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); deleteConversation(conv.id) }}
+                    className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-cream-300 text-warm-400 hover:text-red-500 transition-all"
+                  >
+                    <Trash2 className="w-2.5 h-2.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* File Explorer sidebar */}
+        <div className={`shrink-0 transition-all duration-200 ${showFiles ? 'w-56' : 'w-0'} overflow-hidden`}>
+          <FileExplorer tree={tree} onFileClick={handleNoteClick} />
+        </div>
+
+        {/* Chat Area */}
+        <div className="flex-1 flex flex-col bg-surface border border-cream-200 rounded-2xl overflow-hidden min-w-0">
+          {/* Sub Toolbar */}
+          <div className="px-4 py-2 border-b border-cream-200 flex items-center justify-between gap-3 text-xs bg-cream-100/40">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowSessions(!showSessions)}
+                className={`p-1.5 rounded-lg border text-xs transition-colors flex items-center gap-1 ${
+                  showSessions ? 'bg-accent-orange/15 text-warm-800 border-accent-orange/30' : 'bg-transparent text-warm-500 border-cream-200'
+                }`}
+              >
+                <MessageSquare className="w-3.5 h-3.5" /> 对话
+              </button>
+              <button
+                onClick={() => setShowFiles(!showFiles)}
+                className={`p-1.5 rounded-lg border text-xs transition-colors flex items-center gap-1 ${
+                  showFiles ? 'bg-accent-orange/15 text-warm-800 border-accent-orange/30' : 'bg-transparent text-warm-500 border-cream-200'
+                }`}
+              >
+                <FolderTree className="w-3.5 h-3.5" /> 知识库文件
+              </button>
+
+              <span className="text-[11px] text-warm-400 pl-2 border-l border-cream-200 flex items-center gap-1.5">
+                <span>当前模型:</span>
+                <span className="font-mono text-accent-orange font-bold">{selectedModel || '默认'}</span>
+                {loadingAgents ? (
+                  <Loader2 className="w-2.5 h-2.5 animate-spin text-warm-400" />
+                ) : activeAgentStatus?.version ? (
+                  <span className="text-[10px] text-warm-400 font-mono">({activeAgentStatus.version})</span>
+                ) : null}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 text-[11px] text-warm-400">
+              <span className="hidden sm:inline">Shift+Enter 换行 · Enter 发送</span>
+            </div>
+          </div>
+
+          {/* Messages list */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {messages.map(msg => {
+              const isUser = msg.role === 'user'
+              return (
+                <div
+                  key={msg.id}
+                  className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}
+                >
+                  {!isUser && (
+                    <div className="w-8 h-8 rounded-xl bg-orange-500/10 flex items-center justify-center shrink-0 border border-orange-500/20 shadow-2xs">
+                      <LuluAvatar size="xs" mood={msg.streaming ? 'thinking' : 'idle'} theme="yellow" />
+                    </div>
+                  )}
+
+                  <div className={`max-w-3xl flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
+                    {!isUser && (
+                      <div className="flex items-center gap-2 mb-1 text-xs">
+                        <span className="font-bold text-warm-800 flex items-center gap-1">
+                          <span>{msg.agentIcon || activeAgent.icon}</span>
+                          <span>{msg.agentName || activeAgent.name}</span>
+                        </span>
+                        <span className={`text-[10px] px-1.5 py-0.2 rounded border ${activeAgent.badgeClass}`}>
+                          {activeAgent.title}
+                        </span>
+                      </div>
+                    )}
+
+                    <div
+                      className={`px-4 py-3 rounded-2xl text-xs leading-relaxed ${
+                        isUser
+                          ? 'bg-accent-orange text-white rounded-br-xs shadow-xs'
+                          : 'bg-cream-100/80 border border-cream-200/80 text-warm-800 rounded-bl-xs'
+                      }`}
+                    >
+                      {/* Tool calls execution badge */}
+                      {msg.toolCalls && msg.toolCalls.length > 0 && (
+                        <div className="mb-2.5 pb-2 border-b border-cream-200/80 space-y-1">
+                          {msg.toolCalls.map((tc, idx) => (
+                            <div key={idx} className="flex items-center gap-1.5 text-[10px] text-warm-500 font-mono bg-cream-200/50 px-2 py-0.5 rounded">
+                              <Wrench className="w-3 h-3 text-orange-500 shrink-0" />
+                              <span>已调用工具: {tc.tool}</span>
+                              {tc.success && <CheckCircle2 className="w-3 h-3 text-emerald-500 ml-auto" />}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Content */}
+                      <MarkdownRenderer content={msg.content} />
+
+                      {/* Streaming cursor */}
+                      {msg.streaming && (
+                        <span className="inline-block w-2 h-4 bg-accent-orange animate-pulse ml-1 align-middle" />
+                      )}
+                    </div>
+
+                    {/* Bottom action buttons on assistant messages */}
+                    {!isUser && !msg.streaming && msg.content && (
+                      <div className="flex items-center gap-2 mt-1.5 text-[11px] text-warm-400">
+                        {/* Copy button */}
+                        <button
+                          onClick={() => handleCopy(msg.id, msg.content)}
+                          className="hover:text-warm-700 flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-cream-200 transition-colors"
+                          title="复制完整回复 Markdown"
+                        >
+                          {copiedId === msg.id ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                          <span>{copiedId === msg.id ? '已复制' : '复制'}</span>
+                        </button>
+
+                        {/* Practical Tool 1: Save as Note */}
+                        <button
+                          onClick={() => handleSaveMessage(msg)}
+                          className="hover:text-warm-700 flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-cream-200 transition-colors"
+                          title="一键将此讲解沉淀为知识库 Markdown 真实笔记"
+                        >
+                          <Save className="w-3 h-3 text-purple-500" />
+                          <span>沉淀笔记</span>
+                        </button>
+
+                        {/* Practical Tool 2: Test 3 Questions */}
+                        <button
+                          onClick={() => handleTriggerPracticeFromChat(msg)}
+                          className="hover:text-orange-600 flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-orange-50 text-orange-600 font-medium transition-colors"
+                          title="针对本条考点讲解，现场命制 3 道真题自测"
+                        >
+                          <Target className="w-3 h-3" />
+                          <span>考我3道题</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Quick prompt suggestions for current agent */}
+          <div className="px-4 py-2 border-t border-cream-200/80 bg-cream-100/30 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+            <span className="text-[10px] font-bold text-warm-400 shrink-0">
+              {activeAgent.icon} 考点速问:
+            </span>
+            {activeAgent.quickPrompts.map((qp, i) => (
+              <button
+                key={i}
+                onClick={() => {
+                  setInput(qp)
+                  handleSend(qp)
+                }}
+                disabled={loading}
+                className="px-2.5 py-1 rounded-lg text-[11px] text-warm-600 bg-surface border border-cream-200 hover:border-accent-orange hover:text-accent-orange transition-colors shrink-0 truncate max-w-xs cursor-pointer"
+              >
+                {qp}
+              </button>
+            ))}
+          </div>
+
+          {/* Active Note Citation Indicator */}
+          {selectedNote && (
+            <div className="px-4 py-1.5 bg-accent-orange/10 border-t border-accent-orange/20 flex items-center justify-between text-xs text-warm-800">
+              <span className="flex items-center gap-1.5 font-medium truncate">
+                <FileText className="w-3.5 h-3.5 text-accent-orange shrink-0" />
+                <span className="truncate">已关联知识库笔记：《{selectedNote.title || selectedNote.path}》</span>
+              </span>
+              <button
+                onClick={() => setSelectedNote(null)}
+                className="text-warm-400 hover:text-warm-700 shrink-0 ml-2 cursor-pointer"
+                title="清除笔记引用"
+              >
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
           )}
-        </div>
 
-        {/* Input */}
-        <div className="shrink-0 pt-1">
-          <div className="flex items-end gap-3 bg-surface border border-cream-300 rounded-xl px-4 py-3 focus-within:border-accent-orange/40 transition-colors">
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={activeSkill ? `[${activeSkill.shortName}] ${activeSkill.placeholder}` : "输入问题... 噜噜可以读写整理你的笔记"}
-              rows={1}
-              className="flex-1 bg-transparent text-sm text-warm-700 placeholder-warm-400 resize-none outline-none max-h-32"
-              style={{ minHeight: 24 }}
-              onInput={(e) => {
-                const el = e.target as HTMLTextAreaElement
-                el.style.height = 'auto'
-                el.style.height = Math.min(el.scrollHeight, 128) + 'px'
-              }}
-            />
-            <button
-              onClick={handleSend}
-              disabled={!input.trim() || loading}
-              className="p-2 rounded-lg bg-accent-orange text-white hover:bg-accent-orange/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors shrink-0"
-            >
-              <Send className="w-4 h-4" />
-            </button>
+          {/* Active Skill Indicator */}
+          {activeSkill && (
+            <div className="px-4 py-1.5 bg-purple-500/10 border-t border-purple-500/20 flex items-center justify-between text-xs text-purple-700">
+              <span className="flex items-center gap-1.5 font-medium">
+                <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+                <span>已激活技能：{activeSkill.shortName} ({activeSkill.command})</span>
+              </span>
+              <button
+                onClick={() => setActiveSkill(null)}
+                className="text-purple-400 hover:text-purple-700 cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          {/* Loading tool indicator */}
+          {currentToolStatus && (
+            <div className="px-4 py-1 bg-amber-500/10 border-t border-amber-500/20 flex items-center gap-2 text-[11px] text-amber-700 animate-pulse">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              <span>{currentToolStatus}</span>
+            </div>
+          )}
+
+          {/* Input box */}
+          <div className="p-3 border-t border-cream-200 bg-surface">
+            <div className="relative flex items-end gap-2 bg-cream-100 rounded-xl border border-cream-200 focus-within:border-accent-orange p-2 transition-colors">
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={`向 ${activeAgent.name} 提问 408 / 数学考点、整理笔记或现场命题自测...`}
+                rows={2}
+                disabled={loading}
+                className="flex-1 bg-transparent border-none text-xs text-warm-800 placeholder-warm-400 focus:outline-hidden resize-none min-h-[38px] max-h-32"
+              />
+              <button
+                onClick={() => handleSend()}
+                disabled={loading || !input.trim()}
+                className="p-2 rounded-lg bg-accent-orange text-white hover:bg-accent-orange/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Note preview panel */}
-      {selectedNote && (
-        <div className="w-72 shrink-0 bg-surface border border-cream-200 rounded-xl p-4 overflow-auto">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-warm-700 truncate">{selectedNote.title}</h3>
-            <button onClick={() => setSelectedNote(null)} className="p-1 rounded hover:bg-cream-200 text-warm-400">
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          <div className="text-[10px] text-warm-400 font-mono mb-2">{selectedNote.path}</div>
-          <div className="text-xs text-warm-500 leading-relaxed whitespace-pre-wrap line-clamp-[40]">
-            {selectedNote.content}
-          </div>
-          <button
-            onClick={() => navigate(`/editor?path=${encodeURIComponent(selectedNote.path)}`)}
-            className="mt-3 w-full py-1.5 rounded-lg text-[11px] text-warm-500 bg-cream-200 border border-cream-300 hover:text-warm-700 transition-colors"
-          >
-            在编辑器中打开
-          </button>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ─── Agent Message Bubble ─────────────────────────────────────────────────────
-
-function AgentMessageBubble({
-  message, onSave,
-}: {
-  message: AgentMessage
-  onSave: () => void
-}) {
-  const [toolCallsExpanded, setToolCallsExpanded] = useState(true)
-  const isUser = message.role === 'user'
-
-  return (
-    <div className={`flex items-start gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
-      {/* Avatar */}
-      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-        isUser
-          ? 'bg-cream-300'
-          : 'bg-amber-100 dark:bg-amber-950/40 border border-amber-300/80 dark:border-amber-700/50 shadow-sm'
-      }`}>
-        {isUser
-          ? <span className="text-[10px] text-warm-600 font-medium">你</span>
-          : <LuluAvatar size="xs" mood="idle" theme="yellow" showAccessories={false} />
-        }
-      </div>
-
-      {/* Message body */}
-      <div className={`max-w-[80%] space-y-2 ${isUser ? 'items-end' : ''}`}>
-        {/* Tool calls */}
-        {message.toolCalls.length > 0 && (
-          <div className="space-y-1">
-            <button
-              onClick={() => setToolCallsExpanded(!toolCallsExpanded)}
-              className="flex items-center gap-1.5 text-[10px] text-warm-400 hover:text-warm-600 transition-colors"
-            >
-              {toolCallsExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-              <Wrench className="w-3 h-3" />
-              {message.toolCalls.length} 个工具调用
-            </button>
-
-            {toolCallsExpanded && message.toolCalls.map((tc, i) => (
-              <div key={i} className="ml-4 bg-cream-100/50 border border-cream-200 rounded-lg p-2.5 space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
-                    tc.success === false ? 'bg-rose-500/10 text-rose-400' : 'bg-accent-sage/10 text-accent-sage'
-                  }`}>
-                    {tc.tool}
-                  </span>
-                  <span className="text-[10px] text-warm-400 truncate">
-                    {tc.input?.path || tc.input?.query || ''}
-                  </span>
-                </div>
-                {tc.output && (
-                  <pre className="text-[10px] text-warm-500 whitespace-pre-wrap font-mono bg-cream-100/50 rounded p-2 max-h-40 overflow-auto leading-relaxed">
-                    {tc.output.substring(0, 1000)}
-                    {tc.output.length > 1000 && '...'}
-                  </pre>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Text content */}
-        {message.content && (
-          <div className={`rounded-xl px-4 py-3 text-sm leading-relaxed ${
-            isUser
-              ? 'bg-accent-orange/15 border border-accent-orange/20 text-warm-800'
-              : 'bg-surface border border-cream-200 text-warm-700'
-          }`}>
-            {isUser ? (
-              <div className="whitespace-pre-wrap">{message.content}</div>
-            ) : (
-              <div className="prose prose-sm max-w-none [&_p]:my-1.5 [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-xs [&_ul]:my-1.5 [&_ol]:my-1.5 [&_li]:my-0.5 [&_pre]:my-2 [&_code]:text-accent-sage [&_code]:text-xs [&_a]:text-accent-orange [&_strong]:text-warm-800">
-                <MarkdownRenderer content={message.content} />
-              </div>
-            )}
-            {message.streaming && (
-              <span className="inline-block w-1.5 h-4 bg-accent-orange animate-pulse ml-0.5 align-middle rounded-sm" />
-            )}
-          </div>
-        )}
-
-        {/* Actions for assistant messages */}
-        {!isUser && !message.streaming && message.content && (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onSave}
-              className="flex items-center gap-1 text-[10px] text-warm-400 hover:text-warm-600 transition-colors"
-              title="保存为笔记"
-            >
-              <Save className="w-3 h-3" /> 保存
-            </button>
-          </div>
-        )}
-      </div>
+      {/* Quick Practice Modal */}
+      <QuickPracticeModal
+        isOpen={practiceModalOpen}
+        onClose={() => setPracticeModalOpen(false)}
+        noteTitle={practiceData.title}
+        noteContent={practiceData.content}
+      />
     </div>
   )
 }

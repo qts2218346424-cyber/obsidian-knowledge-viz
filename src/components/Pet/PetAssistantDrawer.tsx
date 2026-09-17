@@ -12,12 +12,15 @@ import {
   Wrench,
   ChevronDown,
   Terminal,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react'
 import MarkdownRenderer from '../MarkdownRenderer'
 import { api, type LocalAgentStatus } from '../../services/api'
 import type { PetMood } from './DesktopPet'
 import LuluAvatar from './LuluAvatar'
 import { STUDY_SKILLS, type StudySkill } from '../../data/studySkills'
+import { STUDY_AGENTS, type StudyAgent } from '../../data/studyAgents'
 
 interface Message {
   id: string
@@ -71,6 +74,47 @@ export default function PetAssistantDrawer({
   const [isCustomModel, setIsCustomModel] = useState(false)
   const [loadingAgents, setLoadingAgents] = useState(false)
 
+  // Drawer sizing & resizing state
+  const [drawerWidth, setDrawerWidth] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('coreforge_pet_drawer_width')
+      if (saved) return Math.max(380, Math.min(window.innerWidth - 60, parseInt(saved, 10)))
+    } catch {}
+    return 560
+  })
+  const [isResizing, setIsResizing] = useState(false)
+  const [isMaximized, setIsMaximized] = useState(false)
+
+  // Agent persona state
+  const [activeAgent, setActiveAgent] = useState<StudyAgent>(() => STUDY_AGENTS[0])
+
+  // Mouse move / up handler for free resizing
+  const handleMouseDownResize = (e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsResizing(true)
+  }
+
+  useEffect(() => {
+    if (!isResizing) return
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const newWidth = Math.max(380, Math.min(window.innerWidth - 40, window.innerWidth - e.clientX))
+      setDrawerWidth(newWidth)
+      localStorage.setItem('coreforge_pet_drawer_width', newWidth.toString())
+    }
+
+    const handleMouseUp = () => {
+      setIsResizing(false)
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isResizing])
+
   // Skill state
   const [activeSkill, setActiveSkill] = useState<StudySkill | null>(null)
   const [showSkillsMenu, setShowSkillsMenu] = useState(false)
@@ -121,18 +165,15 @@ export default function PetAssistantDrawer({
         setIsCustomModel(false)
       }
     } catch {
-      // fallback
+      setSelectedModel(PROVIDER_PRESET_MODELS[provider][0])
     } finally {
       setLoadingAgents(false)
     }
   }
 
   useEffect(() => {
-    if (isOpen) {
-      fetchAgentStatus()
-      setTimeout(() => inputRef.current?.focus(), 150)
-    }
-  }, [isOpen])
+    fetchAgentStatus()
+  }, [])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -140,7 +181,7 @@ export default function PetAssistantDrawer({
 
   if (!isOpen) return null
 
-  const activeAgent = agents.find(a => a.provider === provider)
+  const currentProviderStatus = agents.find(a => a.provider === provider)
   const isLocal = provider === 'codex' || provider === 'claude-code'
 
   const handleProviderChange = (newProvider: ProviderType) => {
@@ -215,6 +256,7 @@ export default function PetAssistantDrawer({
         prompt: text,
         model: selectedModel || undefined,
         skillPrompt: activeSkill?.prompt || undefined,
+        agentPrompt: activeAgent?.systemPrompt || undefined,
       }
 
       const res = await fetch(endpoint, {
@@ -330,9 +372,23 @@ export default function PetAssistantDrawer({
   const presetModels = PROVIDER_PRESET_MODELS[provider] || []
 
   return (
-    <div className="fixed inset-y-0 right-0 z-50 w-full max-w-xl bg-white dark:bg-slate-900 border-l border-cream-200 dark:border-slate-800 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+    <div
+      style={{ width: isMaximized ? '95vw' : `${drawerWidth}px` }}
+      className={`fixed inset-y-0 right-0 z-50 bg-white dark:bg-slate-900 border-l border-cream-200 dark:border-slate-800 shadow-2xl flex flex-col transition-all duration-150 ${
+        isResizing ? 'select-none' : ''
+      }`}
+    >
+      {/* Left resize handle */}
+      <div
+        onMouseDown={handleMouseDownResize}
+        className="absolute -left-1.5 inset-y-0 w-3 cursor-ew-resize z-20 flex items-center justify-center group hover:bg-orange-500/20 active:bg-orange-500/40 transition-colors"
+        title="按住鼠标左键左右拖拽，可自由缩放聊天窗口宽度"
+      >
+        <div className="w-1 h-12 rounded-full bg-slate-300 dark:bg-slate-700 group-hover:bg-orange-500 group-active:bg-orange-600 transition-colors shadow-xs" />
+      </div>
+
       {/* Header */}
-      <div className="px-5 py-3 border-b border-cream-200 dark:border-slate-800 bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-transparent flex items-center justify-between">
+      <div className="px-5 py-3 border-b border-cream-200 dark:border-slate-800 bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-transparent flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 flex items-center justify-center">
             <LuluAvatar size="sm" mood="idle" theme="yellow" />
@@ -340,17 +396,24 @@ export default function PetAssistantDrawer({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-warm-900 dark:text-slate-100 text-sm">噜噜 · 考研伴学与笔记管家</h3>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-semibold border border-indigo-200 dark:border-indigo-800">
-                Agent &amp; Skills 模式
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${activeAgent.badgeClass}`}>
+                {activeAgent.icon} {activeAgent.title}
               </span>
             </div>
             <p className="text-[11px] text-warm-500 dark:text-slate-400 flex items-center gap-1.5">
-              <span>直连 Codex / Claude Code · 考研专属免插件管理</span>
+              <span>{activeAgent.role}</span>
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setIsMaximized(!isMaximized)}
+            className="p-1.5 rounded-lg text-warm-400 hover:text-warm-700 dark:hover:text-slate-200 hover:bg-cream-100 dark:hover:bg-slate-800 transition-colors"
+            title={isMaximized ? '还原窗口' : '最大化窗口 (宽屏精析)'}
+          >
+            {isMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
           <button
             onClick={clearChat}
             className="p-1.5 rounded-lg text-warm-400 hover:text-warm-700 dark:hover:text-slate-200 hover:bg-cream-100 dark:hover:bg-slate-800 transition-colors"
@@ -367,8 +430,26 @@ export default function PetAssistantDrawer({
         </div>
       </div>
 
-      {/* Provider & Model Selector Control Bar */}
-      <div className="px-5 py-2.5 bg-slate-50 dark:bg-slate-950/70 border-b border-cream-200 dark:border-slate-800 space-y-2">
+      {/* Provider, Model & Agent Selector Control Bar */}
+      <div className="px-5 py-2.5 bg-slate-50 dark:bg-slate-950/70 border-b border-cream-200 dark:border-slate-800 space-y-2 shrink-0">
+        {/* Row 0: Agent Persona Switcher */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+          <span className="text-[10px] font-bold text-slate-400 shrink-0">智能体:</span>
+          {STUDY_AGENTS.map(agent => (
+            <button
+              key={agent.id}
+              onClick={() => setActiveAgent(agent)}
+              className={`px-2 py-0.5 rounded-lg text-[11px] font-medium shrink-0 transition-all flex items-center gap-1 ${
+                activeAgent.id === agent.id
+                  ? 'bg-orange-500 text-white shadow-xs font-bold'
+                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-orange-300'
+              }`}
+            >
+              <span>{agent.icon}</span>
+              <span>{agent.name}</span>
+            </button>
+          ))}
+        </div>
         {/* Row 1: Provider Tabs */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
@@ -455,7 +536,7 @@ export default function PetAssistantDrawer({
           <div className="flex items-center gap-1.5 truncate">
             <Terminal className="w-3 h-3 text-emerald-500 shrink-0" />
             <span className="truncate">
-              {activeAgent?.version || (provider === 'web' ? '云端 AI 智算网络' : `${provider} 命令行已连接`)}
+              {currentProviderStatus?.version || (provider === 'web' ? '云端 AI 智算网络' : `${provider} 命令行已连接`)}
             </span>
           </div>
           <div className="flex items-center gap-1 font-mono text-[10px] text-amber-600 dark:text-amber-400 shrink-0">
