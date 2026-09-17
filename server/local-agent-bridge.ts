@@ -5,12 +5,14 @@ import fs from 'node:fs'
 import path from 'node:path'
 import readline from 'node:readline'
 
-export type LocalAgentProvider = 'claude-code' | 'codex'
+export type LocalAgentProvider = 'claude-code' | 'codex' | 'ollama' | 'lm-studio'
 
 export interface LocalAgentConfig {
   claudeCommand?: string
   codexCommand?: string
   defaultCwd?: string
+  ollamaBaseURL?: string
+  lmStudioBaseURL?: string
 }
 
 export interface LocalAgentStatus {
@@ -20,7 +22,10 @@ export interface LocalAgentStatus {
   resolvedPath?: string
   version?: string
   detail?: string
+  models?: string[]
+  defaultModel?: string
 }
+
 
 export interface LocalAgentRunOptions {
   provider: LocalAgentProvider
@@ -120,6 +125,67 @@ export function detectLocalAgents(config?: LocalAgentConfig): LocalAgentStatus[]
     }
   })
 }
+
+export async function detectAllLocalAgents(config?: LocalAgentConfig): Promise<LocalAgentStatus[]> {
+  const cliAgents = detectLocalAgents(config)
+
+  const ollamaURL = config?.ollamaBaseURL || 'http://127.0.0.1:11434'
+  let ollamaStatus: LocalAgentStatus = {
+    provider: 'ollama',
+    available: false,
+    command: ollamaURL,
+    detail: '未检测到 Ollama 服务运行 (端口 11434)',
+    models: [],
+  }
+  try {
+    const res = await fetch(`${ollamaURL}/api/tags`, { signal: AbortSignal.timeout(1500) })
+    if (res.ok) {
+      const data: any = await res.json()
+      const models = (data.models || []).map((m: any) => m.name)
+      ollamaStatus = {
+        provider: 'ollama',
+        available: true,
+        command: ollamaURL,
+        version: models.length > 0 ? `Ollama (${models.length} 个本地模型)` : 'Ollama 已连接 (暂无模型)',
+        detail: '本地离线运行 · 0 Token 费用',
+        models,
+        defaultModel: models[0] || 'deepseek-r1:latest',
+      }
+    }
+  } catch {
+    // offline
+  }
+
+  const lmStudioURL = config?.lmStudioBaseURL || 'http://127.0.0.1:1234'
+  let lmStudioStatus: LocalAgentStatus = {
+    provider: 'lm-studio',
+    available: false,
+    command: lmStudioURL,
+    detail: '未检测到 LM Studio 服务运行 (端口 1234)',
+    models: [],
+  }
+  try {
+    const res = await fetch(`${lmStudioURL}/v1/models`, { signal: AbortSignal.timeout(1500) })
+    if (res.ok) {
+      const data: any = await res.json()
+      const models = (data.data || []).map((m: any) => m.id)
+      lmStudioStatus = {
+        provider: 'lm-studio',
+        available: true,
+        command: lmStudioURL,
+        version: models.length > 0 ? `LM Studio (${models.length} 个模型)` : 'LM Studio 已连接',
+        detail: '本地推理服务器 · 0 费用',
+        models,
+        defaultModel: models[0] || 'local-model',
+      }
+    }
+  } catch {
+    // offline
+  }
+
+  return [ollamaStatus, lmStudioStatus, ...cliAgents]
+}
+
 
 function extractTextFromJson(value: any): string {
   if (!value || typeof value !== 'object') return ''

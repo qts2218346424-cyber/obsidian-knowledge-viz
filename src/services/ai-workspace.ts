@@ -4,6 +4,11 @@ export interface AIWorkspaceMessage {
   content: string
   createdAt: string
   streaming?: boolean
+  usage?: {
+    prompt_tokens: number
+    completion_tokens: number
+    total_tokens: number
+  }
   toolCalls?: {
     tool: string
     input?: Record<string, unknown>
@@ -28,11 +33,12 @@ export interface AISession {
   createdAt: string
   updatedAt: string
   skillIds: string[]
-  provider?: 'web' | 'claude-code' | 'codex'
+  provider?: 'web' | 'claude-code' | 'codex' | 'ollama' | 'lm-studio'
   model?: string
   agentSessionId?: string
   messages: AIWorkspaceMessage[]
 }
+
 
 export interface AIWorkspaceState {
   version: 1

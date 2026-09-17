@@ -15,8 +15,8 @@ import {
   Network,
   Search,
   Settings,
-  Sparkles,
   Timer,
+
   Workflow,
   X,
   Database,
@@ -26,6 +26,8 @@ import { useVaultEvents } from '../hooks/useVaultEvents'
 import SearchModal from './SearchModal'
 import AIAssistantModal from './AIAssistantModal'
 import ImportResourceModal from './ImportResourceModal'
+import DesktopPet from './Pet/DesktopPet'
+
 
 interface NavItem {
   to: string
@@ -278,22 +280,9 @@ export default function Layout({ children }: LayoutProps) {
         <div className="min-w-0 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
       </main>
 
-      {/* Floating AI Copilot Trigger */}
-      {!assistantOpen && (
-        <button
-          onClick={() => setAssistantOpen(true)}
-          aria-label="打开研考 AI 伴学助手"
-          title="打开研考 AI 伴学助手（Ctrl/⌘ + Shift + A）"
-          className="fixed bottom-6 right-6 z-50 inline-flex items-center gap-2.5 rounded-full bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-white/25 px-4 py-3 text-xs font-semibold text-white shadow-[0_16px_35px_rgba(15,23,42,0.35)] transition-all duration-300 hover:scale-105 hover:shadow-[0_20px_45px_rgba(99,102,241,0.4)] group"
-        >
-          <div className="relative">
-            <Sparkles className="h-4 w-4 text-accent-orange animate-pulse-soft" />
-            <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-slate-900" />
-          </div>
-          <span>研考 AI 伴学</span>
-          <kbd className="hidden rounded bg-white/15 px-1.5 py-0.5 font-mono text-[9px] text-white/80 sm:inline">Ctrl+Shift+A</kbd>
-        </button>
-      )}
+      {/* Floating Desktop Companion Pet 「研小核」 */}
+      <DesktopPet />
+
 
       <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
       <AIAssistantModal isOpen={assistantOpen} onClose={() => setAssistantOpen(false)} pagePath={location.pathname} />

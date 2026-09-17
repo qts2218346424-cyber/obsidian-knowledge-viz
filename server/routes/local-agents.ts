@@ -2,15 +2,22 @@ import { Router } from 'express'
 import fs from 'fs'
 import path from 'path'
 import { config } from '../context.js'
-import { detectLocalAgents, runLocalAgent, type LocalAgentProvider } from '../local-agent-bridge.js'
+import { detectAllLocalAgents, runLocalAgent, type LocalAgentProvider } from '../local-agent-bridge.js'
+import { OpenAICompatibleClient } from '../ai-client.js'
+import { runAgentLoop } from '../agent.js'
 
 export const localAgentsRouter = Router()
 
-localAgentsRouter.get('/local-agents/status', (_req, res) => {
-  res.json({
-    agents: detectLocalAgents(config.localAgents),
-    defaultCwd: config.localAgents?.defaultCwd || config.vaultPath,
-  })
+localAgentsRouter.get('/local-agents/status', async (_req, res) => {
+  try {
+    const agents = await detectAllLocalAgents(config.localAgents)
+    res.json({
+      agents,
+      defaultCwd: config.localAgents?.defaultCwd || config.vaultPath,
+    })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
 })
 
 localAgentsRouter.post('/local-agents/chat', async (req, res) => {
@@ -29,10 +36,11 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
     res.status(400).json({ error: 'Missing prompt' })
     return
   }
-  if (body.provider !== 'claude-code' && body.provider !== 'codex') {
+  if (body.provider !== 'claude-code' && body.provider !== 'codex' && body.provider !== 'ollama' && body.provider !== 'lm-studio') {
     res.status(400).json({ error: 'Unsupported local agent provider' })
     return
   }
+
 
   const requestedCwd = body.cwd || config.localAgents?.defaultCwd || config.vaultPath
   const cwd = fs.existsSync(requestedCwd) && fs.statSync(requestedCwd).isDirectory()
@@ -62,7 +70,34 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
   req.on('close', abortRun)
   res.on('close', abortRun)
 
+  if (body.provider === 'ollama' || body.provider === 'lm-studio') {
+    const defaultURL = body.provider === 'ollama' ? 'http://127.0.0.1:11434' : 'http://127.0.0.1:1234'
+    const configuredURL = body.provider === 'ollama' ? config.localAgents?.ollamaBaseURL : config.localAgents?.lmStudioBaseURL
+    const baseURL = (configuredURL || defaultURL).replace(/\/+$/, '') + '/v1'
+    const apiKey = body.provider
+    const client = new OpenAICompatibleClient(apiKey, baseURL)
+    const model = body.model || (body.provider === 'ollama' ? 'deepseek-r1:latest' : 'local-model')
+
+    try {
+      for await (const event of runAgentLoop(
+        client,
+        model,
+        [{ role: 'user', content: context }],
+        config.vaultPath
+      )) {
+        sendEvent(event)
+        if (event.type === 'error') break
+      }
+    } catch (error: any) {
+      sendEvent({ type: 'error', content: `本地 AI 执行失败: ${error?.message || '未知错误'}` })
+    } finally {
+      res.end()
+    }
+    return
+  }
+
   try {
+
     for await (const event of runLocalAgent({
       provider: body.provider,
       prompt: context,

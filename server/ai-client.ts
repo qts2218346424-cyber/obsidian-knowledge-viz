@@ -36,11 +36,18 @@ export interface AiMessageCreateParams {
   }>
 }
 
+export interface AiUsage {
+  prompt_tokens: number
+  completion_tokens: number
+  total_tokens: number
+}
+
 export interface AiClient {
   messages: {
-    create(params: AiMessageCreateParams): Promise<{ content: AiContentBlock[] }>
+    create(params: AiMessageCreateParams): Promise<{ content: AiContentBlock[]; usage?: AiUsage }>
   }
 }
+
 
 function resolveProvider(config: AiConfig): AiProvider {
   if (config.provider) return config.provider
@@ -133,7 +140,7 @@ function convertOpenAIMessages(messages: AiMessageCreateParams['messages']): Arr
   return converted
 }
 
-class OpenAICompatibleClient implements AiClient {
+export class OpenAICompatibleClient implements AiClient {
   messages = {
     create: async (params: AiMessageCreateParams) => {
       const messages: Array<Record<string, unknown>> = []
@@ -197,9 +204,16 @@ class OpenAICompatibleClient implements AiClient {
         })
       }
 
-      return { content }
+      const usage: AiUsage | undefined = data?.usage ? {
+        prompt_tokens: Number(data.usage.prompt_tokens || 0),
+        completion_tokens: Number(data.usage.completion_tokens || 0),
+        total_tokens: Number(data.usage.total_tokens || ((data.usage.prompt_tokens || 0) + (data.usage.completion_tokens || 0))),
+      } : undefined
+
+      return { content, usage }
     },
   }
+
 
   constructor(
     private readonly apiKey: string,

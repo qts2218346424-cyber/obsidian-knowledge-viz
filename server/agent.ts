@@ -50,14 +50,30 @@ export const AGENT_TOOLS: AgentTool[] = [
     },
   },
   {
-    name: 'get_stats',
-    description: '获取 vault 的统计信息（笔记数、标签数、字数等）',
+    name: 'create_error_note',
+    description: '在知识库错题本(wiki/03-真题与错题/)中归档一道错题及其解析和错因分析',
+    input_schema: {
+      type: 'object',
+      properties: {
+        subject: { type: 'string', description: '科目，如 高等数学、线性代数、概率论、数据结构、操作系统等' },
+        title: { type: 'string', description: '错题简短标题或核心考点' },
+        question: { type: 'string', description: '完整题目题干与选项' },
+        errorReason: { type: 'string', description: '错因分析或诊断，如 概念不清/公式记错/计算失误/审题疏忽' },
+        solution: { type: 'string', description: '正确解法、分步推导与防错提醒' },
+      },
+      required: ['subject', 'title', 'question', 'solution'],
+    },
+  },
+  {
+    name: 'organize_vault',
+    description: '扫描知识库结构并输出知识体系健康度、孤立笔记与重构建议',
     input_schema: {
       type: 'object',
       properties: {},
     },
   },
 ]
+
 
 // ===== Tool Execution =====
 
@@ -147,8 +163,64 @@ export function executeTool(toolName: string, input: Record<string, any>, vaultP
         const output = `笔记总数: ${notes.length}\n总字数: ${totalWords}\n标签数: ${allTags.size}\n平均每篇: ${Math.round(totalWords / Math.max(notes.length, 1))} 字`
         return { toolName, input, output, success: true }
       }
+      case 'create_error_note': {
+        const domain = (input.subject?.includes('数学') || input.subject?.includes('数') || input.subject?.includes('代') || input.subject?.includes('率')) ? 'math' : 'cs_408'
+        const subFolder = domain === 'math' ? '数学错题本' : '408错题本'
+        const now = new Date()
+        const dateStr = now.toISOString().split('T')[0]
+        const safeTitle = (input.title || '错题').replace(/[\\/:*?"<>|]/g, '_')
+        const targetPath = `wiki/03-真题与错题/${subFolder}/${dateStr}-${safeTitle}-${Date.now().toString().slice(-4)}.md`
+        const content = `# ❌ 错题复盘：${input.title}
+
+## 1. 题目
+* **科目**：${input.subject}
+* **归档时间**：${dateStr}
+
+### 题干：
+${input.question}
+
+## 2. 错因诊断
+> [!CAUTION]
+> 诊断分析：${input.errorReason || '概念不清'}
+
+## 3. 正确解法与严谨推导
+${input.solution}
+
+## 4. 关联考点
+- [ ] 对应考点：[[${input.subject}]]
+`
+        try {
+          createFile(vaultPath, targetPath, content, {
+            type: 'error_log',
+            domain,
+            subject: input.subject,
+            error_type: input.errorReason || '概念不清',
+            status: 'active',
+            tags: ['错题', domain, input.subject]
+          })
+        } catch {
+          updateFile(vaultPath, targetPath, content)
+        }
+        return { toolName, input, output: `错题已成功归档到知识库: ${targetPath}`, success: true }
+      }
+      case 'organize_vault': {
+        const notes = getNotes(vaultPath)
+        const unlinked = notes.filter(n => (n.links?.length || 0) === 0 && (n.backlinks?.length || 0) === 0).map(n => n.title).slice(0, 5)
+        const shortNotes = notes.filter(n => n.wordCount < 100).map(n => n.title).slice(0, 5)
+        return {
+          toolName,
+          input,
+          output: `知识库结构分析完成：
+- 笔记总数：${notes.length} 篇
+- 孤立无链接笔记：${unlinked.length > 0 ? unlinked.join(', ') : '无'}
+- 篇幅过短待补充笔记：${shortNotes.length > 0 ? shortNotes.join(', ') : '无'}
+建议：为孤立笔记补充双向链接 [[...]]，将重要错题笔记与核心定理笔记双向互联。`,
+          success: true
+        }
+      }
       default:
         return { toolName, input, output: `未知工具: ${toolName}`, success: false }
+
     }
   } catch (err: any) {
     return { toolName, input, output: `工具执行错误: ${err.message}`, success: false }
@@ -158,32 +230,35 @@ export function executeTool(toolName: string, input: Record<string, any>, vaultP
 // ===== Agent Loop =====
 
 export interface AgentEvent {
-  type: 'text' | 'tool_call' | 'tool_result' | 'done' | 'error'
+  type: 'text' | 'tool_call' | 'tool_result' | 'done' | 'error' | 'usage'
   content?: string
   tool?: string
   input?: Record<string, any>
   output?: string
   success?: boolean
+  usage?: {
+    prompt_tokens: number
+    completion_tokens: number
+    total_tokens: number
+  }
 }
 
-const SYSTEM_PROMPT = `你是 Knowledge Viz 知识库 AI 助手，一个专门为 Obsidian 知识库服务的智能代理。
+const SYSTEM_PROMPT = `你是 CoreForge 研核「研小核」考研智能伴学桌宠兼知识库管家（具备类似 Obsidian Claudian 的全自主 Agent 笔记管理能力）。
+你不仅能与学生亲切交流、答疑解惑、督促复习，还可以使用管理工具直接查询、管理和更新用户的本地 Obsidian Vault 知识库（408计算机与考研数学）。
 
-你的能力：
-1. **读取笔记** — 使用 read_file 工具查看任何笔记的内容
-2. **写入笔记** — 使用 write_file 工具创建新笔记或更新现有笔记
-3. **搜索笔记** — 使用 search_notes 工具在知识库中搜索相关内容
-4. **浏览目录** — 使用 list_files 工具查看 vault 的文件结构
-5. **查看统计** — 使用 get_stats 工具获取知识库统计信息
+你的核心能力工具箱：
+1. **read_file** — 查看指定笔记的完整 Markdown 内容
+2. **write_file** — 创建新笔记或更新已有笔记（严格采用标准 Markdown 格式，规范使用 KaTeX LaTeX $...$ 或 $$...$$ 表达公式）
+3. **search_notes** — 在知识库中根据考点或关键词精准检索
+4. **list_files** — 浏览整个知识库的文件与目录结构
+5. **get_stats** — 获取知识库全局统计信息（笔记数、标签分布、词数等）
+6. **create_error_note** — 一键将错题、解析与四维错因诊断归档至 wiki/03-真题与错题/
+7. **organize_vault** — 诊断知识库健康度并给出分类、双链与重构建议
 
-规则：
-- 操作文件前先用 read_file 确认内容
-- 创建笔记时使用 Markdown 格式，包含 YAML frontmatter
-- 搜索时优先使用关键词，不要用完整句子搜索
-- 回答使用中文，简洁准确
-- 当用户要求修改笔记时，先读取原内容，修改后写回
-- 每次操作后简要告知用户结果
-
-请主动使用工具来帮助用户完成任务，不要只是建议用户自己操作。`
+操作准则：
+- 当用户要求修改或补充某篇笔记时，先使用 read_file 查看原内容，再调用 write_file 写回
+- 创建笔记时注意关联到对应的学科分支（如 01-考研数学/高等数学 或 02-408计算机）
+- 语气热情、亲和、严谨，做懂学生的专属考研伙伴！`
 
 export async function* runAgentLoop(
   anthropic: AiClient,
@@ -234,10 +309,23 @@ export async function* runAgentLoop(
         tools: tools.length > 0 ? tools : undefined,
       })
 
+      if ((response as any).usage) {
+        const u = (response as any).usage
+        yield {
+          type: 'usage',
+          usage: {
+            prompt_tokens: Number(u.prompt_tokens || u.input_tokens || 0),
+            completion_tokens: Number(u.completion_tokens || u.output_tokens || 0),
+            total_tokens: Number(u.total_tokens || ((u.prompt_tokens || u.input_tokens || 0) + (u.completion_tokens || u.output_tokens || 0))),
+          }
+        }
+      }
+
       // Process response blocks
       let hasToolUse = false
       const textParts: string[] = []
       const toolCalls: { id: string; name: string; input: Record<string, any> }[] = []
+
 
       for (const block of response.content) {
         if (block.type === 'text') {

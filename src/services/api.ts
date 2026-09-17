@@ -241,13 +241,16 @@ export interface AppSettings {
 }
 
 export interface LocalAgentStatus {
-  provider: 'claude-code' | 'codex'
+  provider: 'claude-code' | 'codex' | 'ollama' | 'lm-studio'
   available: boolean
   command: string
   resolvedPath?: string
   version?: string
   detail?: string
+  models?: string[]
+  defaultModel?: string
 }
+
 
 export interface ErrorQuestion {
   source: string
