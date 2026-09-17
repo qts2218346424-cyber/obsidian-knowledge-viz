@@ -28,11 +28,15 @@ const allowedOrigins = new Set([...(config.allowedOrigins || []), ...development
 
 app.use(cors({
   origin(origin, callback) {
-    const isLocalOrigin = Boolean(origin && /^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?$/.test(origin))
+    const isLocalOrigin = Boolean(
+      origin &&
+      /^http:\/\/(?:localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(?:1[6-9]|2\d|3[01])\.\d+\.\d+)(?::\d+)?$/.test(origin)
+    )
     if (!origin || isLocalOrigin || allowedOrigins.has(origin)) {
       callback(null, true)
       return
     }
+
     callback(new Error('Origin is not allowed'))
   },
   methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -81,11 +85,12 @@ app.use((_req, res) => {
 // Export for Electron or standalone
 export function startServer(port?: number) {
   const p = port || config.port || 3001
-  const host = config.host || '127.0.0.1'
+  const host = config.host || '0.0.0.0'
   return new Promise<void>((resolve) => {
     app.listen(p, host, () => {
-      console.log(`\n  Knowledge Viz API running on http://${host}:${p}`)
+      console.log(`\n  Knowledge Viz API running on http://${host === '0.0.0.0' ? '127.0.0.1' : host}:${p} (LAN accessible)`)
       console.log(`  Vault path: ${config.vaultPath}`)
+
       console.log(`  AI: ${anthropic ? 'Connected' : 'Not configured'}`)
       console.log(`  Status: ${fs.existsSync(config.vaultPath) ? 'Connected' : 'Vault not found'}\n`)
       resolve()

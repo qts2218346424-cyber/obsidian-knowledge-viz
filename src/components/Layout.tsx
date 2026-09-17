@@ -20,12 +20,14 @@ import {
   Workflow,
   X,
   Database,
+  Smartphone,
 } from 'lucide-react'
 import { useVaultStats, useApiHealth } from '../hooks/useVaultData'
 import { useVaultEvents } from '../hooks/useVaultEvents'
 import SearchModal from './SearchModal'
 import AIAssistantModal from './AIAssistantModal'
 import ImportResourceModal from './ImportResourceModal'
+import MobileDeviceModal from './MobileDeviceModal'
 import DesktopPet from './Pet/DesktopPet'
 
 
@@ -79,6 +81,7 @@ export default function Layout({ children }: LayoutProps) {
   const [moreOpen, setMoreOpen] = useState(false)
   const [assistantOpen, setAssistantOpen] = useState(false)
   const [importModalOpen, setImportModalOpen] = useState(false)
+  const [mobileModalOpen, setMobileModalOpen] = useState(false)
   const [syncNotice, setSyncNotice] = useState<string | null>(null)
 
   const noteCount = stats?.totalNotes ?? null
@@ -189,6 +192,16 @@ export default function Layout({ children }: LayoutProps) {
           {/* Right utility toolbar */}
           <div className="ml-auto flex items-center gap-2">
             <button
+              onClick={() => setMobileModalOpen(true)}
+              aria-label="手机/平板连线"
+              title="手机/平板连线 (局域网扫码/PWA/APK)"
+              className="inline-flex h-8 items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/30 px-2.5 text-emerald-700 text-xs font-semibold shadow-2xs hover:from-emerald-500/20 hover:to-teal-500/20 transition-all cursor-pointer"
+            >
+              <Smartphone className="h-3.5 w-3.5 text-emerald-600" />
+              <span className="hidden sm:inline">手机/平板</span>
+            </button>
+
+            <button
               onClick={() => setImportModalOpen(true)}
               aria-label="导入资料与题库"
               title="导入资料与题库 (PDF/教材/真题/学情)"
@@ -269,8 +282,8 @@ export default function Layout({ children }: LayoutProps) {
         )}
       </header>
 
-      {/* Main Content Area */}
-      <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-[1600px]">
+      {/* Main Content Area with safe area for mobile bottom dock */}
+      <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-[1600px] pb-16 xl:pb-0">
         {syncNotice && (
           <div className="fixed right-5 top-[4.5rem] z-30 flex items-center gap-2 rounded-full border border-accent-sage/30 bg-white/95 px-4 py-2 text-xs font-medium text-accent-sage shadow-[0_12px_30px_rgba(0,0,0,0.1)] backdrop-blur-xl animate-fade-in-up">
             <AlertCircle className="h-3.5 w-3.5" />
@@ -280,13 +293,60 @@ export default function Layout({ children }: LayoutProps) {
         <div className="min-w-0 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
       </main>
 
+      {/* Mobile Bottom Navigation Bar (Dock) */}
+      <nav className="xl:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 border-t border-slate-200/80 px-2 py-1 flex items-center justify-around shadow-[0_-4px_25px_rgba(0,0,0,0.06)] backdrop-blur-xl">
+        <NavLink
+          to="/dashboard"
+          className={({ isActive }) => `flex flex-col items-center py-1 px-3 rounded-xl text-[11px] font-medium transition-colors ${
+            isActive ? 'text-indigo-600 font-bold' : 'text-slate-500 hover:text-slate-900'
+          }`}
+        >
+          <Home className="h-5 w-5 mb-0.5" />
+          <span>首页</span>
+        </NavLink>
+        <NavLink
+          to="/quiz"
+          className={({ isActive }) => `flex flex-col items-center py-1 px-3 rounded-xl text-[11px] font-medium transition-colors ${
+            isActive ? 'text-indigo-600 font-bold' : 'text-slate-500 hover:text-slate-900'
+          }`}
+        >
+          <ClipboardList className="h-5 w-5 mb-0.5" />
+          <span>刷题</span>
+        </NavLink>
+        <NavLink
+          to="/study"
+          className={({ isActive }) => `flex flex-col items-center py-1 px-3 rounded-xl text-[11px] font-medium transition-colors ${
+            isActive ? 'text-indigo-600 font-bold' : 'text-slate-500 hover:text-slate-900'
+          }`}
+        >
+          <GraduationCap className="h-5 w-5 mb-0.5" />
+          <span>学习</span>
+        </NavLink>
+        <NavLink
+          to="/chat"
+          className={({ isActive }) => `flex flex-col items-center py-1 px-3 rounded-xl text-[11px] font-medium transition-colors ${
+            isActive ? 'text-indigo-600 font-bold' : 'text-slate-500 hover:text-slate-900'
+          }`}
+        >
+          <MessageCircle className="h-5 w-5 mb-0.5" />
+          <span>伴学</span>
+        </NavLink>
+        <button
+          onClick={() => setMobileModalOpen(true)}
+          className="flex flex-col items-center py-1 px-3 rounded-xl text-[11px] font-medium text-emerald-600 hover:text-emerald-700 transition-colors cursor-pointer"
+        >
+          <Smartphone className="h-5 w-5 mb-0.5" />
+          <span>连线</span>
+        </button>
+      </nav>
+
       {/* Floating Desktop Companion Pet 「研小核」 */}
       <DesktopPet />
-
 
       <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
       <AIAssistantModal isOpen={assistantOpen} onClose={() => setAssistantOpen(false)} pagePath={location.pathname} />
       <ImportResourceModal isOpen={importModalOpen} onClose={() => setImportModalOpen(false)} />
+      <MobileDeviceModal isOpen={mobileModalOpen} onClose={() => setMobileModalOpen(false)} />
     </div>
   )
 }

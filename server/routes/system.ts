@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import fs from 'fs'
 import path from 'path'
+import os from 'os'
 import {
   config,
   loadedConfigPath,
@@ -24,6 +25,59 @@ systemRouter.get('/health', (_req, res) => {
     aiProvider: getAiProvider(config.ai),
   })
 })
+
+// System Network Interfaces for Mobile connection
+const getNetworkHandler = (_req: any, res: any) => {
+  try {
+    const interfaces = os.networkInterfaces()
+    const addresses: Array<{ iface: string; address: string; family: string; mac: string }> = []
+
+    for (const [name, addrs] of Object.entries(interfaces)) {
+      if (!addrs) continue
+      for (const info of addrs) {
+        if (info.family === 'IPv4' && !info.internal) {
+          addresses.push({
+            iface: name,
+            address: info.address,
+            family: info.family,
+            mac: info.mac,
+          })
+        }
+      }
+    }
+
+    const port = config.port || 3001
+    // Prioritize Wi-Fi, WLAN or common physical Ethernet over virtual NICs (WSL/Hyper-V/VMware/vEthernet)
+    const isVirtual = (name: string) => /vEthernet|VirtualBox|VMware|WSL|Loopback/i.test(name)
+    const sorted = [...addresses].sort((a, b) => {
+      const aVirt = isVirtual(a.iface) ? 1 : 0
+      const bVirt = isVirtual(b.iface) ? 1 : 0
+      if (aVirt !== bVirt) return aVirt - bVirt
+      const aWifi = /wlan|wi-?fi|无线/i.test(a.iface) ? 0 : 1
+      const bWifi = /wlan|wi-?fi|无线/i.test(b.iface) ? 0 : 1
+      return aWifi - bWifi
+    })
+
+    const preferred = sorted[0]
+    const preferredUrl = preferred ? `http://${preferred.address}:${port}` : `http://localhost:${port}`
+
+    res.json({
+      port,
+      addresses: sorted,
+      preferredUrl,
+      lanUrls: sorted.map(a => ({
+        iface: a.iface,
+        address: a.address,
+        url: `http://${a.address}:${port}`,
+      })),
+    })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+}
+
+systemRouter.get('/network', getNetworkHandler)
+systemRouter.get('/system/network', getNetworkHandler)
 
 // Settings
 systemRouter.get('/settings', (_req, res) => {

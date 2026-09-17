@@ -1,0 +1,30 @@
+﻿{
+  "short_name": "研核 CoreForge",
+  "name": "CoreForge 研核 · 408 & 考研数学",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "start_url": "/dashboard",
+  "scope": "/",
+  "background_color": "#0a0c14",
+  "theme_color": "#4f46e5",
+  "display": "standalone",
+  "orientation": "portrait",
+  "description": "CoreForge 研核 · 408 & 考研数学 智能双核研学工作台与移动端做题伴学助手"
+}
