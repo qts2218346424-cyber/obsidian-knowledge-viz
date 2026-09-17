@@ -102,7 +102,7 @@ export default function Layout({ children }: LayoutProps) {
   }, [])
 
   useEffect(() => {
-    document.title = `${currentPage?.label || '首页'} · ${vaultName} | Knowledge Viz (408 + 考研数学)`
+    document.title = `${currentPage?.label || '首页'} · ${vaultName} | CoreForge 研核 (408 + 考研数学)`
     setMobileNavOpen(false)
     setMoreOpen(false)
   }, [currentPage?.label, vaultName])
@@ -113,13 +113,14 @@ export default function Layout({ children }: LayoutProps) {
         <div className="mx-auto flex h-14 max-w-[1520px] items-center gap-3 px-4 sm:px-6">
           {/* Logo & Brand */}
           <Link to="/dashboard" className="flex shrink-0 items-center gap-2.5 rounded-xl outline-none group">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-accent-orange via-indigo-600 to-pink-500 text-white shadow-md shadow-accent-orange/25 font-bold text-xs transition-transform group-hover:scale-105">
-              KV
-            </span>
+            <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl bg-slate-950 p-1 shadow-md shadow-indigo-500/20 ring-1 ring-white/20 transition-all group-hover:scale-105 group-hover:ring-indigo-400">
+              <img src="/favicon.svg" alt="CoreForge Logo" className="h-full w-full object-contain" />
+            </div>
             <div className="flex flex-col">
-              <span className="text-[14px] font-bold tracking-tight text-slate-900 flex items-center gap-1.5">
-                Knowledge Viz
-                <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-accent-orange/10 text-accent-orange border border-accent-orange/20">
+              <span className="text-[14.5px] font-extrabold tracking-tight text-slate-900 flex items-center gap-1.5">
+                CoreForge
+                <span className="text-[11px] font-semibold text-indigo-600">研核</span>
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-gradient-to-r from-indigo-50 to-blue-50 text-indigo-700 border border-indigo-200/80 shadow-2xs">
                   408+数学 双核
                 </span>
               </span>
