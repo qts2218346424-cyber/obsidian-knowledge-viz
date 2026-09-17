@@ -1,4 +1,4 @@
-﻿import { Router } from 'express'
+import { Router } from 'express'
 import fs from 'fs'
 import path from 'path'
 import matter from 'gray-matter'
@@ -446,3 +446,114 @@ quizRouter.get('/quiz/history', (_req, res) => {
     res.status(500).json({ error: err.message })
   }
 })
+
+// ===== 7. AI Generate Questions from Note (即学即练) =====
+
+quizRouter.post('/quiz/generate-from-note', async (req, res) => {
+  try {
+    if (!anthropic) {
+      res.status(503).json({ error: 'AI 服务未配置' })
+      return
+    }
+
+    const { title, content, path: filePath } = req.body as {
+      title: string
+      content: string
+      path?: string
+    }
+
+    if (!title && !content) {
+      res.status(400).json({ error: 'Missing title or content' })
+      return
+    }
+
+    let domain: 'cs_408' | 'math' = 'cs_408'
+    let subject = '数据结构'
+    const lower = (title + ' ' + (filePath || '')).toLowerCase()
+    if (lower.includes('数学') || lower.includes('高数') || lower.includes('线代') || lower.includes('微积分') || lower.includes('概率') || lower.includes('极限') || lower.includes('导数') || lower.includes('矩阵') || lower.includes('行列式')) {
+      domain = 'math'
+      if (lower.includes('线代') || lower.includes('矩阵') || lower.includes('行列式') || lower.includes('特征值')) {
+        subject = '线性代数'
+      } else if (lower.includes('概率') || lower.includes('分布') || lower.includes('期望') || lower.includes('方差')) {
+        subject = '概率论与数理统计'
+      } else {
+        subject = '高等数学'
+      }
+    } else {
+      if (lower.includes('网络') || lower.includes('tcp') || lower.includes('ip') || lower.includes('http')) {
+        subject = '计算机网络'
+      } else if (lower.includes('组成') || lower.includes('cpu') || lower.includes('指令') || lower.includes('存储') || lower.includes('cache')) {
+        subject = '计算机组成原理'
+      } else if (lower.includes('系统') || lower.includes('进程') || lower.includes('内存') || lower.includes('调度') || lower.includes('死锁')) {
+        subject = '操作系统'
+      } else {
+        subject = '数据结构'
+      }
+    }
+
+    const prompt = `你是一名精通全国硕士研究生统一招生考试（408计算机统考与考研数学高数/线代/概率）的高校命题组资深专家。
+学生正在阅读这篇知识库笔记《${title}》，请根据笔记的核心内容与关键定理，命制 3 道针对性的随堂单选测试题（涵盖基础概念判定、计算推导或经典易错题）。
+
+【笔记标题】：${title}
+【笔记内容片段】：
+${(content || '').slice(0, 3500)}
+
+【出题要求】：
+1. 命制 3 道单项选择题（A/B/C/D 四个选项），题干考查核心关键结论、易错陷阱与计算或分析能力。
+2. 难度梯度合理（简单、中等、中等/困难）。
+3. 所有数学与计算机表达式必须严格使用 KaTeX 规范的 LaTeX 语法，用 $...$ 或 $$...$$ 包裹。
+4. 提供深入透彻的分步解析（explanation）与踩分点/思维切入点（steps）。
+5. 严格只输出纯 JSON 数组，严禁任何额外文本或 Markdown 代码块包裹：
+[
+  {
+    "id": "drill-${Date.now()}-1",
+    "domain": "${domain}",
+    "subject": "${subject}",
+    "chapter": "${title}",
+    "type": "choice",
+    "difficulty": "简单",
+    "question": "题干内容（含LaTeX）",
+    "options": {
+      "A": "选项A内容",
+      "B": "选项B内容",
+      "C": "选项C内容",
+      "D": "选项D内容"
+    },
+    "answer": "A",
+    "explanation": "详尽分步解析与原理",
+    "steps": ["破题切入点", "定理应用推导"],
+    "tags": ["即学即练", "${title}"]
+  }
+]`
+
+    const aiRes = await anthropic.messages.create({
+      model: config.ai?.model || 'deepseek-v4-pro',
+      max_tokens: 4096,
+      system: '严格只输出纯 JSON 数组，严禁任何额外解释。',
+      messages: [{ role: 'user', content: prompt }]
+    })
+
+    const raw = aiRes.content[0].type === 'text' ? aiRes.content[0].text : '[]'
+    let questions = []
+    try {
+      const cleaned = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim()
+      questions = JSON.parse(cleaned)
+    } catch {
+      const match = raw.match(/\[[\s\S]*\]/)
+      if (match) {
+        questions = JSON.parse(match[0])
+      }
+    }
+
+    res.json({
+      success: true,
+      subject,
+      domain,
+      questions
+    })
+  } catch (err: any) {
+    console.error('Generate questions from note failed:', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+

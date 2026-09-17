@@ -4,11 +4,13 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Cartes
 import {
   GraduationCap, Clock, RefreshCw, Loader2,
   ChevronRight, AlertTriangle, TrendingUp,
-  XCircle, Check, ThumbsUp, ThumbsDown, Minus, Calendar, FileText, Sparkles
+  XCircle, Check, ThumbsUp, ThumbsDown, Minus, Calendar, FileText, Sparkles, Target
 } from 'lucide-react'
 import { api, type ReviewDueData, type SubjectStats, type FileListItem, type DailyReviewData } from '../services/api'
+import QuickPracticeModal from '../components/QuickPracticeModal'
 
 type Tab = 'updates' | 'review' | 'progress' | 'errors'
+
 
 // Dynamic color palette — works with any knowledge base
 const colorPalette = [
@@ -30,6 +32,27 @@ function getCategoryColor(name: string): string {
 export default function Study() {
   const [tab, setTab] = useState<Tab>('updates')
   const [vaultName, setVaultName] = useState('知识库')
+  const [practiceModalOpen, setPracticeModalOpen] = useState(false)
+  const [practiceNote, setPracticeNote] = useState<{ title: string; content: string; path: string }>({ title: '', content: '', path: '' })
+  const [loadingNote, setLoadingNote] = useState<string | null>(null)
+
+  const handleQuickPractice = async (filePath: string, fileTitle: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setLoadingNote(filePath)
+    try {
+      const file = await api.getFile(filePath)
+      setPracticeNote({
+        title: file.title || fileTitle,
+        content: file.content || '',
+        path: filePath,
+      })
+      setPracticeModalOpen(true)
+    } catch (err: any) {
+      alert('加载笔记失败: ' + err.message)
+    } finally {
+      setLoadingNote(null)
+    }
+  }
 
   useEffect(() => {
     api.getStats().then(s => {
@@ -70,19 +93,36 @@ export default function Study() {
 
       {/* Tab content */}
       <div className="flex-1 overflow-auto">
-        {tab === 'updates' && <RecentUpdatesTab />}
+        {tab === 'updates' && <RecentUpdatesTab onQuickPractice={handleQuickPractice} loadingNote={loadingNote} />}
         {tab === 'errors' && <DailyErrorTab />}
-        {tab === 'review' && <ReviewTab />}
+        {tab === 'review' && <ReviewTab onQuickPractice={handleQuickPractice} loadingNote={loadingNote} />}
         {tab === 'progress' && <ProgressTab />}
       </div>
+
+      {/* Quick Practice Modal */}
+      <QuickPracticeModal
+        isOpen={practiceModalOpen}
+        onClose={() => setPracticeModalOpen(false)}
+        noteTitle={practiceNote.title}
+        noteContent={practiceNote.content}
+        notePath={practiceNote.path}
+      />
     </div>
   )
 }
 
+
 // ─── Recent Updates Tab ─────────────────────────────────────────────────────────
 
-function RecentUpdatesTab() {
+function RecentUpdatesTab({
+  onQuickPractice,
+  loadingNote,
+}: {
+  onQuickPractice: (path: string, title: string, e: React.MouseEvent) => void
+  loadingNote: string | null
+}) {
   const navigate = useNavigate()
+
   const [files, setFiles] = useState<FileListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [newCount, setNewCount] = useState(0)
@@ -209,12 +249,24 @@ function RecentUpdatesTab() {
                   </div>
                   <div className="text-[10px] text-warm-400 mt-0.5 truncate">{f.path}</div>
                 </div>
-                <div className="shrink-0 text-right">
-                  <div className="text-[10px] text-warm-400">{formatRelative(f.modified)}</div>
-                  <div className="text-[10px] text-warm-300">{f.wordCount} 字</div>
+                <div className="shrink-0 flex items-center gap-3">
+                  <div className="text-right">
+                    <div className="text-[10px] text-warm-400">{formatRelative(f.modified)}</div>
+                    <div className="text-[10px] text-warm-300">{f.wordCount} 字</div>
+                  </div>
+                  <button
+                    onClick={(e) => onQuickPractice(f.path, f.title, e)}
+                    disabled={loadingNote === f.path}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-200 transition-colors shrink-0"
+                    title="立即基于该笔记考点生成 3 道真题随堂测验"
+                  >
+                    {loadingNote === f.path ? <Loader2 className="w-3 h-3 animate-spin" /> : <Target className="w-3 h-3" />}
+                    🎯 即练
+                  </button>
+                  <ChevronRight className="w-3.5 h-3.5 text-warm-300 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                 </div>
-                <ChevronRight className="w-3.5 h-3.5 text-warm-300 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
               </button>
+
             )
           })}
         </div>
@@ -225,7 +277,13 @@ function RecentUpdatesTab() {
 
 // ─── Review Tab ───────────────────────────────────────────────────────────────
 
-function ReviewTab() {
+function ReviewTab({
+  onQuickPractice,
+  loadingNote,
+}: {
+  onQuickPractice: (path: string, title: string, e: React.MouseEvent) => void
+  loadingNote: string | null
+}) {
   const navigate = useNavigate()
   const [data, setData] = useState<ReviewDueData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -324,6 +382,15 @@ function ReviewTab() {
                       {priorityLabels[note.priority]}
                     </span>
                     <span className="text-[10px] text-warm-400">{note.daysSinceModified} 天前</span>
+                    <button
+                      onClick={(e) => onQuickPractice(note.path, note.title, e)}
+                      disabled={loadingNote === note.path}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-orange-50 hover:bg-orange-100 text-orange-600 border border-orange-200 transition-colors shrink-0"
+                      title="立即针对此待复习笔记生成 3 道真题测试"
+                    >
+                      {loadingNote === note.path ? <Loader2 className="w-3 h-3 animate-spin" /> : <Target className="w-3 h-3" />}
+                      🎯 即练
+                    </button>
                   </div>
                 </button>
               ))}
@@ -336,6 +403,7 @@ function ReviewTab() {
     </div>
   )
 }
+
 
 // ─── Progress Tab ─────────────────────────────────────────────────────────────
 

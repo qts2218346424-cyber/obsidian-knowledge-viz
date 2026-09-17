@@ -5,7 +5,7 @@ import {
   FolderTree, Eye, Bold, Italic, Heading, List, Code,
   Link, Table, Hash, Sparkles, Wand2,
   Undo2, Copy, Check, Quote, Strikethrough, Minus, ListOrdered,
-  Sigma,
+  Sigma, Target,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -16,6 +16,8 @@ import 'highlight.js/styles/github-dark.css'
 import { api, type FileDetail, type IngestStatus, type IngestResult } from '../services/api'
 import { useVaultTree } from '../hooks/useVaultData'
 import FileExplorer from '../components/FileExplorer'
+import QuickPracticeModal from '../components/QuickPracticeModal'
+
 
 type NoteTemplateKey = 'blank' | 'learning' | 'wrong-question' | 'idea'
 
@@ -358,6 +360,7 @@ export default function Editor() {
   const [aiAction, setAiAction] = useState('')
   const [showAiResult, setShowAiResult] = useState(false)
   const [showMathMenu, setShowMathMenu] = useState(false)
+  const [practiceModalOpen, setPracticeModalOpen] = useState(false)
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const richEditorRef = useRef<HTMLDivElement>(null)
@@ -757,6 +760,16 @@ export default function Editor() {
               导入{importing && batchProgress ? ` (${batchProgress.done}/${batchProgress.total})` : ''}
             </button>
           </div>
+
+          {/* Practice */}
+          <button
+            onClick={() => setPracticeModalOpen(true)}
+            disabled={!currentFile && !content.trim()}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            title="基于本篇笔记考点，立即生成 3 道测试题进行随堂真题测验"
+          >
+            <Target className="w-3.5 h-3.5" /> 🎯 即学即练
+          </button>
 
           <div className="ml-auto flex items-center gap-2">
             {saveMsg && (
@@ -1214,9 +1227,19 @@ export default function Editor() {
           </div>
         </div>
       )}
+
+      {/* Quick Practice Modal */}
+      <QuickPracticeModal
+        isOpen={practiceModalOpen}
+        onClose={() => setPracticeModalOpen(false)}
+        noteTitle={currentFile?.title || title || '当前考研笔记'}
+        noteContent={content}
+        notePath={currentFile?.path}
+      />
     </div>
   )
 }
+
 
 // ─── Toolbar Button ───────────────────────────────────────────────────────────
 
