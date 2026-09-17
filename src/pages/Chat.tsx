@@ -5,6 +5,7 @@ import MarkdownRenderer from '../components/MarkdownRenderer'
 import { api, type FileDetail } from '../services/api'
 import { useVaultTree } from '../hooks/useVaultData'
 import FileExplorer from '../components/FileExplorer'
+import LuluAvatar from '../components/Pet/LuluAvatar'
 
 interface ToolCallInfo {
   tool: string
@@ -64,7 +65,7 @@ export default function Chat() {
       messages: [{
         id: 'welcome',
         role: 'assistant',
-        content: '你好！我是你的知识库 AI 助手。我可以帮你：\n\n- **读取笔记** — 查看任何笔记的内容\n- **创建/修改笔记** — 直接在知识库中操作\n- **搜索知识** — 在 vault 中查找相关内容\n- **回答问题** — 基于你的笔记内容\n\n试试问我关于你的笔记的问题吧！',
+        content: '你好呀！我是你的考研 AI 伴学精灵「噜噜」🐾。\n\n无论是在桌面悬浮陪伴，还是在这里进行深度研学，我都随时为你守候！我可以帮你：\n\n- **📖 考研重点精析** — 深度剖析 408 计算机与考研数学各科定理与难点\n- **📝 真题命制与错题诊断** — 针对你的薄弱点一键生成变式训练题\n- **✏️ 知识库笔记管家** — 直接在知识库中读取、修改或新建整理笔记\n- **🎯 考研倒计时督学** — 规划每日复习节奏与番茄钟专注\n\n试试问我关于考研高数或 408 的任何问题，或者让我帮你整理笔记吧！',
         toolCalls: [],
         timestamp: new Date(),
       }],
@@ -327,7 +328,7 @@ export default function Chat() {
       {/* Main chat area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Toolbar */}
-        <div className="flex items-center gap-2 pb-3 border-b border-cream-200 mb-3">
+        <div className="flex items-center gap-2 pb-3 border-b border-cream-200 dark:border-slate-800 mb-3">
           <button
             onClick={() => setShowSessions(!showSessions)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ${
@@ -344,6 +345,12 @@ export default function Chat() {
           >
             <FolderTree className="w-3 h-3" /> 文件
           </button>
+
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-xl bg-amber-500/10 border border-amber-400/30 text-amber-900 dark:text-amber-200 text-xs font-medium">
+            <LuluAvatar size="xs" mood="idle" theme="yellow" />
+            <span>噜噜 · 考研 408 & 数学深度伴学中</span>
+          </div>
+
           <div className="ml-auto text-[11px] text-warm-400">
             Shift+Enter 换行 / Enter 发送
           </div>
@@ -439,14 +446,14 @@ function AgentMessageBubble({
   return (
     <div className={`flex items-start gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
       {/* Avatar */}
-      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
         isUser
           ? 'bg-cream-300'
-          : 'bg-gradient-to-br from-accent-orange to-accent-peach'
+          : 'bg-amber-100 dark:bg-amber-950/40 border border-amber-300/80 dark:border-amber-700/50 shadow-sm'
       }`}>
         {isUser
           ? <span className="text-[10px] text-warm-600 font-medium">你</span>
-          : <BookOpen className="w-3.5 h-3.5 text-white" />
+          : <LuluAvatar size="xs" mood="idle" theme="yellow" showAccessories={false} />
         }
       </div>
 

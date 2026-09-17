@@ -4,7 +4,6 @@ import {
   Send,
   Loader2,
   Sparkles,
-  Bot,
   Zap,
   CheckCircle2,
   RefreshCw,
@@ -13,6 +12,7 @@ import {
 import MarkdownRenderer from '../MarkdownRenderer'
 import { api, type LocalAgentStatus } from '../../services/api'
 import type { PetMood } from './DesktopPet'
+import LuluAvatar from './LuluAvatar'
 
 
 interface Message {
@@ -62,7 +62,7 @@ export default function PetAssistantDrawer({
       id: 'welcome',
       role: 'assistant',
       content:
-        '你好！我是你的考研伴学桌宠「研小核」🐾。\n\n我具备类似 Obsidian Claudian 的全功能 Agent 权限，不仅能为你解答 408 与考研数学考点，还能直接**查阅、新建、修改和整理你知识库中的真实笔记**。\n\n试着吩咐我：\n- *“搜索知识库里关于二叉树的笔记”*\n- *“帮我在高等数学下写一篇《泰勒展开八大必备公式》”*\n- *“诊断一下知识库有没有孤立笔记”*',
+        '你好！我是你的考研伴学小精灵「噜噜」🐾。\n\n我具备类似 Obsidian Claudian 的全功能 Agent 权限，不仅能为你解答 408 与考研数学考点，还能直接**查阅、新建、修改和整理你知识库中的真实笔记**。\n\n试着吩咐我：\n- *“搜索知识库里关于二叉树的笔记”*\n- *“帮我在高等数学下写一篇《泰勒展开八大必备公式》”*\n- *“诊断一下知识库有没有孤立笔记”*',
     },
   ])
   const [loading, setLoading] = useState(false)
@@ -262,14 +262,14 @@ export default function PetAssistantDrawer({
   return (
     <div className="fixed inset-y-0 right-0 z-50 w-full max-w-lg bg-white dark:bg-slate-900 border-l border-cream-200 dark:border-slate-800 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
       {/* Header */}
-      <div className="px-5 py-3.5 border-b border-cream-200 dark:border-slate-800 bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent flex items-center justify-between">
+      <div className="px-5 py-3.5 border-b border-cream-200 dark:border-slate-800 bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-transparent flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-white shadow-md shadow-orange-500/20">
-            <Bot className="w-5 h-5" />
+          <div className="w-10 h-10 flex items-center justify-center">
+            <LuluAvatar size="sm" mood="idle" theme="yellow" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-bold text-warm-900 dark:text-slate-100 text-sm">研小核 · 本地 AI 笔记管家</h3>
+              <h3 className="font-bold text-warm-900 dark:text-slate-100 text-sm">噜噜 · 考研伴学与笔记管家</h3>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 font-medium">
                 Claudian 模式
               </span>

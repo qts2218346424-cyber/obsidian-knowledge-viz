@@ -241,3 +241,90 @@ body {
   transform: rotateY(180deg);
 }
 
+/* Anime Mascot Lulu Animations */
+@keyframes lulu-float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-5px) rotate(1deg);
+  }
+}
+
+@keyframes lulu-jelly {
+  0% { transform: scale(1, 1); }
+  25% { transform: scale(1.15, 0.85); }
+  50% { transform: scale(0.9, 1.1); }
+  75% { transform: scale(1.05, 0.95); }
+  100% { transform: scale(1, 1); }
+}
+
+@keyframes lulu-ear-left {
+  0%, 100% { transform: rotate(-8deg); }
+  50% { transform: rotate(-18deg); }
+}
+
+@keyframes lulu-ear-right {
+  0%, 100% { transform: rotate(8deg); }
+  50% { transform: rotate(18deg); }
+}
+
+@keyframes lulu-sprout {
+  0%, 100% { transform: rotate(-6deg); }
+  50% { transform: rotate(8deg); }
+}
+
+@keyframes lulu-blink {
+  0%, 90%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.1); }
+}
+
+@keyframes lulu-zzz {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.7); }
+  40% { opacity: 0.9; }
+  100% { opacity: 0; transform: translate(14px, -20px) scale(1.2); }
+}
+
+@keyframes lulu-heart {
+  0% { opacity: 0; transform: translateY(0) scale(0.6); }
+  50% { opacity: 1; transform: translateY(-12px) scale(1.1); }
+  100% { opacity: 0; transform: translateY(-24px) scale(0.8); }
+}
+
+.animate-lulu-float {
+  animation: lulu-float 3.2s ease-in-out infinite;
+}
+
+.animate-lulu-jelly {
+  animation: lulu-jelly 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.animate-lulu-ear-l {
+  animation: lulu-ear-left 2.2s ease-in-out infinite;
+  transform-origin: bottom right;
+}
+
+.animate-lulu-ear-r {
+  animation: lulu-ear-right 2.2s ease-in-out infinite;
+  transform-origin: bottom left;
+}
+
+.animate-lulu-sprout {
+  animation: lulu-sprout 1.8s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+.animate-lulu-blink {
+  animation: lulu-blink 3.8s infinite;
+  transform-origin: center;
+}
+
+.animate-lulu-zzz {
+  animation: lulu-zzz 2.4s infinite ease-out;
+}
+
+.animate-lulu-heart {
+  animation: lulu-heart 1.5s ease-out forwards;
+}
+
+
