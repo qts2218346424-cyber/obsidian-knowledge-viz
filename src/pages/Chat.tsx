@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Send, Loader2, BookOpen, FolderTree, X, Wrench, ChevronDown, ChevronRight, Plus, Trash2, MessageSquare, Save } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
+import MarkdownRenderer from '../components/MarkdownRenderer'
 import { api, type FileDetail } from '../services/api'
 import { useVaultTree } from '../hooks/useVaultData'
 import FileExplorer from '../components/FileExplorer'
@@ -499,7 +498,7 @@ function AgentMessageBubble({
               <div className="whitespace-pre-wrap">{message.content}</div>
             ) : (
               <div className="prose prose-sm max-w-none [&_p]:my-1.5 [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-xs [&_ul]:my-1.5 [&_ol]:my-1.5 [&_li]:my-0.5 [&_pre]:my-2 [&_code]:text-accent-sage [&_code]:text-xs [&_a]:text-accent-orange [&_strong]:text-warm-800">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+                <MarkdownRenderer content={message.content} />
               </div>
             )}
             {message.streaming && (

@@ -1,5 +1,17 @@
 import { useState, useEffect } from 'react'
-import { FolderOpen, Play, ExternalLink, Music2, Radio, Headphones, Globe, Cloud } from 'lucide-react'
+import {
+  AlertCircle,
+  Cloud,
+  ExternalLink,
+  FolderOpen,
+  Globe,
+  Headphones,
+  LoaderCircle,
+  Music2,
+  Play,
+  Radio,
+  RefreshCw,
+} from 'lucide-react'
 import WarmCard from '../components/ui/WarmCard'
 import WarmButton from '../components/ui/WarmButton'
 import { useAudioContext } from '../contexts/AudioContext'
@@ -18,7 +30,7 @@ const CATEGORY_ICONS: Record<RadioCategory, typeof Headphones> = {
 }
 
 export default function Music() {
-  const { setQueue, state } = useAudioContext()
+  const { setQueue, play, state } = useAudioContext()
   const [musicPath, setMusicPath] = useState('')
   const [savedPath, setSavedPath] = useState('')
   const [localFiles, setLocalFiles] = useState<MusicFile[]>([])
@@ -113,6 +125,31 @@ export default function Music() {
       {/* Radio Tab */}
       {activeTab === 'radio' && (
         <div className="space-y-6">
+          {state.currentTrack?.type === 'radio' && state.status === 'error' && (
+            <div
+              role="alert"
+              className="flex items-start gap-3 rounded-2xl border border-accent-rose/25 bg-accent-rose/10 px-4 py-3"
+            >
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-accent-rose" />
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium text-warm-700">
+                  {state.currentTrack.title} 播放失败
+                </div>
+                <div className="mt-0.5 text-xs text-warm-500">
+                  {state.error || '暂时无法连接这个电台'}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => play(state.currentTrack!)}
+                className="flex shrink-0 items-center gap-1 rounded-lg border border-accent-rose/20 bg-white/60 px-2.5 py-1.5 text-xs font-medium text-accent-rose transition-colors hover:bg-white"
+              >
+                <RefreshCw className="h-3 w-3" />
+                重试
+              </button>
+            </div>
+          )}
+
           {RADIO_CATEGORIES.map(category => {
             const IconComp = CATEGORY_ICONS[category.key]
             return (
@@ -134,7 +171,10 @@ export default function Music() {
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                   {category.stations.map(station => {
-                    const isPlaying = state.currentTrack?.id === station.id && state.isPlaying
+                    const isCurrent = state.currentTrack?.id === station.id
+                    const isPlaying = isCurrent && state.isPlaying
+                    const isLoading = isCurrent && state.status === 'loading'
+                    const hasError = isCurrent && state.status === 'error'
                     return (
                       <button
                         key={station.id}
@@ -142,20 +182,28 @@ export default function Music() {
                         className={`group relative p-4 rounded-2xl border text-left transition-all duration-200 ${
                           isPlaying
                             ? 'bg-accent-orange/12 border-accent-orange/40 ring-1 ring-accent-orange/20'
-                            : 'bg-cream-50 border-cream-200 hover:bg-cream-100 hover:border-cream-300 hover:-translate-y-0.5'
+                            : hasError
+                              ? 'bg-accent-rose/10 border-accent-rose/30'
+                              : 'bg-cream-50 border-cream-200 hover:bg-cream-100 hover:border-cream-300 hover:-translate-y-0.5'
                         }`}
                       >
                         {/* Emoji + playing indicator */}
                         <div className="flex items-start justify-between mb-2">
                           <span className="text-2xl">{AMBIENT_EMOJIS[station.id] || '🎵'}</span>
-                          {isPlaying && (
+                          {isLoading && (
+                            <LoaderCircle className="h-3.5 w-3.5 animate-spin text-accent-orange" />
+                          )}
+                          {isPlaying && !isLoading && (
                             <div className="flex items-end gap-0.5 h-3.5">
                               <div className="w-0.5 bg-accent-orange rounded-full animate-bounce" style={{ height: 5, animationDelay: '0ms' }} />
                               <div className="w-0.5 bg-accent-orange rounded-full animate-bounce" style={{ height: 9, animationDelay: '150ms' }} />
                               <div className="w-0.5 bg-accent-orange rounded-full animate-bounce" style={{ height: 7, animationDelay: '300ms' }} />
                             </div>
                           )}
-                          {station.website && !isPlaying && (
+                          {hasError && (
+                            <AlertCircle className="h-3.5 w-3.5 text-accent-rose" />
+                          )}
+                          {station.website && !isPlaying && !isLoading && !hasError && (
                             <a
                               href={station.website}
                               target="_blank"

@@ -82,7 +82,7 @@ export const ENGLISH_STATIONS: RadioStation[] = [
     id: 'kexp',
     title: 'KEXP 90.3 FM',
     artist: 'Seattle Public Radio',
-    src: 'https://live-mp3-128.kexp.org',
+    src: 'https://kexp.streamguys1.com/kexp160.aac',
     type: 'radio',
     category: 'english',
     description: 'DJ commentary, interviews & eclectic music',

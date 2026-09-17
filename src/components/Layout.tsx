@@ -25,50 +25,43 @@ import { useVaultEvents } from '../hooks/useVaultEvents'
 import SearchModal from './SearchModal'
 import AIAssistantModal from './AIAssistantModal'
 
-const navGroups = [
-  {
-    label: '知识工作',
-    items: [
-      { to: '/dashboard', label: '首页', icon: Home, emoji: '🏠' },
-      { to: '/graph', label: '图谱', icon: Network, emoji: '🕸️' },
-      { to: '/editor', label: '编辑', icon: FileEdit, emoji: '✏️' },
-      { to: '/workflow', label: '整理', icon: Workflow, emoji: '🧭' },
-      { to: '/chat', label: 'AI 对话', icon: MessageCircle, emoji: '💬' },
-    ],
-  },
-  {
-    label: '学习工具',
-    items: [
-      { to: '/study', label: '学习中心', icon: GraduationCap, emoji: '📚' },
-      { to: '/quiz', label: '在线做题', icon: ClipboardList, emoji: '📝' },
-      { to: '/vocabulary', label: '背单词', icon: Languages, emoji: '📖' },
-      { to: '/pomodoro', label: '番茄钟', icon: Timer, emoji: '🍅' },
-      { to: '/music', label: '专注音乐', icon: Music, emoji: '🎵' },
-    ],
-  },
-  {
-    label: '系统',
-    items: [
-      { to: '/settings', label: '设置', icon: Settings, emoji: '⚙️' },
-    ],
-  },
+interface NavItem {
+  to: string
+  label: string
+  icon: any
+  emoji: string
+  badge?: string
+  desc?: string
+}
+
+const primaryNavItems: NavItem[] = [
+  { to: '/dashboard', label: '首页', icon: Home, emoji: '🏠' },
+  { to: '/quiz', label: '做题中心', icon: ClipboardList, emoji: '📝', badge: '408+数学' },
+  { to: '/study', label: '学习中心', icon: GraduationCap, emoji: '📚' },
+  { to: '/graph', label: '知识图谱', icon: Network, emoji: '🕸️' },
+  { to: '/editor', label: '笔记编辑', icon: FileEdit, emoji: '✏️' },
+  { to: '/chat', label: 'AI 伴学', icon: MessageCircle, emoji: '💬' },
 ]
 
-const allNavItems = navGroups.flatMap(group => group.items)
-const primaryNavItems = allNavItems.filter(item =>
-  ['/dashboard', '/editor', '/workflow', '/study'].includes(item.to)
-)
-const moreNavItems = allNavItems.filter(item => !primaryNavItems.some(primary => primary.to === item.to))
+const moreNavItems: NavItem[] = [
+  { to: '/workflow', label: '知识库整理', icon: Workflow, emoji: '🧭', desc: 'Lint、标签治理与结构优化' },
+  { to: '/vocabulary', label: '考研英语词汇', icon: Languages, emoji: '📖', desc: '核心高频大纲词汇复盘' },
+  { to: '/pomodoro', label: '专注番茄钟', icon: Timer, emoji: '🍅', desc: '心流沉浸与时间切片' },
+  { to: '/music', label: '声学专注氛围', icon: Music, emoji: '🎵', desc: '双耳节拍与白噪音音频' },
+  { to: '/settings', label: '全局系统设置', icon: Settings, emoji: '⚙️', desc: '知识库路径与 AI 服务模型' },
+]
+
+const allNavItems = [...primaryNavItems, ...moreNavItems]
 
 interface LayoutProps {
   children: ReactNode
 }
 
 function navClass(isActive: boolean) {
-  return `inline-flex items-center rounded-full px-3 py-1.5 text-[13px] transition-colors ${
+  return `relative inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[13px] font-medium transition-all duration-200 ${
     isActive
-      ? 'bg-slate-100 font-medium text-warm-900'
-      : 'text-warm-500 hover:bg-slate-100/80 hover:text-warm-900'
+      ? 'bg-slate-900 text-white shadow-sm shadow-slate-900/25'
+      : 'text-slate-600 hover:bg-slate-100/90 hover:text-slate-900'
   }`
 }
 
@@ -85,10 +78,10 @@ export default function Layout({ children }: LayoutProps) {
 
   const noteCount = stats?.totalNotes ?? null
   const connected = apiHealthy === true
-  const vaultName = stats?.vaultPath.split(/[\\/]/).filter(Boolean).pop() || '本地知识系统'
+  const vaultName = stats?.vaultPath.split(/[\\/]/).filter(Boolean).pop() || '本地知识库'
 
   useVaultEvents((event) => {
-    const action = event.type === 'file-changed' ? '文件已更新' : event.type === 'file-added' ? '新文件已加入' : '文件已删除'
+    const action = event.type === 'file-changed' ? '文件已更新' : event.type === 'file-added' ? '新笔记加入' : '文件已删除'
     setSyncNotice(`${action}：${event.path.split('/').pop()}`)
     setTimeout(() => setSyncNotice(null), 3000)
   })
@@ -109,47 +102,77 @@ export default function Layout({ children }: LayoutProps) {
   }, [])
 
   useEffect(() => {
-    document.title = `${currentPage?.label || '首页'} · ${vaultName} | Knowledge Viz`
+    document.title = `${currentPage?.label || '首页'} · ${vaultName} | Knowledge Viz (408 + 考研数学)`
     setMobileNavOpen(false)
     setMoreOpen(false)
   }, [currentPage?.label, vaultName])
 
   return (
-    <div className="min-h-screen bg-cream-50 text-warm-900">
-      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/85 backdrop-blur-xl">
-        <div className="mx-auto flex h-14 max-w-[1440px] items-center gap-3 px-4 sm:px-6">
-          <Link to="/dashboard" className="flex shrink-0 items-center gap-2.5 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-accent-orange/50">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-warm-900 text-[10px] font-semibold tracking-tight text-white">KV</span>
-            <span className="hidden text-[14px] font-semibold tracking-[-0.02em] text-warm-900 sm:inline">Knowledge Viz</span>
+    <div className="min-h-screen aurora-mesh text-slate-900 selection:bg-accent-orange/20 selection:text-accent-orange font-sans antialiased">
+      <header className="glass-header sticky top-0 z-40">
+        <div className="mx-auto flex h-14 max-w-[1520px] items-center gap-3 px-4 sm:px-6">
+          {/* Logo & Brand */}
+          <Link to="/dashboard" className="flex shrink-0 items-center gap-2.5 rounded-xl outline-none group">
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-tr from-accent-orange via-indigo-600 to-pink-500 text-white shadow-md shadow-accent-orange/25 font-bold text-xs transition-transform group-hover:scale-105">
+              KV
+            </span>
+            <div className="flex flex-col">
+              <span className="text-[14px] font-bold tracking-tight text-slate-900 flex items-center gap-1.5">
+                Knowledge Viz
+                <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-accent-orange/10 text-accent-orange border border-accent-orange/20">
+                  408+数学 双核
+                </span>
+              </span>
+            </div>
           </Link>
 
-          <nav className="ml-4 hidden flex-1 items-center justify-center gap-0.5 xl:flex" aria-label="主导航">
+          {/* Primary Navigation */}
+          <nav className="ml-4 hidden flex-1 items-center justify-center gap-1 xl:flex" aria-label="主导航">
             {primaryNavItems.map(item => (
               <NavLink key={item.to} to={item.to} className={({ isActive }) => navClass(isActive)}>
-                {item.label}
+                {({ isActive }) => (
+                  <>
+                    <item.icon className={`h-3.5 w-3.5 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                    <span>{item.label}</span>
+                    {item.badge && (
+                      <span className={`text-[9px] px-1.5 py-0.2 rounded-full font-bold uppercase tracking-wider ${
+                        isActive ? 'bg-accent-orange text-white' : 'bg-accent-orange/15 text-accent-orange'
+                      }`}>
+                        {item.badge}
+                      </span>
+                    )}
+                  </>
+                )}
               </NavLink>
             ))}
-            <div className="relative">
+
+            {/* More Tools Dropdown */}
+            <div className="relative ml-1">
               <button
                 onClick={() => setMoreOpen(previous => !previous)}
                 className={navClass(moreOpen || moreNavItems.some(item => item.to === location.pathname))}
                 aria-expanded={moreOpen}
               >
-                更多
-                <ChevronDown className={`ml-1 h-3.5 w-3.5 transition-transform ${moreOpen ? 'rotate-180' : ''}`} />
+                <span>更多工具</span>
+                <ChevronDown className={`h-3.5 w-3.5 transition-transform ${moreOpen ? 'rotate-180' : ''}`} />
               </button>
               {moreOpen && (
-                <div className="absolute right-0 top-full z-50 mt-2 w-52 rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_16px_40px_rgba(0,0,0,0.12)]">
-                  <p className="px-3 pb-1.5 pt-1 text-[10px] font-medium tracking-wide text-warm-400">扩展工具</p>
+                <div className="absolute left-0 top-full z-50 mt-2 w-64 rounded-2xl border border-slate-200/80 bg-white/95 p-2 shadow-[0_20px_45px_rgba(15,23,42,0.14)] backdrop-blur-xl animate-fade-in-up">
+                  <p className="px-3 pb-1.5 pt-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">研学辅助工具</p>
                   {moreNavItems.map(item => (
                     <NavLink
                       key={item.to}
                       to={item.to}
                       onClick={() => setMoreOpen(false)}
-                      className={({ isActive }) => `flex items-center gap-2 rounded-xl px-3 py-2 text-sm ${isActive ? 'bg-slate-100 font-medium text-warm-900' : 'text-warm-600 hover:bg-slate-100'}`}
+                      className={({ isActive }) => `flex items-center gap-3 rounded-xl px-3 py-2 text-xs transition-colors ${
+                        isActive ? 'bg-slate-100 font-semibold text-slate-900' : 'text-slate-600 hover:bg-slate-50'
+                      }`}
                     >
-                      <item.icon className="h-4 w-4 text-warm-400" />
-                      {item.label}
+                      <span className="text-base">{item.emoji}</span>
+                      <div className="min-w-0">
+                        <div className="font-medium text-slate-800">{item.label}</div>
+                        {item.desc && <div className="text-[10px] text-slate-400 truncate">{item.desc}</div>}
+                      </div>
                     </NavLink>
                   ))}
                 </div>
@@ -157,83 +180,104 @@ export default function Layout({ children }: LayoutProps) {
             </div>
           </nav>
 
-          <div className="ml-auto flex items-center gap-1.5">
+          {/* Right utility toolbar */}
+          <div className="ml-auto flex items-center gap-2">
             <button
               onClick={() => setSearchOpen(true)}
               aria-label="搜索知识"
               title="搜索知识（Ctrl+K）"
-              className="inline-flex h-8 items-center gap-2 rounded-full px-2.5 text-warm-500 transition-colors hover:bg-slate-100 hover:text-warm-900 sm:px-3"
+              className="inline-flex h-8 items-center gap-2 rounded-xl border border-slate-200/90 bg-white/80 px-3 text-slate-500 transition-all hover:border-accent-orange/40 hover:bg-white hover:text-slate-900 shadow-sm"
             >
-              <Search className="h-4 w-4" />
-              <span className="hidden text-xs lg:inline">搜索</span>
-              <kbd className="hidden rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[9px] text-warm-400 2xl:inline">Ctrl K</kbd>
+              <Search className="h-3.5 w-3.5" />
+              <span className="hidden text-xs lg:inline">全局检索...</span>
+              <kbd className="hidden rounded bg-slate-100 border border-slate-200/80 px-1.5 py-0.5 font-mono text-[9px] text-slate-500 2xl:inline">Ctrl K</kbd>
             </button>
-            <div className="hidden items-center gap-2 rounded-full px-2.5 py-1.5 text-xs text-warm-500 sm:flex" title={vaultName}>
-              <span className={`h-1.5 w-1.5 rounded-full ${connected ? 'bg-accent-sage' : 'bg-accent-rose'}`} />
-              <span className="hidden max-w-28 truncate md:inline">{connected ? '已连接' : apiHealthy === null ? '连接中' : '离线'}</span>
+
+            {/* Live Vault Status Beacon */}
+            <div className="hidden items-center gap-2 rounded-xl border border-slate-200/80 bg-white/80 px-2.5 py-1 text-xs text-slate-600 shadow-sm sm:flex backdrop-blur-sm" title={vaultName}>
+              <span className="relative flex h-2 w-2">
+                {connected && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />}
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${connected ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+              </span>
+              <span className="hidden max-w-32 truncate font-medium text-[11px] md:inline">
+                {connected ? vaultName : '未连接知识库'}
+              </span>
             </div>
-            <Link to="/settings" aria-label="设置" title="设置" className="hidden h-8 w-8 items-center justify-center rounded-full text-warm-500 transition-colors hover:bg-slate-100 hover:text-warm-900 sm:inline-flex">
+
+            <Link
+              to="/settings"
+              aria-label="设置"
+              title="系统设置"
+              className="hidden h-8 w-8 items-center justify-center rounded-xl border border-slate-200/80 bg-white/80 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 shadow-sm sm:inline-flex"
+            >
               <Settings className="h-4 w-4" />
             </Link>
+
             <button
               onClick={() => setMobileNavOpen(previous => !previous)}
               aria-label={mobileNavOpen ? '关闭导航' : '打开导航'}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-warm-600 transition-colors hover:bg-slate-100 xl:hidden"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200/80 bg-white text-slate-600 transition-colors hover:bg-slate-100 xl:hidden"
             >
-              {mobileNavOpen ? <X className="h-5 w-5" /> : <MoreHorizontal className="h-5 w-5" />}
+              {mobileNavOpen ? <X className="h-4 w-4" /> : <MoreHorizontal className="h-4 w-4" />}
             </button>
           </div>
         </div>
 
+        {/* Mobile Navigation Sheet */}
         {mobileNavOpen && (
-          <div className="border-t border-slate-200/80 bg-white px-4 pb-4 pt-3 xl:hidden">
-            <div className="mx-auto max-w-[1440px]">
-              {navGroups.map(group => (
-                <div key={group.label} className="mb-4 last:mb-0">
-                  <p className="mb-1.5 px-2 text-[11px] font-medium text-warm-400">{group.label}</p>
-                  <div className="grid grid-cols-2 gap-1 sm:grid-cols-3">
-                    {group.items.map(item => (
-                      <NavLink
-                        key={item.to}
-                        to={item.to}
-                        onClick={() => setMobileNavOpen(false)}
-                        className={({ isActive }) => `flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm ${isActive ? 'bg-slate-100 font-medium text-warm-900' : 'text-warm-600 hover:bg-slate-100'}`}
-                      >
-                        <item.icon className="h-4 w-4 text-warm-400" />
-                        {item.label}
-                      </NavLink>
-                    ))}
-                  </div>
-                </div>
-              ))}
-              <div className="flex items-center gap-2 border-t border-slate-200 pt-3 text-xs text-warm-400">
+          <div className="border-t border-slate-200/80 bg-white/95 px-4 pb-4 pt-3 xl:hidden backdrop-blur-xl">
+            <div className="mx-auto max-w-[1520px]">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {allNavItems.map(item => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    onClick={() => setMobileNavOpen(false)}
+                    className={({ isActive }) => `flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs transition-colors ${
+                      isActive
+                        ? 'border-accent-orange/40 bg-accent-orange/10 font-semibold text-accent-orange'
+                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className="text-base">{item.emoji}</span>
+                    <span className="truncate">{item.label}</span>
+                  </NavLink>
+                ))}
+              </div>
+              <div className="flex items-center gap-2 border-t border-slate-200 mt-3 pt-3 text-xs text-slate-400">
                 <BookOpen className="h-3.5 w-3.5" />
-                {noteCount !== null ? `${noteCount} 篇笔记 · ${vaultName}` : '尚未读取笔记'}
+                {noteCount !== null ? `${noteCount} 篇笔记已连接 · ${vaultName}` : '等待连接 Vault'}
               </div>
             </div>
           </div>
         )}
       </header>
 
+      {/* Main Content Area */}
       <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-[1600px]">
         {syncNotice && (
-          <div className="fixed right-5 top-[4.5rem] z-30 flex items-center gap-2 rounded-full border border-accent-sage/20 bg-white/90 px-4 py-2 text-xs text-accent-sage shadow-[0_8px_30px_rgba(0,0,0,0.08)] backdrop-blur-xl">
+          <div className="fixed right-5 top-[4.5rem] z-30 flex items-center gap-2 rounded-full border border-accent-sage/30 bg-white/95 px-4 py-2 text-xs font-medium text-accent-sage shadow-[0_12px_30px_rgba(0,0,0,0.1)] backdrop-blur-xl animate-fade-in-up">
             <AlertCircle className="h-3.5 w-3.5" />
             {syncNotice}
           </div>
         )}
-        <div className="min-w-0 px-4 py-7 sm:px-6 lg:px-10 lg:py-10">{children}</div>
+        <div className="min-w-0 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
       </main>
 
+      {/* Floating AI Copilot Trigger */}
       {!assistantOpen && (
         <button
           onClick={() => setAssistantOpen(true)}
-          aria-label="打开 AI 助手"
-          title="打开 AI 助手（Ctrl/⌘ + Shift + A）"
-          className="fixed bottom-5 right-5 z-50 inline-flex items-center gap-2 rounded-full bg-warm-900 px-4 py-3 text-xs font-medium text-white shadow-[0_12px_30px_rgba(15,23,42,0.22)] transition-transform hover:-translate-y-0.5 hover:bg-warm-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-orange/60"
+          aria-label="打开研考 AI 伴学助手"
+          title="打开研考 AI 伴学助手（Ctrl/⌘ + Shift + A）"
+          className="fixed bottom-6 right-6 z-50 inline-flex items-center gap-2.5 rounded-full bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-white/25 px-4 py-3 text-xs font-semibold text-white shadow-[0_16px_35px_rgba(15,23,42,0.35)] transition-all duration-300 hover:scale-105 hover:shadow-[0_20px_45px_rgba(99,102,241,0.4)] group"
         >
-          <Sparkles className="h-4 w-4 text-accent-orange" />
-          <span className="hidden sm:inline">问 AI</span>
+          <div className="relative">
+            <Sparkles className="h-4 w-4 text-accent-orange animate-pulse-soft" />
+            <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-slate-900" />
+          </div>
+          <span>研考 AI 伴学</span>
+          <kbd className="hidden rounded bg-white/15 px-1.5 py-0.5 font-mono text-[9px] text-white/80 sm:inline">Ctrl+Shift+A</kbd>
         </button>
       )}
 

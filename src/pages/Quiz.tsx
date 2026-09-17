@@ -1,20 +1,53 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { Upload } from 'lucide-react'
-import WarmCard from '../components/ui/WarmCard'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import {
+  Upload,
+  ChevronDown,
+  ChevronRight,
+  Sparkles,
+  Star,
+  ArrowLeft,
+  Lightbulb,
+  CheckCircle2,
+  XCircle,
+  Flame,
+} from 'lucide-react'
 import WarmButton from '../components/ui/WarmButton'
+import MarkdownRenderer from '../components/MarkdownRenderer'
 import { QUESTION_BANK, type QuizQuestion } from '../data/questions'
+import { MATH_QUESTION_BANK } from '../data/questions/math'
+import type { MathCategory, MathSubject, CsSubject, UnifiedQuestion } from '../types/subject'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-type Subject = QuizQuestion['subject']
+export type AllSubject = CsSubject | MathSubject
 type ViewMode = 'start' | 'quiz' | 'results'
 type QuizMode = 'practice' | 'exam'
+type QuestionType = 'choice' | 'blank' | 'analysis'
+
+export interface ActiveQuizQuestion {
+  id: string
+  domain: 'cs_408' | 'math'
+  subject: AllSubject
+  scope?: MathCategory[]
+  chapter?: string
+  type: QuestionType
+  difficulty: '简单' | '中等' | '困难'
+  question: string
+  options?: { A: string; B: string; C: string; D: string }
+  answer: string
+  explanation: string
+  steps?: string[]
+  keyPoints?: string[]
+  tags: string[]
+}
 
 interface SubjectInfo {
-  key: Subject
+  key: AllSubject
+  domain: 'cs_408' | 'math'
   emoji: string
   color: string
   bgColor: string
+  categories?: MathCategory[]
 }
 
 interface QuizResult {
@@ -24,20 +57,88 @@ interface QuizResult {
   timeTaken: number
   subjectBreakdown: Record<string, { total: number; correct: number }>
   wrongQuestions: Array<{
-    question: QuizQuestion
+    question: ActiveQuizQuestion
     userAnswer: string
+    errorReason?: string
   }>
   summaryPath: string
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const SUBJECTS: SubjectInfo[] = [
-  { key: '数据结构', emoji: '🧮', color: 'text-orange-600', bgColor: 'bg-orange-50 border-orange-200' },
-  { key: '计算机组成原理', emoji: '🖥️', color: 'text-blue-600', bgColor: 'bg-blue-50 border-blue-200' },
-  { key: '操作系统', emoji: '⚙️', color: 'text-green-600', bgColor: 'bg-green-50 border-green-200' },
-  { key: '计算机网络', emoji: '🌐', color: 'text-purple-600', bgColor: 'bg-purple-50 border-purple-200' },
+const ALL_SUBJECTS: SubjectInfo[] = [
+  // 408 科目
+  { key: '数据结构', domain: 'cs_408', emoji: '🧮', color: 'text-orange-600', bgColor: 'bg-orange-50 border-orange-200' },
+  { key: '计算机组成原理', domain: 'cs_408', emoji: '🖥️', color: 'text-blue-600', bgColor: 'bg-blue-50 border-blue-200' },
+  { key: '操作系统', domain: 'cs_408', emoji: '⚙️', color: 'text-green-600', bgColor: 'bg-green-50 border-green-200' },
+  { key: '计算机网络', domain: 'cs_408', emoji: '🌐', color: 'text-purple-600', bgColor: 'bg-purple-50 border-purple-200' },
+  // 考研数学科目
+  { key: '高等数学', domain: 'math', emoji: '📐', color: 'text-pink-600', bgColor: 'bg-pink-50 border-pink-200', categories: ['数一', '数二', '数三'] },
+  { key: '线性代数', domain: 'math', emoji: '🔢', color: 'text-indigo-600', bgColor: 'bg-indigo-50 border-indigo-200', categories: ['数一', '数二', '数三'] },
+  { key: '概率论与数理统计', domain: 'math', emoji: '🎲', color: 'text-teal-600', bgColor: 'bg-teal-50 border-teal-200', categories: ['数一', '数三'] },
 ]
+
+const ERROR_REASONS = ['概念不清', '公式记错', '计算失误', '忽略定理前提', '思路阻塞', '审题遗漏']
+
+const SCRATCHPAD_MATH_SYMBOLS = [
+  { label: '∫ dx', code: '\\int_{a}^{b} f(x)\\,dx' },
+  { label: 'lim', code: '\\lim_{x \\to 0}' },
+  { label: '∑', code: '\\sum_{i=1}^{n}' },
+  { label: '√x', code: '\\sqrt{x}' },
+  { label: 'a/b', code: '\\frac{a}{b}' },
+  { label: '∂f/∂x', code: '\\frac{\\partial f}{\\partial x}' },
+  { label: 'A⁻¹', code: 'A^{-1}' },
+  { label: 'λ', code: '\\lambda' },
+  { label: '±', code: '\\pm' },
+  { label: '∞', code: '\\infty' },
+]
+
+function convertCsQuestion(q: QuizQuestion): ActiveQuizQuestion {
+  return {
+    id: q.id,
+    domain: 'cs_408',
+    subject: q.subject,
+    type: 'choice',
+    difficulty: q.difficulty,
+    question: q.question,
+    options: q.options,
+    answer: q.answer,
+    explanation: q.explanation,
+    tags: q.tags,
+  }
+}
+
+function convertMathQuestion(q: UnifiedQuestion): ActiveQuizQuestion {
+  const optArr = q.options || []
+  const cleanOption = (text?: string) => text ? text.replace(/^[A-D][.、\s]+/, '').trim() : ''
+
+  let optionsObj: { A: string; B: string; C: string; D: string } | undefined = undefined
+  if (optArr.length >= 2) {
+    optionsObj = {
+      A: cleanOption(optArr[0]),
+      B: cleanOption(optArr[1]),
+      C: cleanOption(optArr[2] || ''),
+      D: cleanOption(optArr[3] || ''),
+    }
+  }
+
+  return {
+    id: q.id,
+    domain: 'math',
+    subject: q.subject as MathSubject,
+    scope: q.scope,
+    chapter: q.chapter,
+    type: q.type || (optionsObj ? 'choice' : 'blank'),
+    difficulty: q.difficulty,
+    question: q.question,
+    options: optionsObj,
+    answer: q.correctAnswer || 'A',
+    explanation: q.explanation,
+    steps: q.steps,
+    keyPoints: q.keyPoints,
+    tags: q.tags,
+  }
+}
 
 function shuffleArray<T>(arr: T[]): T[] {
   const shuffled = [...arr]
@@ -54,31 +155,41 @@ function formatTime(seconds: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
-// ── Component ──────────────────────────────────────────────────────────────────
+// ── Main Component ──────────────────────────────────────────────────────────
 
 export default function Quiz() {
   const [view, setView] = useState<ViewMode>('start')
 
-  // Start view state
-  const [selectedSubjects, setSelectedSubjects] = useState<Set<Subject>>(new Set(SUBJECTS.map(s => s.key)))
+  // Subject and category filters
+  const [domainFilter, setDomainFilter] = useState<'all' | 'cs_408' | 'math'>('all')
+  const [mathCategory, setMathCategory] = useState<MathCategory | 'all'>('all')
+  const [selectedSubjects, setSelectedSubjects] = useState<Set<AllSubject>>(new Set(ALL_SUBJECTS.map(s => s.key)))
+
+  // Practice mode & question count
   const [mode, setMode] = useState<QuizMode>('practice')
   const [questionCount, setQuestionCount] = useState(20)
 
-  // Quiz state
-  const [questions, setQuestions] = useState<QuizQuestion[]>([])
+  // Quiz active state
+  const [questions, setQuestions] = useState<ActiveQuizQuestion[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [selectedOption, setSelectedOption] = useState<string | null>(null)
+  const [blankInput, setBlankInput] = useState('')
   const [showFeedback, setShowFeedback] = useState(false)
+  const [showSteps, setShowSteps] = useState(false)
   const [timeElapsed, setTimeElapsed] = useState(0)
-  const [examNavGrid, setExamNavGrid] = useState(false)
+  const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set())
+  const [errorReasons, setErrorReasons] = useState<Record<string, string>>({})
+  const [scratchpads, setScratchpads] = useState<Record<string, string>>({})
+  const [activeSideTab, setActiveSideTab] = useState<'palette' | 'scratchpad' | 'hints'>('palette')
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const scratchpadRef = useRef<HTMLTextAreaElement>(null)
 
   // Results state
   const [result, setResult] = useState<QuizResult | null>(null)
 
-  // Import state
-  const [customQuestions, setCustomQuestions] = useState<QuizQuestion[]>([])
+  // Custom import state
+  const [customQuestions, setCustomQuestions] = useState<ActiveQuizQuestion[]>([])
   const [showImportPanel, setShowImportPanel] = useState(false)
   const [importTab, setImportTab] = useState<'file' | 'text' | 'ai'>('file')
   const [importText, setImportText] = useState('')
@@ -87,6 +198,31 @@ export default function Quiz() {
   const [aiSubject, setAiSubject] = useState<string>('all')
   const [isGenerating, setIsGenerating] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // ── Unified Question Pool ───────────────────────────────────────────────────
+
+  const builtInQuestions = useMemo(() => [
+    ...QUESTION_BANK.map(convertCsQuestion),
+    ...MATH_QUESTION_BANK.map(convertMathQuestion),
+  ], [])
+
+  const allAvailableQuestions = useMemo(() => {
+    const combined = [...builtInQuestions, ...customQuestions]
+    return combined.filter(q => {
+      if (!selectedSubjects.has(q.subject)) return false
+      if (domainFilter === 'cs_408' && q.domain !== 'cs_408') return false
+      if (domainFilter === 'math' && q.domain !== 'math') return false
+      if (q.domain === 'math' && mathCategory !== 'all') {
+        if (q.scope && !q.scope.includes(mathCategory)) return false
+      }
+      return true
+    })
+  }, [builtInQuestions, customQuestions, selectedSubjects, domainFilter, mathCategory])
+
+  const displayedSubjects = useMemo(() => {
+    if (domainFilter === 'all') return ALL_SUBJECTS
+    return ALL_SUBJECTS.filter(s => s.domain === domainFilter)
+  }, [domainFilter])
 
   // ── Timer ──────────────────────────────────────────────────────────────────
 
@@ -101,22 +237,76 @@ export default function Quiz() {
     }
   }, [view])
 
-  // ── Quiz lifecycle ─────────────────────────────────────────────────────────
+  // ── Keyboard Shortcuts (Linear-style) ──────────────────────────────────────
+
+  useEffect(() => {
+    if (view !== 'quiz' || questions.length === 0) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if typing in text inputs or textarea
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
+
+      const key = e.key.toUpperCase()
+      if (['A', 'B', 'C', 'D'].includes(key)) {
+        handleOptionSelect(key)
+      } else if (['1', '2', '3', '4'].includes(e.key)) {
+        const map: Record<string, string> = { '1': 'A', '2': 'B', '3': 'C', '4': 'D' }
+        handleOptionSelect(map[e.key])
+      } else if (e.key === 'Enter' || e.key === 'ArrowRight') {
+        if (mode === 'practice' && showFeedback) {
+          advanceQuestion()
+        }
+      } else if (e.key === 'ArrowLeft') {
+        if (currentIndex > 0) goToQuestion(currentIndex - 1)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [view, questions, currentIndex, mode, showFeedback, answers])
+
+  // ── Handlers ───────────────────────────────────────────────────────────────
+
+  const handleDomainFilterChange = (domain: 'all' | 'cs_408' | 'math') => {
+    setDomainFilter(domain)
+    if (domain === 'cs_408') {
+      setSelectedSubjects(new Set(ALL_SUBJECTS.filter(s => s.domain === 'cs_408').map(s => s.key)))
+    } else if (domain === 'math') {
+      setSelectedSubjects(new Set(ALL_SUBJECTS.filter(s => s.domain === 'math').map(s => s.key)))
+    } else {
+      setSelectedSubjects(new Set(ALL_SUBJECTS.map(s => s.key)))
+    }
+  }
 
   const startQuiz = useCallback(() => {
-    const allQuestions = [...QUESTION_BANK, ...customQuestions]
-    const pool = allQuestions.filter((q) => selectedSubjects.has(q.subject))
-    const shuffled = shuffleArray(pool)
+    if (allAvailableQuestions.length === 0) return
+    const shuffled = shuffleArray(allAvailableQuestions)
     const selected = shuffled.slice(0, questionCount)
     setQuestions(selected)
     setCurrentIndex(0)
     setAnswers({})
     setSelectedOption(null)
+    setBlankInput('')
     setShowFeedback(false)
+    setShowSteps(false)
     setTimeElapsed(0)
-    setExamNavGrid(false)
+    setBookmarkedIds(new Set())
+    setErrorReasons({})
+    setScratchpads({})
+    setActiveSideTab('palette')
     setView('quiz')
-  }, [selectedSubjects, questionCount, customQuestions])
+  }, [allAvailableQuestions, questionCount])
+
+  const goToQuestion = (index: number) => {
+    if (index < 0 || index >= questions.length) return
+    setCurrentIndex(index)
+    const q = questions[index]
+    setSelectedOption(answers[q.id] || null)
+    setBlankInput(answers[q.id] || '')
+    setShowFeedback(mode === 'practice' && Boolean(answers[q.id]))
+    setShowSteps(false)
+  }
 
   const handleOptionSelect = useCallback((option: string) => {
     if (view !== 'quiz' || questions.length === 0) return
@@ -129,31 +319,62 @@ export default function Quiz() {
       const newAnswers = { ...answers, [q.id]: option }
       setAnswers(newAnswers)
     } else {
-      // exam mode — allow changing answers
       setSelectedOption(option)
       const newAnswers = { ...answers, [q.id]: option }
       setAnswers(newAnswers)
     }
   }, [view, questions, currentIndex, mode, showFeedback, answers])
 
+  const handleBlankSubmit = () => {
+    if (!blankInput.trim()) return
+    const q = questions[currentIndex]
+    setSelectedOption(blankInput.trim())
+    setShowFeedback(true)
+    setAnswers({ ...answers, [q.id]: blankInput.trim() })
+  }
+
+  const toggleBookmark = (id: string) => {
+    setBookmarkedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const recordErrorReason = (reason: string) => {
+    const q = questions[currentIndex]
+    setErrorReasons(prev => ({ ...prev, [q.id]: reason }))
+  }
+
+  const insertScratchpadSymbol = (symbolCode: string) => {
+    const el = scratchpadRef.current
+    if (!el) return
+    const q = questions[currentIndex]
+    const currentText = scratchpads[q.id] || ''
+    const start = el.selectionStart
+    const end = el.selectionEnd
+    const nextText = currentText.substring(0, start) + ` ${symbolCode} ` + currentText.substring(end)
+    setScratchpads(prev => ({ ...prev, [q.id]: nextText }))
+    setTimeout(() => {
+      el.focus()
+      el.setSelectionRange(start + symbolCode.length + 2, start + symbolCode.length + 2)
+    }, 0)
+  }
+
   const advanceQuestion = useCallback(() => {
     if (currentIndex < questions.length - 1) {
-      setCurrentIndex((i) => i + 1)
-      const nextQ = questions[currentIndex + 1]
-      setSelectedOption(answers[nextQ.id] || null)
-      setShowFeedback(false)
+      goToQuestion(currentIndex + 1)
     } else {
-      // Last question in practice mode — auto-submit
       finishQuiz()
     }
-  }, [currentIndex, questions, answers])
+  }, [currentIndex, questions, answers, mode])
 
   const finishQuiz = useCallback(async (overrideAnswers?: Record<string, string>) => {
     if (timerRef.current) clearInterval(timerRef.current)
     const finalAnswers = overrideAnswers || answers
     setView('results')
 
-    // Grade locally first
     let correctCount = 0
     const wrongQuestions: QuizResult['wrongQuestions'] = []
     const subjectBreakdown: Record<string, { total: number; correct: number }> = {}
@@ -165,11 +386,20 @@ export default function Quiz() {
       subjectBreakdown[q.subject].total++
 
       const userAns = finalAnswers[q.id]
-      if (userAns === q.answer) {
+      const isCorrect = userAns && (
+        userAns.trim().toUpperCase() === q.answer.trim().toUpperCase() ||
+        userAns.trim() === q.answer.replace(/[\$\\s]/g, '')
+      )
+
+      if (isCorrect) {
         correctCount++
         subjectBreakdown[q.subject].correct++
       } else {
-        wrongQuestions.push({ question: q, userAnswer: userAns || '未作答' })
+        wrongQuestions.push({
+          question: q,
+          userAnswer: userAns || '未作答',
+          errorReason: errorReasons[q.id],
+        })
       }
     }
 
@@ -184,7 +414,6 @@ export default function Quiz() {
     }
     setResult(localResult)
 
-    // Submit to server
     try {
       const resp = await fetch('/api/quiz/submit', {
         method: 'POST',
@@ -208,37 +437,57 @@ export default function Quiz() {
         setResult((prev) => prev ? { ...prev, summaryPath: data.summaryPath || '' } : prev)
       }
     } catch {
-      // Server may be unavailable, local result is still shown
+      // Local result shown
     }
-  }, [answers, questions, timeElapsed, mode])
+  }, [answers, questions, timeElapsed, mode, errorReasons])
 
-  // ── Import handlers ─────────────────────────────────────────────────────────
+  // ── Import Handlers ────────────────────────────────────────────────────────
 
-  const VALID_SUBJECTS = ['数据结构', '计算机组成原理', '操作系统', '计算机网络'] as const
+  const VALID_SUBJECTS: AllSubject[] = [
+    '数据结构', '计算机组成原理', '操作系统', '计算机网络',
+    '高等数学', '线性代数', '概率论与数理统计',
+  ]
   const VALID_DIFFICULTIES = ['简单', '中等', '困难'] as const
 
   const validateAndImport = useCallback((data: unknown): number => {
     if (!Array.isArray(data)) return 0
     let count = 0
-    const newQs: QuizQuestion[] = []
+    const newQs: ActiveQuizQuestion[] = []
     for (const q of data) {
-      if (q && typeof q === 'object' && q.question && q.options && q.answer) {
-        const subj = VALID_SUBJECTS.includes(q.subject) ? q.subject : '数据结构'
+      if (q && typeof q === 'object' && q.question && (q.options || q.correctAnswer || q.answer)) {
+        const isMathSubj = ['高等数学', '线性代数', '概率论与数理统计'].includes(q.subject)
+        const subj: AllSubject = VALID_SUBJECTS.includes(q.subject) ? q.subject : '高等数学'
         const diff = VALID_DIFFICULTIES.includes(q.difficulty) ? q.difficulty : '中等'
-        newQs.push({
-          id: `imp-${Date.now()}-${count}`,
-          subject: subj as QuizQuestion['subject'],
-          difficulty: diff as QuizQuestion['difficulty'],
-          question: String(q.question),
-          options: {
+
+        let optObj: { A: string; B: string; C: string; D: string } | undefined = undefined
+        if (Array.isArray(q.options) && q.options.length >= 2) {
+          optObj = {
+            A: String(q.options[0]).replace(/^[A-D][.、\s]+/, '').trim(),
+            B: String(q.options[1]).replace(/^[A-D][.、\s]+/, '').trim(),
+            C: String(q.options[2] || '').replace(/^[A-D][.、\s]+/, '').trim(),
+            D: String(q.options[3] || '').replace(/^[A-D][.、\s]+/, '').trim(),
+          }
+        } else if (q.options && typeof q.options === 'object') {
+          optObj = {
             A: String(q.options.A || ''),
             B: String(q.options.B || ''),
             C: String(q.options.C || ''),
             D: String(q.options.D || ''),
-          },
-          answer: (['A', 'B', 'C', 'D'].includes(q.answer) ? q.answer : 'A') as 'A' | 'B' | 'C' | 'D',
+          }
+        }
+
+        newQs.push({
+          id: `imp-${Date.now()}-${count}`,
+          domain: isMathSubj ? 'math' : 'cs_408',
+          subject: subj,
+          type: q.type || (optObj ? 'choice' : 'blank'),
+          difficulty: diff,
+          question: String(q.question),
+          options: optObj,
+          answer: String(q.answer || q.correctAnswer || 'A'),
           explanation: String(q.explanation || '暂无解析'),
-          tags: Array.isArray(q.tags) ? q.tags.map(String) : ['导入'],
+          steps: Array.isArray(q.steps) ? q.steps.map(String) : undefined,
+          tags: Array.isArray(q.tags) ? q.tags.map(String) : ['自定义导入'],
         })
         count++
       }
@@ -258,9 +507,9 @@ export default function Quiz() {
         const data = JSON.parse(ev.target?.result as string)
         const count = validateAndImport(data)
         if (count > 0) {
-          setImportStatus({ type: 'success', message: `成功导入 ${count} 道题目` })
+          setImportStatus({ type: 'success', message: `成功导入 ${count} 道试题` })
         } else {
-          setImportStatus({ type: 'error', message: '未找到有效题目，请检查格式' })
+          setImportStatus({ type: 'error', message: '未找到有效试题，请核对 JSON 格式' })
         }
       } catch {
         setImportStatus({ type: 'error', message: 'JSON 解析失败，请检查文件格式' })
@@ -275,57 +524,55 @@ export default function Quiz() {
       const data = JSON.parse(importText)
       const count = validateAndImport(data)
       if (count > 0) {
-        setImportStatus({ type: 'success', message: `成功导入 ${count} 道题目` })
+        setImportStatus({ type: 'success', message: `成功导入 ${count} 道试题` })
         setImportText('')
       } else {
-        setImportStatus({ type: 'error', message: '未找到有效题目，请检查格式' })
+        setImportStatus({ type: 'error', message: '未找到有效试题，请核对 JSON 格式' })
       }
     } catch {
-      setImportStatus({ type: 'error', message: 'JSON 解析失败，请检查格式' })
+      setImportStatus({ type: 'error', message: 'JSON 格式解析失败' })
     }
   }, [importText, validateAndImport])
 
   const handleAiGenerate = useCallback(async () => {
     if (!aiTopic.trim() || isGenerating) return
     setIsGenerating(true)
-    setImportStatus({ type: 'info', message: 'AI 正在生成题目，请稍候...' })
+    setImportStatus({ type: 'info', message: 'AI 正在编写高质量真题与分步推导，请稍候...' })
     try {
-      const subjectHint = aiSubject === 'all' ? '综合科目' : aiSubject
+      const subjectHint = aiSubject === 'all' ? '考研数学或408专业课' : aiSubject
       const resp = await fetch('/api/quiz/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: `请根据以下知识点生成10道选择题。科目范围：${subjectHint}。知识点：${aiTopic}。\n\n请严格按以下JSON数组格式输出，不要添加任何额外文字：\n[{"subject":"数据结构","difficulty":"中等","question":"题目内容","options":{"A":"选项A","B":"选项B","C":"选项C","D":"选项D"},"answer":"A","explanation":"解析","tags":["标签1"]}]`,
+          prompt: `请根据以下知识点生成5-10道选择题（如有数学公式，必须使用标准LaTeX格式，如 $\\lim_{x \\to 0}$）。科目范围：${subjectHint}。知识点：${aiTopic}。\n\n请严格按以下JSON数组格式输出：\n[{"subject":"高等数学","difficulty":"中等","question":"题目内容","options":{"A":"选项A","B":"选项B","C":"选项C","D":"选项D"},"answer":"A","explanation":"解析","steps":["步骤1","步骤2"],"tags":["标签1"]}]`,
         }),
       })
       if (!resp.ok) throw new Error('Server error')
-      const result = await resp.json()
+      const resData = await resp.json()
       let parsed: unknown
-      if (typeof result.questions === 'string') {
-        const text = result.questions.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
+      if (typeof resData.questions === 'string') {
+        const text = resData.questions.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
         const start = text.indexOf('[')
         const end = text.lastIndexOf(']')
-        if (start >= 0 && end > start) {
-          parsed = JSON.parse(text.slice(start, end + 1))
-        }
-      } else if (Array.isArray(result.questions)) {
-        parsed = result.questions
+        if (start >= 0 && end > start) parsed = JSON.parse(text.slice(start, end + 1))
+      } else if (Array.isArray(resData.questions)) {
+        parsed = resData.questions
       }
       const count = validateAndImport(parsed)
       if (count > 0) {
-        setImportStatus({ type: 'success', message: `AI 生成了 ${count} 道题目` })
+        setImportStatus({ type: 'success', message: `AI 成功生成了 ${count} 道专业试题！` })
         setAiTopic('')
       } else {
-        setImportStatus({ type: 'error', message: 'AI 返回的题目格式有误' })
+        setImportStatus({ type: 'error', message: 'AI 返回的格式有偏差，请重试' })
       }
     } catch {
-      setImportStatus({ type: 'error', message: 'AI 生成失败，请稍后再试' })
+      setImportStatus({ type: 'error', message: 'AI 出题失败，请检查服务配置' })
     } finally {
       setIsGenerating(false)
     }
   }, [aiTopic, aiSubject, isGenerating, validateAndImport])
 
-  const toggleSubject = (subject: Subject) => {
+  const toggleSubject = (subject: AllSubject) => {
     setSelectedSubjects((prev) => {
       const next = new Set(prev)
       if (next.has(subject)) {
@@ -337,626 +584,912 @@ export default function Quiz() {
     })
   }
 
-  // ── Start View ─────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
+  // VIEW 1: START SELECTION ARENA
+  // ─────────────────────────────────────────────────────────────────────────────
 
   if (view === 'start') {
-    const allPool = [...QUESTION_BANK, ...customQuestions]
-    const availableCount = allPool.filter((q) => selectedSubjects.has(q.subject)).length
-    const maxQuestions = Math.min(40, availableCount)
-    const effectiveCount = Math.min(questionCount, maxQuestions)
+    const availableCount = allAvailableQuestions.length
+    const maxQuestions = Math.min(50, availableCount)
+    const effectiveCount = Math.min(questionCount, Math.max(1, maxQuestions))
 
     return (
-      <div className="space-y-6 animate-fade-in-up">
-        <div>
-          <h1 className="text-2xl font-bold text-warm-800">📝 在线做题</h1>
-          <p className="text-sm text-warm-500 mt-1">专业课选择题练习</p>
+      <div className="mx-auto max-w-[1520px] space-y-7 animate-fade-in-up">
+        {/* Header Hero */}
+        <div className="relative overflow-hidden rounded-3xl border border-white/80 bg-gradient-to-br from-white/90 via-white/80 to-accent-peach/20 p-7 sm:p-9 shadow-[0_20px_50px_rgba(15,23,42,0.05)] backdrop-blur-xl">
+          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-accent-orange/20 bg-accent-orange/10 px-3 py-1 text-xs font-semibold text-accent-orange">
+                <Flame className="h-3.5 w-3.5" />
+                <span>全真题库 · 分步推导 · 错因闭环</span>
+              </div>
+              <h1 className="mt-3 text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
+                <span>研考做题中心 (408 专业课 + 考研数学)</span>
+              </h1>
+              <p className="mt-2 text-sm text-slate-500 max-w-2xl">
+                支持数一、数二、数三卷种针对性专项练习，LaTeX 严谨推导与分步解析，做题记录与错题自动归档至本地 Obsidian 知识库。
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <WarmButton
+                size="lg"
+                onClick={startQuiz}
+                disabled={availableCount === 0}
+                className="bg-gradient-to-r from-accent-orange via-blue-600 to-indigo-600 text-white shadow-lg shadow-accent-orange/25 px-8 py-3.5 text-sm font-semibold hover:scale-105 transition-transform"
+              >
+                {availableCount > 0 ? `开始做题 (${effectiveCount} 题) →` : '暂无匹配试题'}
+              </WarmButton>
+            </div>
+          </div>
         </div>
 
-        {/* Subject Selection */}
-        <div className="grid grid-cols-2 gap-3 max-w-lg">
-          {SUBJECTS.map((s) => {
-            const count = allPool.filter(q => q.subject === s.key).length
+        {/* Filter Controls Bar */}
+        <div className="glass-panel rounded-2xl p-4 flex flex-wrap items-center gap-3 justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold text-slate-500 mr-1">学科领域:</span>
+            <div className="flex rounded-xl border border-slate-200 bg-slate-100/80 p-1">
+              <button
+                onClick={() => handleDomainFilterChange('all')}
+                className={`rounded-lg px-3.5 py-1.5 text-xs font-medium transition-all ${
+                  domainFilter === 'all' ? 'bg-white text-slate-900 shadow-sm font-semibold' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                全部学科
+              </button>
+              <button
+                onClick={() => handleDomainFilterChange('math')}
+                className={`rounded-lg px-3.5 py-1.5 text-xs font-medium transition-all ${
+                  domainFilter === 'math' ? 'bg-white text-pink-600 shadow-sm font-semibold' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                📐 考研数学
+              </button>
+              <button
+                onClick={() => handleDomainFilterChange('cs_408')}
+                className={`rounded-lg px-3.5 py-1.5 text-xs font-medium transition-all ${
+                  domainFilter === 'cs_408' ? 'bg-white text-blue-600 shadow-sm font-semibold' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                🖥️ 408 计算机
+              </button>
+            </div>
+
+            {(domainFilter === 'math' || domainFilter === 'all') && (
+              <div className="flex items-center gap-1 ml-2 rounded-xl border border-slate-200 bg-slate-100/80 p-1 text-xs">
+                <span className="text-slate-400 pl-2 pr-1 text-[11px]">数学卷种:</span>
+                {(['all', '数一', '数二', '数三'] as const).map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setMathCategory(cat)}
+                    className={`rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all ${
+                      mathCategory === cat ? 'bg-white text-accent-orange shadow-sm font-semibold' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    {cat === 'all' ? '全部卷' : cat}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={() => setSelectedSubjects(new Set(displayedSubjects.map(s => s.key)))}
+            className="text-xs font-medium text-accent-orange hover:underline"
+          >
+            全选当前组学科
+          </button>
+        </div>
+
+        {/* Subjects Cards Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3.5">
+          {displayedSubjects.map((s) => {
+            const count = [...builtInQuestions, ...customQuestions].filter(q => {
+              if (q.subject !== s.key) return false
+              if (q.domain === 'math' && mathCategory !== 'all') {
+                if (q.scope && !q.scope.includes(mathCategory)) return false
+              }
+              return true
+            }).length
             const isSelected = selectedSubjects.has(s.key)
             return (
-              <WarmCard
+              <button
                 key={s.key}
-                hover
-                className={`cursor-pointer border-2 transition-all ${
-                  isSelected
-                    ? `${s.bgColor} border-current shadow-sm`
-                    : 'bg-cream-50 border-cream-200 opacity-60'
-                }`}
+                type="button"
                 onClick={() => toggleSubject(s.key)}
+                className={`glass-panel rounded-2xl p-4 text-left transition-all relative border-2 ${
+                  isSelected
+                    ? `${s.bgColor} border-current shadow-md`
+                    : 'bg-white/60 border-slate-200/60 opacity-60 hover:opacity-100'
+                }`}
               >
-                <div className="flex items-center gap-3 py-1">
+                <div className="flex items-center justify-between mb-2">
                   <span className="text-2xl">{s.emoji}</span>
-                  <div className="min-w-0">
-                    <div className={`text-sm font-semibold truncate ${isSelected ? s.color : 'text-warm-500'}`}>
-                      {s.key}
-                    </div>
-                    <div className="text-xs text-warm-400">{count} 题</div>
-                  </div>
                   {isSelected && (
-                    <span className="ml-auto text-sm">✓</span>
+                    <span className="h-5 w-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] font-bold">
+                      ✓
+                    </span>
                   )}
                 </div>
-              </WarmCard>
+                <div className={`text-xs font-bold truncate ${isSelected ? s.color : 'text-slate-700'}`}>
+                  {s.key}
+                </div>
+                <div className="text-[10px] text-slate-400 mt-1 font-medium">{count} 题储备</div>
+              </button>
             )
           })}
         </div>
 
-        {/* Mode Toggle */}
-        <WarmCard className="max-w-lg">
-          <div className="space-y-3">
-            <div className="text-sm font-medium text-warm-700">练习模式</div>
-            <div className="flex gap-2">
+        {/* Mode & Settings Config Cards */}
+        <div className="grid gap-5 md:grid-cols-2">
+          {/* Mode Selector */}
+          <div className="glass-panel rounded-3xl p-6 space-y-4">
+            <h2 className="text-sm font-bold text-slate-900">演练模式选择</h2>
+            <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => setMode('practice')}
-                className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${
+                className={`rounded-2xl p-4 text-left border-2 transition-all ${
                   mode === 'practice'
-                    ? 'bg-accent-orange text-white shadow-sm'
-                    : 'bg-cream-100 text-warm-500 hover:bg-cream-200'
+                    ? 'border-accent-orange bg-accent-orange/8 shadow-sm'
+                    : 'border-slate-200 bg-white/70 hover:bg-white'
                 }`}
               >
-                📖 练习模式
-                <div className="text-xs mt-0.5 opacity-80">即时反馈 + 解析</div>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">📖</span>
+                  <span className="text-sm font-bold text-slate-900">练习模式 (推荐)</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                  做完即刻展示 KaTeX 详细推导与定理引用，支持针对错题进行错因标注。
+                </p>
               </button>
+
               <button
                 onClick={() => setMode('exam')}
-                className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${
+                className={`rounded-2xl p-4 text-left border-2 transition-all ${
                   mode === 'exam'
-                    ? 'bg-accent-orange text-white shadow-sm'
-                    : 'bg-cream-100 text-warm-500 hover:bg-cream-200'
+                    ? 'border-accent-orange bg-accent-orange/8 shadow-sm'
+                    : 'border-slate-200 bg-white/70 hover:bg-white'
                 }`}
               >
-                📋 考试模式
-                <div className="text-xs mt-0.5 opacity-80">批量提交 + 评分</div>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">📋</span>
+                  <span className="text-sm font-bold text-slate-900">全真考试模式</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                  全真计时模考，统一通过答题卡交卷并生成各学科正确率深度成绩单。
+                </p>
               </button>
             </div>
           </div>
-        </WarmCard>
 
-        {/* Question Count Slider */}
-        <WarmCard className="max-w-lg">
-          <div className="space-y-3">
-            <div className="flex justify-between text-sm">
-              <span className="font-medium text-warm-700">题目数量</span>
-              <span className="font-bold text-accent-orange">{effectiveCount} 题</span>
+          {/* Question Count Slider */}
+          <div className="glass-panel rounded-3xl p-6 space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-bold text-slate-900">单次抽题数量</span>
+              <span className="text-base font-bold text-accent-orange">{effectiveCount} 题</span>
             </div>
             <input
               type="range"
-              min={5}
-              max={maxQuestions}
+              min={1}
+              max={Math.max(1, maxQuestions)}
               value={effectiveCount}
+              disabled={availableCount === 0}
               onChange={(e) => setQuestionCount(Number(e.target.value))}
-              className="w-full h-2 rounded-full appearance-none cursor-pointer accent-orange-500"
-              style={{ background: `linear-gradient(to right, #f97316 0%, #f97316 ${((effectiveCount - 5) / Math.max(1, maxQuestions - 5)) * 100}%, #e7e5e4 ${((effectiveCount - 5) / Math.max(1, maxQuestions - 5)) * 100}%, #e7e5e4 100%)` }}
+              className="w-full h-2.5 rounded-full appearance-none cursor-pointer accent-orange-500 bg-slate-200"
             />
-            <div className="flex justify-between text-xs text-warm-400">
-              <span>5</span>
-              <span>可用 {availableCount} 题 · 最多 40</span>
-              <span>{maxQuestions}</span>
+            <div className="flex justify-between text-xs text-slate-400">
+              <span>1 题（快速演练）</span>
+              <span>可用题量 {availableCount} 题</span>
+              <span>{maxQuestions} 题（完整套卷）</span>
             </div>
           </div>
-        </WarmCard>
+        </div>
 
-        {/* Import Section */}
-        <div className="max-w-lg space-y-2">
+        {/* Custom Question & AI Generation Collapsible */}
+        <div className="glass-panel rounded-3xl p-6 space-y-3">
           <button
             onClick={() => setShowImportPanel(!showImportPanel)}
-            className="flex items-center gap-2 text-sm text-warm-500 hover:text-accent-orange transition-colors"
+            className="w-full flex items-center justify-between text-sm font-semibold text-slate-700 hover:text-accent-orange transition-colors"
           >
-            <Upload size={15} />
-            <span>导入题库</span>
-            <span className="text-xs">{showImportPanel ? '收起' : '展开'}</span>
+            <div className="flex items-center gap-2">
+              <Upload size={16} className="text-accent-orange" />
+              <span>导入自有试题 / AI 智能生成考点题</span>
+              {customQuestions.length > 0 && (
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold">
+                  已加载 {customQuestions.length} 题
+                </span>
+              )}
+            </div>
+            {showImportPanel ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
           </button>
 
-          {customQuestions.length > 0 && (
-            <div className="flex items-center justify-between bg-accent-sage/10 rounded-lg px-3 py-1.5">
-              <span className="text-xs text-accent-sage">
-                ✓ 已导入 {customQuestions.length} 道题目
-              </span>
-              <button
-                onClick={() => { setCustomQuestions([]); setImportStatus(null) }}
-                className="text-xs text-warm-400 hover:text-red-500"
-              >
-                清除
-              </button>
-            </div>
-          )}
-
           {showImportPanel && (
-            <WarmCard className="space-y-4">
-              {/* Tab bar */}
-              <div className="flex gap-1 bg-cream-100 rounded-lg p-1">
-                {([['file', '📁 文件导入'], ['text', '📋 粘贴导入'], ['ai', '🤖 AI 生成']] as const).map(([key, label]) => (
-                  <button
-                    key={key}
-                    onClick={() => { setImportTab(key as 'file' | 'text' | 'ai'); setImportStatus(null) }}
-                    className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-                      importTab === key
-                        ? 'bg-white text-warm-800 shadow-sm'
-                        : 'text-warm-500 hover:text-warm-700'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
+            <div className="pt-4 border-t border-slate-200 space-y-4 animate-fade-in-up">
+              <div className="flex gap-2 border-b border-slate-200 pb-2">
+                <button
+                  onClick={() => setImportTab('ai')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+                    importTab === 'ai' ? 'bg-accent-orange text-white' : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  ✨ AI 智能出题
+                </button>
+                <button
+                  onClick={() => setImportTab('text')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+                    importTab === 'text' ? 'bg-accent-orange text-white' : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  粘贴 JSON 试题
+                </button>
+                <button
+                  onClick={() => setImportTab('file')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+                    importTab === 'file' ? 'bg-accent-orange text-white' : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  上传 JSON 文件
+                </button>
               </div>
 
-              {/* File upload tab */}
-              {importTab === 'file' && (
-                <div className="space-y-3">
-                  <p className="text-xs text-warm-500">
-                    支持 JSON 格式的题目文件。文件内容应为题目数组。
-                  </p>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".json,.txt"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full border-2 border-dashed border-cream-300 rounded-xl py-8 text-center hover:border-accent-orange/50 hover:bg-accent-orange/5 transition-all"
-                  >
-                    <Upload size={24} className="mx-auto text-warm-400 mb-2" />
-                    <div className="text-sm font-medium text-warm-600">点击选择 JSON 文件</div>
-                    <div className="text-xs text-warm-400 mt-1">或将文件拖拽到此处</div>
-                  </button>
-                </div>
-              )}
-
-              {/* Text paste tab */}
-              {importTab === 'text' && (
-                <div className="space-y-3">
-                  <p className="text-xs text-warm-500">
-                    粘贴 JSON 格式的题目数组，点击"导入"按钮即可加入题库。
-                  </p>
-                  <textarea
-                    value={importText}
-                    onChange={(e) => setImportText(e.target.value)}
-                    placeholder={'[\n  {\n    "subject": "数据结构",\n    "difficulty": "中等",\n    "question": "题目内容...",\n    "options": { "A": "...", "B": "...", "C": "...", "D": "..." },\n    "answer": "A",\n    "explanation": "解析...",\n    "tags": ["标签"]\n  }\n]'}
-                    className="w-full h-40 rounded-xl border border-cream-300 bg-cream-50 px-3 py-2 text-xs font-mono text-warm-700 focus:outline-none focus:ring-2 focus:ring-accent-orange/30 focus:border-accent-orange resize-none"
-                  />
-                  <WarmButton
-                    size="sm"
-                    onClick={handleTextImport}
-                    disabled={!importText.trim()}
-                    className="w-full"
-                  >
-                    导入题目
-                  </WarmButton>
-                </div>
-              )}
-
-              {/* AI generate tab */}
               {importTab === 'ai' && (
                 <div className="space-y-3">
-                  <p className="text-xs text-warm-500">
-                    输入知识点，AI 将自动生成选择题。
-                  </p>
-                  <div>
-                    <label className="text-xs font-medium text-warm-600 mb-1 block">科目范围</label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {[['all', '全部'], ...SUBJECTS.map(s => [s.key, s.key])].map(([val, label]) => (
-                        <button
-                          key={val}
-                          onClick={() => setAiSubject(val)}
-                          className={`rounded-full px-3 py-1 text-xs transition-all ${
-                            aiSubject === val
-                              ? 'bg-accent-orange text-white'
-                              : 'bg-cream-100 text-warm-500 hover:bg-cream-200'
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-warm-600 mb-1 block">知识点 / 主题</label>
+                  <div className="flex gap-2">
+                    <select
+                      value={aiSubject}
+                      onChange={(e) => setAiSubject(e.target.value)}
+                      className="text-xs bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800 outline-none"
+                    >
+                      <option value="all">全学科综合</option>
+                      <option value="高等数学">高等数学</option>
+                      <option value="线性代数">线性代数</option>
+                      <option value="概率论与数理统计">概率论与数理统计</option>
+                      <option value="数据结构">数据结构</option>
+                      <option value="计算机组成原理">计算机组成原理</option>
+                      <option value="操作系统">操作系统</option>
+                      <option value="计算机网络">计算机网络</option>
+                    </select>
                     <input
                       type="text"
                       value={aiTopic}
                       onChange={(e) => setAiTopic(e.target.value)}
-                      placeholder="如：二叉树的遍历、TCP三次握手、进程调度算法..."
-                      className="w-full rounded-xl border border-cream-300 bg-cream-50 px-3 py-2 text-sm text-warm-700 focus:outline-none focus:ring-2 focus:ring-accent-orange/30 focus:border-accent-orange"
+                      placeholder="输入需要攻克的考点（如：泰勒展开式求极限、矩阵伴随特征值、红黑树插入...）"
+                      className="flex-1 text-xs bg-white border border-slate-200 rounded-xl px-3.5 py-2 text-slate-800 outline-none focus:border-accent-orange"
                     />
                   </div>
                   <WarmButton
                     size="sm"
                     onClick={handleAiGenerate}
                     disabled={!aiTopic.trim() || isGenerating}
-                    className="w-full"
+                    className="bg-accent-orange text-white"
                   >
-                    {isGenerating ? '生成中...' : '🤖 生成 10 道题目'}
+                    <Sparkles size={14} className="mr-1.5" />
+                    {isGenerating ? 'AI 出题中...' : '开始生成高质量试题'}
                   </WarmButton>
                 </div>
               )}
 
-              {/* Format spec */}
-              {importTab !== 'ai' && (
-                <details>
-                  <summary className="cursor-pointer text-xs text-warm-400 hover:text-warm-600">
-                    查看题目格式规范
-                  </summary>
-                  <pre className="mt-2 text-xs bg-cream-100 rounded-lg p-3 overflow-x-auto text-warm-600 whitespace-pre-wrap">{`[{
-  "subject": "数据结构",  // 四选一
-  "difficulty": "中等",   // 简单/中等/困难
-  "question": "题目内容",
-  "options": {
-    "A": "选项A", "B": "选项B",
-    "C": "选项C", "D": "选项D"
-  },
-  "answer": "A",          // 正确答案
-  "explanation": "解析",
-  "tags": ["标签1", "标签2"]
-}]`}</pre>
-                </details>
+              {importTab === 'text' && (
+                <div className="space-y-2">
+                  <textarea
+                    value={importText}
+                    onChange={(e) => setImportText(e.target.value)}
+                    placeholder='[{"subject":"高等数学","difficulty":"中等","question":"题目内容","options":{"A":"选项A","B":"选项B","C":"选项C","D":"选项D"},"answer":"A","explanation":"解析"}]'
+                    rows={4}
+                    className="w-full text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-800 outline-none focus:border-accent-orange"
+                  />
+                  <WarmButton size="sm" onClick={handleTextImport} disabled={!importText.trim()}>
+                    解析并导入
+                  </WarmButton>
+                </div>
               )}
 
-              {/* Status message */}
+              {importTab === 'file' && (
+                <div>
+                  <input ref={fileInputRef} type="file" accept=".json" onChange={handleFileUpload} className="hidden" />
+                  <WarmButton size="sm" variant="secondary" onClick={() => fileInputRef.current?.click()}>
+                    <Upload size={14} className="mr-1.5" />
+                    选择 JSON 题库文件
+                  </WarmButton>
+                </div>
+              )}
+
               {importStatus && (
-                <div className={`text-xs rounded-lg px-3 py-2 ${
-                  importStatus.type === 'success' ? 'bg-green-50 text-green-700' :
-                  importStatus.type === 'error' ? 'bg-red-50 text-red-600' :
-                  'bg-blue-50 text-blue-600'
+                <div className={`text-xs rounded-xl px-3.5 py-2 ${
+                  importStatus.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                  importStatus.type === 'error' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
+                  'bg-blue-50 text-blue-700 border border-blue-200'
                 }`}>
                   {importStatus.message}
                 </div>
               )}
-            </WarmCard>
+            </div>
           )}
         </div>
-
-        {/* Start Button */}
-        <WarmButton size="lg" onClick={startQuiz} className="w-full max-w-lg">
-          开始做题
-        </WarmButton>
       </div>
     )
   }
 
-  // ── Active Quiz View ───────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
+  // VIEW 2: DUAL-PANEL PRO EXAM & LEARNING WORKBENCH (双栏专业做题工作台)
+  // ─────────────────────────────────────────────────────────────────────────────
 
   if (view === 'quiz' && questions.length > 0) {
     const currentQ = questions[currentIndex]
     const optionKeys = ['A', 'B', 'C', 'D'] as const
+    const hasOptions = Boolean(currentQ.options && currentQ.options.A)
+    const isBookmarked = bookmarkedIds.has(currentQ.id)
     const answeredCount = Object.keys(answers).length
-    const progress = ((currentIndex + 1) / questions.length) * 100
+    const progressPct = ((currentIndex + 1) / questions.length) * 100
+    const currentScratchpad = scratchpads[currentQ.id] || ''
 
     return (
-      <div className="space-y-4 animate-fade-in-up">
-        {/* Top Bar */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            {selectedSubjects.size < 4 && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-cream-200 text-warm-600">
-                {[...selectedSubjects].join(' · ')}
-              </span>
-            )}
-            <span className="text-sm font-semibold text-warm-700">
-              {currentIndex + 1} / {questions.length}
-            </span>
-          </div>
+      <div className="mx-auto max-w-[1560px] space-y-4 animate-fade-in-up">
+        {/* Top Slim Progress Header */}
+        <div className="glass-panel rounded-2xl px-5 py-2.5 flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-3">
-            <span className="text-sm font-mono text-warm-500 tabular-nums">
-              {formatTime(timeElapsed)}
-            </span>
-            {mode === 'exam' && (
-              <WarmButton
-                variant="ghost"
-                size="sm"
-                onClick={() => setExamNavGrid(!examNavGrid)}
-              >
-                {examNavGrid ? '关闭导航' : '题目导航'}
-              </WarmButton>
-            )}
-          </div>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="w-full h-1.5 bg-cream-200 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-accent-orange rounded-full transition-all duration-300"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-
-        {/* Exam Mode Navigation Grid */}
-        {mode === 'exam' && examNavGrid && (
-          <WarmCard className="mb-2">
-            <div className="text-xs text-warm-500 mb-2">点击题号跳转</div>
-            <div className="grid grid-cols-10 gap-1.5">
-              {questions.map((q, i) => {
-                const isAnswered = !!answers[q.id]
-                const isCurrent = i === currentIndex
-                return (
-                  <button
-                    key={q.id}
-                    onClick={() => {
-                      setCurrentIndex(i)
-                      setSelectedOption(answers[q.id] || null)
-                      setExamNavGrid(false)
-                    }}
-                    className={`w-8 h-8 rounded-lg text-xs font-medium transition-all ${
-                      isCurrent
-                        ? 'bg-accent-orange text-white'
-                        : isAnswered
-                          ? 'bg-accent-sage/30 text-accent-sage border border-accent-sage/40'
-                          : 'bg-cream-100 text-warm-400 border border-cream-200'
-                    }`}
-                  >
-                    {i + 1}
-                  </button>
-                )
-              })}
-            </div>
-          </WarmCard>
-        )}
-
-        {/* Question Card */}
-        <WarmCard className="relative">
-          <div className="flex items-center gap-2 mb-3">
-            <span className={`text-xs px-2 py-0.5 rounded-full ${
-              currentQ.difficulty === '简单' ? 'bg-green-100 text-green-700' :
-              currentQ.difficulty === '中等' ? 'bg-yellow-100 text-yellow-700' :
-              'bg-red-100 text-red-700'
-            }`}>
-              {currentQ.difficulty}
-            </span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-cream-200 text-warm-500">
+            <button
+              onClick={() => {
+                if (window.confirm('确定要退出当前做题吗？已做答案仍会被统计。')) {
+                  finishQuiz()
+                }
+              }}
+              className="text-xs text-slate-500 hover:text-slate-900 flex items-center gap-1 font-medium"
+            >
+              <ArrowLeft size={14} />
+              <span>交卷退出</span>
+            </button>
+            <div className="h-4 w-px bg-slate-200" />
+            <span className="text-xs font-bold text-slate-800">
               {currentQ.subject}
             </span>
+            {currentQ.chapter && (
+              <span className="text-[11px] text-slate-500 hidden sm:inline">
+                · {currentQ.chapter}
+              </span>
+            )}
           </div>
-          <p className="text-sm font-medium text-warm-800 leading-relaxed mb-4">
-            {currentQ.question}
-          </p>
 
-          {/* Options */}
-          <div className="space-y-2">
-            {optionKeys.map((key) => {
-              const optionText = currentQ.options[key]
-              const isSelected = selectedOption === key
-              const isCorrectAnswer = key === currentQ.answer
-              const showResult = mode === 'practice' && showFeedback
+          <div className="flex items-center gap-4">
+            <div className="text-xs font-mono text-slate-500 flex items-center gap-1.5 tabular-nums">
+              <span>⏱</span>
+              <span className="font-semibold text-slate-800">{formatTime(timeElapsed)}</span>
+            </div>
+            <div className="h-4 w-px bg-slate-200" />
+            <span className="text-xs font-semibold text-slate-700">
+              {currentIndex + 1} / {questions.length} 题
+            </span>
+          </div>
+        </div>
 
-              let optionStyle = 'bg-cream-50 border-cream-200 hover:bg-cream-100 hover:border-cream-300'
-              if (isSelected && !showResult) {
-                optionStyle = 'bg-orange-50 border-accent-orange ring-1 ring-accent-orange/30'
-              }
-              if (showResult && isCorrectAnswer) {
-                optionStyle = 'bg-green-50 border-green-500 ring-1 ring-green-200'
-              }
-              if (showResult && isSelected && !isCorrectAnswer) {
-                optionStyle = 'bg-red-50 border-red-400 ring-1 ring-red-200'
-              }
+        {/* Dual-Panel Grid Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1.22fr_0.78fr] gap-5 items-start">
+          {/* ───────────────── LEFT PANEL: Question & Solution ───────────────── */}
+          <div className="space-y-4">
+            <div className="glass-panel rounded-3xl p-6 sm:p-7 space-y-5 relative shadow-md">
+              {/* Question Meta Badges */}
+              <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                    currentQ.difficulty === '简单' ? 'bg-emerald-100 text-emerald-700' :
+                    currentQ.difficulty === '中等' ? 'bg-amber-100 text-amber-700' :
+                    'bg-rose-100 text-rose-700'
+                  }`}>
+                    {currentQ.difficulty}
+                  </span>
 
-              return (
+                  <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                    {currentQ.type === 'blank' ? '填空题' : currentQ.type === 'analysis' ? '解答题' : '单选题'}
+                  </span>
+
+                  {currentQ.scope && (
+                    <span className="text-[11px] text-slate-500 font-medium bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-md">
+                      适用：{currentQ.scope.join(' / ')}
+                    </span>
+                  )}
+                </div>
+
                 <button
-                  key={key}
-                  onClick={() => handleOptionSelect(key)}
-                  disabled={mode === 'practice' && showFeedback}
-                  className={`w-full text-left rounded-xl border-2 px-4 py-3 transition-all duration-200 ${optionStyle} ${
-                    mode === 'practice' && showFeedback ? 'cursor-default' : 'cursor-pointer'
+                  onClick={() => toggleBookmark(currentQ.id)}
+                  title={isBookmarked ? '取消标星' : '标星关注此题'}
+                  className={`p-1.5 rounded-xl transition-colors ${
+                    isBookmarked ? 'text-amber-500 bg-amber-50' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
                   }`}
                 >
-                  <div className="flex items-start gap-3">
-                    <span className={`flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${
-                      isSelected && !showResult ? 'bg-accent-orange text-white' :
-                      showResult && isCorrectAnswer ? 'bg-green-500 text-white' :
-                      showResult && isSelected && !isCorrectAnswer ? 'bg-red-400 text-white' :
-                      'bg-cream-200 text-warm-600'
-                    }`}>
-                      {key}
-                    </span>
-                    <span className="text-sm text-warm-700 pt-0.5">{optionText}</span>
-                    {showResult && isCorrectAnswer && (
-                      <span className="ml-auto text-green-600 text-sm pt-0.5">✓ 正确</span>
-                    )}
-                    {showResult && isSelected && !isCorrectAnswer && (
-                      <span className="ml-auto text-red-500 text-sm pt-0.5">✗ 错误</span>
+                  <Star size={17} className={isBookmarked ? 'fill-amber-500' : ''} />
+                </button>
+              </div>
+
+              {/* Question Text (KaTeX Rendered) */}
+              <div className="text-[15px] font-medium text-slate-900 leading-relaxed min-h-[4rem]">
+                <MarkdownRenderer content={currentQ.question} />
+              </div>
+
+              {/* Answering Area */}
+              {hasOptions ? (
+                /* Choice Options (选择题选项) */
+                <div className="space-y-3 pt-2">
+                  {optionKeys.map((key) => {
+                    const optionText = currentQ.options![key]
+                    if (!optionText) return null
+                    const isSelected = selectedOption === key
+                    const isCorrectAnswer = key.toUpperCase() === currentQ.answer.toUpperCase()
+                    const showResult = mode === 'practice' && showFeedback
+
+                    let btnStyle = 'border-slate-200/90 bg-white hover:border-slate-300 hover:bg-slate-50/80 text-slate-800'
+                    if (isSelected && !showResult) {
+                      btnStyle = 'border-accent-orange bg-accent-orange/8 ring-2 ring-accent-orange/30 text-slate-900 font-medium shadow-sm'
+                    }
+                    if (showResult && isCorrectAnswer) {
+                      btnStyle = 'border-emerald-500 bg-emerald-50 text-emerald-900 font-semibold ring-2 ring-emerald-300 shadow-sm'
+                    }
+                    if (showResult && isSelected && !isCorrectAnswer) {
+                      btnStyle = 'border-rose-400 bg-rose-50 text-rose-900 ring-2 ring-rose-300 shadow-sm'
+                    }
+
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => handleOptionSelect(key)}
+                        disabled={mode === 'practice' && showFeedback}
+                        className={`w-full text-left rounded-2xl border-2 px-4 py-3.5 transition-all duration-200 group flex items-start gap-3.5 ${btnStyle} ${
+                          mode === 'practice' && showFeedback ? 'cursor-default' : 'cursor-pointer hover:scale-[1.005]'
+                        }`}
+                      >
+                        <span className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 transition-colors ${
+                          isSelected && !showResult ? 'bg-accent-orange text-white' :
+                          showResult && isCorrectAnswer ? 'bg-emerald-500 text-white' :
+                          showResult && isSelected && !isCorrectAnswer ? 'bg-rose-500 text-white' :
+                          'bg-slate-100 text-slate-600 group-hover:bg-slate-200'
+                        }`}>
+                          {key}
+                        </span>
+
+                        <div className="flex-1 text-sm pt-0.5">
+                          <MarkdownRenderer content={optionText} inline />
+                        </div>
+
+                        {showResult && isCorrectAnswer && (
+                          <CheckCircle2 size={18} className="text-emerald-600 shrink-0 mt-0.5" />
+                        )}
+                        {showResult && isSelected && !isCorrectAnswer && (
+                          <XCircle size={18} className="text-rose-500 shrink-0 mt-0.5" />
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              ) : (
+                /* Blank / Fill-in Answer Area (填空题输入区) */
+                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-3">
+                  <div className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
+                    <span>✍️ 填空题作答</span>
+                    <span className="text-[10px] text-slate-400 font-normal">（支持直接输入数值或数学表达式）</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={blankInput}
+                      onChange={(e) => setBlankInput(e.target.value)}
+                      placeholder="在此键入你的计算结果..."
+                      disabled={mode === 'practice' && showFeedback}
+                      className="flex-1 bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-accent-orange font-mono"
+                    />
+                    <button
+                      onClick={handleBlankSubmit}
+                      disabled={(mode === 'practice' && showFeedback) || !blankInput.trim()}
+                      className="rounded-xl bg-accent-orange text-white px-5 py-2.5 text-xs font-semibold hover:bg-accent-orange/90 disabled:opacity-40 transition-all"
+                    >
+                      提交验证
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Bottom Navigation Buttons */}
+              <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                <button
+                  onClick={() => goToQuestion(currentIndex - 1)}
+                  disabled={currentIndex === 0}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 disabled:opacity-30 transition-colors flex items-center gap-1.5"
+                >
+                  <ArrowLeft size={14} />
+                  <span>上一题</span>
+                </button>
+
+                <div className="text-xs text-slate-400">
+                  键盘快捷键：<kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-600 font-mono text-[10px]">A/B/C/D</kbd> 作答 · <kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-600 font-mono text-[10px]">Enter</kbd> 下一题
+                </div>
+
+                <WarmButton
+                  onClick={advanceQuestion}
+                  disabled={mode === 'practice' && !showFeedback}
+                  className="bg-accent-orange text-white px-6"
+                >
+                  <span>{currentIndex < questions.length - 1 ? '下一题 →' : '交卷结算'}</span>
+                </WarmButton>
+              </div>
+            </div>
+
+            {/* Explanation & Step-by-Step Derivation (Notion / Brilliant Style) */}
+            {mode === 'practice' && showFeedback && (
+              <div className="glass-panel rounded-3xl p-6 border-l-4 border-l-emerald-500 space-y-4 animate-fade-in-up">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                    <span className="text-base">💡</span>
+                    <span>真题全解与定理依据</span>
+                  </div>
+                  <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                    正确答案: {currentQ.answer}
+                  </span>
+                </div>
+
+                {/* Main Explanation */}
+                <div className="text-sm text-slate-700 leading-relaxed pl-1">
+                  <MarkdownRenderer content={currentQ.explanation} />
+                </div>
+
+                {/* Brilliant-style Collapsible Step-by-Step Derivation */}
+                {currentQ.steps && currentQ.steps.length > 0 && (
+                  <div className="pt-3 border-t border-slate-200/80">
+                    <button
+                      onClick={() => setShowSteps(!showSteps)}
+                      className="flex items-center gap-1.5 text-xs font-bold text-accent-orange hover:opacity-85 transition-opacity"
+                    >
+                      {showSteps ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                      <span>展开分步严谨推导与定理引用 ({currentQ.steps.length} 步)</span>
+                    </button>
+
+                    {showSteps && (
+                      <div className="mt-3 space-y-2 pl-2 border-l-2 border-accent-orange/40">
+                        {currentQ.steps.map((step, idx) => (
+                          <div key={idx} className="bg-slate-50/90 rounded-xl p-3 border border-slate-100 text-xs text-slate-800">
+                            <span className="font-bold text-accent-orange mr-1.5">步骤 {idx + 1}.</span>
+                            <MarkdownRenderer content={step} inline />
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
-                </button>
-              )
-            })}
-          </div>
-        </WarmCard>
+                )}
 
-        {/* Explanation Panel (practice mode) */}
-        {mode === 'practice' && showFeedback && (
-          <WarmCard className="border-l-4 border-l-accent-sage bg-accent-sage/5">
-            <div className="flex items-start gap-2">
-              <span className="text-lg">💡</span>
-              <div>
-                <div className="text-sm font-semibold text-warm-700 mb-1">解析</div>
-                <p className="text-sm text-warm-600 leading-relaxed">{currentQ.explanation}</p>
-                {currentQ.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {currentQ.tags.map((tag) => (
-                      <span key={tag} className="text-xs px-2 py-0.5 rounded-full bg-cream-200 text-warm-500">
-                        {tag}
+                {/* Anki-style Error Reason Tagging (错因反思闭环) */}
+                <div className="pt-3 border-t border-slate-200/80">
+                  <div className="text-xs font-semibold text-slate-600 mb-2 flex items-center gap-1">
+                    <span>📌 本题复盘归因（记录后存入错题本）：</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {ERROR_REASONS.map(reason => {
+                      const active = errorReasons[currentQ.id] === reason
+                      return (
+                        <button
+                          key={reason}
+                          onClick={() => recordErrorReason(reason)}
+                          className={`text-xs px-2.5 py-1 rounded-lg border transition-all ${
+                            active
+                              ? 'bg-accent-orange text-white border-accent-orange font-semibold shadow-sm'
+                              : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                          }`}
+                        >
+                          {reason}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ───────────────── RIGHT PANEL: Strategic Workbench ───────────────── */}
+          <div className="glass-panel rounded-3xl p-5 space-y-4 sticky top-20 shadow-md">
+            {/* Tab Header */}
+            <div className="flex rounded-xl bg-slate-100 p-1">
+              <button
+                onClick={() => setActiveSideTab('palette')}
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  activeSideTab === 'palette' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                🧮 答题卡大纲
+              </button>
+              <button
+                onClick={() => setActiveSideTab('scratchpad')}
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  activeSideTab === 'scratchpad' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                📝 研考草稿纸
+              </button>
+              <button
+                onClick={() => setActiveSideTab('hints')}
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  activeSideTab === 'hints' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                💡 定理速查
+              </button>
+            </div>
+
+            {/* TAB 1: Answer Palette (答题卡矩阵 - 粉笔/LeetCode 风格) */}
+            {activeSideTab === 'palette' && (
+              <div className="space-y-4 animate-fade-in-up">
+                <div className="flex items-center justify-between text-xs text-slate-500">
+                  <span>已完成 {answeredCount} / {questions.length} 题</span>
+                  <span>标星关注 {bookmarkedIds.size} 题</span>
+                </div>
+
+                {/* Progress bar */}
+                <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-accent-orange rounded-full transition-all duration-300"
+                    style={{ width: `${progressPct}%` }}
+                  />
+                </div>
+
+                {/* Question Chips Grid */}
+                <div className="grid grid-cols-7 sm:grid-cols-8 md:grid-cols-10 gap-1.5 pt-1">
+                  {questions.map((q, idx) => {
+                    const isCurrent = idx === currentIndex
+                    const isAnswered = Boolean(answers[q.id])
+                    const isCorrect = isAnswered && (
+                      answers[q.id].trim().toUpperCase() === q.answer.trim().toUpperCase() ||
+                      answers[q.id].trim() === q.answer.replace(/[\$\\s]/g, '')
+                    )
+                    const isStarred = bookmarkedIds.has(q.id)
+
+                    let chipStyle = 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                    if (isCurrent) {
+                      chipStyle = 'border-accent-orange bg-accent-orange text-white font-bold ring-2 ring-accent-orange/40 shadow-sm'
+                    } else if (mode === 'practice' && isAnswered) {
+                      chipStyle = isCorrect
+                        ? 'border-emerald-300 bg-emerald-100 text-emerald-800 font-semibold'
+                        : 'border-rose-300 bg-rose-100 text-rose-800 font-semibold'
+                    } else if (isAnswered) {
+                      chipStyle = 'border-slate-700 bg-slate-800 text-white font-semibold'
+                    }
+
+                    return (
+                      <button
+                        key={q.id}
+                        type="button"
+                        onClick={() => goToQuestion(idx)}
+                        className={`h-8 rounded-xl text-xs flex items-center justify-center transition-all relative border ${chipStyle}`}
+                      >
+                        <span>{idx + 1}</span>
+                        {isStarred && (
+                          <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-amber-400 ring-1 ring-white" />
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* Legend */}
+                <div className="flex flex-wrap items-center gap-3 pt-2 text-[11px] text-slate-500 border-t border-slate-100">
+                  <span className="flex items-center gap-1">
+                    <span className="w-2.5 h-2.5 rounded-full bg-accent-orange" /> 当前题
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> 已正确
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-400" /> 需复盘
+                  </span>
+                </div>
+
+                <WarmButton
+                  onClick={() => finishQuiz()}
+                  className="w-full mt-2 bg-slate-900 text-white py-2.5 text-xs font-semibold"
+                >
+                  完成全卷并交卷 ({answeredCount}/{questions.length})
+                </WarmButton>
+              </div>
+            )}
+
+            {/* TAB 2: Scratchpad & Math Virtual Keyboard (Symbolab 风格) */}
+            {activeSideTab === 'scratchpad' && (
+              <div className="space-y-3 animate-fade-in-up">
+                <div className="flex items-center justify-between text-xs text-slate-500">
+                  <span className="font-semibold text-slate-800">当前试题专用草稿</span>
+                  <span className="text-[11px] text-slate-400">自动绑定第 {currentIndex + 1} 题</span>
+                </div>
+
+                {/* Math Symbol Quick Insert Bar */}
+                <div className="flex flex-wrap gap-1 p-2 rounded-xl bg-slate-100 border border-slate-200">
+                  {SCRATCHPAD_MATH_SYMBOLS.map((s, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => insertScratchpadSymbol(s.code)}
+                      className="px-2 py-1 rounded-lg bg-white hover:bg-accent-orange/10 hover:text-accent-orange border border-slate-200 text-xs font-mono font-medium transition-colors shadow-2xs"
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Scratchpad Textarea */}
+                <textarea
+                  ref={scratchpadRef}
+                  value={currentScratchpad}
+                  onChange={(e) => setScratchpads({ ...scratchpads, [currentQ.id]: e.target.value })}
+                  placeholder="在此随手推演公式、草拟计算步骤，无需切换草稿本..."
+                  rows={9}
+                  className="w-full text-xs font-mono bg-white border border-slate-200 rounded-xl p-3 text-slate-900 outline-none focus:border-accent-orange leading-relaxed"
+                />
+
+                <div className="flex items-center justify-between text-[11px] text-slate-400">
+                  <span>草稿在本次练习中自动保存</span>
+                  <button
+                    onClick={() => setScratchpads({ ...scratchpads, [currentQ.id]: '' })}
+                    className="text-rose-500 hover:underline"
+                  >
+                    清空本题草稿
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 3: Theorem Hints & AI Assistant */}
+            {activeSideTab === 'hints' && (
+              <div className="space-y-3 animate-fade-in-up">
+                <div className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                  <Lightbulb size={14} className="text-amber-500" />
+                  <span>本题核心定理与公式提示</span>
+                </div>
+
+                {currentQ.keyPoints && currentQ.keyPoints.length > 0 ? (
+                  <div className="space-y-2">
+                    {currentQ.keyPoints.map((kp, idx) => (
+                      <div key={idx} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700">
+                        <span className="font-bold text-accent-orange mr-1">✦</span>
+                        {kp}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 py-3">本题考查基础定义与综合逻辑。</p>
+                )}
+
+                {currentQ.tags && currentQ.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 pt-2">
+                    {currentQ.tags.map(tag => (
+                      <span key={tag} className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
+                        #{tag}
                       </span>
                     ))}
                   </div>
                 )}
               </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // VIEW 3: COMPREHENSIVE PERFORMANCE RESULTS (成绩单与错题精析)
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  if (view === 'results' && result) {
+    const percentage = Math.round((result.correct / result.total) * 100)
+    const gradeColor = percentage >= 80 ? 'text-emerald-600' : percentage >= 60 ? 'text-amber-500' : 'text-rose-500'
+    const gradeEmoji = percentage >= 80 ? '🎉' : percentage >= 60 ? '💪' : '📚'
+
+    return (
+      <div className="mx-auto max-w-[1280px] space-y-6 animate-fade-in-up">
+        {/* Results Hero Header */}
+        <div className="glass-panel rounded-3xl p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">做题测评结算</div>
+            <h1 className="mt-1 text-2xl font-bold text-slate-900 flex items-center gap-2">
+              <span>{gradeEmoji} 测评报告生成完毕</span>
+            </h1>
+            <p className="mt-1 text-xs text-slate-500">
+              {mode === 'practice' ? '练习模式' : '考试模式'} · 答题用时 {formatTime(result.timeTaken)} · 成绩已沉淀至本地 Vault
+            </p>
+          </div>
+
+          <div className="flex items-center gap-8 bg-slate-50 px-6 py-4 rounded-2xl border border-slate-200">
+            <div className="text-center">
+              <div className="text-xs text-slate-400">总得分率</div>
+              <div className={`text-4xl font-extrabold ${gradeColor}`}>{percentage}%</div>
             </div>
-          </WarmCard>
+            <div className="h-10 w-px bg-slate-200" />
+            <div className="space-y-1 text-xs font-medium">
+              <div className="text-emerald-600 flex items-center gap-1.5">
+                <span>✓ 正确</span> <span>{result.correct} 题</span>
+              </div>
+              <div className="text-rose-500 flex items-center gap-1.5">
+                <span>✗ 错题</span> <span>{result.wrong} 题</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Subject Breakdown Cards */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {Object.entries(result.subjectBreakdown).map(([subject, data]) => {
+            const pct = data.total > 0 ? Math.round((data.correct / data.total) * 100) : 0
+            const info = ALL_SUBJECTS.find(s => s.key === subject)
+            return (
+              <div key={subject} className="glass-panel rounded-2xl p-4 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                    <span>{info?.emoji || '📖'}</span>
+                    <span>{subject}</span>
+                  </span>
+                  <span className="font-semibold text-slate-700">{data.correct} / {data.total} ({pct}%)</span>
+                </div>
+                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      pct >= 80 ? 'bg-emerald-500' : pct >= 60 ? 'bg-amber-500' : 'bg-rose-500'
+                    }`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Wrong Questions Breakdown */}
+        {result.wrongQuestions.length > 0 && (
+          <div className="glass-panel rounded-3xl p-6 space-y-4">
+            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <span className="text-rose-500">✗</span>
+              <span>错题精析与复盘 ({result.wrongQuestions.length} 题)</span>
+            </h2>
+
+            <div className="space-y-3">
+              {result.wrongQuestions.map(({ question: q, userAnswer, errorReason }) => (
+                <div key={q.id} className="rounded-2xl border border-rose-200/80 bg-rose-50/30 p-5 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">
+                        {q.subject}
+                      </span>
+                      {errorReason && (
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-rose-100 text-rose-700">
+                          错因: {errorReason}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs font-mono flex items-center gap-3">
+                      <span className="text-rose-600 font-semibold">你的回答: {userAnswer}</span>
+                      <span className="text-emerald-700 font-bold">标准答案: {q.answer}</span>
+                    </div>
+                  </div>
+
+                  <div className="text-sm font-medium text-slate-900">
+                    <MarkdownRenderer content={q.question} />
+                  </div>
+
+                  <div className="bg-white/80 rounded-xl p-3 border border-slate-200 text-xs text-slate-700">
+                    <div className="font-bold text-slate-800 mb-1">解析：</div>
+                    <MarkdownRenderer content={q.explanation} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* Action Buttons */}
         <div className="flex gap-3">
-          {mode === 'practice' ? (
-            <WarmButton
-              onClick={advanceQuestion}
-              disabled={!showFeedback}
-              className="flex-1"
-            >
-              {currentIndex < questions.length - 1 ? '下一题 →' : '查看结果'}
-            </WarmButton>
-          ) : (
-            <>
-              {currentIndex > 0 && (
-                <WarmButton variant="secondary" onClick={() => {
-                  setCurrentIndex((i) => i - 1)
-                  const prevQ = questions[currentIndex - 1]
-                  setSelectedOption(answers[prevQ.id] || null)
-                  setShowFeedback(false)
-                }}>
-                  ← 上一题
-                </WarmButton>
-              )}
-              {currentIndex < questions.length - 1 ? (
-                <WarmButton
-                  variant="secondary"
-                  onClick={() => {
-                    setCurrentIndex((i) => i + 1)
-                    const nextQ = questions[currentIndex + 1]
-                    setSelectedOption(answers[nextQ.id] || null)
-                    setShowFeedback(false)
-                  }}
-                  className="flex-1"
-                >
-                  下一题 →
-                </WarmButton>
-              ) : null}
-              <WarmButton
-                onClick={() => finishQuiz()}
-                className={currentIndex === questions.length - 1 ? 'flex-1' : ''}
-              >
-                交卷 ({answeredCount}/{questions.length})
-              </WarmButton>
-            </>
-          )}
-        </div>
-      </div>
-    )
-  }
-
-  // ── Results View ───────────────────────────────────────────────────────────
-
-  if (view === 'results' && result) {
-    const percentage = Math.round((result.correct / result.total) * 100)
-    const gradeColor = percentage >= 80 ? 'text-green-600' : percentage >= 60 ? 'text-yellow-600' : 'text-red-500'
-    const gradeEmoji = percentage >= 80 ? '🎉' : percentage >= 60 ? '💪' : '📚'
-
-    return (
-      <div className="space-y-6 animate-fade-in-up">
-        <div>
-          <h1 className="text-2xl font-bold text-warm-800">📊 做题结果</h1>
-          <p className="text-sm text-warm-500 mt-1">
-            {mode === 'practice' ? '练习模式' : '考试模式'} · 用时 {formatTime(result.timeTaken)}
-          </p>
-        </div>
-
-        {/* Score Card */}
-        <WarmCard className="max-w-lg text-center py-6">
-          <div className="text-4xl mb-2">{gradeEmoji}</div>
-          <div className={`text-5xl font-bold ${gradeColor}`}>{percentage}%</div>
-          <div className="flex justify-center gap-6 mt-3 text-sm">
-            <span className="text-green-600">✓ 正确 {result.correct}</span>
-            <span className="text-red-500">✗ 错误 {result.wrong}</span>
-            <span className="text-warm-400">共 {result.total} 题</span>
-          </div>
-        </WarmCard>
-
-        {/* Subject Breakdown */}
-        <WarmCard className="max-w-lg">
-          <div className="text-sm font-semibold text-warm-700 mb-3">科目正确率</div>
-          <div className="space-y-2.5">
-            {Object.entries(result.subjectBreakdown).map(([subject, data]) => {
-              const pct = data.total > 0 ? Math.round((data.correct / data.total) * 100) : 0
-              const subjectInfo = SUBJECTS.find(s => s.key === subject)
-              return (
-                <div key={subject}>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-warm-600">
-                      {subjectInfo?.emoji} {subject}
-                    </span>
-                    <span className="font-medium text-warm-700">{data.correct}/{data.total} ({pct}%)</span>
-                  </div>
-                  <div className="w-full h-2 bg-cream-200 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        pct >= 80 ? 'bg-green-400' : pct >= 60 ? 'bg-yellow-400' : 'bg-red-400'
-                      }`}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </WarmCard>
-
-        {/* Saved notice */}
-        {result.summaryPath && (
-          <WarmCard className="max-w-lg border-l-4 border-l-accent-sage bg-accent-sage/5">
-            <div className="flex items-center gap-2 text-sm text-warm-700">
-              <span>📁</span>
-              <span>已归纳到知识库：<code className="text-xs bg-cream-200 px-1.5 py-0.5 rounded">{result.summaryPath}</code></span>
-            </div>
-          </WarmCard>
-        )}
-
-        {/* Wrong Questions List */}
-        {result.wrongQuestions.length > 0 && (
-          <div className="space-y-2 max-w-lg">
-            <div className="text-sm font-semibold text-warm-700">错题详情 ({result.wrongQuestions.length})</div>
-            {result.wrongQuestions.map(({ question: q, userAnswer }) => (
-              <WarmCard key={q.id} className="border-l-4 border-l-red-300">
-                <details>
-                  <summary className="cursor-pointer text-sm font-medium text-warm-700">
-                    {q.question.substring(0, 60)}{q.question.length > 60 ? '...' : ''}
-                  </summary>
-                  <div className="mt-2 space-y-1.5 text-sm">
-                    <div className="flex gap-4">
-                      <span className="text-red-500">你的答案: {userAnswer}</span>
-                      <span className="text-green-600">正确答案: {q.answer}</span>
-                    </div>
-                    <div className="bg-cream-50 rounded-lg p-2.5 mt-1">
-                      <span className="text-xs font-medium text-warm-500">解析: </span>
-                      <span className="text-xs text-warm-600">{q.explanation}</span>
-                    </div>
-                    {q.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {q.tags.map(tag => (
-                          <span key={tag} className="text-xs px-1.5 py-0.5 rounded-full bg-cream-200 text-warm-500">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </details>
-              </WarmCard>
-            ))}
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        <div className="flex gap-3 max-w-lg">
-          <WarmButton onClick={() => setView('start')}>
-            再做一轮
+          <WarmButton onClick={() => setView('start')} className="bg-accent-orange text-white px-8">
+            再练一轮
           </WarmButton>
-          {result.wrongQuestions.length > 0 && (
-            <WarmButton variant="secondary" onClick={() => {
-              // Scroll to wrong questions section
-              const el = document.querySelector('details')
-              if (el) el.scrollIntoView({ behavior: 'smooth' })
-            }}>
-              查看错题
-            </WarmButton>
-          )}
+          <WarmButton variant="secondary" onClick={() => window.location.href = '/dashboard'}>
+            返回首页工作台
+          </WarmButton>
         </div>
       </div>
     )
   }
 
-  // Fallback (should not reach)
   return null
 }

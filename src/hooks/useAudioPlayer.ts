@@ -9,9 +9,13 @@ export interface AudioTrack {
   duration?: number
 }
 
+export type PlayerStatus = 'idle' | 'loading' | 'playing' | 'paused' | 'error'
+
 export interface PlayerState {
   currentTrack: AudioTrack | null
   isPlaying: boolean
+  status: PlayerStatus
+  error: string | null
   volume: number
   progress: number
   duration: number
@@ -24,6 +28,8 @@ export interface PlayerState {
 const initialState: PlayerState = {
   currentTrack: null,
   isPlaying: false,
+  status: 'idle',
+  error: null,
   volume: 0.7,
   progress: 0,
   duration: 0,
@@ -33,188 +39,323 @@ const initialState: PlayerState = {
   queueIndex: -1,
 }
 
+function describeMediaError(error: MediaError | null, track: AudioTrack | null) {
+  const subject = track?.type === 'radio' ? '电台' : '音频'
+  switch (error?.code) {
+    case 1:
+      return `${subject}播放已中止，请重试`
+    case 2:
+      return `${subject}连接失败，请检查网络或代理设置`
+    case 3:
+      return `${subject}音频解码失败，请切换其他频道`
+    case 4:
+      return `${subject}地址已失效或格式不受支持`
+    default:
+      return `${subject}暂时无法播放，请稍后重试`
+  }
+}
+
+function describePlayError(error: unknown, track: AudioTrack | null) {
+  if (error instanceof DOMException) {
+    if (error.name === 'NotAllowedError') {
+      return '浏览器阻止了自动播放，请再次点击播放按钮'
+    }
+    if (error.name === 'NotSupportedError') {
+      return track?.type === 'radio'
+        ? '电台地址已失效或音频格式不受支持'
+        : '音频格式不受支持'
+    }
+  }
+  return error instanceof Error && error.message
+    ? `播放失败：${error.message}`
+    : '播放失败，请检查网络后重试'
+}
+
 export function useAudioPlayer() {
   const [state, setState] = useState<PlayerState>(initialState)
+  const stateRef = useRef<PlayerState>(initialState)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const activeTrackRef = useRef<AudioTrack | null>(null)
+  const wantsPlaybackRef = useRef(false)
   const animFrameRef = useRef<number>(0)
+  const playRequestRef = useRef(0)
+  const nextRef = useRef<() => void>(() => {})
 
-  // Create a persistent Audio element
-  const getAudio = useCallback(() => {
-    if (!audioRef.current) {
-      audioRef.current = new Audio()
-      audioRef.current.volume = initialState.volume
-
-      audioRef.current.addEventListener('ended', () => {
-        handleNext()
-      })
-
-      audioRef.current.addEventListener('loadedmetadata', () => {
-        if (audioRef.current) {
-          setState(s => ({ ...s, duration: audioRef.current!.duration }))
-        }
-      })
-
-      audioRef.current.addEventListener('error', () => {
-        setState(s => ({ ...s, isPlaying: false }))
-      })
-    }
-    return audioRef.current
+  const updateState = useCallback((updater: (current: PlayerState) => PlayerState) => {
+    setState(current => {
+      const next = updater(current)
+      stateRef.current = next
+      return next
+    })
   }, [])
 
-  // Progress update loop
+  const stopProgress = useCallback(() => {
+    cancelAnimationFrame(animFrameRef.current)
+  }, [])
+
   const updateProgress = useCallback(() => {
     const audio = audioRef.current
     if (audio && !audio.paused) {
-      setState(s => ({ ...s, progress: audio.currentTime }))
+      updateState(current => ({ ...current, progress: audio.currentTime || 0 }))
       animFrameRef.current = requestAnimationFrame(updateProgress)
     }
-  }, [])
+  }, [updateState])
+
+  const getAudio = useCallback(() => {
+    if (audioRef.current) return audioRef.current
+
+    const audio = new Audio()
+    audio.preload = 'none'
+    audio.volume = initialState.volume
+
+    const updateDuration = () => {
+      updateState(current => ({
+        ...current,
+        duration: Number.isFinite(audio.duration) ? audio.duration : 0,
+      }))
+    }
+
+    audio.addEventListener('ended', () => nextRef.current())
+    audio.addEventListener('loadedmetadata', updateDuration)
+    audio.addEventListener('durationchange', updateDuration)
+    audio.addEventListener('playing', () => {
+      wantsPlaybackRef.current = true
+      updateState(current => ({
+        ...current,
+        isPlaying: true,
+        status: 'playing',
+        error: null,
+      }))
+      stopProgress()
+      animFrameRef.current = requestAnimationFrame(updateProgress)
+    })
+    audio.addEventListener('pause', () => {
+      stopProgress()
+      if (wantsPlaybackRef.current) return
+      updateState(current => {
+        if (current.status === 'error' || current.status === 'idle') return current
+        return { ...current, isPlaying: false, status: 'paused' }
+      })
+    })
+    audio.addEventListener('waiting', () => {
+      if (!audio.paused) {
+        updateState(current => ({ ...current, isPlaying: false, status: 'loading' }))
+      }
+    })
+    audio.addEventListener('stalled', () => {
+      if (!audio.paused) {
+        updateState(current => ({ ...current, isPlaying: false, status: 'loading' }))
+      }
+    })
+    audio.addEventListener('error', () => {
+      wantsPlaybackRef.current = false
+      stopProgress()
+      updateState(current => ({
+        ...current,
+        isPlaying: false,
+        status: 'error',
+        error: describeMediaError(audio.error, activeTrackRef.current),
+      }))
+    })
+
+    audioRef.current = audio
+    return audio
+  }, [stopProgress, updateProgress, updateState])
+
+  const startTrack = useCallback((
+    track: AudioTrack,
+    queueUpdate?: Partial<Pick<PlayerState, 'queue' | 'queueIndex'>>,
+  ) => {
+    const audio = getAudio()
+    const requestId = ++playRequestRef.current
+    activeTrackRef.current = track
+    wantsPlaybackRef.current = true
+    stopProgress()
+    audio.pause()
+
+    updateState(current => ({
+      ...current,
+      ...queueUpdate,
+      currentTrack: track,
+      isPlaying: false,
+      status: 'loading',
+      error: null,
+      progress: 0,
+      duration: 0,
+    }))
+
+    audio.src = track.src
+    audio.load()
+    audio.play().then(() => {
+      if (requestId !== playRequestRef.current || audio.paused) return
+      updateState(current => ({
+        ...current,
+        isPlaying: true,
+        status: 'playing',
+        error: null,
+      }))
+    }).catch(error => {
+      if (requestId !== playRequestRef.current) return
+      wantsPlaybackRef.current = false
+      stopProgress()
+      updateState(current => ({
+        ...current,
+        isPlaying: false,
+        status: 'error',
+        error: describePlayError(error, track),
+      }))
+    })
+  }, [getAudio, stopProgress, updateState])
+
+  const resume = useCallback(() => {
+    const audio = getAudio()
+    const track = stateRef.current.currentTrack
+    if (!track) return
+
+    const requestId = ++playRequestRef.current
+    wantsPlaybackRef.current = true
+    updateState(current => ({
+      ...current,
+      isPlaying: false,
+      status: 'loading',
+      error: null,
+    }))
+    audio.play().then(() => {
+      if (requestId !== playRequestRef.current || audio.paused) return
+      updateState(current => ({
+        ...current,
+        isPlaying: true,
+        status: 'playing',
+        error: null,
+      }))
+    }).catch(error => {
+      if (requestId !== playRequestRef.current) return
+      wantsPlaybackRef.current = false
+      updateState(current => ({
+        ...current,
+        isPlaying: false,
+        status: 'error',
+        error: describePlayError(error, track),
+      }))
+    })
+  }, [getAudio, updateState])
 
   const play = useCallback((track?: AudioTrack) => {
-    const audio = getAudio()
-
     if (track) {
-      if (audio.src !== track.src) {
-        audio.src = track.src
-      }
-      setState(s => ({
-        ...s,
-        currentTrack: track,
-        isPlaying: true,
-        progress: 0,
-      }))
+      startTrack(track)
     } else {
-      setState(s => ({ ...s, isPlaying: true }))
+      resume()
     }
-
-    audio.play().catch(() => {
-      setState(s => ({ ...s, isPlaying: false }))
-    })
-    animFrameRef.current = requestAnimationFrame(updateProgress)
-  }, [getAudio, updateProgress])
+  }, [resume, startTrack])
 
   const pause = useCallback(() => {
+    playRequestRef.current += 1
+    wantsPlaybackRef.current = false
     const audio = audioRef.current
-    if (audio) {
-      audio.pause()
-      cancelAnimationFrame(animFrameRef.current)
-    }
-    setState(s => ({ ...s, isPlaying: false }))
-  }, [])
+    if (audio) audio.pause()
+    stopProgress()
+    updateState(current => ({
+      ...current,
+      isPlaying: false,
+      status: current.currentTrack ? 'paused' : 'idle',
+    }))
+  }, [stopProgress, updateState])
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current
-    if (!audio || !state.currentTrack) return
-    if (audio.paused) {
-      audio.play().catch(() => {})
-      setState(s => ({ ...s, isPlaying: true }))
-      animFrameRef.current = requestAnimationFrame(updateProgress)
+    if (!audio || !stateRef.current.currentTrack) return
+    if (audio.paused || stateRef.current.status === 'error') {
+      resume()
     } else {
-      audio.pause()
-      cancelAnimationFrame(animFrameRef.current)
-      setState(s => ({ ...s, isPlaying: false }))
+      pause()
     }
-  }, [state.currentTrack, updateProgress])
+  }, [pause, resume])
 
   const setVolume = useCallback((vol: number) => {
+    const nextVolume = Math.max(0, Math.min(1, vol))
     const audio = audioRef.current
-    if (audio) audio.volume = vol
-    setState(s => ({ ...s, volume: vol }))
-  }, [])
+    if (audio) audio.volume = nextVolume
+    updateState(current => ({ ...current, volume: nextVolume }))
+  }, [updateState])
 
   const seek = useCallback((time: number) => {
     const audio = audioRef.current
-    if (audio) {
-      audio.currentTime = time
-      setState(s => ({ ...s, progress: time }))
-    }
-  }, [])
+    if (!audio || !Number.isFinite(audio.duration)) return
+    audio.currentTime = Math.max(0, Math.min(audio.duration, time))
+    updateState(current => ({ ...current, progress: audio.currentTime }))
+  }, [updateState])
 
   const handleNext = useCallback(() => {
-    setState(s => {
-      if (s.queue.length === 0) return { ...s, isPlaying: false }
+    const current = stateRef.current
+    if (current.queue.length === 0) {
+      pause()
+      return
+    }
 
-      let nextIdx: number
-      if (s.repeat === 'one') {
-        nextIdx = s.queueIndex
-      } else if (s.shuffle) {
-        nextIdx = Math.floor(Math.random() * s.queue.length)
+    let nextIndex = current.queueIndex
+    if (current.repeat !== 'one') {
+      if (current.shuffle) {
+        nextIndex = Math.floor(Math.random() * current.queue.length)
       } else {
-        nextIdx = s.queueIndex + 1
-        if (nextIdx >= s.queue.length) {
-          if (s.repeat === 'all') {
-            nextIdx = 0
+        nextIndex += 1
+        if (nextIndex >= current.queue.length) {
+          if (current.repeat === 'all') {
+            nextIndex = 0
           } else {
-            return { ...s, isPlaying: false }
+            pause()
+            return
           }
         }
       }
+    }
 
-      const nextTrack = s.queue[nextIdx]
-      const audio = audioRef.current
-      if (audio && nextTrack) {
-        audio.src = nextTrack.src
-        audio.play().catch(() => {})
-        animFrameRef.current = requestAnimationFrame(updateProgress)
-      }
-
-      return { ...s, currentTrack: nextTrack, queueIndex: nextIdx, isPlaying: true, progress: 0 }
-    })
-  }, [updateProgress])
+    const track = current.queue[nextIndex]
+    if (track) startTrack(track, { queueIndex: nextIndex })
+  }, [pause, startTrack])
 
   const handlePrev = useCallback(() => {
-    setState(s => {
-      if (s.queue.length === 0) return s
-      const prevIdx = s.queueIndex <= 0 ? s.queue.length - 1 : s.queueIndex - 1
-      const prevTrack = s.queue[prevIdx]
-      const audio = audioRef.current
-      if (audio && prevTrack) {
-        audio.src = prevTrack.src
-        audio.play().catch(() => {})
-        animFrameRef.current = requestAnimationFrame(updateProgress)
-      }
-      return { ...s, currentTrack: prevTrack, queueIndex: prevIdx, isPlaying: true, progress: 0 }
-    })
-  }, [updateProgress])
+    const current = stateRef.current
+    if (current.queue.length === 0) return
+    const previousIndex = current.queueIndex <= 0
+      ? current.queue.length - 1
+      : current.queueIndex - 1
+    const track = current.queue[previousIndex]
+    if (track) startTrack(track, { queueIndex: previousIndex })
+  }, [startTrack])
+
+  nextRef.current = handleNext
 
   const setQueue = useCallback((tracks: AudioTrack[], startIdx: number = 0) => {
-    const track = tracks[startIdx]
+    const safeIndex = Math.max(0, Math.min(tracks.length - 1, startIdx))
+    const track = tracks[safeIndex]
     if (!track) return
-    const audio = getAudio()
-    audio.src = track.src
-    audio.play().catch(() => {})
-    animFrameRef.current = requestAnimationFrame(updateProgress)
-    setState(s => ({
-      ...s,
-      queue: tracks,
-      queueIndex: startIdx,
-      currentTrack: track,
-      isPlaying: true,
-      progress: 0,
-    }))
-  }, [getAudio, updateProgress])
+    startTrack(track, { queue: tracks, queueIndex: safeIndex })
+  }, [startTrack])
 
   const toggleShuffle = useCallback(() => {
-    setState(s => ({ ...s, shuffle: !s.shuffle }))
-  }, [])
+    updateState(current => ({ ...current, shuffle: !current.shuffle }))
+  }, [updateState])
 
   const cycleRepeat = useCallback(() => {
-    setState(s => ({
-      ...s,
-      repeat: s.repeat === 'none' ? 'all' : s.repeat === 'all' ? 'one' : 'none',
+    updateState(current => ({
+      ...current,
+      repeat: current.repeat === 'none' ? 'all' : current.repeat === 'all' ? 'one' : 'none',
     }))
-  }, [])
+  }, [updateState])
 
-  // Cleanup
   useEffect(() => {
     return () => {
-      cancelAnimationFrame(animFrameRef.current)
+      playRequestRef.current += 1
+      wantsPlaybackRef.current = false
+      stopProgress()
       if (audioRef.current) {
         audioRef.current.pause()
+        audioRef.current.removeAttribute('src')
+        audioRef.current.load()
         audioRef.current = null
       }
     }
-  }, [])
+  }, [stopProgress])
 
   return {
     state,

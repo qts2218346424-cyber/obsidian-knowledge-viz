@@ -125,7 +125,7 @@ body {
 
 /* Animations */
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -139,13 +139,18 @@ body {
   50% { transform: translateY(-4px); }
 }
 
-@keyframes flipCard {
-  from { transform: rotateY(0); }
-  to { transform: rotateY(180deg); }
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-6px) rotate(0.5deg); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
 .animate-fade-in-up {
-  animation: fadeInUp 0.4s ease-out;
+  animation: fadeInUp 0.45s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .animate-pulse-soft {
@@ -154,6 +159,68 @@ body {
 
 .animate-bounce-gentle {
   animation: bounce-gentle 2s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float-slow 4s ease-in-out infinite;
+}
+
+/* Big-tech Glassmorphism & Aurora primitives */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.05), 0 0 0 1px rgba(15, 23, 42, 0.03);
+}
+
+.glass-panel-hover {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.glass-panel-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 20px 40px -10px rgba(0, 113, 227, 0.12), 0 0 0 1px rgba(0, 113, 227, 0.15);
+}
+
+.glass-header {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.aurora-mesh {
+  background-color: #F8FAFC;
+  background-image: 
+    radial-gradient(at 15% 15%, rgba(0, 113, 227, 0.07) 0px, transparent 50%),
+    radial-gradient(at 85% 10%, rgba(99, 102, 241, 0.06) 0px, transparent 45%),
+    radial-gradient(at 50% 90%, rgba(236, 72, 153, 0.05) 0px, transparent 50%),
+    radial-gradient(at 85% 80%, rgba(16, 185, 129, 0.05) 0px, transparent 40%);
+  background-attachment: fixed;
+}
+
+.text-gradient-brand {
+  background: linear-gradient(135deg, #0071E3 0%, #4F46E5 50%, #EC4899 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-cyan {
+  background: linear-gradient(135deg, #0284c7 0%, #0071E3 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.glow-pill {
+  box-shadow: 0 0 20px -3px rgba(0, 113, 227, 0.35);
+}
+
+.glow-amber {
+  box-shadow: 0 0 20px -3px rgba(245, 158, 11, 0.35);
+}
+
+.glow-emerald {
+  box-shadow: 0 0 20px -3px rgba(16, 185, 129, 0.35);
 }
 
 /* Flip card utility */
@@ -173,3 +240,4 @@ body {
 .flip-card-back {
   transform: rotateY(180deg);
 }
+

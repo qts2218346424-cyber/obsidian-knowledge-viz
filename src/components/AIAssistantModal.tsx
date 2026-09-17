@@ -15,8 +15,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
+import MarkdownRenderer from './MarkdownRenderer'
 import { AI_SKILLS, getSkills } from '../data/ai-skills'
 import { api, type LocalAgentStatus } from '../services/api'
 import {
@@ -584,7 +583,7 @@ function MessageBubble({ message }: { message: AIWorkspaceMessage }) {
         )}
         {isUser
           ? <div className="whitespace-pre-wrap">{message.content}</div>
-          : <div className="prose prose-sm max-w-none [&_p]:my-1.5 [&_ul]:my-1.5 [&_ol]:my-1.5 [&_code]:text-accent-sage">{message.content ? <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown> : <Loader2 className="h-4 w-4 animate-spin text-accent-orange" />}</div>}
+          : <div className="prose prose-sm max-w-none [&_p]:my-1.5 [&_ul]:my-1.5 [&_ol]:my-1.5 [&_code]:text-accent-sage">{message.content ? <MarkdownRenderer content={message.content} /> : <Loader2 className="h-4 w-4 animate-spin text-accent-orange" />}</div>}
         {message.streaming && message.content && <span className="ml-1 inline-block h-4 w-1 animate-pulse rounded bg-accent-orange align-middle" />}
       </div>
     </div>

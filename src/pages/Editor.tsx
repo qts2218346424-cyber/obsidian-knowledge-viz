@@ -5,10 +5,13 @@ import {
   FolderTree, Eye, Bold, Italic, Heading, List, Code,
   Link, Table, Hash, Sparkles, Wand2,
   Undo2, Copy, Check, Quote, Strikethrough, Minus, ListOrdered,
+  Sigma,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
 import rehypeHighlight from 'rehype-highlight'
+import rehypeKatex from 'rehype-katex'
 import 'highlight.js/styles/github-dark.css'
 import { api, type FileDetail, type IngestStatus, type IngestResult } from '../services/api'
 import { useVaultTree } from '../hooks/useVaultData'
@@ -111,6 +114,50 @@ function insertBlock(
     textarea.focus()
   }, 0)
 }
+
+function insertSnippet(
+  textarea: HTMLTextAreaElement,
+  snippet: string,
+  content: string,
+  setContent: (v: string) => void,
+) {
+  const start = textarea.selectionStart
+  const end = textarea.selectionEnd
+  const selected = content.substring(start, end)
+  let textToInsert = snippet
+  let selectStartOffset = 0
+  let selectLen = 0
+
+  if (snippet.includes('${text}')) {
+    const defaultPlaceholder = selected || 'f(x)'
+    textToInsert = snippet.replace('${text}', defaultPlaceholder)
+    selectStartOffset = snippet.indexOf('${text}')
+    selectLen = defaultPlaceholder.length
+  } else {
+    selectStartOffset = 0
+    selectLen = snippet.length
+  }
+
+  const newContent = content.substring(0, start) + textToInsert + content.substring(end)
+  setContent(newContent)
+  setTimeout(() => {
+    textarea.focus()
+    textarea.setSelectionRange(start + selectStartOffset, start + selectStartOffset + selectLen)
+  }, 0)
+}
+
+const mathSnippets = [
+  { label: '行内公式 $...$', snippet: '$${text}$', desc: '行内公式' },
+  { label: '块级公式 $$...$$', snippet: '$$\n${text}\n$$', desc: '独立公式块' },
+  { label: '定积分', snippet: '\\int_{a}^{b} f(x) \\, dx', desc: '\\int' },
+  { label: '求极限', snippet: '\\lim_{x \\to 0} \\frac{f(x)}{g(x)}', desc: '\\lim' },
+  { label: '求和号', snippet: '\\sum_{i=1}^{n} a_i', desc: '\\sum' },
+  { label: '分式', snippet: '\\frac{分子}{分母}', desc: '\\frac{a}{b}' },
+  { label: '开方', snippet: '\\sqrt{x}', desc: '\\sqrt{}' },
+  { label: '矩阵 (2×2)', snippet: '\\begin{pmatrix}\na & b \\\\\nc & d\n\\end{pmatrix}', desc: 'pmatrix' },
+  { label: '偏导数', snippet: '\\frac{\\partial f}{\\partial x}', desc: '\\partial' },
+  { label: '特征值', snippet: 'A\\mathbf{x} = \\lambda\\mathbf{x}', desc: 'Ax = λx' },
+]
 
 function escapeHtml(value: string) {
   return value
@@ -310,6 +357,7 @@ export default function Editor() {
   const [aiResult, setAiResult] = useState('')
   const [aiAction, setAiAction] = useState('')
   const [showAiResult, setShowAiResult] = useState(false)
+  const [showMathMenu, setShowMathMenu] = useState(false)
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const richEditorRef = useRef<HTMLDivElement>(null)
@@ -567,6 +615,16 @@ export default function Editor() {
       : ta() && insertBlock(ta()!, '| Col 1 | Col 2 | Col 3 |\n|-------|-------|-------|\n| cell  | cell  | cell  |', content, setContent),
   }
 
+  const handleInsertMath = (snippet: string) => {
+    setShowMathMenu(false)
+    if (editorMode === 'write') {
+      execRich('insertText', snippet.replace('${text}', 'f(x)'))
+    } else {
+      const el = ta()
+      if (el) insertSnippet(el, snippet, content, setContent)
+    }
+  }
+
   // ─── AI Edit Actions ──────────────────────────────────────────────────────────
 
   const aiActions = [
@@ -751,6 +809,36 @@ export default function Editor() {
           <ToolBtn icon={Table} label="表格" onClick={fmt.table} />
           <ToolBtn icon={Minus} label="分隔线" onClick={fmt.hr} />
 
+          {/* Math Quick Formula Dropdown */}
+          <div className="relative">
+            <ToolBtn
+              icon={Sigma}
+              label="插入数学公式 (LaTeX / KaTeX)"
+              onClick={() => setShowMathMenu(!showMathMenu)}
+              className={showMathMenu ? 'bg-cream-200 text-accent-orange' : ''}
+            />
+            {showMathMenu && (
+              <div className="absolute left-0 top-full mt-1 w-64 bg-surface border border-cream-300 rounded-xl shadow-xl z-50 p-1.5 animate-fade-in-up">
+                <div className="px-2.5 py-1.5 border-b border-cream-200 text-[10px] text-warm-500 font-semibold uppercase tracking-wider flex items-center justify-between">
+                  <span>LaTeX 数学公式速插</span>
+                  <span className="text-[9px] text-warm-400 font-normal">支持 KaTeX</span>
+                </div>
+                <div className="max-h-60 overflow-y-auto py-1 space-y-0.5">
+                  {mathSnippets.map((m, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleInsertMath(m.snippet)}
+                      className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs text-warm-700 hover:bg-cream-100 hover:text-accent-orange transition-colors"
+                    >
+                      <span className="font-medium">{m.label}</span>
+                      <span className="font-mono text-[10px] text-warm-400">{m.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* AI Edit Button */}
           <div className="ml-auto relative">
             <button
@@ -897,8 +985,8 @@ export default function Editor() {
               <div className="mb-3 text-[10px] uppercase tracking-wider text-warm-400">实时预览</div>
               <div className="md-preview">
                 <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeHighlight]}
+                  remarkPlugins={[remarkGfm, remarkMath]}
+                  rehypePlugins={[rehypeHighlight, rehypeKatex]}
                   components={{
                     h1: ({ children }) => <h1 className="text-xl font-bold text-warm-800 mt-6 mb-3 pb-2 border-b border-cream-200">{children}</h1>,
                     h2: ({ children }) => <h2 className="text-lg font-semibold text-warm-700 mt-5 mb-2">{children}</h2>,
@@ -1075,7 +1163,7 @@ export default function Editor() {
                 </div>
               ) : (
                 <div className="md-preview">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}
+                  <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeHighlight, rehypeKatex]}
                     components={{
                       h1: ({ children }) => <h1 className="text-lg font-bold text-warm-800 mt-4 mb-2">{children}</h1>,
                       h2: ({ children }) => <h2 className="text-base font-semibold text-warm-700 mt-3 mb-2">{children}</h2>,

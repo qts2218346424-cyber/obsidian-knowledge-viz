@@ -3,6 +3,7 @@ import { BookOpen, User, Save, Check, X } from 'lucide-react'
 import type { AgentMessage } from '../pages/Chat'
 import { api } from '../services/api'
 import NoteCard from './NoteCard'
+import MarkdownRenderer from './MarkdownRenderer'
 
 interface ChatMessageProps {
   message: AgentMessage
@@ -91,12 +92,7 @@ export default function ChatMessage({ message, onNoteClick }: ChatMessageProps) 
             ? 'bg-accent-orange/15 text-warm-800 border border-accent-orange/20'
             : 'bg-cream-200/50 text-warm-600 border border-cream-300/50'
         }`}>
-          {message.content.split('\n').map((line, i) => (
-            <span key={i}>
-              {renderInlineMarkdown(line)}
-              {i < message.content.split('\n').length - 1 && <br />}
-            </span>
-          ))}
+          <MarkdownRenderer content={message.content} className="text-left text-sm" />
         </div>
 
         {/* Cited notes */}
@@ -166,14 +162,4 @@ export default function ChatMessage({ message, onNoteClick }: ChatMessageProps) 
       )}
     </div>
   )
-}
-
-function renderInlineMarkdown(text: string): React.ReactNode {
-  const parts = text.split(/(\*\*[^*]+\*\*)/)
-  return parts.map((part, i) => {
-    if (part.startsWith('**') && part.endsWith('**')) {
-      return <strong key={i} className="text-warm-800 font-semibold">{part.slice(2, -2)}</strong>
-    }
-    return part
-  })
 }

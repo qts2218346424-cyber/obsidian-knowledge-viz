@@ -1,0 +1,88 @@
+import type { UnifiedQuestion } from '../../../types/subject'
+
+/**
+ * 考研数学 - 高等数学精选试题库
+ */
+export const calculusQuestions: UnifiedQuestion[] = [
+  {
+    id: 'math-calc-001',
+    domain: 'math',
+    subject: '高等数学',
+    scope: ['数一', '数二', '数三'],
+    chapter: '极限与连续',
+    type: 'choice',
+    question: '求极限 $\\lim_{x \\to 0} \\frac{x - \\sin x}{x^3}$ 的值为：',
+    options: [
+      'A. $\\frac{1}{6}$',
+      'B. $\\frac{1}{3}$',
+      'C. $\\frac{1}{2}$',
+      'D. $0$',
+    ],
+    correctAnswer: 'A',
+    explanation: '利用麦克劳林展开式：$\\sin x = x - \\frac{x^3}{6} + o(x^3)$，代入分子得 $x - \\sin x = \\frac{x^3}{6} + o(x^3)$。因此原式为 $\\lim_{x \\to 0} \\frac{\\frac{1}{6}x^3 + o(x^3)}{x^3} = \\frac{1}{6}$。亦可通过洛必达法则连续求导三次得出。',
+    steps: [
+      '方法一（泰勒公式展开法）：',
+      '写出正弦函数的麦克劳林展开：$\\sin x = x - \\frac{x^3}{3!} + o(x^3) = x - \\frac{x^3}{6} + o(x^3)$',
+      '代入分子得：$x - \\sin x = \\frac{x^3}{6} - o(x^3)$',
+      '计算极限：$\\lim_{x \\to 0} \\frac{\\frac{x^3}{6}}{x^3} = \\frac{1}{6}$',
+      '方法二（洛必达法则）：$\\lim_{x \\to 0} \\frac{1 - \\cos x}{3x^2} = \\lim_{x \\to 0} \\frac{\\frac{1}{2}x^2}{3x^2} = \\frac{1}{6}$',
+    ],
+    keyPoints: ['泰勒公式展开', '等价无穷小替换', '洛必达法则'],
+    difficulty: '简单',
+    tags: ['极限', '高数', '泰勒展开'],
+  },
+  {
+    id: 'math-calc-002',
+    domain: 'math',
+    subject: '高等数学',
+    scope: ['数一', '数二', '数三'],
+    chapter: '一元函数微分学',
+    type: 'choice',
+    question: '设 $f(x)$ 在 $[a, b]$ 上连续，在 $(a, b)$ 内可导，且 $f(a) = f(b) = 0$。若已知 $f\'(x) + 2f(x) = 0$ 在 $(a, b)$ 内至少有一实根，常辅助函数应构造为：',
+    options: [
+      'A. $g(x) = e^{2x} f(x)$',
+      'B. $g(x) = e^{-2x} f(x)$',
+      'C. $g(x) = 2e^x f(x)$',
+      'D. $g(x) = x^2 f(x)$',
+    ],
+    correctAnswer: 'A',
+    explanation: '对于微分方程 $y\' + 2y = 0$，其积分因子为 $e^{\\int 2 dx} = e^{2x}$。因此设 $g(x) = e^{2x}f(x)$，则 $g\'(x) = e^{2x}[f\'(x) + 2f(x)]$。由罗尔定理即可得证。',
+    steps: [
+      '目标形式为验证 $f\'(x) + 2f(x) = 0$ 的零点',
+      '联想一阶线性微分方程的标准积分因子法：对 $y\' + P(x)y = 0$，积分因子为 $\\mu(x) = e^{\\int P(x)dx} = e^{2x}$',
+      '构造辅助函数：$g(x) = e^{2x}f(x)$',
+      '求导验证：$g\'(x) = 2e^{2x}f(x) + e^{2x}f\'(x) = e^{2x}(f\'(x) + 2f(x))$',
+      '因 $e^{2x} > 0$，故 $g\'(\\xi) = 0 \\iff f\'(\\xi) + 2f(\\xi) = 0$',
+    ],
+    keyPoints: ['罗尔中值定理', '辅助函数构造', '积分因子法'],
+    difficulty: '中等',
+    tags: ['微分中值定理', '辅助函数', '罗尔定理'],
+  },
+  {
+    id: 'math-calc-003',
+    domain: 'math',
+    subject: '高等数学',
+    scope: ['数一', '数二', '数三'],
+    chapter: '一元函数积分学',
+    type: 'blank',
+    question: '计算定积分：$\\int_{-1}^{1} (x^3 \\cos x + \\sqrt{1 - x^2}) dx = $ _______',
+    options: [
+      'A. $\\frac{\\pi}{2}$',
+      'B. $\\pi$',
+      'C. $0$',
+      'D. $\\frac{\\pi}{4}$',
+    ],
+    correctAnswer: 'A',
+    explanation: '利用对称区间定积分性质：奇函数在对称区间积分为0，偶函数积分为半区间2倍。$x^3\\cos x$ 为奇函数，积分为0；$\\sqrt{1-x^2}$ 为偶函数，几何意义为半径为1的上半圆面积，故原式 $= 2 \\times \\int_0^1 \\sqrt{1-x^2} dx = \\frac{1}{2} \\times \\pi \\times 1^2 = \\frac{\\pi}{2}$。',
+    steps: [
+      '拆分积分式：$I = \\int_{-1}^1 x^3\\cos x dx + \\int_{-1}^1 \\sqrt{1-x^2} dx$',
+      '分析被积函数奇偶性：$f_1(x) = x^3\\cos x$ 满足 $f_1(-x) = (-x)^3\\cos(-x) = -x^3\\cos x = -f_1(x)$，为奇函数，对称区间积分为 0',
+      '分析第二项：$f_2(x) = \\sqrt{1-x^2}$ 为偶函数，$y = \\sqrt{1-x^2}$ 表示以原点为圆心、半径为 1 的上半圆',
+      '几何意义计算积分：$\\int_{-1}^1 \\sqrt{1-x^2}dx = \\frac{1}{2}\\pi r^2 = \\frac{\\pi}{2}$',
+      '得出最终结果：$0 + \\frac{\\pi}{2} = \\frac{\\pi}{2}$',
+    ],
+    keyPoints: ['对称区间积分性质', '奇偶性简化', '定积分几何意义'],
+    difficulty: '简单',
+    tags: ['定积分', '奇偶对称性', '几何意义'],
+  },
+]

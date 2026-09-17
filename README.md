@@ -164,6 +164,14 @@ obsidian-viz/
 └─ docs/                      设计与实施计划
 ```
 
+## 产品规划
+
+近期产品方向、目标用户、手机端、账号体系、云端知识库、平台 AI、
+UI 主题自定义和 AI 语气风格，统一记录在：
+
+- [产品愿景与路线图](docs/PRODUCT-VISION.md)
+- [100 人以内可上线实施方案](docs/IMPLEMENTATION-PLAN-100-USERS.md)
+
 ## 主要 API
 
 | 方法 | 路径 | 说明 |

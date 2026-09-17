@@ -1,133 +1,213 @@
 import { useState } from 'react'
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Shuffle, Repeat, Repeat1, ChevronDown, ChevronUp } from 'lucide-react'
+import {
+  AlertCircle,
+  ChevronDown,
+  ChevronUp,
+  LoaderCircle,
+  Pause,
+  Play,
+  Repeat,
+  Repeat1,
+  Shuffle,
+  SkipBack,
+  SkipForward,
+  Volume2,
+  VolumeX,
+} from 'lucide-react'
 import { useAudioContext } from '../../contexts/AudioContext'
 
 export default function MiniPlayer() {
-  const { state, togglePlay, next, prev, setVolume, seek, toggleShuffle, cycleRepeat, setQueue } = useAudioContext()
+  const {
+    state,
+    togglePlay,
+    next,
+    prev,
+    setVolume,
+    seek,
+    toggleShuffle,
+    cycleRepeat,
+    setQueue,
+  } = useAudioContext()
   const [expanded, setExpanded] = useState(false)
-  const { currentTrack, isPlaying, volume, progress, duration, shuffle, repeat, queue, queueIndex } = state
+  const {
+    currentTrack,
+    isPlaying,
+    status,
+    error,
+    volume,
+    progress,
+    duration,
+    shuffle,
+    repeat,
+    queue,
+    queueIndex,
+  } = state
 
   if (!currentTrack) return null
 
-  const formatTime = (s: number) => {
-    if (!s || isNaN(s)) return '0:00'
-    const m = Math.floor(s / 60)
-    const sec = Math.floor(s % 60)
-    return `${m}:${sec.toString().padStart(2, '0')}`
+  const formatTime = (seconds: number) => {
+    if (!seconds || !Number.isFinite(seconds)) return '0:00'
+    const minutes = Math.floor(seconds / 60)
+    const remaining = Math.floor(seconds % 60)
+    return `${minutes}:${remaining.toString().padStart(2, '0')}`
   }
 
-  const pct = duration > 0 ? (progress / duration) * 100 : 0
-
-  const repeatIcon = repeat === 'one' ? <Repeat1 className="w-3.5 h-3.5" /> : <Repeat className="w-3.5 h-3.5" />
+  const isLive = currentTrack.type === 'radio'
+  const progressPercent = duration > 0 ? (progress / duration) * 100 : 0
+  const repeatIcon = repeat === 'one'
+    ? <Repeat1 className="h-3.5 w-3.5" />
+    : <Repeat className="h-3.5 w-3.5" />
 
   return (
     <div className={`fixed bottom-0 left-0 right-0 z-50 transition-all duration-300 ${
       expanded ? 'h-64' : 'h-16'
     }`}>
-      {/* Progress bar on top */}
       <div
-        className="h-1 bg-cream-200 cursor-pointer group"
-        onClick={(e) => {
-          const rect = e.currentTarget.getBoundingClientRect()
-          const x = (e.clientX - rect.left) / rect.width
-          seek(x * duration)
+        className={`group h-1 bg-cream-200 ${isLive ? '' : 'cursor-pointer'}`}
+        onClick={(event) => {
+          if (isLive || duration <= 0) return
+          const rect = event.currentTarget.getBoundingClientRect()
+          const position = (event.clientX - rect.left) / rect.width
+          seek(position * duration)
         }}
       >
         <div
-          className="h-full bg-accent-orange transition-all duration-150 relative"
-          style={{ width: `${pct}%` }}
+          className="relative h-full bg-accent-orange transition-all duration-150"
+          style={{ width: `${progressPercent}%` }}
         >
-          <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-accent-orange opacity-0 group-hover:opacity-100 transition-opacity" />
+          {!isLive && (
+            <div className="absolute right-0 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-accent-orange opacity-0 transition-opacity group-hover:opacity-100" />
+          )}
         </div>
       </div>
 
-      {/* Main bar */}
-      <div className="h-15 bg-surface border-t border-cream-200 flex items-center px-4 gap-4">
-        {/* Track info */}
+      <div className="flex h-15 items-center gap-4 border-t border-cream-200 bg-surface px-4">
         <button
           onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-3 min-w-0 w-48 shrink-0 hover:opacity-80 transition-opacity"
+          className="flex w-48 min-w-0 shrink-0 items-center gap-3 transition-opacity hover:opacity-80"
         >
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent-orange/30 to-accent-peach/30 flex items-center justify-center shrink-0">
-            <span className="text-lg">
-              {currentTrack.type === 'ambient' ? '🎵' : '🎶'}
-            </span>
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-accent-orange/30 to-accent-peach/30">
+            <span className="text-lg">{isLive ? '📻' : '🎵'}</span>
           </div>
           <div className="min-w-0 text-left">
-            <div className="text-xs font-medium text-warm-700 truncate">{currentTrack.title}</div>
-            <div className="text-[10px] text-warm-400 truncate">{currentTrack.artist || '未知'}</div>
+            <div className="truncate text-xs font-medium text-warm-700">{currentTrack.title}</div>
+            <div className={`truncate text-[10px] ${status === 'error' ? 'text-accent-rose' : 'text-warm-400'}`}>
+              {status === 'loading'
+                ? '正在连接…'
+                : status === 'error'
+                  ? '播放失败'
+                  : currentTrack.artist || '未知'}
+            </div>
           </div>
-          {expanded ? <ChevronDown className="w-3.5 h-3.5 text-warm-400 shrink-0" /> : <ChevronUp className="w-3.5 h-3.5 text-warm-400 shrink-0" />}
+          {expanded
+            ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-warm-400" />
+            : <ChevronUp className="h-3.5 w-3.5 shrink-0 text-warm-400" />}
         </button>
 
-        {/* Controls */}
-        <div className="flex-1 flex items-center justify-center gap-3">
+        <div className="flex flex-1 items-center justify-center gap-3">
           <button
             onClick={toggleShuffle}
-            className={`p-1.5 rounded-lg transition-colors ${shuffle ? 'text-accent-orange bg-accent-orange/10' : 'text-warm-400 hover:text-warm-600'}`}
+            className={`rounded-lg p-1.5 transition-colors ${
+              shuffle
+                ? 'bg-accent-orange/10 text-accent-orange'
+                : 'text-warm-400 hover:text-warm-600'
+            }`}
+            title="随机播放"
           >
-            <Shuffle className="w-3.5 h-3.5" />
+            <Shuffle className="h-3.5 w-3.5" />
           </button>
-          <button onClick={prev} className="p-1.5 rounded-lg text-warm-500 hover:text-warm-700 transition-colors">
-            <SkipBack className="w-4 h-4" />
+          <button
+            onClick={prev}
+            className="rounded-lg p-1.5 text-warm-500 transition-colors hover:text-warm-700"
+            title="上一个"
+          >
+            <SkipBack className="h-4 w-4" />
           </button>
           <button
             onClick={togglePlay}
-            className="w-9 h-9 rounded-full bg-accent-orange text-white flex items-center justify-center hover:bg-accent-peach transition-colors shadow-sm"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-orange text-white shadow-sm transition-colors hover:bg-accent-peach"
+            title={isPlaying ? '暂停' : status === 'error' ? '重新连接' : '播放'}
           >
-            {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
+            {status === 'loading'
+              ? <LoaderCircle className="h-4 w-4 animate-spin" />
+              : isPlaying
+                ? <Pause className="h-4 w-4" />
+                : <Play className="ml-0.5 h-4 w-4" />}
           </button>
-          <button onClick={next} className="p-1.5 rounded-lg text-warm-500 hover:text-warm-700 transition-colors">
-            <SkipForward className="w-4 h-4" />
+          <button
+            onClick={next}
+            className="rounded-lg p-1.5 text-warm-500 transition-colors hover:text-warm-700"
+            title="下一个"
+          >
+            <SkipForward className="h-4 w-4" />
           </button>
           <button
             onClick={cycleRepeat}
-            className={`p-1.5 rounded-lg transition-colors ${repeat !== 'none' ? 'text-accent-orange bg-accent-orange/10' : 'text-warm-400 hover:text-warm-600'}`}
+            className={`rounded-lg p-1.5 transition-colors ${
+              repeat !== 'none'
+                ? 'bg-accent-orange/10 text-accent-orange'
+                : 'text-warm-400 hover:text-warm-600'
+            }`}
+            title="循环模式"
           >
             {repeatIcon}
           </button>
         </div>
 
-        {/* Volume + time */}
-        <div className="flex items-center gap-3 w-48 shrink-0 justify-end">
-          <span className="text-[10px] text-warm-400 font-mono">{formatTime(progress)} / {formatTime(duration)}</span>
+        <div className="flex w-48 shrink-0 items-center justify-end gap-3">
+          {status === 'error' ? (
+            <span
+              title={error || undefined}
+              className="flex min-w-0 items-center gap-1 truncate text-[10px] text-accent-rose"
+            >
+              <AlertCircle className="h-3 w-3 shrink-0" />
+              <span className="truncate">{error || '播放失败'}</span>
+            </span>
+          ) : (
+            <span className="font-mono text-[10px] text-warm-400">
+              {isLive ? '直播' : `${formatTime(progress)} / ${formatTime(duration)}`}
+            </span>
+          )}
           <button
             onClick={() => setVolume(volume > 0 ? 0 : 0.7)}
-            className="p-1 text-warm-400 hover:text-warm-600 transition-colors"
+            className="p-1 text-warm-400 transition-colors hover:text-warm-600"
+            title={volume === 0 ? '恢复音量' : '静音'}
           >
-            {volume === 0 ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+            {volume === 0
+              ? <VolumeX className="h-3.5 w-3.5" />
+              : <Volume2 className="h-3.5 w-3.5" />}
           </button>
           <input
             type="range"
-            min={0} max={1} step={0.01}
+            min={0}
+            max={1}
+            step={0.01}
             value={volume}
-            onChange={e => setVolume(Number(e.target.value))}
-            className="w-20 h-1 accent-accent-orange cursor-pointer"
+            onChange={event => setVolume(Number(event.target.value))}
+            className="h-1 w-20 cursor-pointer accent-accent-orange"
+            aria-label="音量"
           />
         </div>
       </div>
 
-      {/* Expanded queue */}
       {expanded && queue.length > 0 && (
-        <div className="bg-surface border-t border-cream-200 max-h-44 overflow-auto px-4 py-2">
-          <div className="text-[10px] text-warm-400 mb-2 font-medium">播放列表</div>
-          {queue.map((track, i) => (
-            <div
+        <div className="max-h-44 overflow-auto border-t border-cream-200 bg-surface px-4 py-2">
+          <div className="mb-2 text-[10px] font-medium text-warm-400">播放列表</div>
+          {queue.map((track, index) => (
+            <button
+              type="button"
               key={track.id}
-              onClick={() => {
-                // Jump to this track using context's setQueue
-                setQueue(queue, i)
-              }}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs cursor-pointer transition-colors ${
-                i === queueIndex
-                  ? 'bg-accent-orange/10 text-accent-orange font-medium'
+              onClick={() => setQueue(queue, index)}
+              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-xs transition-colors ${
+                index === queueIndex
+                  ? 'bg-accent-orange/10 font-medium text-accent-orange'
                   : 'text-warm-600 hover:bg-cream-100'
               }`}
             >
-              <span className="w-5 text-right text-warm-400">{i + 1}</span>
-              <span className="truncate flex-1">{track.title}</span>
-              <span className="text-warm-400 text-[10px]">{track.type === 'ambient' ? '🎵' : '📁'}</span>
-            </div>
+              <span className="w-5 text-right text-warm-400">{index + 1}</span>
+              <span className="flex-1 truncate">{track.title}</span>
+              <span className="text-[10px] text-warm-400">{track.type === 'radio' ? '📻' : '🎵'}</span>
+            </button>
           ))}
         </div>
       )}
