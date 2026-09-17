@@ -5,7 +5,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import readline from 'node:readline'
 
-export type LocalAgentProvider = 'claude-code' | 'codex' | 'ollama' | 'lm-studio'
+export type LocalAgentProvider = 'claude-code' | 'codex' | 'ollama' | 'lm-studio' | 'web'
 
 export interface LocalAgentConfig {
   claudeCommand?: string

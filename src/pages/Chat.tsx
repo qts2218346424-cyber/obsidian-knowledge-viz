@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Send, Loader2, BookOpen, FolderTree, X, Wrench, ChevronDown, ChevronRight, Plus, Trash2, MessageSquare, Save } from 'lucide-react'
+import { Send, Loader2, BookOpen, FolderTree, X, Wrench, ChevronDown, ChevronRight, Plus, Trash2, MessageSquare, Save, Sparkles, CheckCircle2 } from 'lucide-react'
 import MarkdownRenderer from '../components/MarkdownRenderer'
 import { api, type FileDetail } from '../services/api'
 import { useVaultTree } from '../hooks/useVaultData'
 import FileExplorer from '../components/FileExplorer'
 import LuluAvatar from '../components/Pet/LuluAvatar'
+import { STUDY_SKILLS, type StudySkill } from '../data/studySkills'
 
 interface ToolCallInfo {
   tool: string
@@ -37,6 +38,7 @@ export default function Chat() {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [activeConvId, setActiveConvId] = useState<string>('')
   const [input, setInput] = useState('')
+  const [activeSkill, setActiveSkill] = useState<StudySkill | null>(null)
   const [loading, setLoading] = useState(false)
   const [showFiles, setShowFiles] = useState(false)
   const [showSessions, setShowSessions] = useState(true)
@@ -145,10 +147,14 @@ export default function Chat() {
         .slice(-10)
         .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
 
+      const messageToSend = activeSkill
+        ? `${activeSkill.prompt}\n\n【用户具体指令/考点】：\n${text}`
+        : text
+
       const response = await fetch('/api/agent/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, history }),
+        body: JSON.stringify({ message: messageToSend, history }),
         signal: controller.signal,
       })
 
@@ -249,6 +255,7 @@ export default function Chat() {
       })
       setLoading(false)
       abortRef.current = null
+      setActiveSkill(null)
     }
   }
 
@@ -378,15 +385,66 @@ export default function Chat() {
           <div ref={messagesEndRef} />
         </div>
 
+        {/* Built-in Study Skills chips */}
+        <div className="shrink-0 border-t border-cream-200 dark:border-slate-800 pt-2 pb-1">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 custom-scrollbar">
+            <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 shrink-0 flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-amber-500" />
+              考研专属技能:
+            </span>
+            {STUDY_SKILLS.map(skill => {
+              const isCur = activeSkill?.id === skill.id
+              return (
+                <button
+                  key={skill.id}
+                  onClick={() => {
+                    if (isCur) {
+                      setActiveSkill(null)
+                    } else {
+                      setActiveSkill(skill)
+                      setInput(skill.placeholder)
+                      inputRef.current?.focus()
+                    }
+                  }}
+                  title={skill.desc}
+                  className={`px-2 py-0.5 rounded-lg text-xs transition-all flex items-center gap-1 shrink-0 cursor-pointer ${
+                    isCur
+                      ? 'bg-amber-500 text-white font-bold shadow-xs'
+                      : 'bg-cream-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-cream-200 dark:border-slate-700 hover:border-amber-300 hover:bg-amber-50/40'
+                  }`}
+                >
+                  <span>{skill.emoji}</span>
+                  <span>{skill.shortName}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          {activeSkill && (
+            <div className="mb-2 p-1.5 px-2.5 rounded-xl bg-amber-500/15 border border-amber-400/40 flex items-center justify-between text-xs animate-in fade-in">
+              <div className="flex items-center gap-1.5 text-amber-900 dark:text-amber-200 font-medium text-[11px]">
+                <CheckCircle2 className="w-3.5 h-3.5 text-amber-500" />
+                <span>已激活考研专属 Skill：<b>{activeSkill.name}</b></span>
+              </div>
+              <button
+                onClick={() => setActiveSkill(null)}
+                className="text-amber-600 hover:text-amber-800 dark:text-amber-400 text-xs font-bold cursor-pointer"
+              >
+                取消
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* Input */}
-        <div className="shrink-0 border-t border-cream-200 pt-3">
+        <div className="shrink-0 pt-1">
           <div className="flex items-end gap-3 bg-surface border border-cream-300 rounded-xl px-4 py-3 focus-within:border-accent-orange/40 transition-colors">
             <textarea
               ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="输入问题... AI 可以读写你的笔记"
+              placeholder={activeSkill ? `[${activeSkill.shortName}] ${activeSkill.placeholder}` : "输入问题... 噜噜可以读写整理你的笔记"}
               rows={1}
               className="flex-1 bg-transparent text-sm text-warm-700 placeholder-warm-400 resize-none outline-none max-h-32"
               style={{ minHeight: 24 }}
