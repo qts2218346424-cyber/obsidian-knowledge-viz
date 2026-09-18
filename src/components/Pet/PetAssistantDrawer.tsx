@@ -20,6 +20,7 @@ import {
   ArrowRight,
   Copy,
   Save,
+  Settings,
 } from 'lucide-react'
 import MarkdownRenderer from '../MarkdownRenderer'
 import { api, type LocalAgentStatus, type LocalSkill } from '../../services/api'
@@ -30,6 +31,7 @@ import { STUDY_AGENTS, type StudyAgent } from '../../data/studyAgents'
 import AIMemoryModal from '../AIMemoryModal'
 import QuickPracticeModal from '../QuickPracticeModal'
 import LocalSkillPickerModal from '../LocalSkillPickerModal'
+import ModelManagerModal from '../ModelManagerModal'
 
 interface Message {
   id: string
@@ -62,9 +64,9 @@ interface PetAssistantDrawerProps {
 type ProviderType = 'codex' | 'claude-code' | 'web'
 
 const PROVIDER_PRESET_MODELS: Record<ProviderType, string[]> = {
-  codex: ['gpt-4o', 'o3-mini', 'o1', 'gpt-4o-mini', 'codex'],
-  'claude-code': ['claude-3-7-sonnet', 'claude-3-5-sonnet', 'claude-3-5-haiku'],
-  web: ['deepseek-v4-pro', 'deepseek-reasoner', 'deepseek-chat', 'claude-3-7-sonnet', 'gpt-4o'],
+  codex: ['gpt-5.6-luna', 'gpt-4o', 'o3-mini', 'o1', 'gpt-4o-mini'],
+  'claude-code': ['deepseek-v4-flash', 'deepseek-v4-pro', 'deepseek-flash', 'deepseek-reasoner'],
+  web: ['deepseek-v4-pro', 'deepseek-flash', 'deepseek-reasoner', 'deepseek-chat'],
 }
 
 export default function PetAssistantDrawer({
@@ -101,12 +103,32 @@ export default function PetAssistantDrawer({
   const [showMemoryModal, setShowMemoryModal] = useState(false)
   const [showSkillPicker, setShowSkillPicker] = useState(false)
   const [selectedLocalSkill, setSelectedLocalSkill] = useState<LocalSkill | null>(null)
+  const [showModelManagerModal, setShowModelManagerModal] = useState(false)
   const [syncingModels, setSyncingModels] = useState(false)
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null)
   const [practiceModalOpen, setPracticeModalOpen] = useState(false)
   const [practiceData, setPracticeData] = useState<{ title: string; content: string }>({
     title: '', content: ''
   })
+
+  const handleDeleteModelDirectly = async (model: string) => {
+    if (!model) return
+    if (!window.confirm(`确定要从列表中删除模型「${model}」吗？`)) return
+    try {
+      const res = await api.deleteLocalModel(model)
+      if (res.success && res.agents) {
+        setAgents(res.agents)
+        const active = res.agents.find(a => a.provider === provider)
+        if (selectedModel === model) {
+          setSelectedModel(active?.models?.[0] || '')
+        }
+        setSyncFeedback(`已删除模型 ${model}`)
+        setTimeout(() => setSyncFeedback(null), 3000)
+      }
+    } catch (err: any) {
+      alert(`删除模型失败: ${err.message}`)
+    }
+  }
 
   // Mouse move / up handler for free resizing
   const handleMouseDownResize = (e: React.MouseEvent) => {
@@ -604,18 +626,44 @@ export default function PetAssistantDrawer({
           </span>
 
           {currentAvailableModels.map(m => (
-            <button
+            <div
               key={m}
-              onClick={() => handleModelSelect(m)}
-              className={`px-2 py-0.5 rounded-lg text-[11px] font-mono transition-all shrink-0 cursor-pointer ${
+              className={`inline-flex items-center rounded-lg text-[11px] font-mono transition-all shrink-0 border ${
                 selectedModel === m && !isCustomModel
-                  ? 'bg-amber-500 text-white font-bold shadow-xs'
-                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-amber-300'
+                  ? 'bg-amber-500 text-white font-bold border-amber-600 shadow-xs'
+                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-amber-300'
               }`}
             >
-              {m}
-            </button>
+              <button
+                onClick={() => handleModelSelect(m)}
+                className="px-2 py-0.5 cursor-pointer"
+              >
+                {m}
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleDeleteModelDirectly(m)
+                }}
+                title={`删除模型 ${m}`}
+                className={`pr-1.5 pl-0.5 py-0.5 text-[10px] hover:text-red-500 transition-colors cursor-pointer ${
+                  selectedModel === m && !isCustomModel ? 'text-white/80 hover:text-white' : 'text-slate-400'
+                }`}
+              >
+                ×
+              </button>
+            </div>
           ))}
+
+          {/* Model Manager Launcher */}
+          <button
+            onClick={() => setShowModelManagerModal(true)}
+            title="管理模型仓库（可删除不需要的模型）"
+            className="px-2 py-0.5 rounded-lg text-[10px] font-medium bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shrink-0 flex items-center gap-1 cursor-pointer"
+          >
+            <Settings className="w-3 h-3 text-orange-500" />
+            <span>管理</span>
+          </button>
 
           {/* Custom model entry */}
           <div className="flex items-center gap-1 shrink-0">
@@ -977,6 +1025,21 @@ export default function PetAssistantDrawer({
         onClose={() => setShowSkillPicker(false)}
         onSelectSkill={skill => setSelectedLocalSkill(skill)}
         currentSkillId={selectedLocalSkill?.id}
+      />
+
+      {/* Model Management Modal */}
+      <ModelManagerModal
+        isOpen={showModelManagerModal}
+        onClose={() => setShowModelManagerModal(false)}
+        agents={agents}
+        currentProvider={provider}
+        onModelsUpdated={updated => {
+          setAgents(updated)
+          const active = updated.find(a => a.provider === provider)
+          if (active?.models && !active.models.includes(selectedModel)) {
+            setSelectedModel(active.models[0] || '')
+          }
+        }}
       />
     </div>
   )

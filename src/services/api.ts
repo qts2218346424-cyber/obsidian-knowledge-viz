@@ -580,6 +580,18 @@ export const api = {
   syncLocalAgentModels: () =>
     postJSON<{ success: boolean; agents: LocalAgentStatus[]; defaultCwd: string }>('/local-agents/sync-models', {}),
 
+  deleteLocalModel: (model: string) =>
+    postJSON<{ success: boolean; agents: LocalAgentStatus[]; deletedModels: string[]; message: string }>('/local-agents/delete-model', { model }),
+
+  undeleteLocalModel: (model: string) =>
+    postJSON<{ success: boolean; agents: LocalAgentStatus[]; deletedModels: string[]; message: string }>('/local-agents/undelete-model', { model }),
+
+  restoreLocalModels: () =>
+    postJSON<{ success: boolean; agents: LocalAgentStatus[]; deletedModels: string[]; message: string }>('/local-agents/restore-models', {}),
+
+  getDeletedModels: () =>
+    fetchJSON<{ success: boolean; deletedModels: string[] }>('/local-agents/deleted-models'),
+
   getLocalSkills: () =>
     fetchJSON<{ success: boolean; skills: LocalSkill[]; totalCount: number; categories: string[]; sources: string[] }>('/local-agents/skills'),
 

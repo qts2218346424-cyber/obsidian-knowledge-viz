@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import {
   Send, Loader2, FolderTree, X, Wrench, ChevronDown,
   Plus, Trash2, MessageSquare, Save, Sparkles, CheckCircle2, Target,
-  Copy, Check, Bot, FileText, Brain, RefreshCw
+  Copy, Check, Bot, FileText, Brain, RefreshCw, Settings
 } from 'lucide-react'
 import MarkdownRenderer from '../components/MarkdownRenderer'
 import { api, type FileDetail, type LocalAgentStatus, type LocalSkill } from '../services/api'
@@ -14,6 +14,7 @@ import { STUDY_AGENTS, type StudyAgent } from '../data/studyAgents'
 import QuickPracticeModal from '../components/QuickPracticeModal'
 import AIMemoryModal from '../components/AIMemoryModal'
 import LocalSkillPickerModal from '../components/LocalSkillPickerModal'
+import ModelManagerModal from '../components/ModelManagerModal'
 
 interface ToolCallInfo {
   tool: string
@@ -44,9 +45,9 @@ interface Conversation {
 type ProviderType = 'codex' | 'claude-code' | 'web'
 
 const PROVIDER_PRESET_MODELS: Record<ProviderType, string[]> = {
-  codex: ['gpt-4o', 'o3-mini', 'o1', 'gpt-4o-mini', 'codex'],
-  'claude-code': ['claude-3-7-sonnet', 'claude-3-5-sonnet', 'claude-3-5-haiku'],
-  web: ['deepseek-v4-pro', 'deepseek-reasoner', 'deepseek-chat', 'claude-3-7-sonnet', 'gpt-4o'],
+  codex: ['gpt-5.6-luna', 'gpt-4o', 'o3-mini', 'o1', 'gpt-4o-mini'],
+  'claude-code': ['deepseek-v4-flash', 'deepseek-v4-pro', 'deepseek-flash', 'deepseek-reasoner'],
+  web: ['deepseek-v4-pro', 'deepseek-flash', 'deepseek-reasoner', 'deepseek-chat'],
 }
 
 export default function Chat() {
@@ -71,6 +72,7 @@ export default function Chat() {
   const [showSkillPicker, setShowSkillPicker] = useState(false)
   const [selectedLocalSkill, setSelectedLocalSkill] = useState<LocalSkill | null>(null)
   const [showMemoryModal, setShowMemoryModal] = useState(false)
+  const [showModelManagerModal, setShowModelManagerModal] = useState(false)
   const [syncingModels, setSyncingModels] = useState(false)
   const [modelSyncFeedback, setModelSyncFeedback] = useState<string | null>(null)
 
@@ -141,6 +143,28 @@ export default function Chat() {
       setTimeout(() => setModelSyncFeedback(null), 3500)
     } finally {
       setSyncingModels(false)
+    }
+  }
+
+  const handleDeleteCurrentModel = async () => {
+    if (!selectedModel || selectedModel === '__custom__') return
+    if (!window.confirm(`确定要从下拉列表中删除模型「${selectedModel}」吗？`)) return
+    try {
+      const res = await api.deleteLocalModel(selectedModel)
+      if (res.success && res.agents) {
+        setAgents(res.agents)
+        const active = res.agents.find(a => a.provider === provider)
+        if (active?.models && active.models.length > 0) {
+          setSelectedModel(active.models[0])
+          localStorage.setItem(`coreforge_model_${provider}`, active.models[0])
+        } else {
+          setSelectedModel('')
+        }
+        setModelSyncFeedback(`已删除模型 ${selectedModel}`)
+        setTimeout(() => setModelSyncFeedback(null), 3000)
+      }
+    } catch (err: any) {
+      alert(`删除模型失败: ${err.message}`)
     }
   }
 
@@ -493,13 +517,13 @@ export default function Chat() {
   }
 
   return (
-    <div className="h-full flex flex-col gap-3 overflow-hidden">
+    <div className="h-full max-h-full flex flex-col gap-2 overflow-hidden min-h-0">
       {/* Top Section 1: Agent Persona Switcher */}
-      <div className="bg-surface border border-cream-200 rounded-2xl p-3 shadow-2xs shrink-0 flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="bg-surface border border-cream-200 rounded-xl px-3 py-2 shadow-2xs shrink-0 flex flex-col md:flex-row md:items-center justify-between gap-2">
         <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
           <div className="flex items-center gap-1.5 shrink-0 pr-2 border-r border-cream-200 mr-1">
             <Bot className="w-4 h-4 text-accent-orange" />
-            <span className="text-xs font-bold text-warm-700">切换智能体:</span>
+            <span className="text-xs font-bold text-warm-700">伴学智能体:</span>
           </div>
           {STUDY_AGENTS.map(agent => {
             const isSelected = activeAgent.id === agent.id
@@ -510,9 +534,9 @@ export default function Chat() {
                   setActiveAgent(agent)
                   createConversation(agent)
                 }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all flex items-center gap-2 cursor-pointer ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold shrink-0 transition-all flex items-center gap-1.5 cursor-pointer ${
                   isSelected
-                    ? 'bg-accent-orange text-white shadow-sm scale-102 font-bold'
+                    ? 'bg-accent-orange text-white shadow-xs font-bold'
                     : 'bg-cream-100 hover:bg-cream-200 text-warm-700 border border-cream-200 hover:border-accent-orange/40'
                 }`}
               >
@@ -544,7 +568,7 @@ export default function Chat() {
       </div>
 
       {/* Top Section 2: Model & Engine Switcher + Skills Bar */}
-      <div className="bg-surface border border-cream-200 rounded-xl px-4 py-2 flex flex-wrap items-center justify-between gap-3 shrink-0">
+      <div className="bg-surface border border-cream-200 rounded-xl px-3 py-1.5 flex flex-wrap items-center justify-between gap-2 shrink-0">
         {/* Left: Provider & Model Selector */}
         <div className="flex items-center gap-2 flex-wrap">
           {/* Provider Tabs */}
@@ -560,9 +584,9 @@ export default function Chat() {
                 <button
                   key={tab.key}
                   onClick={() => handleProviderChange(tab.key)}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                     provider === tab.key
-                      ? 'bg-surface text-warm-800 shadow-xs'
+                      ? 'bg-surface text-warm-800 shadow-xs font-bold'
                       : 'text-warm-500 hover:text-warm-700'
                   }`}
                 >
@@ -575,7 +599,7 @@ export default function Chat() {
             })}
           </div>
 
-          {/* Model Dropdown */}
+          {/* Model Dropdown & Management */}
           <div className="flex items-center gap-1.5 flex-wrap">
             <select
               value={isCustomModel ? '__custom__' : selectedModel}
@@ -606,15 +630,36 @@ export default function Chat() {
               </div>
             )}
 
+            {/* Quick 1-Click Delete Current Model Button */}
+            {selectedModel && !isCustomModel && (
+              <button
+                onClick={handleDeleteCurrentModel}
+                title={`从列表删除当前模型「${selectedModel}」`}
+                className="p-1 rounded-lg border border-cream-200 bg-cream-100 hover:border-red-400 hover:bg-red-50 text-warm-400 hover:text-red-600 transition-colors cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+            {/* Open Model Manager Modal */}
+            <button
+              onClick={() => setShowModelManagerModal(true)}
+              title="管理全部大模型，净化下拉列表"
+              className="px-2 py-1 rounded-lg border border-cream-200 bg-cream-100 hover:border-accent-orange text-xs text-warm-700 font-semibold flex items-center gap-1 transition-all cursor-pointer"
+            >
+              <Settings className="w-3 h-3 text-accent-orange" />
+              <span>管理模型</span>
+            </button>
+
             {/* Sync Local Models Button */}
             <button
               onClick={handleSyncLocalModels}
               disabled={syncingModels}
-              title="一键扫描并同步本机 ~/.codex, ~/.claude, ~/.cc-switch 真实安装的本地大模型"
-              className="px-2.5 py-1 rounded-lg border border-cream-200 bg-cream-100 hover:border-accent-orange text-xs text-warm-700 font-semibold flex items-center gap-1 transition-all cursor-pointer"
+              title="一键扫描并同步本机已配置的大模型"
+              className="px-2 py-1 rounded-lg border border-cream-200 bg-cream-100 hover:border-accent-orange text-xs text-warm-700 font-semibold flex items-center gap-1 transition-all cursor-pointer"
             >
               <RefreshCw className={`w-3 h-3 text-accent-orange ${syncingModels ? 'animate-spin' : ''}`} />
-              <span>{syncingModels ? '同步中...' : '🔄 同步本机模型'}</span>
+              <span>{syncingModels ? '同步中...' : '🔄 扫描'}</span>
             </button>
 
             {modelSyncFeedback && (
@@ -879,6 +924,69 @@ export default function Chat() {
                 </div>
               )
             })}
+            {/* Quick-start exploration cards when conversation is fresh */}
+            {messages.length <= 1 && (
+              <div className="mt-4 p-4 rounded-2xl border border-cream-200 bg-cream-50/70 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-warm-800 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-accent-orange" />
+                    <span>研学探索·快捷启发：</span>
+                  </span>
+                  <span className="text-[11px] text-warm-400">点击卡片即可直接向 {activeAgent.name} 发起深度研习</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {[
+                    {
+                      icon: '⚡',
+                      title: '408 核心考点深度精讲',
+                      desc: '解析虚拟内存分页与分段、TLB快表机制与缺页中断流程',
+                      prompt: '请为我深度解析 408 核心考点：请求分页存储管理、快表（TLB）与页表机制、缺页中断处理流程，结合硬件底层原理给出命题常考陷阱。',
+                    },
+                    {
+                      icon: '🎯',
+                      title: '现场命题·随堂真题自测',
+                      desc: '针对 408 重点题型现场命制 3 道考研难度测验',
+                      prompt: '请针对 408 数据结构与操作系统高频重点，现场命制 3 道考研难度的单选/大题进行随堂自测，附带答案解析。',
+                    },
+                    {
+                      icon: '📖',
+                      title: '关联知识库笔记研析',
+                      desc: '调取本地 Obsidian 笔记，查漏补缺与知识网串联',
+                      prompt: '请检索并结合我本地 Obsidian 知识库中的相关笔记，为我梳理当前科目的重难点脉络，指出笔记中未覆盖的考研高频知识盲区。',
+                    },
+                    {
+                      icon: '🧠',
+                      title: '考点口诀与对比辨析',
+                      desc: '易混淆考点对比表、一针见血记忆口诀与思维导图',
+                      prompt: '请梳理 408 历年极易混淆的 5 组核心概念（如同步vs异步、阻塞vs非阻塞、中断vs异常等），以清晰对比表呈现，并提供易记口诀。',
+                    },
+                  ].map((card, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        setInput(card.prompt)
+                        handleSend(card.prompt)
+                      }}
+                      disabled={loading}
+                      className="p-3 text-left rounded-xl border border-cream-200 bg-surface hover:border-accent-orange hover:shadow-xs transition-all flex items-start gap-2.5 group cursor-pointer"
+                    >
+                      <span className="text-xl shrink-0 p-1.5 rounded-lg bg-cream-100 group-hover:scale-110 transition-transform">
+                        {card.icon}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-warm-800 group-hover:text-accent-orange transition-colors">
+                          {card.title}
+                        </div>
+                        <div className="text-[11px] text-warm-500 line-clamp-1 mt-0.5">
+                          {card.desc}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
 
@@ -1011,6 +1119,21 @@ export default function Chat() {
         onClose={() => setShowSkillPicker(false)}
         onSelectSkill={skill => setSelectedLocalSkill(skill)}
         currentSkillId={selectedLocalSkill?.id}
+      />
+
+      {/* Model Management Modal */}
+      <ModelManagerModal
+        isOpen={showModelManagerModal}
+        onClose={() => setShowModelManagerModal(false)}
+        agents={agents}
+        currentProvider={provider}
+        onModelsUpdated={updated => {
+          setAgents(updated)
+          const active = updated.find(a => a.provider === provider)
+          if (active?.models && !active.models.includes(selectedModel)) {
+            setSelectedModel(active.models[0] || '')
+          }
+        }}
       />
     </div>
   )

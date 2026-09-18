@@ -126,8 +126,8 @@ export function detectLocalAgents(config?: LocalAgentConfig): LocalAgentStatus[]
     const models = (scannedModels[provider] && scannedModels[provider].length > 0)
       ? scannedModels[provider]
       : (provider === 'claude-code'
-          ? ['claude-3-7-sonnet', 'claude-3-5-sonnet', 'claude-3-5-haiku', 'opus']
-          : ['gpt-4o', 'o3-mini', 'o1', 'gpt-4o-mini', 'codex'])
+          ? ['deepseek-v4-flash', 'deepseek-v4-pro', 'deepseek-flash', 'deepseek-reasoner']
+          : ['gpt-5.6-luna', 'gpt-4o', 'o3-mini', 'o1', 'gpt-4o-mini'])
 
     return {
       provider,
@@ -246,7 +246,7 @@ function buildClaudeArgs(options: LocalAgentRunOptions, sessionId: string) {
     '--verbose',
     '--permission-mode', 'acceptEdits',
     '--add-dir', options.cwd,
-    '--model', options.model || 'sonnet',
+    '--model', options.model || 'deepseek-v4-flash',
   ]
   if (options.sessionId) args.push('--resume', options.sessionId)
   else args.push('--session-id', sessionId)

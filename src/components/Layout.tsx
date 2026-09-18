@@ -74,6 +74,7 @@ function navClass(isActive: boolean) {
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation()
   const currentPage = allNavItems.find(item => location.pathname === item.to)
+  const isFullHeightPage = ['/chat', '/editor', '/graph'].includes(location.pathname)
   const apiHealthy = useApiHealth()
   const { stats } = useVaultStats()
   const [searchOpen, setSearchOpen] = useState(false)
@@ -283,14 +284,22 @@ export default function Layout({ children }: LayoutProps) {
       </header>
 
       {/* Main Content Area with safe area for mobile bottom dock */}
-      <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-[1600px] pb-16 xl:pb-0">
+      <main className={`mx-auto max-w-[1600px] ${
+        isFullHeightPage
+          ? 'h-[calc(100vh-3.5rem)] overflow-hidden flex flex-col pb-16 xl:pb-0'
+          : 'min-h-[calc(100vh-3.5rem)] pb-16 xl:pb-0'
+      }`}>
         {syncNotice && (
           <div className="fixed right-5 top-[4.5rem] z-30 flex items-center gap-2 rounded-full border border-accent-sage/30 bg-white/95 px-4 py-2 text-xs font-medium text-accent-sage shadow-[0_12px_30px_rgba(0,0,0,0.1)] backdrop-blur-xl animate-fade-in-up">
             <AlertCircle className="h-3.5 w-3.5" />
             {syncNotice}
           </div>
         )}
-        <div className="min-w-0 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
+        <div className={`min-w-0 ${
+          isFullHeightPage
+            ? 'flex-1 h-full min-h-0 px-3 py-2 sm:px-4 sm:py-2.5 overflow-hidden flex flex-col'
+            : 'px-4 py-6 sm:px-6 lg:px-8 lg:py-8'
+        }`}>{children}</div>
       </main>
 
       {/* Mobile Bottom Navigation Bar (Dock) */}

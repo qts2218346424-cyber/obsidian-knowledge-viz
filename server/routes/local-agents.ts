@@ -6,6 +6,12 @@ import { detectAllLocalAgents, runLocalAgent, type LocalAgentProvider } from '..
 import { OpenAICompatibleClient } from '../ai-client.js'
 import { runAgentLoop } from '../agent.js'
 import { scanLocalSkills } from '../local-skill-scanner.js'
+import {
+  addDeletedModel,
+  removeDeletedModel,
+  clearDeletedModels,
+  getDeletedModels,
+} from '../local-model-scanner.js'
 
 export const localAgentsRouter = Router()
 
@@ -29,6 +35,70 @@ localAgentsRouter.post('/local-agents/sync-models', async (_req, res) => {
       agents,
       defaultCwd: config.localAgents?.defaultCwd || config.vaultPath,
     })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+localAgentsRouter.post('/local-agents/delete-model', async (req, res) => {
+  try {
+    const { model } = req.body || {}
+    if (!model || typeof model !== 'string') {
+      res.status(400).json({ error: 'Missing model name' })
+      return
+    }
+    const deletedModels = addDeletedModel(model)
+    const agents = await detectAllLocalAgents(config.localAgents)
+    res.json({
+      success: true,
+      agents,
+      deletedModels,
+      message: `已成功删除模型 ${model}`,
+    })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+localAgentsRouter.post('/local-agents/restore-models', async (_req, res) => {
+  try {
+    clearDeletedModels()
+    const agents = await detectAllLocalAgents(config.localAgents)
+    res.json({
+      success: true,
+      agents,
+      deletedModels: [],
+      message: '已恢复所有已删除模型',
+    })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+localAgentsRouter.post('/local-agents/undelete-model', async (req, res) => {
+  try {
+    const { model } = req.body || {}
+    if (!model || typeof model !== 'string') {
+      res.status(400).json({ error: 'Missing model name' })
+      return
+    }
+    const deletedModels = removeDeletedModel(model)
+    const agents = await detectAllLocalAgents(config.localAgents)
+    res.json({
+      success: true,
+      agents,
+      deletedModels,
+      message: `已恢复模型 ${model}`,
+    })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+localAgentsRouter.get('/local-agents/deleted-models', async (_req, res) => {
+  try {
+    const deletedModels = getDeletedModels()
+    res.json({ success: true, deletedModels })
   } catch (err: any) {
     res.status(500).json({ error: err.message })
   }
