@@ -13,6 +13,8 @@ import {
   ShieldCheck,
   X,
   RefreshCw,
+  RotateCw,
+  Laptop,
 } from 'lucide-react'
 
 interface NetworkInfo {
@@ -31,12 +33,17 @@ interface MobileDeviceModalProps {
 }
 
 export default function MobileDeviceModal({ isOpen, onClose }: MobileDeviceModalProps) {
-  const [activeTab, setActiveTab] = useState<'lan' | 'remote' | 'apk'>('lan')
+  const [activeTab, setActiveTab] = useState<'simulator' | 'lan' | 'remote' | 'apk'>('simulator')
   const [networkInfo, setNetworkInfo] = useState<NetworkInfo | null>(null)
   const [selectedUrl, setSelectedUrl] = useState<string>('')
   const [qrDataUrl, setQrDataUrl] = useState<string>('')
   const [copied, setCopied] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  // Mobile simulator state
+  const [simulatorRoute, setSimulatorRoute] = useState('/dashboard')
+  const [deviceModel, setDeviceModel] = useState<'android' | 'iphone' | 'tablet'>('android')
+  const [isLandscape, setIsLandscape] = useState(false)
 
   const fetchNetwork = async () => {
     setLoading(true)
@@ -98,7 +105,7 @@ export default function MobileDeviceModal({ isOpen, onClose }: MobileDeviceModal
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/60 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-2xl overflow-hidden rounded-3xl border border-slate-700/50 bg-slate-900 text-slate-100 shadow-2xl shadow-indigo-950/40 animate-scale-up">
+      <div className={`relative w-full ${activeTab === 'simulator' ? 'max-w-5xl' : 'max-w-2xl'} overflow-hidden rounded-3xl border border-slate-700/50 bg-slate-900 text-slate-100 shadow-2xl shadow-indigo-950/40 transition-all duration-300 animate-scale-up`}>
         {/* Glow accent */}
         <div className="absolute -top-24 -left-24 h-56 w-56 rounded-full bg-indigo-600/20 blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -right-24 h-56 w-56 rounded-full bg-violet-600/20 blur-3xl pointer-events-none" />
@@ -111,52 +118,63 @@ export default function MobileDeviceModal({ isOpen, onClose }: MobileDeviceModal
             </div>
             <div>
               <h2 className="text-base font-bold text-white flex items-center gap-2">
-                安卓手机 / 平板端连线
+                安卓手机 / 平板端连线与电脑实时预览
                 <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                   支持 PWA & 原生 APK
                 </span>
               </h2>
-              <p className="text-xs text-slate-400">床头刷题、自习室伴学、移动端知识库随时调阅</p>
+              <p className="text-xs text-slate-400">电脑端免手机实时仿真、局域网扫码即连、自习室跨端研学</p>
             </div>
           </div>
           <button
             onClick={onClose}
             aria-label="关闭"
-            className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+            className="rounded-xl p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white cursor-pointer"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex border-b border-slate-800/80 bg-slate-950/40 px-6 pt-2">
+        <div className="flex border-b border-slate-800/80 bg-slate-950/40 px-6 pt-2 overflow-x-auto scrollbar-none">
+          <button
+            onClick={() => setActiveTab('simulator')}
+            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-xs font-semibold transition-colors shrink-0 cursor-pointer ${
+              activeTab === 'simulator'
+                ? 'border-indigo-500 text-indigo-400 font-bold'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Smartphone className="h-4 w-4" />
+            📱 电脑实时手机预览 (仿真器)
+          </button>
           <button
             onClick={() => setActiveTab('lan')}
-            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-xs font-semibold transition-colors ${
+            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-xs font-semibold transition-colors shrink-0 cursor-pointer ${
               activeTab === 'lan'
-                ? 'border-indigo-500 text-indigo-400'
+                ? 'border-indigo-500 text-indigo-400 font-bold'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
             <Wifi className="h-4 w-4" />
-            局域网秒连 (PWA 模式 · 推荐)
+            局域网秒连 (PWA 模式)
           </button>
           <button
             onClick={() => setActiveTab('remote')}
-            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-xs font-semibold transition-colors ${
+            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-xs font-semibold transition-colors shrink-0 cursor-pointer ${
               activeTab === 'remote'
-                ? 'border-indigo-500 text-indigo-400'
+                ? 'border-indigo-500 text-indigo-400 font-bold'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
             <Globe className="h-4 w-4" />
-            异地研学 (图书馆/5G穿透)
+            异地研学 (5G穿透)
           </button>
           <button
             onClick={() => setActiveTab('apk')}
-            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-xs font-semibold transition-colors ${
+            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-xs font-semibold transition-colors shrink-0 cursor-pointer ${
               activeTab === 'apk'
-                ? 'border-indigo-500 text-indigo-400'
+                ? 'border-indigo-500 text-indigo-400 font-bold'
                 : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -167,6 +185,180 @@ export default function MobileDeviceModal({ isOpen, onClose }: MobileDeviceModal
 
         {/* Tab Content */}
         <div className="p-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
+          {activeTab === 'simulator' && (
+            <div className="flex flex-col lg:flex-row gap-6 items-center justify-between">
+              {/* Phone Frame Simulator */}
+              <div className="flex flex-col items-center shrink-0">
+                {/* Device controls bar */}
+                <div className="flex items-center gap-2 mb-3 text-xs">
+                  <div className="flex items-center bg-slate-950 rounded-xl p-1 border border-slate-800">
+                    <button
+                      onClick={() => setDeviceModel('android')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
+                        deviceModel === 'android' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      Android (390×844)
+                    </button>
+                    <button
+                      onClick={() => setDeviceModel('iphone')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
+                        deviceModel === 'iphone' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      iPhone 16 (393×852)
+                    </button>
+                    <button
+                      onClick={() => setDeviceModel('tablet')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
+                        deviceModel === 'tablet' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      平板 (480×640)
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={() => setIsLandscape(!isLandscape)}
+                    className="p-1.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                    title="横竖屏旋转"
+                  >
+                    <RotateCw className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      const iframe = document.getElementById('mobile-preview-iframe') as HTMLIFrameElement
+                      if (iframe) iframe.src = iframe.src
+                    }}
+                    className="p-1.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                    title="重新加载手机画面"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Physical Phone Shell Mockup */}
+                <div
+                  style={{
+                    width: isLandscape ? '600px' : deviceModel === 'tablet' ? '460px' : '360px',
+                    height: isLandscape ? '360px' : deviceModel === 'tablet' ? '600px' : '640px',
+                  }}
+                  className="rounded-[44px] border-[10px] border-slate-800 bg-black shadow-2xl p-1 relative flex flex-col overflow-hidden ring-1 ring-slate-700/50"
+                >
+                  {/* Dynamic Island / Notch */}
+                  {!isLandscape && (
+                    <div className="absolute top-2.5 left-1/2 -translate-x-1/2 z-20 flex items-center justify-between px-3 h-5 w-24 rounded-full bg-black border border-slate-800/80">
+                      <span className="w-2.5 h-2.5 rounded-full bg-slate-900 border border-slate-800" />
+                      <span className="w-2 h-2 rounded-full bg-blue-900/60" />
+                    </div>
+                  )}
+
+                  {/* Top Status Bar */}
+                  <div className="h-6 shrink-0 bg-slate-950 flex items-center justify-between px-6 text-[10px] text-slate-400 select-none z-10">
+                    <span className="font-semibold">09:41</span>
+                    <div className="flex items-center gap-1.5">
+                      <Wifi className="w-3 h-3" />
+                      <span>5G</span>
+                      <div className="w-4 h-2 border border-slate-400 rounded-xs p-0.2 flex items-center">
+                        <div className="h-full w-full bg-emerald-400 rounded-2xs" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Real-time Iframe View */}
+                  <iframe
+                    id="mobile-preview-iframe"
+                    src={`${window.location.origin}${simulatorRoute}`}
+                    className="flex-1 w-full border-none bg-white rounded-b-[36px]"
+                    title="Mobile Live Preview"
+                  />
+
+                  {/* Bottom Home Indicator Bar */}
+                  <div className="h-4 shrink-0 bg-slate-950 flex items-center justify-center z-10">
+                    <div className="w-32 h-1 bg-slate-600 rounded-full" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Side Controls & Tool Recommendations */}
+              <div className="flex-1 space-y-4">
+                {/* Route Switcher */}
+                <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2.5">
+                  <div className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                    <Smartphone className="w-4 h-4 text-indigo-400" />
+                    <span>仿真器页面直达</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    点击快速在左侧手机预览中切换各个考研研学模块，实时验证移动端响应式交互
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { route: '/dashboard', label: '📊 首页看板' },
+                      { route: '/study', label: '📚 讲义与真题' },
+                      { route: '/quiz', label: '🎯 考研刷题模式' },
+                      { route: '/chat', label: '🤖 AI 智能伴学' },
+                      { route: '/vocabulary', label: '📖 408 核心词汇' },
+                      { route: '/pomodoro', label: '🍅 研学番茄钟' },
+                    ].map(r => (
+                      <button
+                        key={r.route}
+                        onClick={() => setSimulatorRoute(r.route)}
+                        className={`p-2 rounded-xl text-xs font-semibold text-left border transition-all cursor-pointer ${
+                          simulatorRoute === r.route
+                            ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300'
+                            : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
+                        }`}
+                      >
+                        {r.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* External Tools Recommendation Guide */}
+                <div className="p-4 rounded-2xl bg-indigo-950/30 border border-indigo-900/50 space-y-3">
+                  <div className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+                    <Laptop className="w-4 h-4" />
+                    <span>电脑实时预览手机效果的神器工具推荐</span>
+                  </div>
+
+                  <div className="space-y-2 text-xs text-slate-300">
+                    <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
+                      <div className="font-bold text-white flex items-center justify-between">
+                        <span>1. 浏览器开发者工具 (DevTools 设备仿真)</span>
+                        <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">免安装 · 最推荐</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        在 Chrome / Edge 中按 <b>F12</b>，接着按快捷键 <b>Ctrl + Shift + M</b>（或点击左上角手机平板小图标），即可开启任意手机型号（iPhone/Android/小米）的完美仿真，支持触摸手势模拟和网络降速测试。
+                      </p>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
+                      <div className="font-bold text-white flex items-center justify-between">
+                        <span>2. scrcpy (开源安卓手机投屏控制神器)</span>
+                        <span className="text-[10px] text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded">真机 60 帧投屏</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        通过 USB 数据线或局域网 WiFi，在电脑屏幕上直接投射真实安卓手机屏幕，延迟低于 30ms，支持直接在电脑上用鼠标点击与键盘打字操控手机。
+                      </p>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
+                      <div className="font-bold text-white flex items-center justify-between">
+                        <span>3. Chrome 远程真机调试 (chrome://inspect)</span>
+                        <span className="text-[10px] text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded">远程审查</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        在电脑 Chrome 地址栏输入 <code className="text-indigo-400">chrome://inspect/#devices</code>，可在电脑上实时镜像手机 Chrome 正在访问的网页，直接审查手机端元素与控制台日志。
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'lan' && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
