@@ -108,9 +108,14 @@ export default function ImportResourceModal({
     setLoadingBooks(true)
     try {
       const res = await fetch('/api/books/list')
-      const data = await res.json()
-      if (data.books) {
-        setBooks(data.books)
+      const text = await res.text()
+      try {
+        const data = JSON.parse(text)
+        if (data.books) {
+          setBooks(data.books)
+        }
+      } catch {
+        console.error('Books response is not valid JSON:', text.slice(0, 100))
       }
     } catch (err) {
       console.error('Failed to fetch books:', err)
@@ -123,9 +128,14 @@ export default function ImportResourceModal({
     setLoadingCustom(true)
     try {
       const res = await fetch('/api/quiz/custom')
-      const data = await res.json()
-      if (data.questions) {
-        setCustomQuestions(data.questions)
+      const text = await res.text()
+      try {
+        const data = JSON.parse(text)
+        if (data.questions) {
+          setCustomQuestions(data.questions)
+        }
+      } catch {
+        console.error('Custom questions response is not valid JSON:', text.slice(0, 100))
       }
     } catch (err) {
       console.error('Failed to fetch custom questions:', err)
@@ -156,17 +166,17 @@ export default function ImportResourceModal({
       try {
         data = JSON.parse(text)
       } catch {
-        throw new Error(res.ok ? '服务解析异常' : `后端响应异常 (HTTP ${res.status}): ${text.slice(0, 120)}`)
+        throw new Error(res.ok ? '服务解析异常，返回非标准格式' : `服务端响应异常 (HTTP ${res.status}): ${text.slice(0, 120)}`)
       }
 
       if (data.success) {
-        setImportFeedback(`资料《${file.name}》已成功导入并归档至 raw-sources！`)
+        setImportFeedback(`资料《${file.name}》已成功导入并安全归档至 raw-sources！`)
         loadBooks()
       } else {
-        alert(data.error || '上传失败')
+        alert(data.error || '上传失败，请稍后重试')
       }
     } catch (err: any) {
-      alert('上传异常: ' + err.message)
+      alert('上传异常: ' + (err.message || String(err)))
     } finally {
       setIsUploading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -466,7 +476,7 @@ export default function ImportResourceModal({
                     ref={fileInputRef}
                     onChange={handleFileUpload}
                     className="hidden"
-                    accept=".pdf,.md,.txt,.markdown"
+                    accept=".pdf,.md,.txt,.markdown,.html,.htm,.doc,.docx"
                   />
 
                   <button

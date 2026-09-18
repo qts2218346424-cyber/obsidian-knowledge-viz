@@ -74,8 +74,29 @@ app.use('/api', memoryRouter)
 startWatcher()
 initScheduler()
 
-// SPA fallback — serve index.html for client-side routes
-app.use((_req, res) => {
+// ===== API 404 & Error Handlers (Never leak HTML to API clients) =====
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: `API endpoint not found: ${req.method} ${req.originalUrl}` })
+})
+
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('[API Error]', req.method, req.originalUrl, err)
+  if (req.originalUrl?.startsWith('/api') || req.path?.startsWith('/api')) {
+    res.status(err.status || err.statusCode || 500).json({
+      error: err.message || '内部服务异常',
+      code: err.code,
+    })
+    return
+  }
+  next(err)
+})
+
+// SPA fallback — serve index.html for client-side routes (never for /api)
+app.use((req, res) => {
+  if (req.originalUrl?.startsWith('/api') || req.path?.startsWith('/api')) {
+    res.status(404).json({ error: `API route not found: ${req.path}` })
+    return
+  }
   const indexPath = path.join(distPath, 'index.html')
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath)

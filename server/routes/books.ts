@@ -7,24 +7,45 @@ import { createFile } from '../vault-parser.js'
 
 export const booksRouter = Router()
 
+function getSafeUploadFilename(rawName: string): string {
+  let name = rawName
+  try {
+    const decoded = Buffer.from(rawName, 'latin1').toString('utf8')
+    if (/[ÃÂæçèé]/.test(rawName) && !decoded.includes('\ufffd')) {
+      name = decoded
+    }
+  } catch {}
+
+  const ext = path.extname(name)
+  const base = path.basename(name, ext).replace(/[<>:"/\\|?*\x00-\x1F]/g, '_').trim()
+  return `${base || 'upload'}${ext}`
+}
+
 // Configure multer for file uploads into raw-sources
 const storage = multer.diskStorage({
   destination: (req, _file, cb) => {
-    const domain = (req.body.domain as string) || 'math' // 'math' | 'cs_408'
-    const category = (req.body.category as string) || '教材' // '教材' | '真题' | '辅导讲义' | '模拟题'
-    
-    let subDir = domain === 'cs_408' ? '408计算机' : '考研数学'
-    let fullDest = path.join(config.vaultPath, 'raw-sources', subDir, category)
-    
-    if (!fs.existsSync(fullDest)) {
-      fs.mkdirSync(fullDest, { recursive: true })
+    const domain = (req.body?.domain as string) || 'math'
+    let category = (req.body?.category as string) || '教材'
+    if (category === '经典教材') category = '教材'
+    if (category === '历年真题') category = '真题'
+    if (category === '辅导讲义/精讲') category = '辅导讲义'
+    if (category === '模拟测试卷') category = '模拟题'
+
+    const subDir = domain === 'cs_408' ? '408计算机' : '考研数学'
+    const safeCategory = category.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_').trim() || '教材'
+    const fullDest = path.join(config.vaultPath, 'raw-sources', subDir, safeCategory)
+
+    try {
+      if (!fs.existsSync(fullDest)) {
+        fs.mkdirSync(fullDest, { recursive: true })
+      }
+      cb(null, fullDest)
+    } catch (err: any) {
+      cb(err, fullDest)
     }
-    cb(null, fullDest)
   },
   filename: (_req, file, cb) => {
-    // Handle UTF-8 encoding for Chinese filenames
-    const originalName = Buffer.from(file.originalname, 'latin1').toString('utf8')
-    cb(null, originalName)
+    cb(null, getSafeUploadFilename(file.originalname))
   }
 })
 
@@ -737,28 +758,42 @@ booksRouter.get('/books/raw', (req, res) => {
 /**
  * Upload reference book / notes into raw-sources
  */
-booksRouter.post('/books/upload', upload.single('file'), (req, res) => {
+booksRouter.post('/books/upload', (req, res, next) => {
+  upload.single('file')(req, res, (err: any) => {
+    if (err) {
+      console.error('[Books Upload Multer Error]:', err)
+      if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({ error: '上传文件过大（超过系统限制 100MB）' })
+        }
+        return res.status(400).json({ error: `上传文件解析失败: ${err.message}` })
+      }
+      return res.status(500).json({ error: `文件持久化保存失败: ${err.message || '系统写入错误'}` })
+    }
+    next()
+  })
+}, (req, res) => {
   try {
     if (!req.file) {
-      res.status(400).json({ error: '未选择任何上传文件' })
+      res.status(400).json({ error: '未接收到上传的文件内容' })
       return
     }
 
-    const originalName = Buffer.from(req.file.originalname, 'latin1').toString('utf8')
+    const safeName = getSafeUploadFilename(req.file.originalname)
     const relPath = path.relative(config.vaultPath, req.file.path).replace(/\\/g, '/')
 
     invalidateCache()
     res.json({
       success: true,
       file: {
-        name: originalName,
+        name: safeName,
         relativePath: relPath,
         size: req.file.size
       }
     })
   } catch (err: any) {
     console.error('Upload book error:', err.message)
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: err.message || '上传处理异常' })
   }
 })
 
