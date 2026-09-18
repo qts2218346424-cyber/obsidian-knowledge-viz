@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { scanVault, getFile, getTree, createFile, updateFile, type VaultNote } from './vault-parser.js'
 import type { AiClient, AiMessageCreateParams } from './ai-client.js'
+import { getEffectiveSystemPrompt } from './memory-store.js'
 
 // ===== Tool Definitions =====
 
@@ -265,8 +266,9 @@ export async function* runAgentLoop(
   model: string,
   messages: { role: 'user' | 'assistant'; content: any }[],
   vaultPath: string,
+  customSystemPrompt?: string,
 ): AsyncGenerator<AgentEvent> {
-  const systemPrompt = SYSTEM_PROMPT
+  const systemPrompt = customSystemPrompt || getEffectiveSystemPrompt(vaultPath)
 
   // Convert tool definitions to Anthropic format
   const tools: NonNullable<AiMessageCreateParams['tools']> = AGENT_TOOLS.map(t => ({

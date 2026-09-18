@@ -1,250 +1,562 @@
 import fs from 'fs'
 import path from 'path'
-import { config } from './context.js'
+import matter from 'gray-matter'
+import { config, runtimeDataDir } from './context.js'
 
-export type MemoryType = 'concept' | 'chunk' | 'mistake' | 'profile'
-export type MemoryMastery = 'mastered' | 'learning' | 'weak'
+export interface AgentPersona {
+  name: string
+  role: string
+  tone: string
+  avatarEmoji: string
+  summary: string
+}
 
-export interface MemoryItem {
+export interface AgentDirective {
   id: string
-  type: MemoryType
   title: string
   content: string
-  subject: '数据结构' | '计算机组成' | '操作系统' | '计算机网络' | '高等数学' | '线性代数' | '概率论' | '考研全科'
-  domain: 'cs_408' | 'math' | 'general'
-  mastery?: MemoryMastery
+  category: 'behavior' | 'knowledge' | 'preference' | 'habit'
+  enabled: boolean
+  lastUpdated: string
+}
+
+export interface UserProfileContext {
+  targetExam: string
+  targetSchool: string
+  userBackground: string
+  currentStage: string
+  weakPoints: string[]
+  customPreferences: string[]
+}
+
+export interface AgentMemoryConfig {
+  persona: AgentPersona
+  rules: string[]
+  userProfile: UserProfileContext
+  directives: AgentDirective[]
+  lastUpdated: string
+}
+
+const DEFAULT_PERSONA: AgentPersona = {
+  name: '研小核 (CoreForge AI)',
+  role: '408计算机与考研数学全科专属金牌导师兼知识库管家',
+  tone: '严谨犀利、亲和鼓舞、启发式推演、直击考纲考点',
+  avatarEmoji: '🤖',
+  summary: '清北复交级计算机408与考研数学教研伴学导师，具备全自主 Obsidian 知识库管理与双链治理能力。',
+}
+
+const DEFAULT_RULES: string[] = [
+  '公式规范：所有数学与算法推导必须采用标准 LaTeX / KaTeX 格式（行内 $...$，独立行间公式 $$...$$）。',
+  '代码规范：数据结构与操作系统算法默认采用标准 C/C++ 语法，关键代码段落必须附带【时间复杂度】与【空间复杂度】分析。',
+  '双链联动：提及知识库既有内容或核心考点时，主动使用 [[笔记名称]] 双向链接语法。',
+  '错题归档：发现用户答错高频真题时，主动提醒是否一键归档到知识库错题本 (wiki/03-真题与错题/) 并给出四维归因诊断。',
+  '修改慎重：修改或补充既有笔记前，先调用 read_file 读取原文并向用户明确告知改动原因。',
+  '大纲聚焦：严格遵循教育部 408 统考与全国研究生招生数学考试大纲命题规律，严禁超纲拓展偏怪离谱内容。',
+]
+
+const DEFAULT_USER_PROFILE: UserProfileContext = {
+  targetExam: '全国统考 408 计算机学科综合 + 考研数学 (数学一/二/三)',
+  targetSchool: '目标双一流 / 顶级计算机院所',
+  userBackground: '计算机跨考 / 科班攻坚生，追求高效率框架学习与实战刷题',
+  currentStage: '强化冲刺与真题攻坚阶段',
+  weakPoints: [
+    '计组：CPU五级流水线冒险冲突与 Forwarding',
+    '高数：泰勒展开截断阶数与极限未定式',
+    '数据结构：AVL树旋转平衡化与外部排序',
+    '网络：TCP拥塞控制状态机与快重传',
+  ],
+  customPreferences: [
+    '偏好“直观几何/物理图景先于纯数学证明”',
+    '偏好“一题多解对比分析与错因归因（概念/公式/计算/审题）”',
+    '每道大题解答完毕后附带 1 道高频同类变式题供即时巩固',
+  ],
+}
+
+const DEFAULT_DIRECTIVES: AgentDirective[] = [
+  {
+    id: 'dir-01',
+    title: '算法大题图解优先',
+    content: '遇到二叉树、图遍历或算法设计题时，先给出 ASCII 时序或拓扑图示，再写出规范伪代码与时空复杂度分析。',
+    category: 'behavior',
+    enabled: true,
+    lastUpdated: '2026-09-18',
+  },
+  {
+    id: 'dir-02',
+    title: '极限展开截断对齐',
+    content: '泰勒展开求未定式极限时，反复核验分母与分子展开截断阶数是否一致，严禁在加减项中违规部分等价代换。',
+    category: 'knowledge',
+    enabled: true,
+    lastUpdated: '2026-09-18',
+  },
+  {
+    id: 'dir-03',
+    title: '知识库格式对齐',
+    content: '整理或新建笔记时，严格生成符合 Obsidian 标准的 Frontmatter 元数据标签与相关考点双向链接。',
+    category: 'habit',
+    enabled: true,
+    lastUpdated: '2026-09-18',
+  },
+  {
+    id: 'dir-04',
+    title: '启发式思考梯级引导',
+    content: '当用户询问解题思路卡壳时，不要直接扔出最终答案，先给出 1~2 个关键跳板启发用户自主推演。',
+    category: 'behavior',
+    enabled: true,
+    lastUpdated: '2026-09-18',
+  },
+  {
+    id: 'dir-05',
+    title: '举一反三变式训练',
+    content: '每次解题或剖析难点完成后，根据所涉考点自动附带 1 道真题同类变式题供即时自测巩固。',
+    category: 'preference',
+    enabled: true,
+    lastUpdated: '2026-09-18',
+  },
+]
+
+/**
+ * Determine the primary agent.md location
+ */
+export function getAgentMemoryPath(vaultPath?: string): string {
+  const vPath = vaultPath || config.vaultPath
+  if (vPath && fs.existsSync(vPath)) {
+    // If wiki exists, prefer wiki/agent.md or vault root agent.md
+    const wikiAgent = path.join(vPath, 'wiki', 'agent.md')
+    if (fs.existsSync(wikiAgent)) return wikiAgent
+
+    const rootAgent = path.join(vPath, 'agent.md')
+    return rootAgent
+  }
+
+  // Fallback to local server data dir
+  const serverDataDir = path.join(runtimeDataDir, 'server', 'data')
+  if (!fs.existsSync(serverDataDir)) {
+    fs.mkdirSync(serverDataDir, { recursive: true })
+  }
+  return path.join(serverDataDir, 'agent.md')
+}
+
+/**
+ * Serialize AgentMemoryConfig into standard human-readable agent.md markdown
+ */
+export function formatAgentMarkdown(cfg: AgentMemoryConfig): string {
+  const frontmatter = {
+    name: cfg.persona.name,
+    role: cfg.persona.role,
+    tone: cfg.persona.tone,
+    avatarEmoji: cfg.persona.avatarEmoji || '🤖',
+    version: '1.5.0',
+    lastUpdated: cfg.lastUpdated || new Date().toISOString().split('T')[0],
+  }
+
+  const lines: string[] = []
+  lines.push('---')
+  lines.push(`name: "${frontmatter.name.replace(/"/g, '\\"')}"`)
+  lines.push(`role: "${frontmatter.role.replace(/"/g, '\\"')}"`)
+  lines.push(`tone: "${frontmatter.tone.replace(/"/g, '\\"')}"`)
+  lines.push(`avatarEmoji: "${frontmatter.avatarEmoji}"`)
+  lines.push(`version: "${frontmatter.version}"`)
+  lines.push(`lastUpdated: "${frontmatter.lastUpdated}"`)
+  lines.push('---')
+  lines.push('')
+  lines.push('# 🤖 CoreForge 智能体设定与记忆仓库 (agent.md)')
+  lines.push('')
+  lines.push('> 这是我对 AI 伴学助手的核心人设、行为准则与长期记忆设定。AI 在所有对话、解题与笔记管理中严格遵循本设定。')
+  lines.push('')
+  lines.push('---')
+  lines.push('')
+  lines.push('## 🎭 一、角色定位与人设 (Identity & Persona)')
+  lines.push(`- **助手名称**：${cfg.persona.name}`)
+  lines.push(`- **角色定位**：${cfg.persona.role}`)
+  lines.push(`- **语气风格**：${cfg.persona.tone}`)
+  lines.push(`- **专长概述**：${cfg.persona.summary}`)
+  lines.push('')
+  lines.push('---')
+  lines.push('')
+  lines.push('## 📜 二、全局行为准则与响应规则 (Behavioral Directives)')
+  for (const rule of cfg.rules) {
+    lines.push(`- ${rule}`)
+  }
+  lines.push('')
+  lines.push('---')
+  lines.push('')
+  lines.push('## 👤 三、考生档案与备考画像 (User Profile & Context)')
+  lines.push(`- **目标考向**：${cfg.userProfile.targetExam}`)
+  lines.push(`- **目标院校**：${cfg.userProfile.targetSchool}`)
+  lines.push(`- **考生背景**：${cfg.userProfile.userBackground}`)
+  lines.push(`- **当前阶段**：${cfg.userProfile.currentStage}`)
+  lines.push('- **薄弱考点预警**：')
+  for (const wp of cfg.userProfile.weakPoints) {
+    lines.push(`  - ${wp}`)
+  }
+  lines.push('- **学习偏好**：')
+  for (const cp of cfg.userProfile.customPreferences) {
+    lines.push(`  - ${cp}`)
+  }
+  lines.push('')
+  lines.push('---')
+  lines.push('')
+  lines.push('## 🧠 四、活跃长效记忆片段 (Active Long-Term Directives)')
+  lines.push('<!-- DIRECTIVES_START -->')
+  for (const dir of cfg.directives) {
+    const check = dir.enabled ? '[x]' : '[ ]'
+    lines.push(`- ${check} <!-- id:${dir.id} cat:${dir.category} --> **[${dir.title}]** ${dir.content}`)
+  }
+  lines.push('<!-- DIRECTIVES_END -->')
+  lines.push('')
+
+  return lines.join('\n')
+}
+
+/**
+ * Parse agent.md markdown into structured AgentMemoryConfig
+ */
+export function parseAgentMarkdown(raw: string): AgentMemoryConfig {
+  try {
+    const { data: fm, content } = matter(raw)
+
+    const persona: AgentPersona = {
+      name: (fm.name as string) || DEFAULT_PERSONA.name,
+      role: (fm.role as string) || DEFAULT_PERSONA.role,
+      tone: (fm.tone as string) || DEFAULT_PERSONA.tone,
+      avatarEmoji: (fm.avatarEmoji as string) || DEFAULT_PERSONA.avatarEmoji,
+      summary: DEFAULT_PERSONA.summary,
+    }
+
+    const rules: string[] = []
+    const weakPoints: string[] = []
+    const customPreferences: string[] = []
+    const directives: AgentDirective[] = []
+
+    // Section parser
+    const lines = content.split('\n')
+    let currentSection = ''
+
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (trimmed.startsWith('## 🎭') || trimmed.includes('角色定位')) {
+        currentSection = 'persona'
+        continue
+      }
+      if (trimmed.startsWith('## 📜') || trimmed.includes('行为准则')) {
+        currentSection = 'rules'
+        continue
+      }
+      if (trimmed.startsWith('## 👤') || trimmed.includes('考生档案')) {
+        currentSection = 'userProfile'
+        continue
+      }
+      if (trimmed.startsWith('## 🧠') || trimmed.includes('长效记忆')) {
+        currentSection = 'directives'
+        continue
+      }
+
+      if (currentSection === 'persona') {
+        if (trimmed.startsWith('- **专长概述**：')) {
+          persona.summary = trimmed.replace('- **专长概述**：', '').trim()
+        }
+      } else if (currentSection === 'rules') {
+        if (trimmed.startsWith('- ')) {
+          rules.push(trimmed.slice(2).trim())
+        }
+      } else if (currentSection === 'userProfile') {
+        if (trimmed.startsWith('- **薄弱考点预警**：') || trimmed.startsWith('- **学习偏好**：')) {
+          continue
+        }
+        if (line.startsWith('  - ')) {
+          const val = line.slice(4).trim()
+          if (val) weakPoints.push(val)
+        }
+      } else if (currentSection === 'directives') {
+        // match checkbox directives: - [x] <!-- id:dir-01 cat:behavior --> **[title]** content
+        const match = trimmed.match(/^-\s*\[([ xX])\]\s*(?:<!--\s*id:([^\s]+)\s*cat:([^\s]+)\s*-->)?\s*\*\*\[(.*?)\]\*\*\s*(.*)$/)
+        if (match) {
+          const enabled = match[1].toLowerCase() === 'x'
+          const id = match[2] || `dir-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+          const category = (match[3] as any) || 'behavior'
+          const title = match[4].trim()
+          const content = match[5].trim()
+          directives.push({
+            id,
+            title,
+            content,
+            category,
+            enabled,
+            lastUpdated: new Date().toISOString().split('T')[0],
+          })
+        }
+      }
+    }
+
+    return {
+      persona,
+      rules: rules.length > 0 ? rules : DEFAULT_RULES,
+      userProfile: {
+        ...DEFAULT_USER_PROFILE,
+        weakPoints: weakPoints.length > 0 ? weakPoints : DEFAULT_USER_PROFILE.weakPoints,
+        customPreferences: customPreferences.length > 0 ? customPreferences : DEFAULT_USER_PROFILE.customPreferences,
+      },
+      directives: directives.length > 0 ? directives : DEFAULT_DIRECTIVES,
+      lastUpdated: (fm.lastUpdated as string) || new Date().toISOString().split('T')[0],
+    }
+  } catch (err) {
+    console.error('Failed to parse agent.md, using default config:', err)
+    return {
+      persona: DEFAULT_PERSONA,
+      rules: DEFAULT_RULES,
+      userProfile: DEFAULT_USER_PROFILE,
+      directives: DEFAULT_DIRECTIVES,
+      lastUpdated: new Date().toISOString().split('T')[0],
+    }
+  }
+}
+
+/**
+ * Load full Agent Memory Config
+ */
+export function loadAgentMemoryConfig(vaultPath?: string): {
+  config: AgentMemoryConfig
+  rawMarkdown: string
+  filePath: string
+} {
+  const filePath = getAgentMemoryPath(vaultPath)
+  if (fs.existsSync(filePath)) {
+    try {
+      const raw = fs.readFileSync(filePath, 'utf8')
+      const parsed = parseAgentMarkdown(raw)
+      return { config: parsed, rawMarkdown: raw, filePath }
+    } catch (err) {
+      console.error('Error reading agent.md from disk:', err)
+    }
+  }
+
+  // Initialize with default
+  const defConfig: AgentMemoryConfig = {
+    persona: DEFAULT_PERSONA,
+    rules: DEFAULT_RULES,
+    userProfile: DEFAULT_USER_PROFILE,
+    directives: DEFAULT_DIRECTIVES,
+    lastUpdated: new Date().toISOString().split('T')[0],
+  }
+  const rawMarkdown = formatAgentMarkdown(defConfig)
+
+  try {
+    fs.mkdirSync(path.dirname(filePath), { recursive: true })
+    fs.writeFileSync(filePath, rawMarkdown, 'utf8')
+  } catch (e) {
+    console.error('Could not write default agent.md to disk:', e)
+  }
+
+  return { config: defConfig, rawMarkdown, filePath }
+}
+
+/**
+ * Save structured Agent Memory Config back to agent.md
+ */
+export function saveAgentMemoryConfig(cfg: AgentMemoryConfig, vaultPath?: string): {
+  success: boolean
+  filePath: string
+  rawMarkdown: string
+} {
+  const filePath = getAgentMemoryPath(vaultPath)
+  cfg.lastUpdated = new Date().toISOString().split('T')[0]
+  const rawMarkdown = formatAgentMarkdown(cfg)
+
+  fs.mkdirSync(path.dirname(filePath), { recursive: true })
+  fs.writeFileSync(filePath, rawMarkdown, 'utf8')
+
+  // Also save a mirror copy into server/data for resilience
+  try {
+    const backupPath = path.join(runtimeDataDir, 'server', 'data', 'agent.md')
+    if (filePath !== backupPath) {
+      fs.mkdirSync(path.dirname(backupPath), { recursive: true })
+      fs.writeFileSync(backupPath, rawMarkdown, 'utf8')
+    }
+  } catch {}
+
+  return { success: true, filePath, rawMarkdown }
+}
+
+/**
+ * Save raw markdown directly to agent.md
+ */
+export function saveRawAgentMarkdown(rawMarkdown: string, vaultPath?: string): {
+  success: boolean
+  config: AgentMemoryConfig
+  filePath: string
+} {
+  const filePath = getAgentMemoryPath(vaultPath)
+  fs.mkdirSync(path.dirname(filePath), { recursive: true })
+  fs.writeFileSync(filePath, rawMarkdown, 'utf8')
+
+  const parsed = parseAgentMarkdown(rawMarkdown)
+  return { success: true, config: parsed, filePath }
+}
+
+/**
+ * Add a new directive item to agent.md
+ */
+export function addAgentDirective(
+  item: Omit<AgentDirective, 'id' | 'lastUpdated'>,
+  vaultPath?: string
+): { success: boolean; directive: AgentDirective } {
+  const { config: current } = loadAgentMemoryConfig(vaultPath)
+  const newDirective: AgentDirective = {
+    id: `dir-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    title: item.title,
+    content: item.content,
+    category: item.category || 'behavior',
+    enabled: item.enabled ?? true,
+    lastUpdated: new Date().toISOString().split('T')[0],
+  }
+
+  current.directives.unshift(newDirective)
+  saveAgentMemoryConfig(current, vaultPath)
+  return { success: true, directive: newDirective }
+}
+
+/**
+ * Update an existing directive
+ */
+export function updateAgentDirective(
+  id: string,
+  patch: Partial<AgentDirective>,
+  vaultPath?: string
+): { success: boolean; directive?: AgentDirective } {
+  const { config: current } = loadAgentMemoryConfig(vaultPath)
+  const index = current.directives.findIndex(d => d.id === id)
+  if (index === -1) return { success: false }
+
+  current.directives[index] = {
+    ...current.directives[index],
+    ...patch,
+    lastUpdated: new Date().toISOString().split('T')[0],
+  }
+
+  saveAgentMemoryConfig(current, vaultPath)
+  return { success: true, directive: current.directives[index] }
+}
+
+/**
+ * Delete a directive
+ */
+export function deleteAgentDirective(id: string, vaultPath?: string): boolean {
+  const { config: current } = loadAgentMemoryConfig(vaultPath)
+  const initialLen = current.directives.length
+  current.directives = current.directives.filter(d => d.id !== id)
+  if (current.directives.length === initialLen) return false
+
+  saveAgentMemoryConfig(current, vaultPath)
+  return true
+}
+
+/**
+ * Build dynamic, effective System Prompt from agent.md
+ * Injected into AI chat loop so user settings take live effect!
+ */
+export function getEffectiveSystemPrompt(vaultPath?: string): string {
+  const { config: cfg } = loadAgentMemoryConfig(vaultPath)
+
+  const activeDirectives = cfg.directives.filter(d => d.enabled)
+
+  return `你是 CoreForge 研核「${cfg.persona.name}」—— ${cfg.persona.role}。
+人设与语气风格：${cfg.persona.tone}。
+专长概述：${cfg.persona.summary}
+
+【用户档案与备考画像】
+- 目标考向：${cfg.userProfile.targetExam}
+- 目标院校：${cfg.userProfile.targetSchool}
+- 考生背景：${cfg.userProfile.userBackground}
+- 当前阶段：${cfg.userProfile.currentStage}
+- 重点薄弱板块：${cfg.userProfile.weakPoints.join('；')}
+- 学习偏好约定：${cfg.userProfile.customPreferences.join('；')}
+
+【全局行为准则与响应规范】
+${cfg.rules.map((r, i) => `${i + 1}. ${r}`).join('\n')}
+
+【已启用的长效记忆与个性化指令】
+${activeDirectives.length > 0
+  ? activeDirectives.map(d => `- [${d.title}]：${d.content}`).join('\n')
+  : '- 暂无额外个性化指令，遵循标准大纲规则。'}
+
+【知识库管理能力工具箱】
+1. read_file — 查看指定笔记的完整 Markdown 内容
+2. write_file — 创建新笔记或更新已有笔记（严格采用标准 Markdown 格式与 KaTeX 公式）
+3. search_notes — 在知识库中根据考点或关键词精准检索
+4. list_files — 浏览整个知识库的文件与目录结构
+5. get_stats — 获取知识库全局统计信息
+6. create_error_note — 一键将错题、解析与四维错因诊断归档至 wiki/03-真题与错题/
+7. organize_vault — 诊断知识库健康度并给出分类与重构建议
+
+请在每一次交流中严格履行上述 agent.md 中的设定与长效记忆！`
+}
+
+// ===== Backward compatibility helpers for legacy queries =====
+export interface MemoryItem {
+  id: string
+  type: string
+  title: string
+  content: string
+  subject: string
+  domain: string
+  mastery?: string
   tags: string[]
   reviewCount: number
   lastReviewed: string
-  examFrequency?: '高频核心' | '历年必考' | '常见陷阱' | '考点拔高'
-  formulaKatex?: string
+  examFrequency?: string
   createdAt: string
   updatedAt: string
 }
 
-export interface UserStudyProfile {
-  targetExam: string
-  targetYear: string
-  examSubjects: string[]
-  preferredTone: 'rigorous' | 'vivid' | 'exam'
-  activePersona: string
-  notesCreated: number
-  questionsPracticed: number
-}
-
-const DEFAULT_MEMORIES: MemoryItem[] = [
-  {
-    id: 'mem-cs-01',
-    type: 'concept',
-    title: '虚拟内存分页机制与 TLB / Cache 联合查找',
-    content: '虚拟地址分为虚拟页号(VPN)与页内偏移量(VPO)。TLB为硬件页表缓存，TLB命中直接得物理页号(PPN)，缺失需查主存多级页表。结合 Cache 的查找时序：TLB -> 多级页表 -> Cache L1/L2 -> 主存。',
-    subject: '操作系统',
-    domain: 'cs_408',
-    mastery: 'learning',
-    tags: ['虚拟内存', 'TLB', 'Cache', '地址翻译'],
-    reviewCount: 3,
-    lastReviewed: new Date().toISOString().split('T')[0],
-    examFrequency: '历年必考',
-    createdAt: '2026-09-10',
-    updatedAt: new Date().toISOString().split('T')[0],
-  },
-  {
-    id: 'mem-cs-02',
-    type: 'concept',
-    title: 'AVL 平衡二叉树四种旋转平衡化',
-    content: 'LL型右单旋、RR型左单旋、LR型先左后右双旋、RL型先右后左双旋。旋转后子树根节点深度恢复，中序遍历单调递增性始终保持不变。',
-    subject: '数据结构',
-    domain: 'cs_408',
-    mastery: 'mastered',
-    tags: ['二叉树', 'AVL树', '平衡化', '旋转'],
-    reviewCount: 5,
-    lastReviewed: new Date().toISOString().split('T')[0],
-    examFrequency: '高频核心',
-    createdAt: '2026-09-11',
-    updatedAt: new Date().toISOString().split('T')[0],
-  },
-  {
-    id: 'mem-cs-03',
-    type: 'concept',
-    title: 'CPU 五级流水线数据冒险 (RAW) 与 Forwarding 旁路技术',
-    content: '前一条指令写寄存器发生在 WB 段，后一条指令读寄存器发生在 ID 段。若未解决则产生 RAW 冒险。硬件旁路（Forwarding）将 EX 或 MEM 段计算结果直接转发到下一指令的 ALU 输入端，避免 2 个周期 Stall 气泡。',
-    subject: '计算机组成',
-    domain: 'cs_408',
-    mastery: 'learning',
-    tags: ['流水线', 'RAW冲突', '旁路技术', 'Stall气泡'],
-    reviewCount: 2,
-    lastReviewed: new Date().toISOString().split('T')[0],
-    examFrequency: '高频核心',
-    createdAt: '2026-09-12',
-    updatedAt: new Date().toISOString().split('T')[0],
-  },
-  {
-    id: 'mem-cs-04',
-    type: 'mistake',
-    title: '【易错陷阱】TCP 拥塞控制超时重传 vs 收到 3 个冗余 ACK (快重传)',
-    content: '超时重传 (Timeout)：ssthresh = cwnd / 2，cwnd 重置为 1 MSS，重新进入慢开始；收到 3 个冗余 ACK：ssthresh = cwnd / 2，cwnd = ssthresh (或 + 3 MSS)，进入快速恢复，绝不能重置为 1！',
-    subject: '计算机网络',
-    domain: 'cs_408',
-    mastery: 'weak',
-    tags: ['TCP', '拥塞控制', '慢开始', '快重传', '易错点'],
+export function loadAllMemories(vaultPath?: string): MemoryItem[] {
+  const { config: cfg } = loadAgentMemoryConfig(vaultPath)
+  return cfg.directives.map(d => ({
+    id: d.id,
+    type: d.category,
+    title: d.title,
+    content: d.content,
+    subject: '考研全科',
+    domain: 'general',
+    mastery: d.enabled ? 'mastered' : 'learning',
+    tags: [d.category, 'agent-memory'],
     reviewCount: 1,
-    lastReviewed: new Date().toISOString().split('T')[0],
-    examFrequency: '常见陷阱',
-    createdAt: '2026-09-15',
-    updatedAt: new Date().toISOString().split('T')[0],
-  },
-  {
-    id: 'mem-math-01',
-    type: 'concept',
-    title: '泰勒公式麦克劳林展开与皮亚诺余项精确截断',
-    content: '求未定式极限时，分母为 $x^n$ 时，分子各项必须统统展开到 $x^n$ 同阶项。若只展开到低阶会导致高阶系数信息丢失直接算错；若展开过深则计算量爆炸。常见 8 大基本初等函数麦克劳林级数必须倒背如流。',
-    subject: '高等数学',
-    domain: 'math',
-    mastery: 'mastered',
-    tags: ['极限', '泰勒公式', '麦克劳林展开', '未定式'],
-    reviewCount: 6,
-    lastReviewed: new Date().toISOString().split('T')[0],
-    examFrequency: '历年必考',
-    formulaKatex: 'f(x) = \\sum_{k=0}^{n} \\frac{f^{(k)}(0)}{k!} x^k + o(x^n)',
-    createdAt: '2026-09-12',
-    updatedAt: new Date().toISOString().split('T')[0],
-  },
-  {
-    id: 'mem-math-02',
-    type: 'concept',
-    title: '实对称矩阵的正交相似对角化',
-    content: '实对称矩阵性质：不同特征值对应的特征向量天然两两正交；重根特征值对应线性无关特征向量个数恰等于重数；必存在正交矩阵 $Q$ 使得 $Q^T A Q = \\Lambda$。施密特正交化用于同一特征值的不同特征向量。',
-    subject: '线性代数',
-    domain: 'math',
-    mastery: 'learning',
-    tags: ['矩阵', '实对称矩阵', '正交化', '对角化'],
-    reviewCount: 4,
-    lastReviewed: new Date().toISOString().split('T')[0],
-    examFrequency: '历年必考',
-    formulaKatex: 'Q^T A Q = \\text{diag}(\\lambda_1, \\lambda_2, \\dots, \\lambda_n)',
-    createdAt: '2026-09-13',
-    updatedAt: new Date().toISOString().split('T')[0],
-  },
-  {
-    id: 'mem-math-03',
-    type: 'mistake',
-    title: '【易错陷阱】连续型随机变量函数的分布：雅可比单调变换区间切分',
-    content: '当 $Y = g(X)$ 不是严格单调函数时，绝不能直接使用单调反函数公式 $f_Y(y) = f_X(h(y)) |h\'(y)|$！必须先切分单调区间分别求反函数求导累加，或者严格回归分布函数法 $F_Y(y) = P(g(X) \\le y)$ 积分！',
-    subject: '概率论',
-    domain: 'math',
-    mastery: 'weak',
-    tags: ['随机变量函数', '分布函数法', '易错点'],
-    reviewCount: 2,
-    lastReviewed: new Date().toISOString().split('T')[0],
-    examFrequency: '常见陷阱',
-    createdAt: '2026-09-14',
-    updatedAt: new Date().toISOString().split('T')[0],
-  },
-  {
-    id: 'mem-chunk-01',
-    type: 'chunk',
-    title: '408 操作系统页面置换四大经典算法速查卡',
-    content: '1. OPT(最佳)：淘汰未来最长时间内不再访问的页面，理想不可实现；\n2. FIFO(先进先出)：淘汰最早进入的页面，会产生 Belady 异常现象；\n3. LRU(最近最久未使用)：淘汰过去最长时间未被访问的页面，硬件成本高；\n4. CLOCK(时钟/NRU)：结合访问位与修改位(A, M)，4 轮扫描淘汰 (0,0) -> (0,1) -> (0,0) -> (0,1)。',
-    subject: '操作系统',
-    domain: 'cs_408',
-    tags: ['页面置换', 'LRU', 'FIFO', 'CLOCK', 'Belady'],
-    reviewCount: 3,
-    lastReviewed: new Date().toISOString().split('T')[0],
+    lastReviewed: d.lastUpdated,
     examFrequency: '高频核心',
-    createdAt: '2026-09-15',
-    updatedAt: new Date().toISOString().split('T')[0],
-  },
-]
-
-function getMemoryFilePath(): string {
-  const primaryDir = path.join(config.vaultPath || process.cwd(), 'wiki', '.memory')
-  if (!fs.existsSync(primaryDir)) {
-    try { fs.mkdirSync(primaryDir, { recursive: true }) } catch { /* ignore */ }
-  }
-  return path.join(primaryDir, 'ai_memory.json')
+    createdAt: d.lastUpdated,
+    updatedAt: d.lastUpdated,
+  }))
 }
 
-export function loadAllMemories(): MemoryItem[] {
-  const filePath = getMemoryFilePath()
-  try {
-    if (fs.existsSync(filePath)) {
-      const raw = fs.readFileSync(filePath, 'utf-8')
-      const data = JSON.parse(raw)
-      if (Array.isArray(data) && data.length > 0) return data
-    }
-  } catch {
-    // fallback
-  }
-
-  // Save default memories
-  saveAllMemories(DEFAULT_MEMORIES)
-  return DEFAULT_MEMORIES
-}
-
-export function saveAllMemories(memories: MemoryItem[]): void {
-  const filePath = getMemoryFilePath()
-  try {
-    fs.mkdirSync(path.dirname(filePath), { recursive: true })
-    fs.writeFileSync(filePath, JSON.stringify(memories, null, 2), 'utf-8')
-  } catch (err: any) {
-    console.error('Failed to save memories:', err.message)
-  }
-}
-
-export function addMemory(item: Omit<MemoryItem, 'id' | 'createdAt' | 'updatedAt' | 'reviewCount'>): MemoryItem {
-  const memories = loadAllMemories()
-  const today = new Date().toISOString().split('T')[0]
-  const newItem: MemoryItem = {
-    ...item,
-    id: `mem-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-    reviewCount: 1,
-    createdAt: today,
-    updatedAt: today,
-  }
-  memories.unshift(newItem)
-  saveAllMemories(memories)
-  return newItem
-}
-
-export function updateMemory(id: string, patch: Partial<MemoryItem>): MemoryItem | null {
-  const memories = loadAllMemories()
-  const idx = memories.findIndex(m => m.id === id)
-  if (idx === -1) return null
-
-  memories[idx] = {
-    ...memories[idx],
-    ...patch,
-    updatedAt: new Date().toISOString().split('T')[0],
-  }
-  saveAllMemories(memories)
-  return memories[idx]
-}
-
-export function deleteMemory(id: string): boolean {
-  const memories = loadAllMemories()
-  const filtered = memories.filter(m => m.id !== id)
-  if (filtered.length === memories.length) return false
-  saveAllMemories(filtered)
-  return true
-}
-
-export function getMemoryStats() {
-  const memories = loadAllMemories()
-  const concepts = memories.filter(m => m.type === 'concept')
-  const mastered = concepts.filter(m => m.mastery === 'mastered').length
-  const learning = concepts.filter(m => m.mastery === 'learning').length
-  const weak = concepts.filter(m => m.mastery === 'weak').length
-  const mistakes = memories.filter(m => m.type === 'mistake').length
-  const chunks = memories.filter(m => m.type === 'chunk').length
-
+export function getMemoryStats(vaultPath?: string) {
+  const { config: cfg } = loadAgentMemoryConfig(vaultPath)
+  const total = cfg.directives.length
+  const active = cfg.directives.filter(d => d.enabled).length
   return {
-    total: memories.length,
-    conceptsCount: concepts.length,
-    masteredCount: mastered,
-    learningCount: learning,
-    weakCount: weak,
-    mistakesCount: mistakes,
-    chunksCount: chunks,
-    masteryRate: concepts.length > 0 ? Math.round((mastered / concepts.length) * 100) : 0,
+    total,
+    mastered: active,
+    learning: total - active,
+    weak: 0,
+    traps: cfg.rules.length,
+    chunks: cfg.userProfile.weakPoints.length,
   }
+}
+
+export function addMemory(item: any, vaultPath?: string) {
+  const res = addAgentDirective({
+    title: item.title,
+    content: item.content,
+    category: item.type || 'behavior',
+    enabled: true,
+  }, vaultPath)
+  return res.directive
+}
+
+export function updateMemory(id: string, patch: any, vaultPath?: string) {
+  const res = updateAgentDirective(id, patch, vaultPath)
+  return res.directive
+}
+
+export function deleteMemory(id: string, vaultPath?: string) {
+  return deleteAgentDirective(id, vaultPath)
 }

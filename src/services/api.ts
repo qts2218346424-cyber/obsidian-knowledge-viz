@@ -310,6 +310,40 @@ export interface MemoryStats {
   masteryRate: number
 }
 
+export interface AgentPersona {
+  name: string
+  role: string
+  tone: string
+  avatarEmoji?: string
+  summary: string
+}
+
+export interface AgentDirective {
+  id: string
+  title: string
+  content: string
+  category: 'behavior' | 'knowledge' | 'preference' | 'habit'
+  enabled: boolean
+  lastUpdated: string
+}
+
+export interface UserProfileContext {
+  targetExam: string
+  targetSchool: string
+  userBackground: string
+  currentStage: string
+  weakPoints: string[]
+  customPreferences: string[]
+}
+
+export interface AgentMemoryConfig {
+  persona: AgentPersona
+  rules: string[]
+  userProfile: UserProfileContext
+  directives: AgentDirective[]
+  lastUpdated: string
+}
+
 export interface ErrorQuestion {
   source: string
   question: string
@@ -598,7 +632,28 @@ export const api = {
   syncLocalSkills: () =>
     postJSON<{ success: boolean; skills: LocalSkill[]; totalCount: number; categories: string[]; sources: string[]; scannedCount: number }>('/local-agents/sync-skills', {}),
 
-  // AI Visual Memory Warehouse
+  // AI Visual Memory Warehouse (agent.md)
+  getAgentMemoryConfig: () =>
+    fetchJSON<{ success: boolean; config: AgentMemoryConfig; rawMarkdown: string; filePath: string }>('/memory/agent-config'),
+
+  saveAgentMemoryConfig: (config: AgentMemoryConfig) =>
+    postJSON<{ success: boolean; config: AgentMemoryConfig; rawMarkdown: string; filePath: string; message: string }>('/memory/agent-config', { config }),
+
+  saveRawAgentMarkdown: (rawMarkdown: string) =>
+    postJSON<{ success: boolean; config: AgentMemoryConfig; rawMarkdown: string; filePath: string; message: string }>('/memory/agent-config', { rawMarkdown }),
+
+  addAgentDirective: (directive: { title: string; content: string; category?: string; enabled?: boolean }) =>
+    postJSON<{ success: boolean; directive: AgentDirective }>('/memory/directive', directive),
+
+  updateAgentDirective: (id: string, patch: Partial<AgentDirective>) =>
+    putJSON<{ success: boolean; directive: AgentDirective }>(`/memory/directive/${id}`, patch),
+
+  deleteAgentDirective: (id: string) =>
+    delJSON<{ success: boolean }>(`/memory/directive/${id}`, {}),
+
+  resetAgentMemoryDefault: () =>
+    postJSON<{ success: boolean; config: AgentMemoryConfig; rawMarkdown: string; filePath: string; message: string }>('/memory/reset-default', {}),
+
   getAllMemories: () =>
     fetchJSON<{ success: boolean; memories: MemoryItem[]; stats: MemoryStats }>('/memory/all'),
 
