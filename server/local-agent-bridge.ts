@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import readline from 'node:readline'
+import { scanHostLocalModels } from './local-model-scanner.js'
 
 export type LocalAgentProvider = 'claude-code' | 'codex' | 'ollama' | 'lm-studio' | 'web'
 
@@ -112,9 +113,22 @@ function readVersion(command: string) {
 }
 
 export function detectLocalAgents(config?: LocalAgentConfig): LocalAgentStatus[] {
+  let scannedModels: Record<string, string[]> = {}
+  try {
+    scannedModels = scanHostLocalModels()
+  } catch {
+    // ignore
+  }
+
   return (['claude-code', 'codex'] as LocalAgentProvider[]).map(provider => {
     const command = commandFromConfig(config, provider)
     const version = readVersion(command)
+    const models = (scannedModels[provider] && scannedModels[provider].length > 0)
+      ? scannedModels[provider]
+      : (provider === 'claude-code'
+          ? ['claude-3-7-sonnet', 'claude-3-5-sonnet', 'claude-3-5-haiku', 'opus']
+          : ['gpt-4o', 'o3-mini', 'o1', 'gpt-4o-mini', 'codex'])
+
     return {
       provider,
       available: Boolean(version.version),
@@ -122,6 +136,8 @@ export function detectLocalAgents(config?: LocalAgentConfig): LocalAgentStatus[]
       resolvedPath: version.resolvedPath,
       version: version.version,
       detail: version.detail,
+      models,
+      defaultModel: models[0],
     }
   })
 }

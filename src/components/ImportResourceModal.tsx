@@ -142,16 +142,23 @@ export default function ImportResourceModal({
 
     setIsUploading(true)
     const formData = new FormData()
-    formData.append('file', file)
     formData.append('domain', uploadDomain)
     formData.append('category', uploadCategory)
+    formData.append('file', file)
 
     try {
       const res = await fetch('/api/books/upload', {
         method: 'POST',
         body: formData,
       })
-      const data = await res.json()
+      const text = await res.text()
+      let data: any = {}
+      try {
+        data = JSON.parse(text)
+      } catch {
+        throw new Error(res.ok ? '服务解析异常' : `后端响应异常 (HTTP ${res.status}): ${text.slice(0, 120)}`)
+      }
+
       if (data.success) {
         setImportFeedback(`资料《${file.name}》已成功导入并归档至 raw-sources！`)
         loadBooks()

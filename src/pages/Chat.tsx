@@ -1,17 +1,19 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import {
   Send, Loader2, FolderTree, X, Wrench, ChevronDown,
   Plus, Trash2, MessageSquare, Save, Sparkles, CheckCircle2, Target,
-  Copy, Check, Bot, FileText
+  Copy, Check, Bot, FileText, Brain, RefreshCw
 } from 'lucide-react'
 import MarkdownRenderer from '../components/MarkdownRenderer'
-import { api, type FileDetail, type LocalAgentStatus } from '../services/api'
+import { api, type FileDetail, type LocalAgentStatus, type LocalSkill } from '../services/api'
 import { useVaultTree } from '../hooks/useVaultData'
 import FileExplorer from '../components/FileExplorer'
 import LuluAvatar from '../components/Pet/LuluAvatar'
 import { STUDY_SKILLS, type StudySkill } from '../data/studySkills'
 import { STUDY_AGENTS, type StudyAgent } from '../data/studyAgents'
 import QuickPracticeModal from '../components/QuickPracticeModal'
+import AIMemoryModal from '../components/AIMemoryModal'
+import LocalSkillPickerModal from '../components/LocalSkillPickerModal'
 
 interface ToolCallInfo {
   tool: string
@@ -65,7 +67,14 @@ export default function Chat() {
   const [isCustomModel, setIsCustomModel] = useState(false)
   const [loadingAgents, setLoadingAgents] = useState(false)
 
-  // Skill state
+  // Local Skills & Memory Hub state
+  const [showSkillPicker, setShowSkillPicker] = useState(false)
+  const [selectedLocalSkill, setSelectedLocalSkill] = useState<LocalSkill | null>(null)
+  const [showMemoryModal, setShowMemoryModal] = useState(false)
+  const [syncingModels, setSyncingModels] = useState(false)
+  const [modelSyncFeedback, setModelSyncFeedback] = useState<string | null>(null)
+
+  // Built-in Skill state
   const [activeSkill, setActiveSkill] = useState<StudySkill | null>(null)
   const [showSkillsMenu, setShowSkillsMenu] = useState(false)
 
@@ -101,6 +110,40 @@ export default function Chat() {
 
   useEffect(() => { scrollToBottom() }, [messages, scrollToBottom])
 
+  // Compute dynamically available models for current provider
+  const currentAvailableModels = useMemo(() => {
+    const active = agents.find(a => a.provider === provider)
+    if (active?.models && active.models.length > 0) {
+      return active.models
+    }
+    return PROVIDER_PRESET_MODELS[provider] || []
+  }, [agents, provider])
+
+  const activeAgentStatus = agents.find(a => a.provider === provider)
+
+  const handleSyncLocalModels = async () => {
+    setSyncingModels(true)
+    setModelSyncFeedback(null)
+    try {
+      const res = await api.syncLocalAgentModels()
+      if (res.agents) {
+        setAgents(res.agents)
+        const active = res.agents.find(a => a.provider === provider)
+        if (active?.models && active.models.length > 0) {
+          setSelectedModel(active.models[0])
+          localStorage.setItem(`coreforge_model_${provider}`, active.models[0])
+        }
+      }
+      setModelSyncFeedback(`已从本机同步 ${res.agents?.length || 0} 个本地引擎模型`)
+      setTimeout(() => setModelSyncFeedback(null), 3500)
+    } catch (err: any) {
+      setModelSyncFeedback(`同步失败: ${err.message}`)
+      setTimeout(() => setModelSyncFeedback(null), 3500)
+    } finally {
+      setSyncingModels(false)
+    }
+  }
+
   // Fetch agent status & auto-select models
   const fetchAgentStatus = useCallback(async () => {
     setLoadingAgents(true)
@@ -121,13 +164,17 @@ export default function Chat() {
       }
 
       const savedModel = localStorage.getItem(`coreforge_model_${currentProv}`)
-      const presets = PROVIDER_PRESET_MODELS[currentProv]
-      if (savedModel) {
+      const activeObj = data.agents.find(a => a.provider === currentProv)
+      const availableModels = (activeObj?.models && activeObj.models.length > 0)
+        ? activeObj.models
+        : PROVIDER_PRESET_MODELS[currentProv]
+
+      if (savedModel && (availableModels.includes(savedModel) || savedModel.length > 0)) {
         setSelectedModel(savedModel)
-        setIsCustomModel(!presets.includes(savedModel))
-        if (!presets.includes(savedModel)) setCustomModelInput(savedModel)
+        setIsCustomModel(!availableModels.includes(savedModel))
+        if (!availableModels.includes(savedModel)) setCustomModelInput(savedModel)
       } else {
-        setSelectedModel(presets[0])
+        setSelectedModel(availableModels[0] || 'default')
         setIsCustomModel(false)
       }
     } catch {
@@ -271,11 +318,15 @@ export default function Chat() {
 
     try {
       const endpoint = '/api/local-agents/chat'
+      const skillPrompt = selectedLocalSkill
+        ? `【启用本地技能: ${selectedLocalSkill.displayName} (${selectedLocalSkill.name})】\n${selectedLocalSkill.instructions}`
+        : (activeSkill?.prompt || undefined)
+
       const body = {
         provider,
         prompt: text,
         model: selectedModel || undefined,
-        skillPrompt: activeSkill?.prompt || undefined,
+        skillPrompt,
         agentPrompt: `${activeAgent.systemPrompt}\n${toneInstruction}`,
         projectName: '考研 408 & 数学研学工作台',
         pageContext: `AI 伴学主页面 (${activeAgent.name})`,
@@ -441,9 +492,6 @@ export default function Chat() {
     setTimeout(() => setCopiedId(null), 2000)
   }
 
-  const presetModels = PROVIDER_PRESET_MODELS[provider] || []
-  const activeAgentStatus = agents.find(a => a.provider === provider)
-
   return (
     <div className="h-full flex flex-col gap-3 overflow-hidden">
       {/* Top Section 1: Agent Persona Switcher */}
@@ -528,13 +576,13 @@ export default function Chat() {
           </div>
 
           {/* Model Dropdown */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <select
               value={isCustomModel ? '__custom__' : selectedModel}
               onChange={e => handleModelSelect(e.target.value)}
               className="text-xs bg-cream-100 border border-cream-200 rounded-lg px-2.5 py-1 text-warm-800 font-medium focus:outline-hidden focus:border-accent-orange"
             >
-              {presetModels.map(m => (
+              {currentAvailableModels.map(m => (
                 <option key={m} value={m}>{m}</option>
               ))}
               <option value="__custom__">⚙️ 自定义模型名称...</option>
@@ -551,28 +599,64 @@ export default function Chat() {
                 />
                 <button
                   onClick={handleCustomModelConfirm}
-                  className="px-2 py-1 rounded-lg bg-accent-orange text-white text-xs font-semibold"
+                  className="px-2 py-1 rounded-lg bg-accent-orange text-white text-xs font-semibold cursor-pointer"
                 >
                   确认
                 </button>
               </div>
             )}
+
+            {/* Sync Local Models Button */}
+            <button
+              onClick={handleSyncLocalModels}
+              disabled={syncingModels}
+              title="一键扫描并同步本机 ~/.codex, ~/.claude, ~/.cc-switch 真实安装的本地大模型"
+              className="px-2.5 py-1 rounded-lg border border-cream-200 bg-cream-100 hover:border-accent-orange text-xs text-warm-700 font-semibold flex items-center gap-1 transition-all cursor-pointer"
+            >
+              <RefreshCw className={`w-3 h-3 text-accent-orange ${syncingModels ? 'animate-spin' : ''}`} />
+              <span>{syncingModels ? '同步中...' : '🔄 同步本机模型'}</span>
+            </button>
+
+            {modelSyncFeedback && (
+              <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium animate-in fade-in">
+                {modelSyncFeedback}
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Right: 6 Exam Skills Button & Dropdown */}
-        <div className="flex items-center gap-2">
+        {/* Right: AI Memory Hub + Local Skills Picker + Built-in Skills */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setShowMemoryModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-300 dark:border-amber-700/60 text-amber-800 dark:text-amber-300 hover:from-amber-500/20 hover:to-orange-500/20 transition-all shadow-2xs cursor-pointer"
+          >
+            <Brain className="w-3.5 h-3.5 text-amber-600" />
+            <span>🧠 AI 可视化记忆仓库</span>
+          </button>
+
+          <button
+            onClick={() => setShowSkillPicker(true)}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+              selectedLocalSkill
+                ? 'bg-purple-100 text-purple-800 border-purple-300 shadow-xs'
+                : 'bg-cream-100 hover:bg-cream-200 text-warm-700 border-cream-200 hover:border-purple-300'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+            <span>{selectedLocalSkill ? `本机: ${selectedLocalSkill.displayName}` : '⚡ 本机 Agent 技能库 (98+)'}</span>
+          </button>
+
           <div className="relative">
             <button
               onClick={() => setShowSkillsMenu(!showSkillsMenu)}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold border transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
                 activeSkill
                   ? 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-400/40 shadow-xs'
                   : 'bg-cream-100 text-warm-600 border-cream-200 hover:border-purple-300 hover:bg-purple-50'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5 text-purple-500" />
-              <span>{activeSkill ? `Skill: ${activeSkill.shortName}` : '⚡ 考研专属 Skills (免插件)'}</span>
+              <span>{activeSkill ? `专项: ${activeSkill.shortName}` : '📚 考研专项 Skills'}</span>
               <ChevronDown className="w-3 h-3 text-warm-400" />
             </button>
 
@@ -851,6 +935,25 @@ export default function Chat() {
             </div>
           )}
 
+          {/* Active Local Skill Indicator */}
+          {selectedLocalSkill && (
+            <div className="px-4 py-1.5 bg-indigo-500/10 border-t border-indigo-500/20 flex items-center justify-between text-xs text-indigo-700">
+              <span className="flex items-center gap-1.5 font-medium truncate">
+                <Sparkles className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                <span className="truncate">
+                  已启用本机 Agent 技能：<b>{selectedLocalSkill.displayName}</b> ({selectedLocalSkill.source} / {selectedLocalSkill.category})
+                </span>
+              </span>
+              <button
+                onClick={() => setSelectedLocalSkill(null)}
+                className="text-indigo-400 hover:text-indigo-700 cursor-pointer ml-2 shrink-0"
+                title="关闭此技能"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           {/* Loading tool indicator */}
           {currentToolStatus && (
             <div className="px-4 py-1 bg-amber-500/10 border-t border-amber-500/20 flex items-center gap-2 text-[11px] text-amber-700 animate-pulse">
@@ -875,7 +978,7 @@ export default function Chat() {
               <button
                 onClick={() => handleSend()}
                 disabled={loading || !input.trim()}
-                className="p-2 rounded-lg bg-accent-orange text-white hover:bg-accent-orange/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                className="p-2 rounded-lg bg-accent-orange text-white hover:bg-accent-orange/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0 cursor-pointer"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               </button>
@@ -890,6 +993,24 @@ export default function Chat() {
         onClose={() => setPracticeModalOpen(false)}
         noteTitle={practiceData.title}
         noteContent={practiceData.content}
+      />
+
+      {/* AI Visual Memory Hub Modal */}
+      <AIMemoryModal
+        isOpen={showMemoryModal}
+        onClose={() => setShowMemoryModal(false)}
+        onSelectConcept={(title: string) => {
+          setInput(`请详细为我深度解析考点「${title}」，给出考点本质、真题考法和记忆口诀：`)
+          inputRef.current?.focus()
+        }}
+      />
+
+      {/* Local Agent Skill Picker Hub Modal */}
+      <LocalSkillPickerModal
+        isOpen={showSkillPicker}
+        onClose={() => setShowSkillPicker(false)}
+        onSelectSkill={skill => setSelectedLocalSkill(skill)}
+        currentSkillId={selectedLocalSkill?.id}
       />
     </div>
   )

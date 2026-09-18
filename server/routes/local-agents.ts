@@ -5,6 +5,7 @@ import { config, anthropic } from '../context.js'
 import { detectAllLocalAgents, runLocalAgent, type LocalAgentProvider } from '../local-agent-bridge.js'
 import { OpenAICompatibleClient } from '../ai-client.js'
 import { runAgentLoop } from '../agent.js'
+import { scanLocalSkills } from '../local-skill-scanner.js'
 
 export const localAgentsRouter = Router()
 
@@ -14,6 +15,54 @@ localAgentsRouter.get('/local-agents/status', async (_req, res) => {
     res.json({
       agents,
       defaultCwd: config.localAgents?.defaultCwd || config.vaultPath,
+    })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+localAgentsRouter.post('/local-agents/sync-models', async (_req, res) => {
+  try {
+    const agents = await detectAllLocalAgents(config.localAgents)
+    res.json({
+      success: true,
+      agents,
+      defaultCwd: config.localAgents?.defaultCwd || config.vaultPath,
+    })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+localAgentsRouter.get('/local-agents/skills', async (_req, res) => {
+  try {
+    const skills = scanLocalSkills()
+    const categories = ['全部', ...Array.from(new Set(skills.map(s => s.category)))]
+    const sources = ['全部', ...Array.from(new Set(skills.map(s => s.source)))]
+    res.json({
+      success: true,
+      skills,
+      totalCount: skills.length,
+      categories,
+      sources,
+    })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+localAgentsRouter.post('/local-agents/sync-skills', async (_req, res) => {
+  try {
+    const skills = scanLocalSkills()
+    const categories = ['全部', ...Array.from(new Set(skills.map(s => s.category)))]
+    const sources = ['全部', ...Array.from(new Set(skills.map(s => s.source)))]
+    res.json({
+      success: true,
+      skills,
+      totalCount: skills.length,
+      categories,
+      sources,
+      scannedCount: skills.length,
     })
   } catch (err: any) {
     res.status(500).json({ error: err.message })

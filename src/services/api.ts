@@ -267,6 +267,48 @@ export interface LocalAgentStatus {
   defaultModel?: string
 }
 
+export interface LocalSkill {
+  id: string
+  name: string
+  displayName: string
+  description: string
+  source: 'claude' | 'agents' | 'codex' | 'antigravity' | 'plugin' | 'builtin'
+  category: '研学与考研' | '文档与办公' | '开发与架构' | '安全与审计' | '浏览器与自动化' | '通用技能'
+  path: string
+  instructions: string
+  allowedTools?: string[]
+}
+
+export type MemoryType = 'concept' | 'chunk' | 'mistake' | 'profile'
+export type MemoryMastery = 'mastered' | 'learning' | 'weak'
+
+export interface MemoryItem {
+  id: string
+  type: MemoryType
+  title: string
+  content: string
+  subject: '数据结构' | '计算机组成' | '操作系统' | '计算机网络' | '高等数学' | '线性代数' | '概率论' | '考研全科'
+  domain: 'cs_408' | 'math' | 'general'
+  mastery?: MemoryMastery
+  tags: string[]
+  reviewCount: number
+  lastReviewed: string
+  examFrequency?: '高频核心' | '历年必考' | '常见陷阱' | '考点拔高'
+  formulaKatex?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface MemoryStats {
+  total: number
+  conceptsCount: number
+  masteredCount: number
+  learningCount: number
+  weakCount: number
+  mistakesCount: number
+  chunksCount: number
+  masteryRate: number
+}
 
 export interface ErrorQuestion {
   source: string
@@ -533,6 +575,31 @@ export const api = {
 
   getLocalAgentStatus: () =>
     fetchJSON<{ agents: LocalAgentStatus[]; defaultCwd: string }>('/local-agents/status'),
+
+  syncLocalAgentModels: () =>
+    postJSON<{ success: boolean; agents: LocalAgentStatus[]; defaultCwd: string }>('/local-agents/sync-models', {}),
+
+  getLocalSkills: () =>
+    fetchJSON<{ success: boolean; skills: LocalSkill[]; totalCount: number; categories: string[]; sources: string[] }>('/local-agents/skills'),
+
+  syncLocalSkills: () =>
+    postJSON<{ success: boolean; skills: LocalSkill[]; totalCount: number; categories: string[]; sources: string[]; scannedCount: number }>('/local-agents/sync-skills', {}),
+
+  // AI Visual Memory Warehouse
+  getAllMemories: () =>
+    fetchJSON<{ success: boolean; memories: MemoryItem[]; stats: MemoryStats }>('/memory/all'),
+
+  addMemory: (item: Partial<MemoryItem>) =>
+    postJSON<{ success: boolean; item: MemoryItem }>('/memory/item', item),
+
+  updateMemory: (id: string, patch: Partial<MemoryItem>) =>
+    putJSON<{ success: boolean; item: MemoryItem }>(`/memory/item/${id}`, patch),
+
+  deleteMemory: (id: string) =>
+    delJSON<{ success: boolean }>(`/memory/item/${id}`, {}),
+
+  exportMemoryToObsidian: (data: { memoryId?: string; title: string; content: string; tags?: string[]; subject?: string }) =>
+    postJSON<{ success: boolean; notePath: string; message: string }>('/memory/export-to-obsidian', data),
 
   // Obsidian AI plugin config detection
   detectAIPlugins: () =>

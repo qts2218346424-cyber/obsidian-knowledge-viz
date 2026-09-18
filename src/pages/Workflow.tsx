@@ -81,9 +81,12 @@ function IngestionPanel() {
 
       setResult(res)
     } catch (err: any) {
-      setError(err.message)
+      const msg = err.message === 'Internal Server Error'
+        ? '文档解析或写入异常：请确认上传格式在支持列表内（PDF, Word, Excel, Markdown等）且服务正常'
+        : err.message
+      setError(msg)
       // Mark current active step as failed
-      setSteps(prev => prev.map(s => s.status === 'active' ? { ...s, status: 'pending', desc: 'Failed' } : s))
+      setSteps(prev => prev.map(s => s.status === 'active' ? { ...s, status: 'pending', desc: '处理中断' } : s))
     } finally {
       setRunning(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -116,7 +119,7 @@ function IngestionPanel() {
         </button>
       </div>
 
-      <div className="flex-1" style={{ minHeight: 380 }}>
+      <div className="flex-1 min-h-[460px] h-full w-full relative">
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -629,7 +632,7 @@ export default function Workflow() {
       </div>
 
       {/* Active pipeline */}
-      <div className="flex-1" style={{ minHeight: 480 }}>
+      <div className="flex-1 min-h-[520px] flex flex-col">
         {activePipeline === 'ingestion' && <IngestionPanel />}
         {activePipeline === 'research' && <ResearchPanel />}
         {activePipeline === 'lint' && <LintPanel />}
