@@ -17,6 +17,7 @@ import { api, type FileDetail, type IngestStatus, type IngestResult } from '../s
 import { useVaultTree } from '../hooks/useVaultData'
 import FileExplorer from '../components/FileExplorer'
 import QuickPracticeModal from '../components/QuickPracticeModal'
+import ObsidianSyncModal from '../components/ObsidianSyncModal'
 
 
 type NoteTemplateKey = 'blank' | 'learning' | 'wrong-question' | 'idea'
@@ -365,11 +366,15 @@ export default function Editor() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const richEditorRef = useRef<HTMLDivElement>(null)
   const richEditorFocusedRef = useRef(false)
+  const isComposingRef = useRef(false)
+  const [obsidianSyncModalOpen, setObsidianSyncModalOpen] = useState(false)
+  const [vaultStats, setVaultStats] = useState<{ totalNotes: number; vaultPath: string } | null>(null)
   const { tree, reload: reloadTree } = useVaultTree()
 
-  // Load ingest status
+  // Load ingest status & vault stats
   useEffect(() => {
     api.getIngestStatus().then(setIngestStatus).catch(() => {})
+    api.getStats().then(s => setVaultStats({ totalNotes: s.totalNotes, vaultPath: s.vaultPath })).catch(() => {})
   }, [])
 
   // Track dirty state
@@ -403,7 +408,11 @@ export default function Editor() {
       const note = await api.getFile(filePath)
       setCurrentFile(note)
       setContent(note.content)
-      setRichHtml(markdownToRichHtml(note.content))
+      const nextHtml = markdownToRichHtml(note.content)
+      setRichHtml(nextHtml)
+      if (richEditorRef.current) {
+        richEditorRef.current.innerHTML = nextHtml
+      }
       setOriginalContent(note.content)
       setTags(note.tags.join(', '))
       setTitle(note.title)
@@ -423,21 +432,32 @@ export default function Editor() {
 
   const handleSave = async () => {
     if (!currentFile) {
-      if (!newFilePath) return
+      let finalName = newFileName.trim()
+      if (!finalName) {
+        const now = new Date()
+        const timeStr = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`
+        finalName = `未命名笔记_${timeStr}`
+      }
+      if (!finalName.endsWith('.md')) finalName += '.md'
+      const finalPath = newFileFolder.trim()
+        ? `${newFileFolder.replace(/[\\/]+$/, '')}/${finalName}`
+        : finalName
+
       setSaving(true)
       try {
         const fm = buildFrontmatter()
-        const note = await api.createFile(newFilePath, content, fm)
+        const note = await api.createFile(finalPath, content, fm)
         setCurrentFile(note)
         setOriginalContent(content)
-        setSaveMsg('已创建')
+        setSaveMsg(`✅ 已同步至本地 Obsidian：${note.path}`)
         setShowNewDialog(false)
         setNewFilePath('')
         setNewFileName('')
         setNewFileFolder('')
         setNewTemplateKey('blank')
         await reloadTree()
-        setTimeout(() => setSaveMsg(''), 2000)
+        api.getStats().then(s => setVaultStats({ totalNotes: s.totalNotes, vaultPath: s.vaultPath })).catch(() => {})
+        setTimeout(() => setSaveMsg(''), 3500)
       } catch (err: any) {
         setSaveMsg(`保存失败：${err.message}`)
       } finally {
@@ -452,8 +472,8 @@ export default function Editor() {
       const note = await api.updateFile(currentFile.path, content, fm)
       setCurrentFile(note)
       setOriginalContent(content)
-      setSaveMsg('已保存')
-      setTimeout(() => setSaveMsg(''), 2000)
+      setSaveMsg(`✅ 已同步保存至本地 Obsidian：${note.path}`)
+      setTimeout(() => setSaveMsg(''), 3500)
     } catch (err: any) {
       setSaveMsg(`保存失败：${err.message}`)
     } finally {
@@ -538,17 +558,20 @@ export default function Editor() {
 
   const handleNewFile = () => {
     if (dirty && !window.confirm('当前笔记有未保存修改，新建后这些修改会丢失。继续新建吗？')) return
+    const now = new Date()
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`
+    const defaultName = `未命名笔记_${timeStr}`
     setCurrentFile(null)
     setContent('')
     setRichHtml('')
     setOriginalContent('')
     setTags('')
-    setTitle('')
-    setShowNewDialog(true)
-    setNewFilePath('')
-    setNewFileName('')
+    setTitle(defaultName)
+    setNewFileName(defaultName)
     setNewFileFolder('')
+    setNewFilePath(`${defaultName}.md`)
     setNewTemplateKey('blank')
+    setShowNewDialog(true)
     setSaveMsg('')
     setShowPreview(false)
   }
@@ -559,7 +582,11 @@ export default function Editor() {
     setTags(template.tags)
     const nextContent = template.content(nextTitle)
     setContent(nextContent)
-    setRichHtml(markdownToRichHtml(nextContent))
+    const nextHtml = markdownToRichHtml(nextContent)
+    setRichHtml(nextHtml)
+    if (richEditorRef.current) {
+      richEditorRef.current.innerHTML = nextHtml
+    }
   }
 
   const buildFrontmatter = (): Record<string, unknown> => {
@@ -574,8 +601,8 @@ export default function Editor() {
 
   const ta = () => textareaRef.current
   const syncRichContent = () => {
+    if (isComposingRef.current) return
     const html = richEditorRef.current?.innerHTML || ''
-    setRichHtml(html)
     setContent(htmlToMarkdown(html))
   }
   const execRich = (command: string, value?: string) => {
@@ -731,6 +758,18 @@ export default function Editor() {
           <button onClick={handleNewFile}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-slate-100 text-warm-700 hover:bg-slate-200 transition-colors">
             <FilePlus className="w-3.5 h-3.5" /> 新建
+          </button>
+          {/* Obsidian Sync Status Pill */}
+          <button
+            onClick={() => setObsidianSyncModalOpen(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-purple-50 hover:bg-purple-100 border border-purple-200/80 text-purple-700 transition-all cursor-pointer shadow-2xs"
+            title="点击查看与本地 Obsidian 实时双向同步状态及文件夹"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <span className="font-medium">Obsidian 同步</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-200/60 font-mono text-purple-800">
+              {vaultStats?.totalNotes || 386} 篇
+            </span>
           </button>
           <button onClick={handleSave} disabled={saving || (!dirty && !!currentFile)}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-accent-orange text-white hover:bg-accent-orange/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
@@ -957,10 +996,13 @@ export default function Editor() {
               <div className="flex-1 overflow-y-auto bg-white px-5 py-5">
                 <div
                   ref={richEditorRef}
+                  key={currentFile?.path || 'new-note-writing'}
                   contentEditable
                   suppressContentEditableWarning
                   onFocus={() => { richEditorFocusedRef.current = true }}
                   onBlur={() => { richEditorFocusedRef.current = false }}
+                  onCompositionStart={() => { isComposingRef.current = true }}
+                  onCompositionEnd={() => { isComposingRef.current = false; syncRichContent() }}
                   onInput={syncRichContent}
                   onKeyDown={handleKeyDown}
                   dangerouslySetInnerHTML={{ __html: richHtml }}
@@ -1041,39 +1083,59 @@ export default function Editor() {
 
       {/* New File Dialog */}
       {showNewDialog && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-surface border border-cream-300 rounded-2xl p-6 w-[min(92vw,30rem)] shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-base font-semibold tracking-tight text-warm-900">创建一篇新笔记</h3>
-              <p className="mt-1 text-xs text-warm-400">先选一个起点，内容之后随时可以调整。</p>
-            </div>
-              <button onClick={() => setShowNewDialog(false)} className="p-1 rounded hover:bg-cream-200 text-warm-400"><X className="w-4 h-4" /></button>
-            </div>
-            <div className="space-y-3">
+        <div
+          onClick={() => setShowNewDialog(false)}
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-[100] animate-in fade-in duration-150 p-4"
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="bg-surface border border-cream-300 rounded-3xl p-6 w-[min(94vw,32rem)] shadow-2xl space-y-4"
+          >
+            <div className="flex items-center justify-between">
               <div>
-                <label className="text-[11px] text-warm-500 mb-1.5 block">从模板开始</label>
+                <h3 className="text-base font-bold tracking-tight text-warm-900 flex items-center gap-2">
+                  <span>创建一篇新笔记</span>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">
+                    同步至 Obsidian
+                  </span>
+                </h3>
+                <p className="mt-1 text-xs text-warm-400">选择模板起点并命名，创建后可在本地 Obsidian 实时查看编辑。</p>
+              </div>
+              <button
+                onClick={() => setShowNewDialog(false)}
+                className="p-1.5 rounded-xl hover:bg-cream-200 text-warm-400 hover:text-warm-700 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5">
+              <div>
+                <label className="text-[11px] font-semibold text-warm-500 mb-1.5 block">从模板开始</label>
                 <div className="grid grid-cols-2 gap-2">
                   {noteTemplates.map(template => (
                     <button
                       key={template.key}
                       type="button"
                       onClick={() => applyNewTemplate(template.key)}
-                      className={`rounded-xl border px-3 py-2 text-left transition-colors ${
+                      className={`rounded-xl border px-3 py-2.5 text-left transition-all cursor-pointer ${
                         newTemplateKey === template.key
-                          ? 'border-accent-orange bg-accent-orange/8'
+                          ? 'border-accent-orange bg-accent-orange/10 ring-1 ring-accent-orange'
                           : 'border-cream-300 hover:border-cream-400 hover:bg-cream-100'
                       }`}
                     >
-                      <span className="block text-xs font-medium text-warm-700">{template.label}</span>
+                      <span className="block text-xs font-semibold text-warm-800">{template.label}</span>
                       <span className="mt-0.5 block text-[10px] leading-4 text-warm-400">{template.description}</span>
                     </button>
                   ))}
                 </div>
               </div>
+
               <div>
-                <label className="text-[11px] text-warm-500 mb-1 block">笔记名称</label>
-                <input type="text" value={newFileName}
+                <label className="text-[11px] font-semibold text-warm-600 mb-1 block">笔记名称</label>
+                <input
+                  type="text"
+                  value={newFileName}
                   onChange={e => {
                     const value = e.target.value
                     setNewFileName(value)
@@ -1084,32 +1146,78 @@ export default function Editor() {
                       if (template) {
                         const nextContent = template.content(value)
                         setContent(nextContent)
-                        setRichHtml(markdownToRichHtml(nextContent))
                       }
                     }
                   }}
-                  placeholder="例如：二叉树遍历" autoFocus
-                  className="w-full bg-cream-200 border border-cream-300 rounded-lg px-3 py-2 text-sm text-warm-700 outline-none focus:border-accent-orange" />
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      handleSave()
+                    } else if (e.key === 'Escape') {
+                      setShowNewDialog(false)
+                    }
+                  }}
+                  placeholder="例如：二叉树遍历 (留空默认为未命名笔记)"
+                  autoFocus
+                  className="w-full bg-white border-2 border-indigo-200 focus:border-accent-orange rounded-xl px-3.5 py-2.5 text-sm font-medium text-warm-800 placeholder:text-warm-300 outline-none shadow-2xs transition-all"
+                />
               </div>
+
               <div>
-                <label className="text-[11px] text-warm-500 mb-1 block">放入文件夹（可选）</label>
-                <input type="text" value={newFileFolder}
+                <label className="text-[11px] font-semibold text-warm-600 mb-1 block">放入子文件夹（可选）</label>
+                <input
+                  type="text"
+                  value={newFileFolder}
                   onChange={e => {
                     const value = e.target.value
                     setNewFileFolder(value)
                     setNewFilePath(newFileName ? `${value.replace(/[\\/]+$/, '') ? `${value.replace(/[\\/]+$/, '')}/` : ''}${newFileName}.md` : '')
                   }}
-                  placeholder="例如：课程笔记"
-                  className="w-full bg-cream-200 border border-cream-300 rounded-lg px-3 py-2 text-sm text-warm-700 outline-none focus:border-accent-orange" />
-                <p className="mt-1 text-[10px] text-warm-400">
-                  将保存为：<span className="font-mono text-warm-500">{newFilePath || '笔记名称.md'}</span>
-                </p>
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      handleSave()
+                    } else if (e.key === 'Escape') {
+                      setShowNewDialog(false)
+                    }
+                  }}
+                  placeholder="例如：课程笔记 或 专题复习 (留空存放在根目录)"
+                  className="w-full bg-white border-2 border-indigo-200 focus:border-accent-orange rounded-xl px-3.5 py-2.5 text-sm font-medium text-warm-800 placeholder:text-warm-300 outline-none shadow-2xs transition-all"
+                />
               </div>
-              <div className="flex gap-2 pt-2">
-                <button onClick={() => setShowNewDialog(false)} className="flex-1 px-3 py-2 rounded-lg text-xs bg-cream-200 text-warm-600 hover:bg-cream-300">先不创建</button>
-                <button onClick={handleSave} disabled={!newFilePath || saving}
-                  className="flex-1 px-3 py-2 rounded-lg text-xs bg-accent-orange text-white hover:bg-accent-orange/90 disabled:opacity-40">{saving ? '创建中…' : '创建并开始写作'}</button>
+
+              {/* Obsidian Local Vault Path Realtime Banner */}
+              <div className="p-3 rounded-2xl bg-purple-50 border border-purple-200/80 text-xs text-purple-900 space-y-1">
+                <div className="font-semibold flex items-center gap-1.5 text-[11px] text-purple-800">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>将实时落盘保存至本地 Obsidian 目录：</span>
+                </div>
+                <div className="font-mono text-[11px] text-purple-700 break-all select-all font-semibold">
+                  {vaultStats?.vaultPath || 'E:\\考研\\408考研学习'}\{newFilePath || `${newFileName || '未命名笔记'}.md`}
+                </div>
               </div>
+
+              <div className="flex gap-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowNewDialog(false)}
+                  className="flex-1 px-4 py-2.5 rounded-xl text-xs font-semibold bg-cream-200 text-warm-600 hover:bg-cream-300 transition-colors cursor-pointer"
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="flex-1 px-4 py-2.5 rounded-xl text-xs font-bold bg-accent-orange text-white hover:bg-accent-orange/90 shadow-md active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {saving ? '正在同步落盘…' : '创建并开始写作 ↵'}
+                </button>
+              </div>
+
+              <p className="text-[10px] text-warm-400 text-center">
+                💡 提示：输入名称后直接按 Enter 回车键即可极速创建并开始写作
+              </p>
             </div>
           </div>
         </div>
@@ -1235,6 +1343,16 @@ export default function Editor() {
         noteTitle={currentFile?.title || title || '当前考研笔记'}
         noteContent={content}
         notePath={currentFile?.path}
+      />
+
+      {/* Obsidian Sync Verification Modal */}
+      <ObsidianSyncModal
+        isOpen={obsidianSyncModalOpen}
+        onClose={() => setObsidianSyncModalOpen(false)}
+        onRefresh={() => {
+          reloadTree()
+          api.getStats().then(s => setVaultStats({ totalNotes: s.totalNotes, vaultPath: s.vaultPath })).catch(() => {})
+        }}
       />
     </div>
   )

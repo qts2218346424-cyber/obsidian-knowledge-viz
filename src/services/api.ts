@@ -508,6 +508,7 @@ export const api = {
     postJSON<ChatResponse>('/chat', { message, history }),
 
   refreshVault: () => postJSON<{ ok: boolean; noteCount: number }>('/vault/refresh', {}),
+  openVaultFolder: () => postJSON<{ ok: boolean; vaultPath: string }>('/vault/open-folder', {}),
 
   // File CRUD
   createFile: (filePath: string, content: string, frontmatter?: Record<string, unknown>) =>

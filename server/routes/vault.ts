@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import fs from 'fs'
 import path from 'path'
+import { exec } from 'child_process'
 import {
   config,
   anthropic,
@@ -215,6 +216,26 @@ vaultRouter.post('/vault/refresh', (_req, res) => {
   startWatcher()
   const notes = getNotes()
   res.json({ ok: true, noteCount: notes.length })
+})
+
+vaultRouter.post('/vault/open-folder', (_req, res) => {
+  try {
+    if (!config.vaultPath || !fs.existsSync(config.vaultPath)) {
+      res.status(404).json({ error: '本地 Obsidian 知识库路径不存在或尚未配置' })
+      return
+    }
+    const target = config.vaultPath.replace(/\//g, '\\')
+    if (process.platform === 'win32') {
+      exec(`explorer.exe "${target}"`)
+    } else if (process.platform === 'darwin') {
+      exec(`open "${config.vaultPath}"`)
+    } else {
+      exec(`xdg-open "${config.vaultPath}"`)
+    }
+    res.json({ ok: true, vaultPath: config.vaultPath })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
 })
 
 // ===== Vault Watcher SSE =====
