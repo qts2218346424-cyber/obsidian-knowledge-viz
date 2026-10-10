@@ -5,6 +5,11 @@ import matter from 'gray-matter'
 import { config, anthropic, markSelfWrite, invalidateCache } from '../context.js'
 import { createFile, updateFile } from '../vault-parser.js'
 import { generateQuizSummary } from '../quiz-summary.js'
+import { database } from '../db/database.js'
+import { matchSyllabusNode } from '../data/syllabus.js'
+import { MasteryEngine } from '../algorithms/mastery.js'
+import { calculateSM2 } from '../algorithms/sm2.js'
+
 
 export const quizRouter = Router()
 
@@ -244,10 +249,59 @@ ${question.steps ? `### 详细步骤：\n${question.steps.join('\n\n')}` : ''}
     markSelfWrite(targetPath)
     invalidateCache()
 
+    // 结构化持久化至 SQLite 数据库 & 绑定三级考点大纲
+    const syllabusNode = matchSyllabusNode(question.question, question.subject)
+    const errorId = `err-${question.id || Date.now()}`
+    try {
+      database.upsertErrorQuestion({
+        id: errorId,
+        domain,
+        subject: question.subject,
+        chapter: question.chapter || '',
+        syllabusId: syllabusNode?.id || '',
+        question: question.question,
+        optionsJson: JSON.stringify(question.options || {}),
+        userAnswer: userAnswer || '',
+        correctAnswer: question.answer || question.correctAnswer || '',
+        explanation: question.explanation || '',
+        errorType: errorType || '概念不清',
+        difficulty: question.difficulty || '中等',
+        sourceNote: targetPath,
+        status: 'active',
+        createdAt: dateStr,
+        updatedAt: dateStr,
+      })
+
+      // 初始化 SM-2 间隔记忆卡片 (初始 EF 2.5, 间隔 1 天)
+      const sm2Initial = calculateSM2({ cardId: errorId }, 2) // 错题默认给 2 分触发强化记忆
+      database.upsertSM2Flashcard({
+        cardId: errorId,
+        title: `错题复盘 · ${question.subject}`,
+        subject: question.subject,
+        syllabusId: syllabusNode?.id || '',
+        repetition: sm2Initial.repetition,
+        intervalDays: sm2Initial.intervalDays,
+        easinessFactor: sm2Initial.easinessFactor,
+        reviewCount: sm2Initial.reviewCount,
+        lastReviewAt: sm2Initial.lastReviewAt,
+        nextReviewAt: sm2Initial.nextReviewAt,
+        lastGrade: 2,
+        historyJson: JSON.stringify([{ date: dateStr, grade: 2 }]),
+      })
+
+      // 更新考点掌握度为错误统计
+      if (syllabusNode) {
+        MasteryEngine.recordAttempt(syllabusNode.id, false)
+      }
+    } catch (dbErr: any) {
+      console.warn('[DB Error] 错题结构化持久化提醒:', dbErr.message)
+    }
+
     res.json({
       success: true,
       savedPath: targetPath,
-      fileName
+      fileName,
+      syllabus: syllabusNode ? { id: syllabusNode.id, point: syllabusNode.level3 } : undefined,
     })
   } catch (err: any) {
     console.error('Save error note failed:', err.message)
@@ -363,10 +417,43 @@ quizRouter.post('/quiz/submit', (req, res) => {
     }
 
     let summaryPath = ''
+    const now = new Date()
+    const dateStr = now.toISOString().split('T')[0]
+    const hmStr = now.toTimeString().split(' ')[0].substring(0, 5).replace(':', '')
+    const quizId = `quiz-${dateStr}-${hmStr}-${Date.now().toString().slice(-4)}`
+
+    // 1. 结构化持久化至 SQLite 数据库
     try {
-      const now = new Date()
-      const dateStr = now.toISOString().split('T')[0]
-      const hmStr = now.toTimeString().split(' ')[0].substring(0, 5).replace(':', '')
+      database.insertQuizRecord({
+        id: quizId,
+        mode: mode || 'practice',
+        totalQuestions: questions.length,
+        correctCount: summary.correctCount,
+        wrongCount: summary.wrongCount,
+        timeTaken: timeTaken || 0,
+        score: questions.length > 0 ? Math.round((summary.correctCount / questions.length) * 100) : 0,
+        domain: (questions[0] as any).domain || 'cs_408',
+        createdAt: now.toISOString(),
+        detailsJson: JSON.stringify({
+          answers,
+          questions: questions.map(q => ({ id: q.id, subject: q.subject, answer: q.answer, isCorrect: answers[q.id] === q.answer }))
+        })
+      })
+
+      // 2. 考点掌握度热力引擎实时更新
+      for (const q of questions) {
+        const isCorrect = answers[q.id] === q.answer
+        const node = matchSyllabusNode(q.question, q.subject)
+        if (node) {
+          MasteryEngine.recordAttempt(node.id, isCorrect)
+        }
+      }
+    } catch (dbErr: any) {
+      console.warn('[DB Error] 做题记录结构化持久化异常:', dbErr.message)
+    }
+
+    // 3. 同时生成 Obsidian Markdown 做题小结 (双轨落地)
+    try {
       const fileName = `${dateStr}-${hmStr}.md`
       const targetPath = `做题记录/${fileName}`
 
@@ -394,6 +481,7 @@ quizRouter.post('/quiz/submit', (req, res) => {
     }
 
     res.json({
+      quizId,
       result: {
         total: questions.length,
         correct: summary.correctCount,

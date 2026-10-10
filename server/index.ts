@@ -19,6 +19,7 @@ import { vaultRouter } from './routes/vault.js'
 import { aiRouter } from './routes/ai.js'
 import { booksRouter } from './routes/books.js'
 import { memoryRouter } from './routes/memory.js'
+import { flashcardsRouter } from './routes/flashcards.js'
 
 const app = express()
 app.disable('x-powered-by')
@@ -31,7 +32,7 @@ app.use(cors({
   origin(origin, callback) {
     const isLocalOrigin = Boolean(
       origin &&
-      /^http:\/\/(?:localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(?:1[6-9]|2\d|3[01])\.\d+\.\d+)(?::\d+)?$/.test(origin)
+      /^https?:\/\/(?:localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(?:1[6-9]|2\d|3[01])\.\d+\.\d+|100\.\d+\.\d+\.\d+|[a-zA-Z0-9-]+\.ts\.net)(?::\d+)?$/.test(origin)
     )
     if (!origin || isLocalOrigin || allowedOrigins.has(origin)) {
       callback(null, true)
@@ -69,6 +70,7 @@ app.use('/api', vaultRouter)
 app.use('/api', aiRouter)
 app.use('/api', booksRouter)
 app.use('/api', memoryRouter)
+app.use('/api', flashcardsRouter)
 
 // ===== Background Services =====
 startWatcher()

@@ -1,4 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
+
 
 .rich-note-editor:empty::before {
   content: attr(data-placeholder);
@@ -33,6 +35,7 @@
   background: #f1ede8;
   color: #62805f;
   font-size: 0.9em;
+  font-family: 'JetBrains Mono', monospace;
 }
 .rich-note-editor pre {
   overflow-x: auto;
@@ -41,6 +44,7 @@
   border-radius: 0.75rem;
   background: #f5f1ec;
   font-size: 0.85em;
+  font-family: 'JetBrains Mono', monospace;
 }
 .rich-note-editor a,
 .rich-note-editor .wiki-link {
@@ -48,6 +52,17 @@
 }
 
 @theme {
+  /* UI/UX Pro Max · CoreForge Design System Tokens */
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", system-ui, sans-serif;
+
+  /* Master Dark & Code Accent */
+  --color-brand-midnight: #0F172A;
+  --color-brand-primary: #1E293B;
+  --color-brand-secondary: #334155;
+  --color-brand-green: #22C55E;
+  --color-brand-border: #475569;
+
   /* Apple-inspired neutral surfaces */
   --color-cream-50: #F5F5F7;
   --color-cream-100: #F5F5F7;
@@ -58,6 +73,7 @@
   --color-warm-50: #F5F5F7;
   --color-warm-100: #E8E8ED;
   --color-warm-200: #D2D2D7;
+
   --color-warm-300: #86868B;
   --color-warm-400: #6E6E73;
   --color-warm-500: #515154;
@@ -97,13 +113,23 @@
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   background: var(--color-cream-50);
   color: var(--color-warm-800);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/* WCAG 2.1 AA 规范：全站键盘导航高可见性聚焦环 */
+:focus-visible {
+  outline: 2px solid #0071E3;
+  outline-offset: 2px;
 }
 
 #root {
@@ -119,9 +145,13 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-warm-200);
-  border-radius: 3px;
+  background: var(--color-warm-300);
+  border-radius: 4px;
 }
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-warm-400);
+}
+
 
 /* Animations */
 @keyframes fadeInUp {
@@ -326,5 +356,113 @@ body {
 .animate-lulu-heart {
   animation: lulu-heart 1.5s ease-out forwards;
 }
+
+/* ==========================================================================
+   Swiss Academic Typography & KaTeX System (瑞士国际主义学术排版体系)
+   ========================================================================== */
+
+.prose-math {
+  color: var(--color-warm-800);
+  line-height: 1.68;
+  font-size: 0.9375rem;
+}
+
+.prose-math p {
+  margin: 0.65rem 0;
+}
+
+/* 块级数学公式：学术卡片化展示 */
+.prose-math .katex-display {
+  margin: 1rem 0;
+  padding: 0.85rem 1.25rem;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-left: 3px solid #0071E3;
+  border-radius: 1rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  box-shadow: 0 2px 10px -2px rgba(15, 23, 42, 0.03);
+}
+
+.prose-math .katex-display > .katex {
+  display: block;
+  text-align: center;
+  font-size: 1.05em;
+}
+
+/* 行内公式微调：杜绝撑破行距 */
+.prose-math .katex {
+  font-size: 1.02em;
+  text-rendering: auto;
+}
+
+/* 瑞士极简三线表格 (Swiss Grid Academic Table) */
+.prose-math table {
+  width: 100%;
+  margin: 1.25rem 0;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  border-top: 2px solid #0F172A;
+  border-bottom: 2px solid #0F172A;
+}
+
+.prose-math th {
+  padding: 0.65rem 1rem;
+  font-weight: 600;
+  text-align: left;
+  background: rgba(241, 245, 249, 0.8);
+  border-bottom: 1px solid #CBD5E1;
+  color: #1E293B;
+}
+
+.prose-math td {
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid #E2E8F0;
+  color: #334155;
+}
+
+.prose-math tr:last-child td {
+  border-bottom: none;
+}
+
+/* 瑞士学术引用块 (Academic Blockquote) */
+.prose-math blockquote {
+  margin: 0.9rem 0;
+  padding: 0.6rem 1rem;
+  background: rgba(248, 250, 252, 0.85);
+  border-left: 3.5px solid #6366F1;
+  border-radius: 0 0.75rem 0.75rem 0;
+  color: #475569;
+  font-size: 0.9em;
+}
+
+/* 行内代码与代码块 */
+.prose-math code:not(pre code) {
+  padding: 0.15rem 0.4rem;
+  margin: 0 0.15rem;
+  border-radius: 0.375rem;
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  color: #0F172A;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85em;
+  font-weight: 500;
+}
+
+.prose-math pre {
+  margin: 1rem 0;
+  padding: 1rem 1.25rem;
+  border-radius: 1rem;
+  background: #0F172A;
+  color: #F8FAFC;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85em;
+  line-height: 1.55;
+  overflow-x: auto;
+  border: 1px solid #1E293B;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.1);
+}
+
 
 

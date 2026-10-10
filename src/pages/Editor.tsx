@@ -425,9 +425,13 @@ export default function Editor() {
   }, [])
 
   const handleFileClick = (filePath: string) => {
-    if (currentFile?.path === filePath) return
+    if (currentFile?.path === filePath) {
+      if (window.innerWidth < 768) setShowFiles(false)
+      return
+    }
     if (dirty && !window.confirm('当前笔记有未保存修改，切换后这些修改会丢失。继续切换吗？')) return
     loadFile(filePath)
+    if (window.innerWidth < 768) setShowFiles(false)
   }
 
   const handleSave = async () => {
@@ -740,29 +744,56 @@ export default function Editor() {
       onDragLeave={() => setDragOver(false)}
       onDrop={handleDrop}
     >
-      {/* File Explorer Sidebar */}
-      <div className={`shrink-0 transition-all duration-200 ${showFiles ? 'w-56' : 'w-0'} overflow-hidden border-r border-cream-200`}>
-        <FileExplorer tree={tree} onFileClick={handleFileClick} selectedPath={currentFile?.path} />
+      {/* 移动端遮罩 Backdrop */}
+      {showFiles && (
+        <div
+          className="fixed inset-0 bg-warm-900/40 z-40 lg:hidden backdrop-blur-xs"
+          onClick={() => setShowFiles(false)}
+        />
+      )}
+
+      {/* File Explorer Sidebar: 移动端为侧滑抽屉，桌面端保持经典侧边栏 */}
+      <div className={`
+        fixed inset-y-0 left-0 z-50 w-72 bg-cream-50 shadow-2xl transition-transform duration-200
+        lg:static lg:z-auto lg:shadow-none lg:transition-all
+        ${showFiles ? 'translate-x-0 lg:w-56' : '-translate-x-full lg:w-0'}
+        overflow-hidden border-r border-cream-200 flex flex-col shrink-0
+      `}>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-cream-200 lg:hidden bg-cream-100/90 shrink-0">
+          <span className="font-semibold text-xs text-warm-800 flex items-center gap-1.5">
+            <FolderTree className="w-4 h-4 text-accent-orange" /> 笔记目录
+          </span>
+          <button
+            onClick={() => setShowFiles(false)}
+            className="p-1 rounded-lg text-warm-500 hover:text-warm-800 hover:bg-cream-200"
+            title="关闭目录"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <FileExplorer tree={tree} onFileClick={handleFileClick} selectedPath={currentFile?.path} />
+        </div>
       </div>
 
       {/* Main Editor Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Toolbar: File operations */}
-        <div className="flex items-center gap-2 px-4 py-2 border-b border-cream-200 bg-cream-100/80 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 border-b border-cream-200 bg-cream-100/80 shrink-0">
           <button onClick={() => setShowFiles(!showFiles)}
-            className={`p-1.5 rounded-lg text-xs transition-colors ${showFiles ? 'bg-cream-200 text-warm-600' : 'text-warm-400 hover:text-warm-600'}`}
+            className={`p-1.5 rounded-lg text-xs transition-colors shrink-0 ${showFiles ? 'bg-cream-200 text-warm-600' : 'text-warm-500 hover:text-warm-700'}`}
             title={showFiles ? '隐藏文件列表' : '显示文件列表'}>
             <FolderTree className="w-4 h-4" />
           </button>
-          <div className="w-px h-5 bg-cream-200" />
+          <div className="w-px h-5 bg-cream-200 shrink-0" />
           <button onClick={handleNewFile}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-slate-100 text-warm-700 hover:bg-slate-200 transition-colors">
-            <FilePlus className="w-3.5 h-3.5" /> 新建
+            className="flex items-center gap-1 px-2 py-1.5 sm:px-2.5 rounded-lg text-xs bg-slate-100 text-warm-700 hover:bg-slate-200 transition-colors shrink-0">
+            <FilePlus className="w-3.5 h-3.5" /> <span className="hidden sm:inline">新建</span>
           </button>
-          {/* Obsidian Sync Status Pill */}
+          {/* Obsidian Sync Status Pill (只在电脑或平板宽屏展示) */}
           <button
             onClick={() => setObsidianSyncModalOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-purple-50 hover:bg-purple-100 border border-purple-200/80 text-purple-700 transition-all cursor-pointer shadow-2xs"
+            className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-purple-50 hover:bg-purple-100 border border-purple-200/80 text-purple-700 transition-all cursor-pointer shadow-2xs shrink-0"
             title="点击查看与本地 Obsidian 实时双向同步状态及文件夹"
           >
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
@@ -772,24 +803,25 @@ export default function Editor() {
             </span>
           </button>
           <button onClick={handleSave} disabled={saving || (!dirty && !!currentFile)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-accent-orange text-white hover:bg-accent-orange/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} 保存
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs bg-accent-orange text-white hover:bg-accent-orange/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0 font-semibold shadow-2xs">
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} 
+            <span>保存</span>
           </button>
           {currentFile && (
-            <>
+            <div className="hidden sm:flex items-center gap-1.5 shrink-0">
               <button onClick={() => setShowRenameDialog(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-slate-100 text-warm-700 hover:bg-slate-200 transition-colors">
+                className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs bg-slate-100 text-warm-700 hover:bg-slate-200 transition-colors">
                 <FileEdit className="w-3.5 h-3.5" /> 重命名
               </button>
               <button onClick={() => setShowDeleteConfirm(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-slate-100 text-accent-rose hover:bg-accent-rose/10 transition-colors">
+                className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs bg-slate-100 text-accent-rose hover:bg-accent-rose/10 transition-colors">
                 <Trash2 className="w-3.5 h-3.5" /> 删除
               </button>
-            </>
+            </div>
           )}
-          <div className="w-px h-5 bg-cream-200" />
+          <div className="hidden sm:block w-px h-5 bg-cream-200 shrink-0" />
           {/* Import */}
-          <div className="relative">
+          <div className="relative hidden sm:block shrink-0">
             <input ref={fileInputRef} type="file" multiple
               accept={ingestStatus?.supportedFormats?.join(',') || '.pdf,.docx,.xlsx,.pptx,.html,.csv'}
               onChange={handleImport} className="hidden" />
@@ -804,13 +836,13 @@ export default function Editor() {
           <button
             onClick={() => setPracticeModalOpen(true)}
             disabled={!currentFile && !content.trim()}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-sm disabled:opacity-40 disabled:cursor-not-allowed transition-all shrink-0"
             title="基于本篇笔记考点，立即生成 3 道测试题进行随堂真题测验"
           >
             <Target className="w-3.5 h-3.5" /> 🎯 即学即练
           </button>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-1.5 sm:gap-2 shrink-0">
             {saveMsg && (
               <div className={`text-xs px-2 py-1 rounded-lg ${saveMsg.includes('失败') ? 'text-accent-rose bg-accent-rose/10' : 'text-accent-sage bg-accent-sage/10'}`}>
                 {saveMsg}
@@ -818,19 +850,20 @@ export default function Editor() {
             )}
             {dirty && (
               <div className="text-xs text-accent-amber flex items-center gap-1">
-                <AlertTriangle className="w-3 h-3" /> 未保存
+                <AlertTriangle className="w-3 h-3" /> <span className="hidden sm:inline">未保存</span>
               </div>
             )}
             <button onClick={() => setShowPreview(!showPreview)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors ${showPreview ? 'bg-cream-200 text-warm-600' : 'text-warm-400 hover:text-warm-600'}`}>
-              <Eye className="w-3.5 h-3.5" /> 预览
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors shrink-0 ${showPreview ? 'bg-accent-orange/15 text-accent-orange font-semibold border border-accent-orange/30' : 'text-warm-600 hover:bg-cream-200'}`}>
+              <Eye className="w-3.5 h-3.5" /> 
+              <span>{showPreview ? '返回编辑' : '预览'}</span>
             </button>
           </div>
         </div>
 
-        {/* Formatting Toolbar */}
-        <div className="flex items-center gap-0.5 px-4 py-1.5 border-b border-cream-200 bg-surface/50 shrink-0 flex-wrap">
-          <div className="mr-2 flex items-center rounded-lg border border-cream-300 bg-cream-100 p-0.5">
+        {/* Formatting Toolbar - 手机端单行横滑，绝不折行占高 */}
+        <div className="flex items-center gap-1 px-3 py-1.5 border-b border-cream-200 bg-surface/50 shrink-0 overflow-x-auto whitespace-nowrap scroll-smooth no-scrollbar">
+          <div className="mr-1.5 flex items-center rounded-lg border border-cream-300 bg-cream-100 p-0.5 shrink-0">
             <button
               onClick={() => switchEditorMode('write')}
               className={`rounded-md px-2.5 py-1 text-[11px] transition-colors ${editorMode === 'write' ? 'bg-white font-medium text-warm-800 shadow-sm' : 'text-warm-400 hover:text-warm-700'}`}
@@ -841,17 +874,17 @@ export default function Editor() {
               onClick={() => switchEditorMode('markdown')}
               className={`rounded-md px-2.5 py-1 text-[11px] transition-colors ${editorMode === 'markdown' ? 'bg-white font-medium text-warm-800 shadow-sm' : 'text-warm-400 hover:text-warm-700'}`}
             >
-              Markdown
+              源码
             </button>
           </div>
           <ToolBtn icon={Bold} label="粗体 (Ctrl+B)" onClick={fmt.bold} />
           <ToolBtn icon={Italic} label="斜体 (Ctrl+I)" onClick={fmt.italic} />
           <ToolBtn icon={Strikethrough} label="删除线" onClick={fmt.strike} />
-          <div className="w-px h-4 bg-cream-300 mx-1" />
+          <div className="w-px h-4 bg-cream-300 mx-1 shrink-0" />
           <ToolBtn icon={Heading} label="H1 (Ctrl+1)" onClick={fmt.h1} />
           <ToolBtn icon={Heading} label="H2 (Ctrl+2)" onClick={fmt.h2} className="!text-[10px]" suffix="2" />
           <ToolBtn icon={Heading} label="H3 (Ctrl+3)" onClick={fmt.h3} className="!text-[9px]" suffix="3" />
-          <div className="w-px h-4 bg-cream-300 mx-1" />
+          <div className="w-px h-4 bg-cream-300 mx-1 shrink-0" />
           <ToolBtn icon={List} label="无序列表" onClick={fmt.list} />
           <ToolBtn icon={ListOrdered} label="有序列表" onClick={fmt.olist} />
           <ToolBtn icon={Quote} label="引用" onClick={fmt.quote} />
@@ -862,7 +895,7 @@ export default function Editor() {
           <ToolBtn icon={Minus} label="分隔线" onClick={fmt.hr} />
 
           {/* Math Quick Formula Dropdown */}
-          <div className="relative">
+          <div className="relative shrink-0">
             <ToolBtn
               icon={Sigma}
               label="插入数学公式 (LaTeX / KaTeX)"
@@ -892,14 +925,14 @@ export default function Editor() {
           </div>
 
           {/* AI Edit Button */}
-          <div className="ml-auto relative">
+          <div className="ml-auto relative shrink-0 pl-1">
             <button
               onClick={() => setShowAiMenu(!showAiMenu)}
               disabled={!content.trim()}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-gradient-to-r from-accent-orange to-accent-peach text-white hover:opacity-90 disabled:opacity-40 transition-all"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs bg-gradient-to-r from-accent-orange to-accent-peach text-white hover:opacity-90 disabled:opacity-40 transition-all shrink-0"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              AI 编辑
+              <span className="hidden sm:inline">AI 编辑</span>
               <ChevronDown className={`w-3 h-3 transition-transform ${showAiMenu ? 'rotate-180' : ''}`} />
             </button>
 
@@ -936,7 +969,7 @@ export default function Editor() {
         )}
 
         {/* Editor + Preview */}
-        <div className="flex flex-1 flex-col overflow-hidden relative lg:flex-row">
+        <div className="flex flex-1 overflow-hidden relative">
           {/* Drag overlay */}
           {dragOver && (
             <div className="absolute inset-0 z-40 bg-accent-orange/10 border-2 border-dashed border-accent-orange rounded-lg flex items-center justify-center pointer-events-none">
@@ -947,25 +980,25 @@ export default function Editor() {
           )}
 
           {/* Editor Panel with line numbers */}
-          <div className={`flex min-h-0 flex-1 flex-col overflow-hidden ${showPreview ? 'border-b border-cream-200 lg:border-b-0 lg:border-r' : ''}`}>
+          <div className={`min-h-0 flex-1 flex-col overflow-hidden ${showPreview ? 'hidden lg:flex lg:border-r border-cream-200' : 'flex'}`}>
             {/* Note title */}
-            <div className="border-b border-cream-200 bg-surface px-5 py-4">
+            <div className="border-b border-cream-200 bg-surface px-4 py-3 sm:px-5 sm:py-4">
               <input
                 type="text"
                 value={title}
                 onChange={e => setTitle(e.target.value)}
                 placeholder="无标题笔记"
                 aria-label="笔记标题"
-                className="w-full bg-transparent text-xl font-semibold tracking-tight text-warm-900 outline-none placeholder:text-warm-300"
+                className="w-full bg-transparent text-lg sm:text-xl font-semibold tracking-tight text-warm-900 outline-none placeholder:text-warm-300"
               />
-              <div className="mt-2 flex items-center gap-2 text-[11px] text-warm-400">
+              <div className="mt-1 sm:mt-2 flex items-center gap-2 text-[11px] text-warm-400">
                 {currentFile ? (
                   <>
-                    <span className="max-w-[60%] truncate font-mono">{currentFile.path}</span>
+                    <span className="max-w-[50%] sm:max-w-[60%] truncate font-mono">{currentFile.path}</span>
                     <span>·</span>
                     <span>{currentFile.wordCount} 字</span>
-                    <span>·</span>
-                    <span>{currentFile.links.length} 条链接</span>
+                    <span className="hidden sm:inline">·</span>
+                    <span className="hidden sm:inline">{currentFile.links.length} 条链接</span>
                   </>
                 ) : (
                   <span>新笔记 · 写下你的想法，保存后会进入 Vault</span>
@@ -993,7 +1026,7 @@ export default function Editor() {
             </div>
 
             {editorMode === 'write' ? (
-              <div className="flex-1 overflow-y-auto bg-white px-5 py-5">
+              <div className="flex-1 overflow-y-auto bg-white px-4 py-4 sm:px-5 sm:py-5">
                 <div
                   ref={richEditorRef}
                   key={currentFile?.path || 'new-note-writing'}
@@ -1007,12 +1040,12 @@ export default function Editor() {
                   onKeyDown={handleKeyDown}
                   dangerouslySetInnerHTML={{ __html: richHtml }}
                   data-placeholder={currentFile || showNewDialog ? '从这里开始写作…' : '从左侧选择一篇笔记，或点击“新建”开始写作…'}
-                  className="rich-note-editor min-h-full text-[16px] leading-8 text-warm-700 outline-none"
+                  className="rich-note-editor min-h-full text-[15px] sm:text-[16px] leading-7 sm:leading-8 text-warm-700 outline-none"
                 />
               </div>
             ) : (
               <div className="flex flex-1 overflow-hidden">
-                <div className="w-10 shrink-0 overflow-hidden border-r border-cream-200 bg-surface/50 select-none">
+                <div className="hidden sm:block w-10 shrink-0 overflow-hidden border-r border-cream-200 bg-surface/50 select-none">
                   <div className="py-3 pr-2 text-right">
                     {Array.from({ length: lineCount }, (_, i) => (
                       <div key={i} className="font-mono text-[11px] leading-relaxed text-warm-400" style={{ height: '1.625em' }}>
@@ -1027,7 +1060,7 @@ export default function Editor() {
                   onChange={e => setContent(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder={currentFile || showNewDialog ? '从这里开始写作…' : '从左侧选择一篇笔记，或点击“新建”开始写作…'}
-                  className="flex-1 resize-none bg-transparent px-4 py-4 font-sans text-[15px] leading-7 text-warm-700 outline-none placeholder:text-warm-300"
+                  className="flex-1 resize-none bg-transparent px-3 py-3 sm:px-4 sm:py-4 font-sans text-[14px] sm:text-[15px] leading-6 sm:leading-7 text-warm-700 outline-none placeholder:text-warm-300"
                   spellCheck
                 />
               </div>
@@ -1036,8 +1069,16 @@ export default function Editor() {
 
           {/* Preview Panel — Professional Markdown Rendering */}
           {showPreview && (
-            <div className="max-h-[45%] w-full overflow-auto bg-cream-100 p-5 lg:max-h-none lg:w-[45%]">
-              <div className="mb-3 text-[10px] uppercase tracking-wider text-warm-400">实时预览</div>
+            <div className="flex-1 w-full overflow-auto bg-cream-100 p-4 sm:p-5 lg:w-[45%] lg:flex-none">
+              <div className="mb-3 flex items-center justify-between text-[10px] uppercase tracking-wider text-warm-400">
+                <span>实时预览</span>
+                <button
+                  onClick={() => setShowPreview(false)}
+                  className="lg:hidden px-2.5 py-1 rounded-lg bg-white border border-cream-300 text-warm-700 font-semibold text-xs shadow-2xs hover:bg-cream-50"
+                >
+                  返回编辑
+                </button>
+              </div>
               <div className="md-preview">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm, remarkMath]}
@@ -1366,7 +1407,7 @@ function ToolBtn({ icon: Icon, label, onClick, className, suffix }: {
 }) {
   return (
     <button onClick={onClick} title={label}
-      className={`p-1.5 rounded text-warm-500 hover:text-warm-700 hover:bg-cream-200 transition-colors relative ${className || ''}`}>
+      className={`p-1.5 rounded text-warm-500 hover:text-warm-700 hover:bg-cream-200 transition-colors relative shrink-0 ${className || ''}`}>
       <Icon className="w-3.5 h-3.5" />
       {suffix && <span className="absolute -bottom-0.5 -right-0.5 text-[8px] text-warm-400 font-bold">{suffix}</span>}
     </button>

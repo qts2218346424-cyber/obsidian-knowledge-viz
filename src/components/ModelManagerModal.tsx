@@ -16,8 +16,10 @@ interface ModelManagerModalProps {
   isOpen: boolean
   onClose: () => void
   agents: LocalAgentStatus[]
-  currentProvider: 'codex' | 'claude-code' | 'web'
+  currentProvider: 'codex' | 'claude-code' | 'web' | 'antigravity'
   onModelsUpdated: (updatedAgents: LocalAgentStatus[]) => void
+  webModels?: string[]
+  onWebModelsUpdated?: (models: string[]) => void
 }
 
 export default function ModelManagerModal({
@@ -26,8 +28,10 @@ export default function ModelManagerModal({
   agents,
   currentProvider,
   onModelsUpdated,
+  webModels = [],
+  onWebModelsUpdated,
 }: ModelManagerModalProps) {
-  const [selectedTab, setSelectedTab] = useState<'codex' | 'claude-code' | 'web'>(currentProvider)
+  const [selectedTab, setSelectedTab] = useState<'codex' | 'claude-code' | 'web' | 'antigravity'>(currentProvider)
   const [deletedModels, setDeletedModels] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
@@ -59,6 +63,12 @@ export default function ModelManagerModal({
   const handleDeleteModel = async (model: string) => {
     setLoading(true)
     try {
+      if (selectedTab === 'web') {
+        const next = webModels.filter(m => m !== model)
+        onWebModelsUpdated?.(next)
+        showFeedback(`已删除云端模型: ${model}`)
+        return
+      }
       const res = await api.deleteLocalModel(model)
       if (res.success && res.agents) {
         onModelsUpdated(res.agents)
@@ -108,6 +118,17 @@ export default function ModelManagerModal({
   const handleSync = async () => {
     setLoading(true)
     try {
+      if (selectedTab === 'web') {
+        const res = await api.fetchAIModels()
+        const ids = (res.models || []).map(m => m.id)
+        if (ids.length > 0) {
+          onWebModelsUpdated?.(ids)
+          showFeedback(`已从云端拉取并同步 ${ids.length} 个模型`)
+        } else {
+          showFeedback('未拉取到云端模型，请检查系统设置', 'error')
+        }
+        return
+      }
       const res = await api.syncLocalAgentModels()
       if (res.success && res.agents) {
         onModelsUpdated(res.agents)
@@ -124,6 +145,15 @@ export default function ModelManagerModal({
   const handleAddCustomModel = async () => {
     const trimmed = customModelInput.trim()
     if (!trimmed) return
+    if (selectedTab === 'web') {
+      if (!webModels.includes(trimmed)) {
+        const next = [...webModels, trimmed]
+        onWebModelsUpdated?.(next)
+        showFeedback(`已添加云端模型: ${trimmed}`)
+      }
+      setCustomModelInput('')
+      return
+    }
     // If it's in deletedModels, undelete it
     if (deletedModels.includes(trimmed)) {
       await handleUndeleteModel(trimmed)
@@ -136,7 +166,7 @@ export default function ModelManagerModal({
   if (!isOpen) return null
 
   const currentAgent = agents.find(a => a.provider === selectedTab)
-  const currentModels = currentAgent?.models || []
+  const currentModels = selectedTab === 'web' ? webModels : (currentAgent?.models || [])
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in">
@@ -191,7 +221,8 @@ export default function ModelManagerModal({
             {[
               { key: 'codex' as const, label: '🤖 Codex 引擎', count: agents.find(a => a.provider === 'codex')?.models?.length || 0 },
               { key: 'claude-code' as const, label: '⚡ Claude Code', count: agents.find(a => a.provider === 'claude-code')?.models?.length || 0 },
-              { key: 'web' as const, label: '☁️ 云端双核', count: 4 },
+              { key: 'antigravity' as const, label: '🪐 Antigravity', count: agents.find(a => a.provider === 'antigravity')?.models?.length || 0 },
+              { key: 'web' as const, label: '☁️ 云端双核', count: webModels.length },
             ].map(tab => (
               <button
                 key={tab.key}
@@ -214,11 +245,11 @@ export default function ModelManagerModal({
             <button
               onClick={handleSync}
               disabled={loading}
-              title="重新扫描本机当前配置的大模型"
+              title={selectedTab === 'web' ? '重新从云端服务商 API 拉取可用模型' : '重新扫描本机当前配置的大模型'}
               className="px-2.5 py-1.5 rounded-lg border border-cream-200 dark:border-slate-700 bg-surface dark:bg-slate-800 hover:border-orange-400 text-xs font-medium text-warm-700 dark:text-slate-200 flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <RefreshCw className={`w-3.5 h-3.5 text-orange-500 ${loading ? 'animate-spin' : ''}`} />
-              <span>重新扫描本机</span>
+              <span>{selectedTab === 'web' ? '重新扫描云端' : '重新扫描本机'}</span>
             </button>
           </div>
         </div>
@@ -248,8 +279,13 @@ export default function ModelManagerModal({
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
                       <span className="text-xs font-mono font-medium text-warm-800 dark:text-slate-200 truncate" title={m}>
-                        {m}
+                        {m.includes('::') ? m.split('::')[1] : m}
                       </span>
+                      {m.includes('::') && (
+                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-cream-200 text-warm-500 font-sans shrink-0">
+                          {m.split('::')[0]}
+                        </span>
+                      )}
                     </div>
 
                     <button

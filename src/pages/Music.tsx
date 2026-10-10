@@ -3,6 +3,7 @@ import {
   AlertCircle,
   Cloud,
   ExternalLink,
+  Folder,
   FolderOpen,
   Globe,
   Headphones,
@@ -14,6 +15,7 @@ import {
 } from 'lucide-react'
 import WarmCard from '../components/ui/WarmCard'
 import WarmButton from '../components/ui/WarmButton'
+import FolderPickerModal from '../components/FolderPickerModal'
 import { useAudioContext } from '../contexts/AudioContext'
 import { api, type MusicFile } from '../services/api'
 import {
@@ -37,6 +39,7 @@ export default function Music() {
   const [scanning, setScanning] = useState(false)
   const [scanError, setScanError] = useState('')
   const [activeTab, setActiveTab] = useState<MusicTab>('radio')
+  const [showPicker, setShowPicker] = useState(false)
 
   // Load saved music path on mount
   useEffect(() => {
@@ -48,21 +51,50 @@ export default function Music() {
     }).catch(() => {})
   }, [])
 
-  const handleScan = async () => {
-    if (!musicPath.trim()) return
+  const doScan = async (targetPath: string) => {
+    const trimmed = targetPath.trim()
+    if (!trimmed) return
     setScanning(true)
     setScanError('')
     try {
-      const result = await api.scanMusicFolder(musicPath.trim())
+      const result = await api.scanMusicFolder(trimmed)
       setLocalFiles(result.files)
-      await api.setMusicPath(musicPath.trim())
-      setSavedPath(musicPath.trim())
+      await api.setMusicPath(trimmed)
+      setSavedPath(trimmed)
     } catch (err: any) {
       setScanError(err.message || '扫描失败')
       setLocalFiles([])
     } finally {
       setScanning(false)
     }
+  }
+
+  const handleScan = () => {
+    doScan(musicPath)
+  }
+
+  const handleOpenPicker = async () => {
+    // 优先尝试 Electron 桌面端原生系统文件选择器
+    if (typeof window !== 'undefined' && window.electronAPI?.selectFolder) {
+      try {
+        const chosen = await window.electronAPI.selectFolder()
+        if (chosen) {
+          setMusicPath(chosen)
+          doScan(chosen)
+          return
+        }
+      } catch (e) {
+        console.error('Electron folder picker error:', e)
+      }
+    }
+    // 手机浏览器或网页端则呼出跨平台内置文件浏览弹窗
+    setShowPicker(true)
+  }
+
+  const handlePickerSelect = (selectedFolder: string) => {
+    setMusicPath(selectedFolder)
+    setShowPicker(false)
+    doScan(selectedFolder)
   }
 
   const playStation = (station: RadioStation) => {
@@ -254,18 +286,33 @@ export default function Music() {
               <h2 className="text-base font-semibold text-warm-700">本地音乐库</h2>
             </div>
 
-            {/* Path input */}
-            <div className="flex gap-2 mb-4">
+            {/* Path input & Folder selection */}
+            <div className="flex flex-col sm:flex-row gap-2 mb-4">
               <input
                 type="text"
                 value={musicPath}
                 onChange={e => setMusicPath(e.target.value)}
-                placeholder="输入音乐文件夹路径，如 D:\Music 或 /home/user/Music"
+                placeholder="输入或选择音乐文件夹，如 D:\Music"
                 className="flex-1 px-4 py-2.5 rounded-xl bg-cream-50 border border-cream-200 text-sm text-warm-700 placeholder-warm-300 outline-none focus:border-accent-orange/40 focus:ring-2 focus:ring-accent-orange/10 transition-all"
               />
-              <WarmButton onClick={handleScan} disabled={scanning || !musicPath.trim()}>
-                {scanning ? '扫描中...' : '扫描'}
-              </WarmButton>
+              <div className="flex items-center gap-2">
+                <WarmButton
+                  variant="secondary"
+                  onClick={handleOpenPicker}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-1.5"
+                  title="浏览并选择本地音乐文件夹"
+                >
+                  <Folder className="w-4 h-4 text-accent-orange" />
+                  <span>选择文件夹</span>
+                </WarmButton>
+                <WarmButton
+                  onClick={handleScan}
+                  disabled={scanning || !musicPath.trim()}
+                  className="flex-1 sm:flex-none justify-center"
+                >
+                  {scanning ? '扫描中...' : '扫描'}
+                </WarmButton>
+              </div>
             </div>
 
             {scanError && (
@@ -340,12 +387,22 @@ export default function Music() {
             {localFiles.length === 0 && !scanning && !scanError && (
               <div className="text-center py-8">
                 <Music2 className="w-12 h-12 text-cream-300 mx-auto mb-3" />
-                <p className="text-sm text-warm-400">输入文件夹路径并点击扫描</p>
-                <p className="text-xs text-warm-300 mt-1">支持 MP3, WAV, OGG, FLAC, M4A 等格式</p>
+                <p className="text-sm text-warm-400">点击“选择文件夹”或手动输入路径并扫描</p>
+                <p className="text-xs text-warm-300 mt-1">支持 MP3, WAV, OGG, FLAC, M4A 等主流格式</p>
               </div>
             )}
           </WarmCard>
         </div>
+      )}
+
+      {/* Folder Picker Modal */}
+      {showPicker && (
+        <FolderPickerModal
+          title="选择本地音乐文件夹"
+          initialPath={musicPath}
+          onSelect={handlePickerSelect}
+          onClose={() => setShowPicker(false)}
+        />
       )}
     </div>
   )

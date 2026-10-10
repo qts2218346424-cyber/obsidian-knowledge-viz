@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { ChevronRight, ChevronDown, FileText, Folder, FolderOpen, Search, X } from 'lucide-react'
+import { ChevronRight, ChevronDown, FileText, Folder, FolderOpen, Search, X, BookOpen, FileCode } from 'lucide-react'
 import type { TreeNode } from '../services/api'
 
 interface FileExplorerProps {
@@ -89,18 +89,40 @@ function TreeNodeItem({
   const [expanded, setExpanded] = useState(depth < 1)
 
   if (node.type === 'file') {
+    const ext = node.ext || (node.path.includes('.') ? `.${node.path.split('.').pop()?.toLowerCase()}` : '.md')
+    const isPdf = ext === '.pdf'
+    const isHtml = ext === '.html' || ext === '.htm'
+
     return (
       <button
-        onClick={() => onFileClick(node.path)}
-        className={`w-full flex items-center gap-1.5 rounded px-2 py-1 text-left text-xs transition-colors ${
+        onClick={() => {
+          if (isPdf || isHtml) {
+            window.open(`/api/books/raw?path=${encodeURIComponent(node.path)}`, '_blank')
+          }
+          onFileClick(node.path)
+        }}
+        title={isPdf ? `${node.name} (PDF 参考资料 - 点击在新标签页预览)` : isHtml ? `${node.name} (交互仿真课件 - 点击在新标签页打开)` : node.name}
+        className={`w-full flex items-center gap-1.5 rounded px-2 py-1 text-left text-xs transition-colors cursor-pointer ${
           selectedPath === node.path
             ? 'bg-accent-orange/12 font-medium text-accent-orange'
             : 'text-warm-500 hover:bg-cream-200/50 hover:text-warm-700'
         }`}
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
       >
-        <FileText className="w-3 h-3 text-warm-400 shrink-0" />
+        {isPdf ? (
+          <BookOpen className="w-3 h-3 text-red-500 shrink-0" />
+        ) : isHtml ? (
+          <FileCode className="w-3 h-3 text-sky-500 shrink-0" />
+        ) : (
+          <FileText className="w-3 h-3 text-warm-400 shrink-0" />
+        )}
         <span className="truncate">{node.name}</span>
+        {isPdf && (
+          <span className="ml-auto text-[9px] px-1 rounded bg-red-100 text-red-600 font-mono scale-90">PDF</span>
+        )}
+        {isHtml && (
+          <span className="ml-auto text-[9px] px-1 rounded bg-sky-100 text-sky-600 font-mono scale-90">课件</span>
+        )}
       </button>
     )
   }

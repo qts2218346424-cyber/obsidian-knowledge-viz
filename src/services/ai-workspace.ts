@@ -33,7 +33,7 @@ export interface AISession {
   createdAt: string
   updatedAt: string
   skillIds: string[]
-  provider?: 'web' | 'claude-code' | 'codex' | 'ollama' | 'lm-studio'
+  provider?: 'web' | 'antigravity' | 'claude-code' | 'codex' | 'ollama' | 'lm-studio'
   model?: string
   agentSessionId?: string
   messages: AIWorkspaceMessage[]
@@ -129,7 +129,7 @@ export function normalizeWorkspace(value: unknown): AIWorkspaceState {
       createdAt: String(session.createdAt || new Date().toISOString()),
       updatedAt: String(session.updatedAt || session.createdAt || new Date().toISOString()),
       skillIds: Array.isArray(session.skillIds) ? session.skillIds.map(String) : ['knowledge'],
-      provider: session.provider === 'claude-code' || session.provider === 'codex' ? session.provider : 'web',
+      provider: session.provider === 'antigravity' || session.provider === 'claude-code' || session.provider === 'codex' ? session.provider : 'web',
       model: typeof session.model === 'string' ? session.model : '',
       agentSessionId: typeof session.agentSessionId === 'string' ? session.agentSessionId : '',
       messages: Array.isArray(session.messages)

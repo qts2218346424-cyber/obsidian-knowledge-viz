@@ -424,6 +424,7 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath }: AIAssist
               <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 p-1">
                 {([
                   ['web', '网页 AI'],
+                  ['antigravity', 'Antigravity'],
                   ['claude-code', 'Claude Code'],
                   ['codex', 'Codex'],
                 ] as const).map(([provider, label]) => {
@@ -436,20 +437,27 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath }: AIAssist
                       type="button"
                       disabled={disabled}
                       onClick={() => selectProvider(provider)}
-                      className={`rounded-full px-2.5 py-1.5 text-[11px] transition ${
+                      className={`rounded-full px-2.5 py-1.5 text-[11px] font-medium transition flex items-center gap-1.5 ${
                         selected
-                          ? 'bg-warm-900 text-white shadow-sm'
+                          ? provider === 'antigravity'
+                            ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-sm ring-1 ring-white/20'
+                            : 'bg-warm-900 text-white shadow-sm'
                           : disabled
                             ? 'cursor-not-allowed text-warm-300'
-                            : 'text-warm-500 hover:bg-white hover:text-warm-900'
+                            : provider === 'antigravity' && status?.available
+                              ? 'text-indigo-600 bg-indigo-50/80 hover:bg-indigo-100 font-semibold border border-indigo-200/60'
+                              : 'text-warm-500 hover:bg-white hover:text-warm-900'
                       }`}
                       title={provider === 'web'
                         ? '使用已配置的网页 AI'
                         : status?.available
-                          ? `${label}：${status.version || '已检测'}`
+                          ? `${label}：${status.version || '已就绪'} (${status.detail || '运行中'})`
                           : `${label}：${status?.detail || '本机未检测到'}`}
                     >
                       {label}
+                      {provider === 'antigravity' && status?.available && (
+                        <span className={`inline-block h-1.5 w-1.5 rounded-full ${selected ? 'bg-emerald-300' : 'bg-emerald-500 animate-pulse'}`} />
+                      )}
                     </button>
                   )
                 })}
@@ -461,7 +469,7 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath }: AIAssist
                   : activeProvider === 'web'
                     ? '网页模式'
                     : activeLocalStatus?.available
-                      ? `${activeProvider === 'claude-code' ? 'Claude Code' : 'Codex'} 已连接`
+                      ? `${activeProvider === 'antigravity' ? 'Antigravity' : activeProvider === 'claude-code' ? 'Claude Code' : 'Codex'} 已连接 (${activeLocalStatus.version || '就绪'})`
                       : '本机 Agent 不可用'}
               </span>
               <button onClick={() => setSkillsOpen(value => !value)} className="flex min-w-0 items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs text-warm-600 hover:border-accent-orange/40">

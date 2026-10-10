@@ -154,6 +154,16 @@ export function useVaultTree(): UseVaultTreeResult {
 
   useEffect(() => { load() }, [load])
 
+  useEffect(() => {
+    const handleSync = () => { load() }
+    window.addEventListener('vault-updated', handleSync)
+    window.addEventListener('storage', handleSync)
+    return () => {
+      window.removeEventListener('vault-updated', handleSync)
+      window.removeEventListener('storage', handleSync)
+    }
+  }, [load])
+
   return { tree, loading, error, reload: load }
 }
 

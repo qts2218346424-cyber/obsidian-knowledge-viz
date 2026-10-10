@@ -143,7 +143,12 @@ export interface TreeNode {
   path: string
   type: 'folder' | 'file'
   children?: TreeNode[]
+  ext?: string
 }
+
+const TREE_SUPPORTED_EXTS = new Set([
+  '.md', '.markdown', '.pdf', '.html', '.htm', '.txt', '.png', '.jpg', '.jpeg', '.svg'
+])
 
 export function getTree(vaultPath: string): TreeNode[] {
   function buildTree(dir: string, basePath: string): TreeNode[] {
@@ -163,12 +168,16 @@ export function getTree(vaultPath: string): TreeNode[] {
           type: 'folder',
           children: buildTree(fullPath, basePath),
         })
-      } else if (entry.name.endsWith('.md')) {
-        nodes.push({
-          name: entry.name.replace('.md', ''),
-          path: relPath,
-          type: 'file',
-        })
+      } else {
+        const ext = path.extname(entry.name).toLowerCase()
+        if (TREE_SUPPORTED_EXTS.has(ext)) {
+          nodes.push({
+            name: ext === '.md' ? entry.name.replace(/\.md$/i, '') : entry.name,
+            path: relPath,
+            type: 'file',
+            ext,
+          })
+        }
       }
     }
 

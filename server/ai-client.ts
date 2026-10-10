@@ -2,12 +2,25 @@ import Anthropic from '@anthropic-ai/sdk'
 
 export type AiProvider = 'anthropic' | 'openai-compatible'
 
+export interface CloudEndpoint {
+  id: string
+  name: string
+  apiFormat: 'anthropic' | 'openai'
+  baseURL: string
+  apiKey: string
+  models: string[]
+  defaultModel?: string
+}
+
 export interface AiConfig {
   apiKey: string
   baseURL: string
   model?: string
+  models?: string[]
   provider?: AiProvider
   apiFormat?: 'anthropic' | 'openai'
+  endpoints?: CloudEndpoint[]
+  activeEndpointId?: string
 }
 
 export interface AiTextBlock {

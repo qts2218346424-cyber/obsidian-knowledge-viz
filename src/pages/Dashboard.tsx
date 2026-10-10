@@ -56,27 +56,29 @@ interface MetricCardProps {
 
 function MetricCard({ label, value, subtext, icon: Icon, glowClass, gradientIcon }: MetricCardProps) {
   return (
-    <div className={`glass-panel glass-panel-hover rounded-2xl p-5 relative overflow-hidden group`}>
-      <div className={`absolute -right-6 -bottom-6 w-24 h-24 rounded-full opacity-15 blur-xl pointer-events-none ${glowClass}`} />
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-medium text-slate-500">{label}</span>
-        <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-white shadow-sm ${gradientIcon}`}>
-          <Icon className="h-4 w-4" />
+    <div className="glass-panel glass-panel-hover rounded-2xl p-4 sm:p-5 relative overflow-hidden group transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
+      <div className={`absolute -right-6 -bottom-6 w-24 h-24 rounded-full opacity-20 blur-xl pointer-events-none group-hover:opacity-35 transition-opacity ${glowClass}`} />
+      <div className="flex items-center justify-between mb-2.5 sm:mb-3">
+        <span className="text-[11px] sm:text-xs font-semibold text-slate-600">{label}</span>
+        <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-white shadow-sm transition-transform duration-200 group-hover:scale-105 ${gradientIcon}`}>
+          <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         </div>
       </div>
-      <div className="text-2xl font-bold tracking-tight text-slate-900">
+      <div className="text-xl sm:text-2xl font-extrabold font-mono tracking-tight text-slate-900">
         {typeof value === 'number' ? value.toLocaleString() : value}
       </div>
-      {subtext && <div className="mt-1 text-[11px] text-slate-400 truncate">{subtext}</div>}
+      {subtext && <div className="mt-1 text-[11px] font-medium text-slate-500 truncate">{subtext}</div>}
     </div>
   )
 }
+
 
 export default function Dashboard() {
   const { stats, loading: statsLoading } = useVaultStats()
   const { report, loading: healthLoading } = useVaultHealth()
   const [recentFiles, setRecentFiles] = useState<FileListItem[]>([])
   const [filesLoading, setFilesLoading] = useState(true)
+  const [mobileStationTab, setMobileStationTab] = useState<'math' | 'cs'>('math')
 
   useEffect(() => {
     let cancelled = false
@@ -159,13 +161,76 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="mx-auto max-w-[1520px] space-y-7 animate-fade-in-up">
+    <div className="mx-auto max-w-[1520px] space-y-3.5 sm:space-y-7 animate-fade-in-up">
       {/* Aurora Hero Cockpit Banner */}
-      <section className="relative overflow-hidden rounded-3xl border border-white/70 bg-gradient-to-br from-white/90 via-white/80 to-accent-peach/25 p-7 sm:p-9 shadow-[0_20px_50px_rgba(15,23,42,0.06)] backdrop-blur-xl">
+      <section className="relative overflow-hidden rounded-3xl border border-white/70 bg-gradient-to-br from-white/90 via-white/80 to-accent-peach/25 p-4 sm:p-7 lg:p-9 shadow-[0_20px_50px_rgba(15,23,42,0.06)] backdrop-blur-xl">
         <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
         <div className="absolute right-32 -bottom-16 h-48 w-48 rounded-full bg-accent-orange/15 blur-3xl pointer-events-none" />
 
-        <div className="relative flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
+        {/* ── 📱 Mobile Compact Cockpit (专为手机小屏定制，拒绝长屏废话) ── */}
+        <div className="md:hidden space-y-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              </span>
+              <span className="text-[11px] font-semibold text-slate-700 truncate max-w-40">{vaultName}</span>
+            </div>
+            <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2 py-0.5 rounded-full">
+              408+数学 双核研学
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between pt-0.5">
+            <h1 className="text-base font-extrabold text-slate-900 flex items-center gap-1.5">
+              <span>{getTimeGreeting().split('，')[0]}</span>
+              <span>⚡</span>
+            </h1>
+            <span className="text-[11px] text-slate-400 font-medium font-mono">今日冲刺</span>
+          </div>
+
+          {/* Quick Action Pair */}
+          <div className="grid grid-cols-2 gap-2 pt-0.5">
+            <Link
+              to="/quiz"
+              className="flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-accent-orange to-indigo-600 py-2.5 text-xs font-bold text-white shadow-md shadow-accent-orange/20 active:scale-95 transition-all"
+            >
+              <Flame className="h-4 w-4" />
+              <span>开始刷题</span>
+            </Link>
+            <Link
+              to="/chat"
+              className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200/90 bg-white/95 py-2.5 text-xs font-bold text-slate-700 shadow-2xs active:scale-95 transition-all hover:text-indigo-600"
+            >
+              <Sparkles className="h-4 w-4 text-indigo-500" />
+              <span>AI 伴学</span>
+            </Link>
+          </div>
+
+          {/* 4-Grid Quick Launch (金刚区高频入口) */}
+          <div className="grid grid-cols-4 gap-1.5 pt-1">
+            <Link to="/quiz" className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-white/70 border border-slate-200/70 shadow-2xs active:scale-95 transition-all">
+              <span className="text-base mb-0.5">🖥️</span>
+              <span className="text-[10px] font-semibold text-slate-700">408真题</span>
+            </Link>
+            <Link to="/quiz" className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-white/70 border border-slate-200/70 shadow-2xs active:scale-95 transition-all">
+              <span className="text-base mb-0.5">📐</span>
+              <span className="text-[10px] font-semibold text-slate-700">考研数学</span>
+            </Link>
+            <Link to="/graph" className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-white/70 border border-slate-200/70 shadow-2xs active:scale-95 transition-all">
+              <span className="text-base mb-0.5">🕸️</span>
+              <span className="text-[10px] font-semibold text-slate-700">知识图谱</span>
+            </Link>
+            <Link to="/editor" className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-white/70 border border-slate-200/70 shadow-2xs active:scale-95 transition-all">
+              <span className="text-base mb-0.5">✏️</span>
+              <span className="text-[10px] font-semibold text-slate-700">速记笔记</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* ── 🖥️ Desktop Aurora Cockpit Banner (宽屏沉浸展示) ── */}
+        <div className="hidden md:flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/90 bg-white/90 px-3.5 py-1 text-xs font-medium text-slate-600 shadow-sm backdrop-blur-sm">
               <span className="flex h-2 w-2 relative">
@@ -216,112 +281,140 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* Dual-Core Battle Stations (双核学科作战舱) */}
-      <div className="grid gap-5 md:grid-cols-2">
-        {/* Math Station */}
-        <div className="glass-panel glass-panel-hover rounded-3xl p-6 relative overflow-hidden border border-pink-100/60 group">
-          <div className="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-gradient-to-br from-pink-500/10 to-indigo-500/15 blur-2xl pointer-events-none" />
+      {/* ── 📱 Mobile Subject Station Segmented Control (小屏学科切换器，省去整屏翻滚) ── */}
+      <div className="lg:hidden flex rounded-2xl bg-slate-100/90 p-1 border border-slate-200/80">
+        <button
+          onClick={() => setMobileStationTab('math')}
+          className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+            mobileStationTab === 'math'
+              ? 'bg-white text-pink-700 shadow-sm'
+              : 'text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          📐 考研数学 (数一/二/三)
+        </button>
+        <button
+          onClick={() => setMobileStationTab('cs')}
+          className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+            mobileStationTab === 'cs'
+              ? 'bg-white text-blue-700 shadow-sm'
+              : 'text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          🖥️ 408 计算机 (统考四门)
+        </button>
+      </div>
+
+      {/* Dual-Core Battle Stations (双核学科作战舱 - 电脑双栏 / 手机Tab单栏) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        {/* Math Station - Bento Span 6 */}
+        <div className={`lg:col-span-6 glass-panel glass-panel-hover rounded-3xl p-5 sm:p-7 relative overflow-hidden border border-pink-100/70 group transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${
+          mobileStationTab === 'cs' ? 'hidden lg:block' : 'block'
+        }`}>
+          <div className="absolute -right-8 -top-8 w-44 h-44 rounded-full bg-gradient-to-br from-pink-500/15 to-indigo-500/20 blur-3xl pointer-events-none group-hover:scale-110 transition-transform duration-500" />
           
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-pink-500 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-pink-500/25">
-                <Sigma className="h-6 w-6" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-pink-500 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-pink-500/25 shrink-0">
+                <Sigma className="h-5 w-5 sm:h-6 sm:w-6" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-bold text-slate-900">考研数学作战舱</h2>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 border border-pink-200">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">考研数学作战舱</h2>
+                  <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-pink-100/90 text-pink-800 border border-pink-200/80 shadow-2xs">
                     数一 · 数二 · 数三
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 mt-0.5">高等数学 · 线性代数 · 概率论与数理统计</p>
+                <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">高等数学 · 线性代数 · 概率统计</p>
               </div>
             </div>
             <Link
               to="/quiz"
-              className="rounded-xl bg-pink-50 hover:bg-pink-100 border border-pink-200 px-3 py-1.5 text-xs font-semibold text-pink-700 transition-colors"
+              className="rounded-xl bg-pink-50 hover:bg-pink-100 border border-pink-200/80 px-3 py-1.5 text-xs font-semibold text-pink-700 transition-all cursor-pointer active:scale-95 shadow-2xs shrink-0"
             >
               去刷题 →
             </Link>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 mt-5 py-3 px-4 rounded-2xl bg-slate-50/80 border border-slate-100">
+          <div className="grid grid-cols-3 gap-2 mt-4 sm:mt-5 py-2.5 sm:py-3 px-3 sm:px-4 rounded-2xl bg-slate-50/90 border border-slate-200/70">
             <div>
-              <div className="text-[10px] text-slate-400 font-medium">高数经典试题</div>
-              <div className="text-sm font-bold text-slate-800 mt-0.5">泰勒与中值定理</div>
+              <div className="text-[10px] text-slate-500 font-semibold truncate">高数核心</div>
+              <div className="text-xs sm:text-sm font-bold text-slate-900 mt-0.5 truncate">泰勒与中值</div>
             </div>
             <div>
-              <div className="text-[10px] text-slate-400 font-medium">线代矩阵特征</div>
-              <div className="text-sm font-bold text-slate-800 mt-0.5">相似与二次型</div>
+              <div className="text-[10px] text-slate-500 font-semibold truncate">线代矩阵</div>
+              <div className="text-xs sm:text-sm font-bold text-slate-900 mt-0.5 truncate">相似二次型</div>
             </div>
             <div>
-              <div className="text-[10px] text-slate-400 font-medium">公式排版规范</div>
-              <div className="text-sm font-bold text-pink-600 mt-0.5">KaTeX 全渲染</div>
+              <div className="text-[10px] text-slate-500 font-semibold truncate">公式排版</div>
+              <div className="text-xs sm:text-sm font-bold text-pink-700 mt-0.5 truncate font-mono">KaTeX 全渲染</div>
             </div>
           </div>
 
-          <div className="flex items-center justify-between mt-4 pt-2 text-xs text-slate-500">
-            <span>✨ 支持分步严谨推导与反例辨析</span>
-            <Link to="/quiz" className="font-semibold text-pink-600 hover:text-pink-700 flex items-center gap-1">
-              <span>立即练习数学</span>
+          <div className="flex items-center justify-between mt-3 sm:mt-4 pt-1 sm:pt-2 text-xs text-slate-600">
+            <span className="text-[11px] sm:text-xs">✨ 分步严谨推导与反例辨析</span>
+            <Link to="/quiz" className="font-semibold text-pink-700 hover:text-pink-800 flex items-center gap-1 transition-transform hover:translate-x-0.5 text-xs">
+              <span>立即练习</span>
               <ArrowRight size={13} />
             </Link>
           </div>
         </div>
 
-        {/* CS 408 Station */}
-        <div className="glass-panel glass-panel-hover rounded-3xl p-6 relative overflow-hidden border border-blue-100/60 group">
-          <div className="absolute -right-8 -top-8 w-36 h-36 rounded-full bg-gradient-to-br from-blue-500/10 to-teal-500/15 blur-2xl pointer-events-none" />
+        {/* CS 408 Station - Bento Span 6 */}
+        <div className={`lg:col-span-6 glass-panel glass-panel-hover rounded-3xl p-5 sm:p-7 relative overflow-hidden border border-blue-100/70 group transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${
+          mobileStationTab === 'math' ? 'hidden lg:block' : 'block'
+        }`}>
+          <div className="absolute -right-8 -top-8 w-44 h-44 rounded-full bg-gradient-to-br from-blue-500/15 to-teal-500/20 blur-3xl pointer-events-none group-hover:scale-110 transition-transform duration-500" />
           
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-blue-500/25">
-                <Cpu className="h-6 w-6" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-blue-500/25 shrink-0">
+                <Cpu className="h-5 w-5 sm:h-6 sm:w-6" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-bold text-slate-900">408 计算机综合舱</h2>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">408 计算机综合舱</h2>
+                  <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-blue-100/90 text-blue-800 border border-blue-200/80 shadow-2xs">
                     统考专业课
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 mt-0.5">数据结构 · 组成原理 · 操作系统 · 计算机网络</p>
+                <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">数据结构 · 组成原理 · 操作系统 · 计网</p>
               </div>
             </div>
             <Link
               to="/quiz"
-              className="rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 transition-colors"
+              className="rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200/80 px-3 py-1.5 text-xs font-semibold text-blue-700 transition-all cursor-pointer active:scale-95 shadow-2xs shrink-0"
             >
               去做题 →
             </Link>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 mt-5 py-3 px-4 rounded-2xl bg-slate-50/80 border border-slate-100">
+          <div className="grid grid-cols-3 gap-2 mt-4 sm:mt-5 py-2.5 sm:py-3 px-3 sm:px-4 rounded-2xl bg-slate-50/90 border border-slate-200/70">
             <div>
-              <div className="text-[10px] text-slate-400 font-medium">数据结构与算法</div>
-              <div className="text-sm font-bold text-slate-800 mt-0.5">树图·排序查找</div>
+              <div className="text-[10px] text-slate-500 font-semibold truncate">数据结构</div>
+              <div className="text-xs sm:text-sm font-bold text-slate-900 mt-0.5 truncate">树图排序查找</div>
             </div>
             <div>
-              <div className="text-[10px] text-slate-400 font-medium">系统硬件底层</div>
-              <div className="text-sm font-bold text-slate-800 mt-0.5">CPU·存储总线</div>
+              <div className="text-[10px] text-slate-500 font-semibold truncate">硬件底层</div>
+              <div className="text-xs sm:text-sm font-bold text-slate-900 mt-0.5 truncate">CPU存储总线</div>
             </div>
             <div>
-              <div className="text-[10px] text-slate-400 font-medium">核心题库储备</div>
-              <div className="text-sm font-bold text-blue-600 mt-0.5">{QUESTION_BANK.length} 道真题</div>
+              <div className="text-[10px] text-slate-500 font-semibold truncate">题库储备</div>
+              <div className="text-xs sm:text-sm font-bold text-blue-700 mt-0.5 truncate font-mono">{QUESTION_BANK.length} 道真题</div>
             </div>
           </div>
 
-          <div className="flex items-center justify-between mt-4 pt-2 text-xs text-slate-500">
-            <span>✨ 算法闪卡与错题闭环复盘</span>
-            <Link to="/quiz" className="font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
-              <span>进入408专项突破</span>
+          <div className="flex items-center justify-between mt-3 sm:mt-4 pt-1 sm:pt-2 text-xs text-slate-600">
+            <span className="text-[11px] sm:text-xs">✨ 算法闪卡与错题闭环复盘</span>
+            <Link to="/quiz" className="font-semibold text-blue-700 hover:text-blue-800 flex items-center gap-1 transition-transform hover:translate-x-0.5 text-xs">
+              <span>专项突破</span>
               <ArrowRight size={13} />
             </Link>
           </div>
         </div>
       </div>
 
-      {/* Real-time Cockpit Metrics Grid */}
+      {/* Real-time Cockpit Metrics Grid - Bento 4 Grid */}
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <MetricCard
           label="知识库笔记"
@@ -334,7 +427,7 @@ export default function Dashboard() {
         <MetricCard
           label="双链拓扑连接"
           value={stats?.totalLinks ?? 0}
-          subtext={`跨笔记双向链接关联`}
+          subtext="跨笔记双向链接关联"
           icon={Link2}
           glowClass="bg-emerald-500"
           gradientIcon="bg-gradient-to-tr from-emerald-500 to-teal-600"
@@ -342,7 +435,7 @@ export default function Dashboard() {
         <MetricCard
           label="考研双核题库"
           value={`${totalQuestions} 题`}
-          subtext={`408真题 + 高数线代概率`}
+          subtext="408真题 + 高数线代概率"
           icon={ClipboardList}
           glowClass="bg-indigo-500"
           gradientIcon="bg-gradient-to-tr from-indigo-500 to-purple-600"
@@ -356,6 +449,7 @@ export default function Dashboard() {
           gradientIcon="bg-gradient-to-tr from-rose-500 to-pink-600"
         />
       </section>
+
 
       {/* Main Content Split: Recent Notes & Study Actions */}
       <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">

@@ -46,3 +46,10 @@ desktop.ini
 
 # Package lock (optional, include if using npm)
 # package-lock.json
+
+# Database files
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+*.db
+

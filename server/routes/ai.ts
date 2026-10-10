@@ -9,42 +9,124 @@ import {
   invalidateCache,
   summarizeAiError,
   proxyFetch,
+  getAiClientForModel,
 } from '../context.js'
+import { createAiClient, type AiConfig, type CloudEndpoint } from '../ai-client.js'
 import { createFile, type VaultNote } from '../vault-parser.js'
 import { checkHealth } from '../health-checker.js'
 import { runAgentLoop, type AgentEvent } from '../agent.js'
+import { runStepTutor, type TutorMode } from '../services/step-tutor.js'
+
 
 export const aiRouter = Router()
 
-// Common models for fallback
-const FALLBACK_MODELS = [
-  { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4' },
-  { id: 'claude-opus-4-20250514', name: 'Claude Opus 4' },
-  { id: 'claude-3-7-sonnet-20250219', name: 'Claude 3.7 Sonnet' },
-  { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet' },
-  { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku' },
-  { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus' },
-  { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro' },
-  { id: 'mimo-v2.5-pro', name: 'MiMo v2.5 Pro' },
-  { id: 'deepseek-v3', name: 'DeepSeek V3' },
-  { id: 'deepseek-r1', name: 'DeepSeek R1' },
-  { id: 'gpt-4o', name: 'GPT-4o' },
-  { id: 'gpt-4o-mini', name: 'GPT-4o Mini' },
-  { id: 'o3-mini', name: 'o3-mini' },
-]
+// 辅助函数：根据用户填写的 Base URL 智能推导候选端点，真实扫描可用模型列表
+async function fetchRemoteModels(baseURL: string, apiKey: string) {
+  const trimmed = baseURL.replace(/\/+$/, '')
+  const candidateUrls = new Set<string>()
+
+  // 1. 直连探测
+  candidateUrls.add(`${trimmed}/v1/models`)
+  candidateUrls.add(`${trimmed}/models`)
+
+  // 2. 若带有子路径（如 /anthropic 或 /v1），派生其根域名与父路径探测
+  try {
+    const parsed = new URL(trimmed)
+    candidateUrls.add(`${parsed.origin}/v1/models`)
+    candidateUrls.add(`${parsed.origin}/models`)
+    const parts = parsed.pathname.split('/').filter(Boolean)
+    if (parts.length > 0) {
+      parts.pop()
+      const parent = `${parsed.origin}${parts.length > 0 ? '/' + parts.join('/') : ''}`
+      candidateUrls.add(`${parent}/v1/models`)
+      candidateUrls.add(`${parent}/models`)
+    }
+  } catch {}
+
+  const headers: Record<string, string> = {
+    'Authorization': `Bearer ${apiKey}`,
+    'x-api-key': apiKey,
+    'anthropic-version': '2023-06-01',
+  }
+
+  for (const url of candidateUrls) {
+    try {
+      const resp = await proxyFetch(url, { headers, signal: AbortSignal.timeout(6000) })
+      if (resp.ok) {
+        const data = await resp.json()
+        const rawList = data?.data || data?.models || (Array.isArray(data) ? data : [])
+        if (Array.isArray(rawList)) {
+          const models = rawList.map((m: any) => {
+            const id = typeof m === 'string' ? m : (m.id || m.model_id || m.name)
+            const name = typeof m === 'string' ? m : (m.name || m.display_name || m.id)
+            return { id, name }
+          }).filter((m: any) => m.id && typeof m.id === 'string' && m.id.length > 0)
+
+          if (models.length > 0) {
+            return models
+          }
+        }
+      }
+    } catch {
+      // 继续尝试下一候选 URL
+    }
+  }
+  return null
+}
 
 // ===== AI Test =====
 
 aiRouter.post('/ai/test', async (req, res) => {
-  if (!anthropic || !config.ai) {
-    res.status(503).json({ ok: false, error: 'AI 尚未配置' })
+  const reqApiKey = req.body?.apiKey
+  const reqBaseURL = req.body?.baseURL
+  const reqApiFormat = req.body?.apiFormat
+  const reqEndpointId = req.body?.endpointId
+  const reqModel = req.body?.model
+
+  let clientToUse = anthropic
+  let modelToUse = reqModel || 'deepseek-v4-pro'
+  let providerToUse = config.ai?.provider || (config.ai?.apiFormat === 'openai' ? 'openai-compatible' : 'anthropic')
+
+  // 1. 如果请求体自带了特定的 apiKey 和 baseURL（例如正在设置页编辑某个独立接口时即时测试）
+  if (reqApiKey && reqBaseURL) {
+    let resolvedKey = reqApiKey
+    if (resolvedKey.includes('...')) {
+      if (reqEndpointId && config.ai?.endpoints) {
+        const ep = config.ai.endpoints.find(e => e.id === reqEndpointId)
+        if (ep?.apiKey) resolvedKey = ep.apiKey
+      } else if (config.ai?.apiKey) {
+        resolvedKey = config.ai.apiKey
+      }
+    }
+    const tempConfig: AiConfig = {
+      apiKey: resolvedKey,
+      baseURL: reqBaseURL,
+      apiFormat: reqApiFormat || 'anthropic',
+      provider: reqApiFormat === 'openai' ? 'openai-compatible' : 'anthropic',
+    }
+    clientToUse = createAiClient(tempConfig)
+    providerToUse = tempConfig.provider!
+    modelToUse = reqModel || (reqApiFormat === 'openai' ? 'deepseek-v4-pro' : 'claude-3-5-sonnet-20241022')
+  } else {
+    // 2. 根据 model 或 endpointId 定位已配置客户端
+    const target = getAiClientForModel(reqModel, reqEndpointId)
+    if (target) {
+      clientToUse = target.client
+      modelToUse = target.model
+      if (target.endpoint) {
+        providerToUse = target.endpoint.apiFormat === 'openai' ? 'openai-compatible' : 'anthropic'
+      }
+    }
+  }
+
+  if (!clientToUse) {
+    res.status(503).json({ ok: false, error: 'AI 尚未配置或对应接口不存在，请检查设置' })
     return
   }
 
-  const model = String(req.body?.model || config.ai.model || 'deepseek-v4-pro')
   try {
-    const response = await anthropic.messages.create({
-      model,
+    const response = await clientToUse.messages.create({
+      model: modelToUse,
       max_tokens: 128,
       system: '只回复 OK，不要添加其他内容。',
       messages: [{ role: 'user', content: '连接测试' }],
@@ -52,16 +134,16 @@ aiRouter.post('/ai/test', async (req, res) => {
     const reply = response.content.find(block => block.type === 'text')?.text || '已收到模型响应'
     res.json({
       ok: true,
-      provider: config.ai.provider || (config.ai.apiFormat === 'openai' ? 'openai-compatible' : 'anthropic'),
-      model,
+      provider: providerToUse,
+      model: modelToUse,
       reply,
     })
   } catch (err: any) {
     const detail = summarizeAiError(err)
     res.status(detail.status && detail.status >= 400 ? detail.status : 502).json({
       ok: false,
-      provider: config.ai.provider || (config.ai.apiFormat === 'openai' ? 'openai-compatible' : 'anthropic'),
-      model,
+      provider: providerToUse,
+      model: modelToUse,
       error: detail.message,
       status: detail.status,
     })
@@ -70,47 +152,100 @@ aiRouter.post('/ai/test', async (req, res) => {
 
 // ===== AI Models =====
 
-aiRouter.get('/ai/models', async (_req, res) => {
+aiRouter.get('/ai/models', async (req, res) => {
+  const queryEndpointId = req.query.endpointId as string | undefined
+  const queryBaseURL = req.query.baseURL as string | undefined
+  const queryApiKey = req.query.apiKey as string | undefined
+
+  // 1. 如果指定了特定接口参数（从设置页单独拉取某个接口的模型）
+  if (queryBaseURL || queryEndpointId) {
+    let targetBaseURL = queryBaseURL || ''
+    let targetApiKey = queryApiKey || ''
+
+    if (queryEndpointId && config.ai?.endpoints) {
+      const ep = config.ai.endpoints.find(e => e.id === queryEndpointId)
+      if (ep) {
+        if (!targetBaseURL) targetBaseURL = ep.baseURL
+        if (!targetApiKey || targetApiKey.includes('...')) targetApiKey = ep.apiKey
+      }
+    }
+
+    if (targetApiKey && targetApiKey.includes('...') && config.ai?.apiKey) {
+      targetApiKey = config.ai.apiKey
+    }
+
+    if (!targetBaseURL || !targetApiKey) {
+      res.status(400).json({ error: '请先填写该接口的 Base URL 与 API Key' })
+      return
+    }
+
+    const fetched = await fetchRemoteModels(targetBaseURL, targetApiKey)
+    if (fetched && fetched.length > 0) {
+      res.json({ models: fetched, current: '', source: 'api' })
+      return
+    }
+
+    res.json({
+      models: [],
+      current: '',
+      source: 'none',
+      message: '未能从该接口扫描到可用模型，请检查 Base URL、API Key 或网络，亦可在下方手动输入添加'
+    })
+    return
+  }
+
+  // 2. 如果存在多接口配置，聚合返回所有接口的模型信息
+  if (config.ai?.endpoints && config.ai.endpoints.length > 0) {
+    const aggregatedModels: { id: string; name: string; model: string; endpointId: string; endpointName: string }[] = []
+    for (const ep of config.ai.endpoints) {
+      const epModels = ep.models || (ep.defaultModel ? [ep.defaultModel] : [])
+      for (const m of epModels) {
+        aggregatedModels.push({
+          id: `${ep.id}::${m}`,
+          name: `${m} (${ep.name})`,
+          model: m,
+          endpointId: ep.id,
+          endpointName: ep.name,
+        })
+      }
+    }
+
+    res.json({
+      endpoints: config.ai.endpoints,
+      models: aggregatedModels,
+      current: config.ai.model || '',
+      source: 'endpoints',
+    })
+    return
+  }
+
+  // 3. 兜底旧单配置
   if (!config.ai?.apiKey || !config.ai?.baseURL) {
     res.status(400).json({ error: 'AI 未配置，请先设置 API Key 和 Base URL' })
     return
   }
 
-  const baseURL = config.ai.baseURL.replace(/\/+$/, '')
-  const headers: Record<string, string> = {
-    'Authorization': `Bearer ${config.ai.apiKey}`,
-    'x-api-key': config.ai.apiKey,
+  const fetched = await fetchRemoteModels(config.ai.baseURL, config.ai.apiKey)
+  if (fetched && fetched.length > 0) {
+    res.json({ models: fetched, current: config.ai.model || '', source: 'api' })
+    return
   }
 
-  const endpoints = [
-    `${baseURL}/v1/models`,
-    `${baseURL}/models`,
-  ]
-
-  for (const url of endpoints) {
-    try {
-      const resp = await fetch(url, { headers, signal: AbortSignal.timeout(8000) })
-      if (resp.ok) {
-        const data = await resp.json()
-        const models = (data.data || data.models || data || []).map((m: any) => ({
-          id: m.id || m.model_id || m.name,
-          name: m.name || m.display_name || m.id,
-        })).filter((m: any) => m.id)
-        if (models.length > 0) {
-          res.json({ models, current: config.ai.model || '', source: 'api' })
-          return
-        }
-      }
-    } catch {
-      // try next
+  // 若远程接口未开放 /models 端点，但用户配置了主模型，则仅展示用户配置的真实模型
+  const realModels: { id: string; name: string }[] = []
+  if (Array.isArray(config.ai.models) && config.ai.models.length > 0) {
+    for (const m of config.ai.models) {
+      realModels.push({ id: m, name: m })
     }
+  } else if (config.ai.model) {
+    realModels.push({ id: config.ai.model, name: config.ai.model })
   }
 
-  const fallback = [...FALLBACK_MODELS]
-  if (config.ai.model && !fallback.some(m => m.id === config.ai!.model)) {
-    fallback.unshift({ id: config.ai.model!, name: `${config.ai.model} (当前)` })
-  }
-  res.json({ models: fallback, current: config.ai.model || '', source: 'fallback' })
+  res.json({
+    models: realModels,
+    current: config.ai.model || '',
+    source: realModels.length > 0 ? 'config' : 'none'
+  })
 })
 
 // ===== Basic Chat =====
@@ -172,7 +307,7 @@ function buildSystemPrompt(relevantNotes: VaultNote[], totalNotes: number): stri
 }
 
 aiRouter.post('/chat', async (req, res) => {
-  const { message, history } = req.body as { message: string; history?: ChatMessage[] }
+  const { message, history, model: reqModel } = req.body as { message: string; history?: ChatMessage[]; model?: string }
   if (!message) {
     res.status(400).json({ error: 'Missing message' })
     return
@@ -188,7 +323,8 @@ aiRouter.post('/chat', async (req, res) => {
     tags: note.tags.slice(0, 3),
   }))
 
-  if (!anthropic) {
+  const aiTarget = getAiClientForModel(reqModel)
+  if (!aiTarget) {
     let reply: string
     if (citedNotes.length > 0) {
       reply = `根据你的问题，我在知识库中找到了 ${citedNotes.length} 篇相关笔记：\n\n`
@@ -216,8 +352,8 @@ aiRouter.post('/chat', async (req, res) => {
     }
     messages.push({ role: 'user', content: message })
 
-    const response = await anthropic.messages.create({
-      model: config.ai?.model || 'deepseek-v4-pro',
+    const response = await aiTarget.client.messages.create({
+      model: aiTarget.model,
       max_tokens: 1024,
       system: systemPrompt,
       messages,
@@ -245,16 +381,18 @@ aiRouter.post('/chat', async (req, res) => {
 // ===== Agent Chat (SSE Streaming) =====
 
 aiRouter.post('/agent/chat', async (req, res) => {
-  const { message, history } = req.body as {
+  const { message, history, model: reqModel } = req.body as {
     message: string
     history?: { role: 'user' | 'assistant'; content: string }[]
+    model?: string
   }
   if (!message) {
     res.status(400).json({ error: 'Missing message' })
     return
   }
 
-  if (!anthropic) {
+  const aiTarget = getAiClientForModel(reqModel)
+  if (!aiTarget) {
     const notes = getNotes()
     const relevant = findRelevantNotes(message, notes)
     let reply: string
@@ -291,8 +429,8 @@ aiRouter.post('/agent/chat', async (req, res) => {
     messages.push({ role: 'user', content: message })
 
     for await (const event of runAgentLoop(
-      anthropic,
-      config.ai?.model || 'deepseek-v4-pro',
+      aiTarget.client,
+      aiTarget.model,
       messages,
       config.vaultPath,
     )) {
@@ -329,7 +467,8 @@ aiRouter.post('/research', async (req, res) => {
       return
     }
 
-    if (!anthropic) {
+    const aiTarget = getAiClientForModel()
+    if (!aiTarget) {
       res.status(500).json({ error: 'AI not configured, cannot generate research note' })
       return
     }
@@ -351,8 +490,8 @@ aiRouter.post('/research', async (req, res) => {
 
 请直接返回 Markdown 内容，不需要 frontmatter（会自动生成）。`
 
-    const aiRes = await anthropic.messages.create({
-      model: config.ai?.model || 'deepseek-v4-pro',
+    const aiRes = await aiTarget.client.messages.create({
+      model: aiTarget.model,
       max_tokens: 2048,
       system: '你是一个知识管理助手，负责为 Obsidian 知识库生成高质量的结构化笔记。只返回 Markdown 内容。',
       messages: [{ role: 'user', content: prompt }],
@@ -776,3 +915,46 @@ aiRouter.post('/think', async (req, res) => {
     res.status(500).json({ error: '思维导图生成失败: ' + err.message })
   }
 })
+
+// ===== 启发式分步思维链 AI 辅导 (破题思路引导 / 步骤逻辑挑刺 / 公式定理反查) =====
+
+aiRouter.post('/ai/tutor/step', async (req, res) => {
+  try {
+    const { mode, questionText, subject, studentSteps, optionsText, provider, model } = req.body as {
+      mode: TutorMode
+      questionText: string
+      subject?: string
+      studentSteps?: string
+      optionsText?: string
+      provider?: any
+      model?: string
+    }
+
+    if (!questionText) {
+      res.status(400).json({ error: '缺少题面内容 (questionText)' })
+      return
+    }
+
+    if (!mode || !['hint', 'audit', 'formula'].includes(mode)) {
+      res.status(400).json({ error: '无效辅导模式，支持: hint | audit | formula' })
+      return
+    }
+
+    const tutorResult = await runStepTutor({
+      mode,
+      questionText,
+      subject,
+      studentSteps,
+      optionsText,
+      provider,
+      model,
+    })
+
+    res.json(tutorResult)
+  } catch (err: any) {
+    console.error('AI Tutor Step error:', err.message)
+    const summary = summarizeAiError(err)
+    res.status(summary.status || 500).json({ error: summary.message })
+  }
+})
+

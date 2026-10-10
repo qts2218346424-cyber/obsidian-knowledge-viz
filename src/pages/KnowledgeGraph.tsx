@@ -729,7 +729,7 @@ export default function KnowledgeGraph() {
 
         {/* Right Preview Drawer */}
         {(previewNode || previewLoading) && (
-          <div className="w-80 shrink-0 h-full flex flex-col rounded-2xl border border-cream-200 bg-surface p-4 shadow-lg overflow-hidden animate-fade-in">
+          <div className="fixed inset-x-3 bottom-16 top-24 z-40 md:static md:w-80 md:inset-auto md:z-auto shrink-0 h-auto md:h-full flex flex-col rounded-2xl border border-cream-200 bg-surface/95 backdrop-blur-xl p-4 shadow-2xl md:shadow-lg overflow-hidden animate-fade-in">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-semibold text-warm-800 truncate flex-1">
                 {previewLoading ? '加载中...' : previewNode?.title}

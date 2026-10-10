@@ -7,6 +7,7 @@ import {
   FileText,
   Plus,
   Trash2,
+  Edit3,
   CheckCircle2,
   AlertCircle,
   BarChart3,
@@ -50,6 +51,7 @@ interface ImportResourceModalProps {
   isOpen: boolean
   onClose: () => void
   onQuestionsUpdated?: () => void
+  onBooksUpdated?: () => void
   defaultTab?: 'books' | 'import_quiz' | 'analytics'
 }
 
@@ -57,6 +59,7 @@ export default function ImportResourceModal({
   isOpen,
   onClose,
   onQuestionsUpdated,
+  onBooksUpdated,
   defaultTab = 'books',
 }: ImportResourceModalProps) {
   const [activeTab, setActiveTab] = useState<'books' | 'import_quiz' | 'analytics'>(defaultTab)
@@ -68,13 +71,26 @@ export default function ImportResourceModal({
   const [, setBookContent] = useState<string>('')
   const [readingBook, setReadingBook] = useState(false)
   const [uploadDomain, setUploadDomain] = useState<'math' | 'cs_408'>('math')
-  const [uploadCategory, setUploadCategory] = useState<string>('教材')
+  const [uploadCategory, setUploadCategory] = useState<string>('经典教材')
   const [isUploading, setIsUploading] = useState(false)
+  const [renamingBook, setRenamingBook] = useState<BookItem | null>(null)
+  const [newBookName, setNewBookName] = useState<string>('')
+  const [isRenaming, setIsRenaming] = useState(false)
+  const [isSuggestingName, setIsSuggestingName] = useState(false)
 
   // AI Extraction from Book
   const [extractSnippet, setExtractSnippet] = useState('')
   const [isExtracting, setIsExtracting] = useState(false)
   const [extractResult, setExtractResult] = useState<{ note?: any; questions?: any[] } | null>(null)
+  const [autoExtractStatus, setAutoExtractStatus] = useState<'idle' | 'analyzing' | 'done' | 'error'>('idle')
+  const [autoExtractStep, setAutoExtractStep] = useState<string>('')
+  const [autoExtractResult, setAutoExtractResult] = useState<{
+    note?: any
+    questions?: any[]
+    savedNotePath?: string
+    questionsCount?: number
+    subject?: string
+  } | null>(null)
 
   // Quiz Import state
   const [rawQuestionText, setRawQuestionText] = useState('')
@@ -146,6 +162,152 @@ export default function ImportResourceModal({
 
   // ===== Book Actions =====
 
+  const handleAutoExtract = async (relativePath: string, domain?: 'math' | 'cs_408', bookName?: string) => {
+    setAutoExtractStatus('analyzing')
+    setAutoExtractStep('正在解析资料目录架构与考点脉络...')
+    setAutoExtractResult(null)
+    try {
+      setAutoExtractStep('AI 命题与研学专家正在提炼知识库笔记并命制配套真题...')
+      const res = await fetch('/api/books/auto-extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          relativePath,
+          domain: domain || uploadDomain,
+          bookName,
+        }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setAutoExtractResult({
+          note: data.note,
+          questions: data.questions,
+          savedNotePath: data.savedNotePath,
+          questionsCount: data.questionsCount,
+          subject: data.subject
+        })
+        setAutoExtractStatus('done')
+        setImportFeedback(`🎉 资料《${bookName || '教材'}》已成功分析归纳！已生成 1 篇知识库笔记并录入 ${data.questionsCount || 0} 道题进入题库！`)
+        loadCustomQuestions()
+        onQuestionsUpdated?.()
+      } else {
+        setAutoExtractStatus('error')
+        alert(data.error || '自动分析提炼失败')
+      }
+    } catch (err: any) {
+      setAutoExtractStatus('error')
+      alert('自动分析异常: ' + (err.message || String(err)))
+    }
+  }
+
+  const handleDeleteBook = async (book: BookItem, e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    const confirmDelete = window.confirm(
+      `确定要永久删除参考资料《${book.name}》吗？\n删除后该文件将从本地 raw-sources 归档库彻底移除。`
+    )
+    if (!confirmDelete) return
+
+    try {
+      const res = await fetch('/api/books/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ relativePath: book.relativePath }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        if (selectedBook?.id === book.id || selectedBook?.relativePath === book.relativePath) {
+          setSelectedBook(null)
+          setAutoExtractResult(null)
+          setAutoExtractStatus('idle')
+        }
+        await loadBooks()
+        onBooksUpdated?.()
+        window.dispatchEvent(new CustomEvent('vault-updated'))
+      } else {
+        alert(data.error || '删除失败，请稍后重试')
+      }
+    } catch (err: any) {
+      alert('删除异常: ' + (err.message || String(err)))
+    }
+  }
+
+  const handleOpenRename = (book: BookItem, e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    setRenamingBook(book)
+    setNewBookName(book.name)
+  }
+
+  const handleConfirmRename = async () => {
+    if (!renamingBook || !newBookName.trim()) return
+    setIsRenaming(true)
+    try {
+      const res = await fetch('/api/books/rename', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          relativePath: renamingBook.relativePath,
+          newName: newBookName.trim()
+        })
+      })
+      const data = await res.json()
+      if (data.success) {
+        if (selectedBook && (selectedBook.id === renamingBook.id || selectedBook.relativePath === renamingBook.relativePath)) {
+          setSelectedBook({
+            ...selectedBook,
+            name: data.newName || newBookName.trim(),
+            relativePath: data.newRelativePath || selectedBook.relativePath
+          })
+        }
+        setRenamingBook(null)
+        await loadBooks()
+        onBooksUpdated?.()
+        window.dispatchEvent(new CustomEvent('vault-updated'))
+      } else {
+        alert(data.error || '重命名失败')
+      }
+    } catch (err: any) {
+      alert('重命名异常: ' + (err.message || String(err)))
+    } finally {
+      setIsRenaming(false)
+    }
+  }
+
+  const handleSuggestName = async () => {
+    if (!renamingBook) return
+    setIsSuggestingName(true)
+    try {
+      const res = await fetch('/api/books/suggest-name', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ relativePath: renamingBook.relativePath })
+      })
+      const data = await res.json()
+      if (data.success && data.suggestedName) {
+        setNewBookName(data.suggestedName)
+      } else {
+        alert(data.error || '未能提炼出建议书名')
+      }
+    } catch (err: any) {
+      alert('获取建议书名异常: ' + (err.message || String(err)))
+    } finally {
+      setIsSuggestingName(false)
+    }
+  }
+
+  const handleQuickCleanName = () => {
+    if (!newBookName) return
+    const dotIdx = newBookName.lastIndexOf('.')
+    const ext = dotIdx !== -1 ? newBookName.slice(dotIdx) : ''
+    const base = dotIdx !== -1 ? newBookName.slice(0, dotIdx) : newBookName
+    const cleaned = base
+      .replace(/_\d+_\d+$/, '')
+      .replace(/^[0-9a-f]{16,}_?/i, '')
+      .replace(/^(\d{10,}_\w+)/, '')
+      .replace(/^[0-9]+[_\s-]+/, '')
+      .trim()
+    setNewBookName(`${cleaned || base}${ext}`)
+  }
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -170,8 +332,27 @@ export default function ImportResourceModal({
       }
 
       if (data.success) {
-        setImportFeedback(`资料《${file.name}》已成功导入并安全归档至 raw-sources！`)
+        setImportFeedback(`资料《${file.name}》已成功上传！AI 正在自动深度研读并归纳进题库与知识库...`)
         loadBooks()
+        onBooksUpdated?.()
+        window.dispatchEvent(new CustomEvent('vault-updated'))
+        if (data.file?.relativePath) {
+          const uploadedBook: BookItem = {
+            id: data.file.relativePath,
+            name: data.file.name,
+            relativePath: data.file.relativePath,
+            fullPath: '',
+            domain: uploadDomain,
+            category: uploadCategory,
+            size: data.file.size,
+            ext: '.' + data.file.name.split('.').pop(),
+            lastModified: new Date().toISOString(),
+            isTextReadable: true
+          }
+          setSelectedBook(uploadedBook)
+          // 自动启动深度分析并归纳进知识库与题库
+          await handleAutoExtract(data.file.relativePath, uploadDomain, data.file.name)
+        }
       } else {
         alert(data.error || '上传失败，请稍后重试')
       }
@@ -186,10 +367,6 @@ export default function ImportResourceModal({
   const handleReadBook = async (book: BookItem) => {
     setSelectedBook(book)
     setExtractResult(null)
-    if (!book.isTextReadable) {
-      setBookContent('')
-      return
-    }
     setReadingBook(true)
     try {
       const res = await fetch('/api/books/read', {
@@ -200,7 +377,7 @@ export default function ImportResourceModal({
       const data = await res.json()
       if (data.content) {
         setBookContent(data.content)
-        setExtractSnippet(data.content.slice(0, 2000))
+        setExtractSnippet(data.content.slice(0, 3000))
       }
     } catch (err) {
       console.error('Read error:', err)
@@ -463,10 +640,11 @@ export default function ImportResourceModal({
                         onChange={e => setUploadCategory(e.target.value)}
                         className="w-full text-xs rounded-lg border border-slate-200 px-2.5 py-1.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
                       >
-                        <option value="教材">经典教材</option>
-                        <option value="真题">历年真题</option>
+                        <option value="经典教材">经典教材</option>
                         <option value="辅导讲义">辅导讲义/精讲</option>
+                        <option value="真题">历年真题</option>
                         <option value="模拟题">模拟测试卷</option>
+                        <option value="交互课件">交互仿真课件</option>
                       </select>
                     </div>
                   </div>
@@ -535,7 +713,7 @@ export default function ImportResourceModal({
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex items-center gap-2 min-w-0">
                               <FileText className="h-4 w-4 text-indigo-500 shrink-0" />
-                              <span className="text-xs font-semibold text-slate-800 truncate">
+                              <span className="text-xs font-semibold text-slate-800 truncate" title={b.name}>
                                 {b.name}
                               </span>
                             </div>
@@ -547,6 +725,40 @@ export default function ImportResourceModal({
                           <div className="flex items-center justify-between text-[10px] text-slate-400 mt-2">
                             <span>{b.domain === 'cs_408' ? '408 综合' : '考研数学'} · {b.ext.toUpperCase()}</span>
                             <span>{(b.size / 1024).toFixed(1)} KB</span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-slate-200/50">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSelectedBook(b)
+                                handleAutoExtract(b.relativePath, b.domain, b.name)
+                              }}
+                              disabled={autoExtractStatus === 'analyzing'}
+                              className="flex items-center gap-1 text-[11px] font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50/80 hover:bg-indigo-100 px-2 py-0.5 rounded-md transition-all cursor-pointer disabled:opacity-50"
+                            >
+                              <Sparkles className="h-3 w-3 text-amber-500" />
+                              <span>AI 自动分析入库</span>
+                            </button>
+                            <span className="text-[10px] text-slate-400 ml-auto">
+                              {b.isTextReadable ? '已就绪' : '支持抽取'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => handleOpenRename(b, e)}
+                              className="p-1 rounded-md text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors ml-1 cursor-pointer"
+                              title="修改/重命名教材名称"
+                            >
+                              <Edit3 className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => handleDeleteBook(b, e)}
+                              className="p-1 rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors ml-0.5 cursor-pointer"
+                              title="删除此教材"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -566,23 +778,117 @@ export default function ImportResourceModal({
                       </span>
                     </div>
                     {selectedBook && (
-                      <span className="text-xs text-slate-400">{selectedBook.relativePath}</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => handleOpenRename(selectedBook, e)}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-amber-200 text-amber-700 hover:bg-amber-50 text-xs font-medium transition-colors cursor-pointer"
+                          title="修改此教材名称"
+                        >
+                          <Edit3 className="h-3.5 w-3.5" />
+                          <span>重命名</span>
+                        </button>
+                        <button
+                          onClick={() => handleAutoExtract(selectedBook.relativePath, selectedBook.domain, selectedBook.name)}
+                          disabled={autoExtractStatus === 'analyzing'}
+                          className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-semibold shadow-xs hover:from-indigo-500 hover:to-purple-500 transition-all cursor-pointer disabled:opacity-50"
+                        >
+                          <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+                          <span>一键全自动分析入库</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteBook(selectedBook, e)}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 text-xs font-medium transition-colors cursor-pointer"
+                          title="删除此教材"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span>删除</span>
+                        </button>
+                      </div>
                     )}
                   </div>
 
+                  {autoExtractStatus === 'analyzing' ? (
+                    <div className="py-12 px-6 rounded-2xl bg-gradient-to-br from-indigo-50/80 via-white to-purple-50/80 border border-indigo-100/80 flex flex-col items-center justify-center text-center gap-3 animate-pulse my-4">
+                      <div className="p-3.5 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-500/25">
+                        <RefreshCw className="h-6 w-6 animate-spin" />
+                      </div>
+                      <div className="text-sm font-bold text-slate-800">
+                        {autoExtractStep || 'AI 正在深度解析资料知识点...'}
+                      </div>
+                      <p className="text-xs text-slate-500 max-w-md leading-relaxed">
+                        系统正在自动提取核心考点大纲、构建 Obsidian 知识库标准 Markdown 笔记，并命制考研真题直接归纳入库，请稍候片刻...
+                      </p>
+                    </div>
+                  ) : autoExtractStatus === 'done' && autoExtractResult ? (
+                    <div className="mb-4 p-4 rounded-xl bg-emerald-50/70 border border-emerald-200/80 animate-in fade-in">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                          已全自动归纳进知识库与做题题库！
+                        </span>
+                        <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                          已沉淀 1 篇笔记 · 录入 {autoExtractResult.questionsCount || 0} 道题
+                        </span>
+                      </div>
+
+                      {autoExtractResult.savedNotePath && (
+                        <div className="mb-3 p-3 rounded-lg bg-white border border-emerald-100 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-indigo-700">📚 知识库笔记：{autoExtractResult.note?.title}</span>
+                            <span className="text-[10px] text-emerald-600 font-medium">✓ 已写入 Obsidian</span>
+                          </div>
+                          <div className="mt-1 font-mono text-[11px] text-slate-600 bg-slate-50 p-1.5 rounded">
+                            {autoExtractResult.savedNotePath}
+                          </div>
+                        </div>
+                      )}
+
+                      {autoExtractResult.questions && autoExtractResult.questions.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700">
+                            <span>🎯 自动命制并归入题库真题：</span>
+                            <span className="text-indigo-600 font-normal">做题中心随时可刷</span>
+                          </div>
+                          {autoExtractResult.questions.map((q, idx) => (
+                            <div key={idx} className="p-3 rounded-lg bg-white border border-slate-100 text-xs shadow-2xs">
+                              <div className="font-medium text-slate-800 mb-1">
+                                {idx + 1}. <MarkdownRenderer content={q.question} />
+                              </div>
+                              {q.options && (
+                                <div className="grid grid-cols-2 gap-1.5 my-2 text-[11px] text-slate-600 bg-slate-50/70 p-2 rounded">
+                                  {Object.entries(q.options).map(([k, v]) => (
+                                    <div key={k} className="truncate">
+                                      <span className="font-semibold">{k}.</span> {v as string}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              <div className="text-[11px] text-slate-500 flex items-center justify-between pt-1 border-t border-slate-50">
+                                <div>正确答案：<span className="font-bold text-emerald-600">{q.answer}</span></div>
+                                <div className="text-[10px] text-slate-400 truncate max-w-[260px]">考点：{(q.tags || []).join('、')}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+
                   {readingBook ? (
-                    <div className="py-16 text-center text-xs text-slate-400">正在读取文本...</div>
+                    <div className="py-16 text-center text-xs text-slate-400">正在读取教材大纲与核心考点...</div>
                   ) : (
                     <div className="flex-1 flex flex-col gap-3">
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
                           <label className="text-xs font-medium text-slate-700">
-                            从参考书中选取或粘贴核心章节/定理片段（AI 将自动提取为规范笔记并生成真题）：
+                            从参考书中选取或微调章节文本片段（或直接点击上方一键全自动分析）：
                           </label>
                           <span className="text-[10px] text-slate-400">{extractSnippet.length} 字</span>
                         </div>
                         <textarea
-                          rows={6}
+                          rows={5}
                           value={extractSnippet}
                           onChange={e => setExtractSnippet(e.target.value)}
                           placeholder="在此粘贴该教材或讲义中的定义、定理或例题文本（如：泰勒公式在求未定式极限中的应用、红黑树插入旋转条件等）..."
@@ -590,7 +896,7 @@ export default function ImportResourceModal({
                         />
                       </div>
 
-                      <div className="flex justify-end">
+                      <div className="flex justify-end gap-2">
                         <button
                           onClick={handleAIExtract}
                           disabled={isExtracting || !extractSnippet.trim()}
@@ -604,7 +910,7 @@ export default function ImportResourceModal({
                           ) : (
                             <>
                               <Sparkles className="h-4 w-4" />
-                              <span>一键提炼知识库笔记 & 生成配套真题</span>
+                              <span>提炼指定片段知识库笔记 & 生成配套真题</span>
                             </>
                           )}
                         </button>
@@ -1065,6 +1371,112 @@ D. 5
           )}
         </div>
       </div>
+
+      {/* 修改教材/资料名称弹窗 */}
+      {renamingBook && (
+        <div
+          onClick={() => setRenamingBook(null)}
+          className="fixed inset-0 z-60 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4"
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-md p-6 animate-in fade-in zoom-in-95 duration-150"
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-amber-50 rounded-xl text-amber-600 border border-amber-200">
+                  <Edit3 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">修改教材 / 资料名称</h3>
+                  <p className="text-[11px] text-slate-400">重命名后将同步更新磁盘文件名与知识库关联</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRenamingBook(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                  原文件名
+                </label>
+                <div className="text-xs font-mono text-slate-500 bg-slate-50 p-2.5 rounded-xl border border-slate-200 break-all select-all">
+                  {renamingBook.name}
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-slate-700">
+                    新文件名
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleQuickCleanName}
+                      className="text-[11px] text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 px-2 py-0.5 rounded-md transition-colors cursor-pointer border border-amber-200/60"
+                      title="快速去除随机长哈希与时间戳后缀"
+                    >
+                      🧹 一键去杂乱后缀
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSuggestName}
+                      disabled={isSuggestingName}
+                      className="flex items-center gap-1 text-[11px] text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded-md transition-colors cursor-pointer border border-indigo-200/60 disabled:opacity-50"
+                      title="让 AI 读取前言目录提炼标准书名"
+                    >
+                      <Sparkles className="w-3 h-3 text-amber-500" />
+                      <span>{isSuggestingName ? 'AI 识别中...' : 'AI 智能识名'}</span>
+                    </button>
+                  </div>
+                </div>
+                <input
+                  type="text"
+                  value={newBookName}
+                  onChange={e => setNewBookName(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') handleConfirmRename()
+                  }}
+                  className="w-full text-xs rounded-xl border border-slate-300 px-3 py-2 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                  placeholder="请输入清晰的教材名称（例如：高等数学第七版上册.pdf）"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setRenamingBook(null)}
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-medium cursor-pointer"
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmRename}
+                  disabled={isRenaming || !newBookName.trim()}
+                  className="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                >
+                  {isRenaming ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>重命名中...</span>
+                    </>
+                  ) : (
+                    <span>保存修改</span>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -5,7 +5,7 @@ import {
   BookOpen, FileText, Code2, XCircle,
   Plus, Search, Target, Clock,
   Download, RefreshCw, Loader2, ChevronRight,
-  Check, ThumbsUp, ThumbsDown, Minus, ArrowRight
+  Check, ThumbsUp, ThumbsDown, Minus, ArrowRight, Trash2, Sparkles, Edit3
 } from 'lucide-react'
 import { api, type BookItem, type DailyReviewData, type SubjectStats } from '../services/api'
 import { CURATED_HANDOUTS, type HandoutItem } from '../data/handoutsData'
@@ -15,8 +15,11 @@ import PdfViewerModal from '../components/PdfViewerModal'
 import CoursewareViewerModal from '../components/CoursewareViewerModal'
 import QuickPracticeModal from '../components/QuickPracticeModal'
 import ImportResourceModal from '../components/ImportResourceModal'
+import MasteryTopologyView from '../components/study/MasteryTopologyView'
+import StepTutorModal from '../components/study/StepTutorModal'
+import FlashcardsTab from '../components/study/FlashcardsTab'
 
-type Tab = 'handouts' | 'pdfs' | 'coursewares' | 'errors' | 'progress'
+type Tab = 'topology' | 'flashcards' | 'handouts' | 'pdfs' | 'coursewares' | 'errors' | 'progress'
 
 // Palette for charts
 const colorPalette = [
@@ -62,6 +65,102 @@ export default function Study() {
       setLoadingBooks(false)
     }
   }, [])
+
+  const handleDeleteBook = async (book: BookItem, e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    const confirmDelete = window.confirm(`确定要永久删除参考资料《${book.name}》吗？\n删除后该文件将从本地 raw-sources 归档库彻底移除。`)
+    if (!confirmDelete) return
+
+    try {
+      const res = await fetch('/api/books/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ relativePath: book.relativePath }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        loadMaterials()
+      } else {
+        alert(data.error || '删除失败，请稍后重试')
+      }
+    } catch (err: any) {
+      alert('删除异常: ' + (err.message || String(err)))
+    }
+  }
+
+  // Rename book state & handlers
+  const [renamingBook, setRenamingBook] = useState<BookItem | null>(null)
+  const [newBookName, setNewBookName] = useState<string>('')
+  const [isRenaming, setIsRenaming] = useState(false)
+  const [isSuggestingName, setIsSuggestingName] = useState(false)
+
+  const handleOpenRename = (book: BookItem, e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    setRenamingBook(book)
+    setNewBookName(book.name)
+  }
+
+  const handleConfirmRename = async () => {
+    if (!renamingBook || !newBookName.trim()) return
+    setIsRenaming(true)
+    try {
+      const res = await fetch('/api/books/rename', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          relativePath: renamingBook.relativePath,
+          newName: newBookName.trim()
+        })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setRenamingBook(null)
+        loadMaterials()
+      } else {
+        alert(data.error || '重命名失败')
+      }
+    } catch (err: any) {
+      alert('重命名异常: ' + (err.message || String(err)))
+    } finally {
+      setIsRenaming(false)
+    }
+  }
+
+  const handleSuggestName = async () => {
+    if (!renamingBook) return
+    setIsSuggestingName(true)
+    try {
+      const res = await fetch('/api/books/suggest-name', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ relativePath: renamingBook.relativePath })
+      })
+      const data = await res.json()
+      if (data.success && data.suggestedName) {
+        setNewBookName(data.suggestedName)
+      } else {
+        alert(data.error || '未能提炼出建议书名')
+      }
+    } catch (err: any) {
+      alert('获取建议书名异常: ' + (err.message || String(err)))
+    } finally {
+      setIsSuggestingName(false)
+    }
+  }
+
+  const handleQuickCleanName = () => {
+    if (!newBookName) return
+    const dotIdx = newBookName.lastIndexOf('.')
+    const ext = dotIdx !== -1 ? newBookName.slice(dotIdx) : ''
+    const base = dotIdx !== -1 ? newBookName.slice(0, dotIdx) : newBookName
+    const cleaned = base
+      .replace(/_\d+_\d+$/, '')
+      .replace(/^[0-9a-f]{16,}_?/i, '')
+      .replace(/^(\d{10,}_\w+)/, '')
+      .replace(/^[0-9]+[_\s-]+/, '')
+      .trim()
+    setNewBookName(`${cleaned || base}${ext}`)
+  }
 
   useEffect(() => {
     loadMaterials()
@@ -239,6 +338,8 @@ export default function Study() {
         {/* Navigation tabs */}
         <div className="flex items-center gap-1.5">
           {[
+            { key: 'topology' as Tab, label: '🔥 考点拓扑热力', count: null },
+            { key: 'flashcards' as Tab, label: '🎴 易忘闪卡攻坚', count: null },
             { key: 'handouts' as Tab, label: '📖 精编核心讲义', count: allHandouts.length },
             { key: 'pdfs' as Tab, label: '📑 PDF 电子教材与真题', count: pdfBooks.length },
             { key: 'coursewares' as Tab, label: '🌐 HTML 交互仿真课件', count: INTERACTIVE_COURSEWARES.length },
@@ -302,6 +403,12 @@ export default function Study() {
 
       {/* Main Tab Content */}
       <div className="flex-1 overflow-y-auto pr-1">
+        {/* TAB 0: 考点知识拓扑与掌握度热力分布 */}
+        {tab === 'topology' && <MasteryTopologyView />}
+
+        {/* TAB 0.5: 408 易忘考点记忆闪卡与极速背诵 */}
+        {tab === 'flashcards' && <FlashcardsTab />}
+
         {/* TAB 1: 核心讲义精读 */}
         {tab === 'handouts' && (
           <div className="space-y-4">
@@ -446,10 +553,20 @@ export default function Study() {
                           <div className="p-2.5 rounded-xl bg-red-50 text-red-500 border border-red-200 shrink-0 group-hover:scale-105 transition-transform">
                             <FileText className="w-6 h-6" />
                           </div>
-                          <div className="min-w-0">
-                            <h3 className="text-sm font-bold text-warm-800 group-hover:text-red-600 transition-colors leading-snug line-clamp-2">
-                              {book.name}
-                            </h3>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-1">
+                              <h3 className="text-sm font-bold text-warm-800 group-hover:text-red-600 transition-colors leading-snug line-clamp-2">
+                                {book.name}
+                              </h3>
+                              <button
+                                type="button"
+                                onClick={e => handleOpenRename(book, e)}
+                                className="p-1 rounded-md text-warm-400 hover:text-amber-600 hover:bg-amber-50 transition-all opacity-0 group-hover:opacity-100 shrink-0 cursor-pointer"
+                                title="修改教材名称"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                             <div className="text-[11px] text-warm-400 mt-1">
                               {isCs ? '408 计算机' : '考研数学'} · {book.category}
                             </div>
@@ -461,7 +578,23 @@ export default function Study() {
                         <span className="text-[11px] text-warm-400">
                           {new Date(book.lastModified).toLocaleDateString('zh-CN')}
                         </span>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={e => handleOpenRename(book, e)}
+                            className="p-1.5 rounded-lg text-warm-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer"
+                            title="修改/重命名教材名称"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={e => handleDeleteBook(book, e)}
+                            className="p-1.5 rounded-lg text-warm-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                            title="删除该教材文件"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                           <a
                             href={`/api/books/raw?path=${encodeURIComponent(book.relativePath)}`}
                             target="_blank"
@@ -473,7 +606,7 @@ export default function Study() {
                           >
                             <Download className="w-3.5 h-3.5" />
                           </a>
-                          <span className="font-semibold text-red-600 flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+                          <span className="font-semibold text-red-600 flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform ml-1">
                             内嵌阅读 <ChevronRight className="w-3.5 h-3.5" />
                           </span>
                         </div>
@@ -609,7 +742,114 @@ export default function Study() {
           loadMaterials()
         }}
         onQuestionsUpdated={loadMaterials}
+        onBooksUpdated={loadMaterials}
       />
+
+      {/* 修改教材/资料名称弹窗 */}
+      {renamingBook && (
+        <div
+          onClick={() => setRenamingBook(null)}
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="bg-white rounded-2xl border border-cream-300 shadow-2xl w-full max-w-md p-6 animate-in fade-in zoom-in-95 duration-150"
+          >
+            <div className="flex items-center justify-between border-b border-cream-200 pb-3 mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-amber-50 rounded-xl text-amber-600 border border-amber-200">
+                  <Edit3 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-warm-800">修改教材 / 资料名称</h3>
+                  <p className="text-[11px] text-warm-400">重命名后将同步更新磁盘文件名与知识库关联</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRenamingBook(null)}
+                className="p-1 rounded-lg text-warm-400 hover:text-warm-700 hover:bg-cream-100 cursor-pointer"
+              >
+                <XCircle className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-warm-600 mb-1.5">
+                  原文件名
+                </label>
+                <div className="text-xs font-mono text-warm-500 bg-cream-100/80 p-2.5 rounded-xl border border-cream-200 break-all select-all">
+                  {renamingBook.name}
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-warm-700">
+                    新文件名
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleQuickCleanName}
+                      className="text-[11px] text-amber-600 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 px-2 py-0.5 rounded-md transition-colors cursor-pointer"
+                      title="快速去除随机长哈希与时间戳后缀"
+                    >
+                      🧹 一键去杂乱后缀
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSuggestName}
+                      disabled={isSuggestingName}
+                      className="flex items-center gap-1 text-[11px] text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded-md transition-colors cursor-pointer disabled:opacity-50"
+                      title="让 AI 读取前言目录提炼标准书名"
+                    >
+                      <Sparkles className="w-3 h-3 text-amber-500" />
+                      <span>{isSuggestingName ? 'AI 识别中...' : 'AI 智能识名'}</span>
+                    </button>
+                  </div>
+                </div>
+                <input
+                  type="text"
+                  value={newBookName}
+                  onChange={e => setNewBookName(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') handleConfirmRename()
+                    if (e.key === 'Escape') setRenamingBook(null)
+                  }}
+                  autoFocus
+                  placeholder="请输入规范书名，例如：2026操作系统高分笔记.pdf"
+                  className="w-full text-xs bg-cream-50 border border-cream-300 focus:border-accent-orange focus:ring-1 focus:ring-accent-orange rounded-xl p-2.5 outline-hidden text-warm-800"
+                />
+                <p className="text-[10px] text-warm-400 mt-1">
+                  提示：如未填写扩展名，系统将自动保持原扩展名（{renamingBook.ext}）
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-cream-200/60">
+                <button
+                  type="button"
+                  onClick={() => setRenamingBook(null)}
+                  disabled={isRenaming}
+                  className="px-3.5 py-1.5 rounded-xl border border-cream-300 text-warm-600 hover:bg-cream-100 text-xs font-medium cursor-pointer"
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmRename}
+                  disabled={isRenaming || !newBookName.trim() || newBookName.trim() === renamingBook.name}
+                  className="px-4 py-1.5 rounded-xl bg-accent-orange hover:bg-accent-orange/90 text-white text-xs font-semibold shadow-xs disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                >
+                  {isRenaming && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>{isRenaming ? '保存中...' : '确认重命名'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -622,6 +862,7 @@ function DailyErrorTab() {
   const [currentIdx, setCurrentIdx] = useState(0)
   const [showAnswer, setShowAnswer] = useState(false)
   const [reviewing, setReviewing] = useState(false)
+  const [tutorOpen, setTutorOpen] = useState(false)
 
   const loadData = useCallback(() => {
     setLoading(true)
@@ -745,16 +986,30 @@ function DailyErrorTab() {
             )}
           </div>
         ) : (
-          <div className="border-t border-cream-200 p-4 text-center">
+          <div className="border-t border-cream-200 p-4 flex items-center justify-center gap-4 bg-cream-50/50">
+            <button
+              onClick={() => setTutorOpen(true)}
+              className="px-4 py-2 rounded-xl bg-accent-orange/10 hover:bg-accent-orange/20 text-accent-orange text-xs font-bold flex items-center gap-1.5 transition-colors"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              💡 AI 启发式分步辅导 (切入点/挑刺)
+            </button>
             <button
               onClick={() => setShowAnswer(true)}
-              className="text-sm font-semibold text-accent-orange hover:text-accent-orange/80 transition-colors"
+              className="px-4 py-2 rounded-xl bg-cream-200 hover:bg-cream-300 text-warm-700 text-xs font-semibold transition-colors"
             >
               点击查看正确答案与解析
             </button>
           </div>
         )}
       </div>
+
+      <StepTutorModal
+        isOpen={tutorOpen}
+        onClose={() => setTutorOpen(false)}
+        initialQuestion={currentQ.question}
+        initialOptions=""
+      />
 
       {showAnswer && (
         <div className="flex gap-3">

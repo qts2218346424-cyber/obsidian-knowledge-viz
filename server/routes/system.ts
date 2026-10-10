@@ -2,6 +2,7 @@ import { Router } from 'express'
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
+import { ProxyAgent, fetch as undiciFetch } from 'undici'
 import {
   config,
   loadedConfigPath,
@@ -82,13 +83,18 @@ systemRouter.get('/system/network', getNetworkHandler)
 // Settings
 systemRouter.get('/settings', (_req, res) => {
   try {
-    const masked = { ...config }
+    const masked = JSON.parse(JSON.stringify(config))
     if (masked.ai) {
-      masked.ai = {
-        ...masked.ai,
-        apiKey: masked.ai.apiKey
-          ? masked.ai.apiKey.substring(0, 8) + '...' + masked.ai.apiKey.substring(masked.ai.apiKey.length - 4)
-          : '',
+      if (masked.ai.apiKey) {
+        masked.ai.apiKey = masked.ai.apiKey.substring(0, 8) + '...' + masked.ai.apiKey.substring(masked.ai.apiKey.length - 4)
+      }
+      if (Array.isArray(masked.ai.endpoints)) {
+        masked.ai.endpoints = masked.ai.endpoints.map((ep: any) => ({
+          ...ep,
+          apiKey: ep.apiKey
+            ? ep.apiKey.substring(0, Math.min(8, ep.apiKey.length)) + '...' + ep.apiKey.substring(Math.max(0, ep.apiKey.length - 4))
+            : '',
+        }))
       }
     }
     res.json({ ...masked, configPath: loadedConfigPath })
@@ -113,7 +119,36 @@ systemRouter.put('/settings', (req, res) => {
     if (proxy !== undefined) config.proxy = proxy
     if (localAgents !== undefined) config.localAgents = localAgents
     if (ai !== undefined) {
-      config.ai = ai
+      // 恢复顶级 API Key（若未修改）
+      let resolvedApiKey = ai.apiKey
+      if (resolvedApiKey && resolvedApiKey.includes('...') && config.ai?.apiKey) {
+        resolvedApiKey = config.ai.apiKey
+      }
+
+      // 恢复各 endpoint 的 API Key（若未修改）
+      let resolvedEndpoints = ai.endpoints
+      if (Array.isArray(resolvedEndpoints)) {
+        resolvedEndpoints = resolvedEndpoints.map(ep => {
+          if (ep.apiKey && ep.apiKey.includes('...')) {
+            // 优先从已有的 endpoints 中按 id 恢复
+            const oldEp = config.ai?.endpoints?.find(o => o.id === ep.id)
+            if (oldEp?.apiKey && !oldEp.apiKey.includes('...')) {
+              return { ...ep, apiKey: oldEp.apiKey }
+            }
+            // 若为首次从老配置迁移或匹配到老顶级配置，尝试从原有顶级 apiKey 恢复
+            if (config.ai?.apiKey && !config.ai.apiKey.includes('...')) {
+              return { ...ep, apiKey: config.ai.apiKey }
+            }
+          }
+          return ep
+        })
+      }
+
+      config.ai = {
+        ...ai,
+        apiKey: resolvedApiKey || '',
+        endpoints: resolvedEndpoints,
+      }
       reinitAnthropic()
     }
 
@@ -127,6 +162,34 @@ systemRouter.put('/settings', (req, res) => {
     res.json({ ok: true, vaultPath: config.vaultPath, aiConfigured: !!config.ai })
   } catch (err: any) {
     res.status(500).json({ error: err.message })
+  }
+})
+
+// Test Network Proxy
+systemRouter.post('/test-proxy', async (req, res) => {
+  const proxyUrl = req.body?.proxy || config.proxy
+  if (!proxyUrl) {
+    res.status(400).json({ error: '未配置代理地址，请先输入网络代理 URL' })
+    return
+  }
+  const startTime = Date.now()
+  try {
+    const dispatcher = new ProxyAgent(proxyUrl)
+    const resp = await undiciFetch('https://www.google.com/generate_204', {
+      dispatcher,
+      signal: AbortSignal.timeout(5000),
+    })
+    const duration = Date.now() - startTime
+    if (resp.status === 204 || resp.ok) {
+      res.json({ ok: true, latency: duration, message: `代理连接成功 (延迟 ${duration}ms)` })
+    } else {
+      res.status(resp.status).json({ error: `代理响应异常: HTTP ${resp.status}` })
+    }
+  } catch (err: any) {
+    const duration = Date.now() - startTime
+    res.status(502).json({
+      error: `代理连接失败: ${err.message || '网络连接超时'} (已尝试 ${duration}ms)`
+    })
   }
 })
 

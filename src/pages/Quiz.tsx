@@ -9,6 +9,7 @@ import {
   Lightbulb,
   CheckCircle2,
   XCircle,
+  X,
   Flame,
   BookOpen,
   BarChart3,
@@ -187,6 +188,7 @@ export default function Quiz() {
   const [errorReasons, setErrorReasons] = useState<Record<string, string>>({})
   const [scratchpads, setScratchpads] = useState<Record<string, string>>({})
   const [activeSideTab, setActiveSideTab] = useState<'palette' | 'scratchpad' | 'hints'>('palette')
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const scratchpadRef = useRef<HTMLTextAreaElement>(null)
 
@@ -200,6 +202,9 @@ export default function Quiz() {
   const [savingError, setSavingError] = useState(false)
   const [savedErrorMsg, setSavedErrorMsg] = useState<string | null>(null)
   const [generatingVariants, setGeneratingVariants] = useState(false)
+  const [savingAllErrors, setSavingAllErrors] = useState(false)
+  const [saveAllMsg, setSaveAllMsg] = useState<string | null>(null)
+  const [savedItemIds, setSavedItemIds] = useState<Set<string>>(new Set())
 
   const fetchCustomQuestions = useCallback(async () => {
     try {
@@ -245,6 +250,7 @@ export default function Quiz() {
       })
       const data = await res.json()
       if (data.success) {
+        setSavedItemIds(prev => new Set(prev).add(currentQ.id))
         setSavedErrorMsg(`已自动生成知识库错题笔记: ${data.fileName}`)
         setTimeout(() => setSavedErrorMsg(null), 4000)
       } else {
@@ -254,6 +260,38 @@ export default function Quiz() {
       alert('保存失败: ' + err.message)
     } finally {
       setSavingError(false)
+    }
+  }
+
+  const handleSaveAllWrongQuestions = async () => {
+    if (!result?.wrongQuestions || result.wrongQuestions.length === 0) return
+    setSavingAllErrors(true)
+    setSaveAllMsg(null)
+    try {
+      let successCount = 0
+      for (const item of result.wrongQuestions) {
+        const res = await fetch('/api/quiz/save-error', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            question: item.question,
+            userAnswer: item.userAnswer,
+            errorType: errorReasons[item.question.id] || item.errorReason || '概念模糊',
+            notes: scratchpads[item.question.id] || '',
+          }),
+        })
+        const data = await res.json()
+        if (data.success) {
+          successCount++
+          setSavedItemIds(prev => new Set(prev).add(item.question.id))
+        }
+      }
+      setSaveAllMsg(`🎉 成功将 ${successCount} 道错题批量沉淀至 Obsidian 错题集！`)
+      setTimeout(() => setSaveAllMsg(null), 5000)
+    } catch (err: any) {
+      alert('批量归档失败: ' + err.message)
+    } finally {
+      setSavingAllErrors(false)
     }
   }
 
@@ -394,6 +432,7 @@ export default function Quiz() {
   const goToQuestion = (index: number) => {
     if (index < 0 || index >= questions.length) return
     setCurrentIndex(index)
+    setMobileDrawerOpen(false)
     const q = questions[index]
     setSelectedOption(answers[q.id] || null)
     setBlankInput(answers[q.id] || '')
@@ -462,6 +501,39 @@ export default function Quiz() {
       finishQuiz()
     }
   }, [currentIndex, questions, answers, mode])
+
+  // UI/UX Pro Max · 极速刷题无障碍键盘监听 (A/B/C/D 选答，方向键翻题)
+  useEffect(() => {
+    if (view !== 'quiz') return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 如果焦点在输入框、文本域或按下修饰键，不劫持
+      const activeEl = document.activeElement
+      const isInput = activeEl instanceof HTMLInputElement || activeEl instanceof HTMLTextAreaElement
+      if (isInput || e.ctrlKey || e.metaKey || e.altKey) return
+
+      const upperKey = e.key.toUpperCase()
+      if (['A', 'B', 'C', 'D'].includes(upperKey)) {
+        const q = questions[currentIndex]
+        if (q && q.options && (q.options as any)[upperKey]) {
+          e.preventDefault()
+          handleOptionSelect(upperKey)
+        }
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        advanceQuestion()
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        if (currentIndex > 0) {
+          goToQuestion(currentIndex - 1)
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [view, currentIndex, questions, handleOptionSelect, advanceQuestion])
+
 
   const finishQuiz = useCallback(async (overrideAnswers?: Record<string, string>) => {
     if (timerRef.current) clearInterval(timerRef.current)
@@ -820,8 +892,8 @@ export default function Quiz() {
 
     return (
       <div className="mx-auto max-w-[1560px] space-y-4 animate-fade-in-up">
-        {/* Top Slim Progress Header */}
-        <div className="glass-panel rounded-2xl px-5 py-2.5 flex items-center justify-between shadow-sm">
+        {/* Top Slim Progress Header with Linear-style Keyboard HUD */}
+        <div className="glass-panel rounded-2xl px-5 py-2.5 flex items-center justify-between shadow-sm border border-slate-200/90 relative overflow-hidden">
           <div className="flex items-center gap-3">
             <button
               onClick={() => {
@@ -829,7 +901,7 @@ export default function Quiz() {
                   finishQuiz()
                 }
               }}
-              className="text-xs text-slate-500 hover:text-slate-900 flex items-center gap-1 font-medium"
+              className="text-xs text-slate-500 hover:text-slate-900 flex items-center gap-1 font-medium transition-colors cursor-pointer active:scale-95"
             >
               <ArrowLeft size={14} />
               <span>交卷退出</span>
@@ -845,28 +917,49 @@ export default function Quiz() {
             )}
           </div>
 
-          <div className="flex items-center gap-3">
+          {/* Linear HUD Shortcut Bar */}
+          <div className="hidden md:flex items-center gap-2.5 text-[11px] font-mono text-slate-500 bg-slate-100/90 px-3 py-1 rounded-xl border border-slate-200/80 shadow-2xs">
+            <span className="text-slate-400">⌨️ 快捷盲操:</span>
+            <span className="inline-flex items-center gap-1">
+              <kbd className="px-1.5 py-0.5 rounded bg-white text-slate-700 border border-slate-200 font-bold shadow-2xs">A-D</kbd>
+              <span>选答案</span>
+            </span>
+            <span className="text-slate-300">·</span>
+            <span className="inline-flex items-center gap-1">
+              <kbd className="px-1.5 py-0.5 rounded bg-white text-slate-700 border border-slate-200 font-bold shadow-2xs">← / →</kbd>
+              <span>翻题</span>
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={() => {
                 setDefaultModalTab('books')
                 setImportModalOpen(true)
               }}
-              className="text-xs px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              className="hidden sm:flex text-xs px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
             >
               <Database size={13} className="text-indigo-600" />
               <span>题库与书架</span>
             </button>
-            <div className="h-4 w-px bg-slate-200" />
+            <div className="hidden sm:block h-4 w-px bg-slate-200" />
             <div className="text-xs font-mono text-slate-500 flex items-center gap-1.5 tabular-nums">
               <span>⏱</span>
-              <span className="font-semibold text-slate-800">{formatTime(timeElapsed)}</span>
+              <span className="font-semibold text-slate-850 font-mono">{formatTime(timeElapsed)}</span>
             </div>
             <div className="h-4 w-px bg-slate-200" />
-            <span className="text-xs font-semibold text-slate-700">
+            <span className="text-xs font-bold text-slate-700 font-mono">
               {currentIndex + 1} / {questions.length} 题
             </span>
+            <button
+              onClick={() => setMobileDrawerOpen(true)}
+              className="lg:hidden ml-1 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold shadow-2xs active:scale-95 cursor-pointer"
+            >
+              <span>🧮 答题卡</span>
+            </button>
           </div>
         </div>
+
 
         {/* Dual-Panel Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-[1.22fr_0.78fr] gap-5 items-start">
@@ -938,11 +1031,14 @@ export default function Quiz() {
                         key={key}
                         onClick={() => handleOptionSelect(key)}
                         disabled={mode === 'practice' && showFeedback}
-                        className={`w-full text-left rounded-2xl border-2 px-4 py-3.5 transition-all duration-200 group flex items-start gap-3.5 ${btnStyle} ${
-                          mode === 'practice' && showFeedback ? 'cursor-default' : 'cursor-pointer hover:scale-[1.005]'
+                        aria-label={`选项 ${key}: ${optionText}`}
+                        className={`w-full text-left rounded-2xl border-2 px-4 py-3.5 transition-all duration-200 group flex items-start gap-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-orange focus-visible:ring-offset-2 ${btnStyle} ${
+                          mode === 'practice' && showFeedback
+                            ? 'cursor-default'
+                            : 'cursor-pointer hover:scale-[1.006] active:scale-[0.99] hover:shadow-sm'
                         }`}
                       >
-                        <span className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 transition-colors ${
+                        <span className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 transition-colors shadow-2xs ${
                           isSelected && !showResult ? 'bg-accent-orange text-white' :
                           showResult && isCorrectAnswer ? 'bg-emerald-500 text-white' :
                           showResult && isSelected && !isCorrectAnswer ? 'bg-rose-500 text-white' :
@@ -951,9 +1047,14 @@ export default function Quiz() {
                           {key}
                         </span>
 
-                        <div className="flex-1 text-sm pt-0.5">
+                        <div className="flex-1 text-sm pt-0.5 leading-relaxed">
                           <MarkdownRenderer content={optionText} inline />
                         </div>
+
+                        {/* 快捷键提示徽章 */}
+                        <kbd className="hidden sm:inline-block text-[10px] font-mono px-1.5 py-0.5 rounded border border-slate-200/80 bg-slate-50 text-slate-400 group-hover:text-slate-600 group-hover:border-slate-300 transition-colors shrink-0 mt-0.5">
+                          {key}
+                        </kbd>
 
                         {showResult && isCorrectAnswer && (
                           <CheckCircle2 size={18} className="text-emerald-600 shrink-0 mt-0.5" />
@@ -963,6 +1064,7 @@ export default function Quiz() {
                         )}
                       </button>
                     )
+
                   })}
                 </div>
               ) : (
@@ -1003,7 +1105,7 @@ export default function Quiz() {
                   <span>上一题</span>
                 </button>
 
-                <div className="text-xs text-slate-400">
+                <div className="hidden md:block text-xs text-slate-400">
                   键盘快捷键：<kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-600 font-mono text-[10px]">A/B/C/D</kbd> 作答 · <kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-600 font-mono text-[10px]">Enter</kbd> 下一题
                 </div>
 
@@ -1059,11 +1161,16 @@ export default function Quiz() {
                   </div>
                 )}
 
-                {/* Anki-style Error Reason Tagging (错因反思闭环) */}
-                <div className="pt-3 border-t border-slate-200/80">
-                  <div className="text-xs font-semibold text-slate-600 mb-2 flex items-center gap-1">
-                    <span>📌 本题复盘归因（记录后存入错题本）：</span>
+                {/* Anki-style Error Reason Tagging & Quick Note (错因反思与错题笔记闭环) */}
+                <div className="pt-3 border-t border-slate-200/80 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <span>📌 错题归因与心得笔记</span>
+                      <span className="text-[10px] text-slate-400 font-normal">（自动归档至 Obsidian 错题本）</span>
+                    </span>
                   </div>
+
+                  {/* 错因标签大按钮 */}
                   <div className="flex flex-wrap gap-1.5">
                     {ERROR_REASONS.map(reason => {
                       const active = errorReasons[currentQ.id] === reason
@@ -1071,9 +1178,9 @@ export default function Quiz() {
                         <button
                           key={reason}
                           onClick={() => recordErrorReason(reason)}
-                          className={`text-xs px-2.5 py-1 rounded-lg border transition-all ${
+                          className={`text-xs px-2.5 py-1.5 rounded-xl border font-medium transition-all active:scale-95 ${
                             active
-                              ? 'bg-accent-orange text-white border-accent-orange font-semibold shadow-sm'
+                              ? 'bg-rose-500 text-white border-rose-500 font-bold shadow-sm'
                               : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
                           }`}
                         >
@@ -1082,43 +1189,52 @@ export default function Quiz() {
                       )
                     })}
                   </div>
-                </div>
 
-                {/* Actions: Save to Vault Error Notebook & AI Variant Generator */}
-                <div className="pt-3 border-t border-slate-200/80 flex flex-wrap items-center justify-between gap-2.5">
-                  <div className="flex items-center gap-2">
+                  {/* 手机专属本题速记/错因心得输入框 */}
+                  <div className="space-y-1">
+                    <textarea
+                      value={scratchpads[currentQ.id] || ''}
+                      onChange={(e) => setScratchpads({ ...scratchpads, [currentQ.id]: e.target.value })}
+                      placeholder="写下你的反思心得或易错点（如：未注意偶次方正负号、泰勒Peano余项...）"
+                      rows={2}
+                      className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-900 outline-none focus:border-rose-400 transition-colors leading-relaxed placeholder:text-slate-400"
+                    />
+                  </div>
+
+                  {/* 沉淀到错题本与变式题按钮 */}
+                  <div className="flex flex-wrap items-center gap-2 pt-0.5">
                     <button
                       onClick={() => handleSaveToErrorBook(currentQ)}
                       disabled={savingError}
-                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold hover:bg-rose-100 transition-all cursor-pointer disabled:opacity-50"
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 text-white text-xs font-bold shadow-md shadow-rose-500/20 hover:opacity-90 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
                     >
-                      <Save size={13} />
-                      <span>{savingError ? '正在写入知识库...' : '💾 沉淀到错题本 (生成Markdown)'}</span>
+                      <Save size={14} />
+                      <span>{savingError ? '正在写入知识库...' : '💾 存入 Obsidian 错题本'}</span>
                     </button>
 
                     <button
                       onClick={() => handleGenerateVariants(currentQ)}
                       disabled={generatingVariants}
-                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-semibold hover:bg-indigo-100 transition-all cursor-pointer disabled:opacity-50"
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-50 border border-indigo-200/80 text-indigo-700 text-xs font-semibold hover:bg-indigo-100 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
                     >
                       <Sparkles size={13} className="text-indigo-600" />
-                      <span>{generatingVariants ? 'AI 正在命题...' : '🔄 举一反三：AI 变式题强化'}</span>
+                      <span>{generatingVariants ? 'AI 命题中...' : '🔄 AI 变式题强化'}</span>
                     </button>
                   </div>
 
                   {savedErrorMsg && (
-                    <span className="text-xs text-emerald-600 font-medium flex items-center gap-1 animate-in fade-in">
-                      <CheckCircle2 size={13} />
-                      {savedErrorMsg}
-                    </span>
+                    <div className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl font-medium flex items-center gap-1.5 animate-in fade-in">
+                      <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
+                      <span>{savedErrorMsg}</span>
+                    </div>
                   )}
                 </div>
               </div>
             )}
           </div>
 
-          {/* ───────────────── RIGHT PANEL: Strategic Workbench ───────────────── */}
-          <div className="glass-panel rounded-3xl p-5 space-y-4 sticky top-20 shadow-md">
+          {/* ───────────────── RIGHT PANEL: Strategic Workbench (桌面宽屏常驻) ───────────────── */}
+          <div className="hidden lg:block glass-panel rounded-3xl p-5 space-y-4 sticky top-20 shadow-md">
             {/* Tab Header */}
             <div className="flex rounded-xl bg-slate-100 p-1">
               <button
@@ -1302,6 +1418,117 @@ export default function Quiz() {
           </div>
         </div>
 
+        {/* ── 📱 Mobile Bottom Sheet Drawer (小屏抽屉式答题卡与工具) ── */}
+        {mobileDrawerOpen && (
+          <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end">
+            <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-xs" onClick={() => setMobileDrawerOpen(false)} />
+            <div className="relative bg-white rounded-t-3xl p-5 shadow-2xl border-t border-slate-200 max-h-[82vh] overflow-y-auto space-y-4 animate-in slide-in-from-bottom duration-200">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <div className="text-sm font-bold text-slate-900">答题卡大纲 &amp; 辅助工具</div>
+                <button
+                  onClick={() => setMobileDrawerOpen(false)}
+                  className="p-1 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Tab Header */}
+              <div className="flex rounded-xl bg-slate-100 p-1">
+                <button
+                  onClick={() => setActiveSideTab('palette')}
+                  className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                    activeSideTab === 'palette' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  🧮 答题卡
+                </button>
+                <button
+                  onClick={() => setActiveSideTab('scratchpad')}
+                  className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                    activeSideTab === 'scratchpad' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  📝 草稿纸
+                </button>
+                <button
+                  onClick={() => setActiveSideTab('hints')}
+                  className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                    activeSideTab === 'hints' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  💡 定理提示
+                </button>
+              </div>
+
+              {/* TAB 1: Answer Palette */}
+              {activeSideTab === 'palette' && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-xs text-slate-500">
+                    <span>已完成 {answeredCount} / {questions.length} 题</span>
+                    <span>标星关注 {bookmarkedIds.size} 题</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-accent-orange rounded-full" style={{ width: `${progressPct}%` }} />
+                  </div>
+                  <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 pt-1">
+                    {questions.map((q, idx) => {
+                      const isCurrent = idx === currentIndex
+                      const isAnswered = Boolean(answers[q.id])
+                      return (
+                        <button
+                          key={q.id}
+                          onClick={() => goToQuestion(idx)}
+                          className={`h-10 rounded-xl text-xs font-bold transition-all flex items-center justify-center border-2 ${
+                            isCurrent
+                              ? 'border-accent-orange bg-accent-orange text-white shadow-sm scale-105'
+                              : isAnswered
+                              ? 'border-emerald-400 bg-emerald-50 text-emerald-800'
+                              : 'border-slate-200 bg-white text-slate-600'
+                          }`}
+                        >
+                          {idx + 1}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: Scratchpad */}
+              {activeSideTab === 'scratchpad' && (
+                <div className="space-y-2">
+                  <textarea
+                    value={currentScratchpad}
+                    onChange={(e) => setScratchpads({ ...scratchpads, [currentQ.id]: e.target.value })}
+                    placeholder="在此随手推演公式、草拟计算步骤..."
+                    rows={6}
+                    className="w-full text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-900 outline-none focus:border-accent-orange leading-relaxed"
+                  />
+                </div>
+              )}
+
+              {/* TAB 3: Theorem Hints */}
+              {activeSideTab === 'hints' && (
+                <div className="space-y-3 text-xs text-slate-600">
+                  <div className="font-semibold text-slate-800">当前知识点定理：</div>
+                  {currentQ.keyPoints && currentQ.keyPoints.length > 0 ? (
+                    <div className="space-y-1.5">
+                      {currentQ.keyPoints.map((kp, idx) => (
+                        <div key={idx} className="p-2 rounded-lg bg-amber-50/70 border border-amber-200/60 text-slate-800">
+                          {kp}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-slate-400">本题考查综合基础知识与定理。</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         <ImportResourceModal
           isOpen={importModalOpen}
           onClose={() => setImportModalOpen(false)}
@@ -1382,41 +1609,125 @@ export default function Quiz() {
         {/* Wrong Questions Breakdown */}
         {result.wrongQuestions.length > 0 && (
           <div className="glass-panel rounded-3xl p-6 space-y-4">
-            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <span className="text-rose-500">✗</span>
-              <span>错题精析与复盘 ({result.wrongQuestions.length} 题)</span>
-            </h2>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <span className="text-rose-500">✗</span>
+                <span>错题精析与复盘 ({result.wrongQuestions.length} 题)</span>
+              </h2>
+              <button
+                onClick={handleSaveAllWrongQuestions}
+                disabled={savingAllErrors}
+                className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 text-white text-xs font-bold shadow-md shadow-rose-500/20 hover:opacity-90 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+              >
+                <Save size={14} />
+                <span>{savingAllErrors ? '正在批量写入知识库...' : '📦 一键将全部错题归档至 Obsidian'}</span>
+              </button>
+            </div>
 
-            <div className="space-y-3">
-              {result.wrongQuestions.map(({ question: q, userAnswer, errorReason }) => (
-                <div key={q.id} className="rounded-2xl border border-rose-200/80 bg-rose-50/30 p-5 space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">
-                        {q.subject}
-                      </span>
-                      {errorReason && (
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-rose-100 text-rose-700">
-                          错因: {errorReason}
+            {saveAllMsg && (
+              <div className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-3.5 py-2 rounded-xl font-medium flex items-center gap-2 animate-in fade-in">
+                <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+                <span>{saveAllMsg}</span>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              {result.wrongQuestions.map(({ question: q, userAnswer, errorReason }) => {
+                const isSaved = savedItemIds.has(q.id)
+                return (
+                  <div key={q.id} className="rounded-2xl border border-rose-200/80 bg-rose-50/30 p-4 sm:p-5 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">
+                          {q.subject}
                         </span>
-                      )}
+                        {q.chapter && (
+                          <span className="text-[11px] text-slate-500">
+                            {q.chapter}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs font-mono flex items-center gap-3">
+                        <span className="text-rose-600 font-semibold">你的回答: {userAnswer}</span>
+                        <span className="text-emerald-700 font-bold">标准答案: {q.answer}</span>
+                      </div>
                     </div>
-                    <div className="text-xs font-mono flex items-center gap-3">
-                      <span className="text-rose-600 font-semibold">你的回答: {userAnswer}</span>
-                      <span className="text-emerald-700 font-bold">标准答案: {q.answer}</span>
+
+                    <div className="text-sm font-medium text-slate-900 leading-relaxed">
+                      <MarkdownRenderer content={q.question} />
+                    </div>
+
+                    <div className="bg-white/80 rounded-xl p-3 border border-slate-200 text-xs text-slate-700 leading-relaxed">
+                      <div className="font-bold text-slate-800 mb-1">真题解析：</div>
+                      <MarkdownRenderer content={q.explanation} />
+                    </div>
+
+                    {/* 手机错题归因标签与心得速记 */}
+                    <div className="pt-2 border-t border-rose-100 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                          <span>📌 错因反思与归纳</span>
+                        </span>
+                        {isSaved && (
+                          <span className="text-[11px] text-emerald-600 font-bold flex items-center gap-1">
+                            <CheckCircle2 size={12} /> 已沉淀至 Obsidian
+                          </span>
+                        )}
+                      </div>
+
+                      {/* 错因标签大按钮 */}
+                      <div className="flex flex-wrap gap-1.5">
+                        {ERROR_REASONS.map(reason => {
+                          const active = (errorReasons[q.id] || errorReason) === reason
+                          return (
+                            <button
+                              key={reason}
+                              onClick={() => setErrorReasons(prev => ({ ...prev, [q.id]: reason }))}
+                              className={`text-xs px-2.5 py-1.5 rounded-xl border font-medium transition-all active:scale-95 ${
+                                active
+                                  ? 'bg-rose-500 text-white border-rose-500 font-bold shadow-xs'
+                                  : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                              }`}
+                            >
+                              {reason}
+                            </button>
+                          )
+                        })}
+                      </div>
+
+                      {/* 错题反思小记输入框 */}
+                      <textarea
+                        value={scratchpads[q.id] || ''}
+                        onChange={(e) => setScratchpads({ ...scratchpads, [q.id]: e.target.value })}
+                        placeholder="写下本题反思与考点心得（如：未注意泰勒展开阶数、偶次方正负号...）"
+                        rows={2}
+                        className="w-full text-xs bg-white border border-slate-200 rounded-xl p-2.5 text-slate-900 outline-none focus:border-rose-400 transition-colors leading-relaxed placeholder:text-slate-400"
+                      />
+
+                      {/* 存入错题本与变式题强化按钮 */}
+                      <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                        <button
+                          onClick={() => handleSaveToErrorBook(q)}
+                          disabled={savingError}
+                          className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 text-white text-xs font-bold shadow-xs hover:opacity-90 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                        >
+                          <Save size={13} />
+                          <span>{isSaved ? '✅ 已存入错题本' : '💾 存入 Obsidian 错题本'}</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleGenerateVariants(q)}
+                          disabled={generatingVariants}
+                          className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-50 border border-indigo-200/80 text-indigo-700 text-xs font-semibold hover:bg-indigo-100 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                        >
+                          <Sparkles size={13} className="text-indigo-600" />
+                          <span>AI 变式题强化</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
-
-                  <div className="text-sm font-medium text-slate-900">
-                    <MarkdownRenderer content={q.question} />
-                  </div>
-
-                  <div className="bg-white/80 rounded-xl p-3 border border-slate-200 text-xs text-slate-700">
-                    <div className="font-bold text-slate-800 mb-1">解析：</div>
-                    <MarkdownRenderer content={q.explanation} />
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         )}

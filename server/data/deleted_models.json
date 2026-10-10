@@ -1,1 +1,8 @@
-[]
+[
+  "claude-3-5-sonnet",
+  "claude-3-7-sonnet",
+  "deepseek-reasoner",
+  "o3-mini",
+  "gpt-5.5",
+  "gpt-5.6-sol"
+]

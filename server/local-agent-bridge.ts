@@ -6,9 +6,10 @@ import path from 'node:path'
 import readline from 'node:readline'
 import { scanHostLocalModels } from './local-model-scanner.js'
 
-export type LocalAgentProvider = 'claude-code' | 'codex' | 'ollama' | 'lm-studio' | 'web'
+export type LocalAgentProvider = 'antigravity' | 'claude-code' | 'codex' | 'ollama' | 'lm-studio' | 'web'
 
 export interface LocalAgentConfig {
+  antigravityCommand?: string
   claudeCommand?: string
   codexCommand?: string
   defaultCwd?: string
@@ -46,9 +47,64 @@ export interface LocalAgentEvent {
 }
 
 function commandFromConfig(config: LocalAgentConfig | undefined, provider: LocalAgentProvider) {
-  if (provider === 'claude-code') return config?.claudeCommand || 'claude'
-  return config?.codexCommand || 'codex'
+  const appData = process.env.APPDATA || ''
+  const localAppData = process.env.LOCALAPPDATA || ''
+
+  if (provider === 'antigravity') {
+    if (config?.antigravityCommand && fs.existsSync(config.antigravityCommand)) {
+      return config.antigravityCommand
+    }
+    // 1. 扫描 Programs 安装目录的 Antigravity.exe
+    const defaultAntigravityExe = path.join(localAppData, 'Programs', 'antigravity', 'Antigravity.exe')
+    if (fs.existsSync(defaultAntigravityExe)) return defaultAntigravityExe
+
+    // 2. 扫描全局 agy / antigravity 命令
+    const npmAgyCmd = path.join(appData, 'npm', 'agy.cmd')
+    if (fs.existsSync(npmAgyCmd)) return npmAgyCmd
+
+    return config?.antigravityCommand || 'antigravity'
+  }
+
+  if (provider === 'claude-code') {
+    if (config?.claudeCommand && fs.existsSync(config.claudeCommand)) {
+      return config.claudeCommand
+    }
+    // 1. 优先扫描 npm 全局安装的原生二进制
+    const npmClaudeExe = path.join(appData, 'npm', 'node_modules', '@anthropic-ai', 'claude-code', 'bin', 'claude.exe')
+    if (fs.existsSync(npmClaudeExe)) return npmClaudeExe
+
+    // 2. 备用扫描 VS Code 官方插件中的原生 claude.exe
+    if (process.platform === 'win32') {
+      const userHome = process.env.USERPROFILE || process.env.HOME || ''
+      const extDir = path.join(userHome, '.vscode', 'extensions')
+      if (fs.existsSync(extDir)) {
+        try {
+          const matched = fs.readdirSync(extDir).filter(d => d.startsWith('anthropic.claude-code-')).sort().reverse()
+          for (const m of matched) {
+            const candidate = path.join(extDir, m, 'resources', 'native-binary', 'claude.exe')
+            if (fs.existsSync(candidate)) return candidate
+          }
+        } catch {}
+      }
+    }
+    return config?.claudeCommand || 'claude'
+  }
+
+  if (provider === 'codex') {
+    if (config?.codexCommand && fs.existsSync(config.codexCommand)) {
+      return config.codexCommand
+    }
+    // 优先扫描 npm 全局安装的原生 codex.exe
+    const npmCodexExe = path.join(appData, 'npm', 'node_modules', '@openai', 'codex', 'node_modules', '@openai', 'codex-win32-x64', 'vendor', 'x86_64-pc-windows-msvc', 'bin', 'codex.exe')
+    if (fs.existsSync(npmCodexExe)) return npmCodexExe
+
+    return config?.codexCommand || 'codex'
+  }
+
+  return 'claude'
 }
+
+
 
 function resolveCommand(command: string) {
   if (path.isAbsolute(command)) return command
@@ -120,14 +176,35 @@ export function detectLocalAgents(config?: LocalAgentConfig): LocalAgentStatus[]
     // ignore
   }
 
-  return (['claude-code', 'codex'] as LocalAgentProvider[]).map(provider => {
+  return (['antigravity', 'claude-code', 'codex'] as LocalAgentProvider[]).map(provider => {
     const command = commandFromConfig(config, provider)
+
+    if (provider === 'antigravity') {
+      const userHome = process.env.USERPROFILE || process.env.HOME || ''
+      const geminiDir = path.join(userHome, '.gemini', 'antigravity')
+      const exeExists = fs.existsSync(command)
+      const dataDirExists = fs.existsSync(geminiDir)
+      const isAvailable = exeExists || dataDirExists
+
+      const models = ['gemini-3.8-flash', 'gemini-2.5-pro', 'gemini-2.5-flash']
+      return {
+        provider,
+        available: isAvailable,
+        command,
+        resolvedPath: exeExists ? command : geminiDir,
+        version: isAvailable ? 'Antigravity 2.0' : undefined,
+        detail: isAvailable ? 'Google 智能体开发工作台已就绪' : '未检测到 Antigravity 安装',
+        models,
+        defaultModel: models[0],
+      }
+    }
+
     const version = readVersion(command)
     const models = (scannedModels[provider] && scannedModels[provider].length > 0)
       ? scannedModels[provider]
       : (provider === 'claude-code'
-          ? ['deepseek-v4-flash', 'deepseek-v4-pro', 'deepseek-flash', 'deepseek-reasoner']
-          : ['gpt-5.6-luna', 'gpt-4o', 'o3-mini', 'o1', 'gpt-4o-mini'])
+          ? ['deepseek-flash', 'deepseek-reasoner', 'claude-3-7-sonnet', 'claude-3-5-sonnet']
+          : ['gpt-6-luna', 'gpt-5.6-luna', 'gpt-5.6-terra', 'gpt-5.6-sol', 'gpt-5.5', 'o3-mini'])
 
     return {
       provider,
@@ -237,8 +314,12 @@ function isTextJsonEvent(value: any) {
     value?.type === 'response.output_text.delta'
 }
 
-function buildClaudeArgs(options: LocalAgentRunOptions, sessionId: string) {
-  const command = options.config?.claudeCommand || 'claude'
+function isValidUuid(id?: string): boolean {
+  return Boolean(id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
+}
+
+function buildClaudeArgs(options: LocalAgentRunOptions, safeSessionId: string) {
+  const command = commandFromConfig(options.config, 'claude-code')
   const args = [
     '--print',
     '--output-format', 'stream-json',
@@ -246,16 +327,19 @@ function buildClaudeArgs(options: LocalAgentRunOptions, sessionId: string) {
     '--verbose',
     '--permission-mode', 'acceptEdits',
     '--add-dir', options.cwd,
-    '--model', options.model || 'deepseek-v4-flash',
   ]
-  if (options.sessionId) args.push('--resume', options.sessionId)
-  else args.push('--session-id', sessionId)
+  if (options.model) args.push('--model', options.model)
+  if (isValidUuid(options.sessionId)) {
+    args.push('--resume', options.sessionId!)
+  } else {
+    args.push('--session-id', safeSessionId)
+  }
   args.push(options.prompt)
   return commandArgs(resolveCommand(command), args)
 }
 
 function buildCodexArgs(options: LocalAgentRunOptions) {
-  const command = options.config?.codexCommand || 'codex'
+  const command = commandFromConfig(options.config, 'codex')
   const args = [
     'exec',
     '--json',
@@ -263,9 +347,18 @@ function buildCodexArgs(options: LocalAgentRunOptions) {
     '--skip-git-repo-check',
     '-C', options.cwd,
   ]
-  if (options.sessionId) args.splice(1, 0, 'resume', options.sessionId)
   if (options.model) args.push('--model', options.model)
   args.push(options.prompt)
+  return commandArgs(resolveCommand(command), args)
+}
+
+function buildAntigravityArgs(options: LocalAgentRunOptions, sessionId: string) {
+  const command = commandFromConfig(options.config, 'antigravity')
+  const args = [
+    '--prompt', options.prompt,
+    '--cwd', options.cwd,
+  ]
+  if (options.model) args.push('--model', options.model)
   return commandArgs(resolveCommand(command), args)
 }
 
@@ -286,15 +379,18 @@ function terminateProcess(child: ChildProcessWithoutNullStreams) {
 }
 
 export async function* runLocalAgent(options: LocalAgentRunOptions): AsyncGenerator<LocalAgentEvent> {
-  const sessionId = options.sessionId || randomUUID()
-  const built = options.provider === 'claude-code'
-    ? buildClaudeArgs(options, sessionId)
-    : buildCodexArgs(options)
+  const safeSessionId = isValidUuid(options.sessionId) ? options.sessionId! : randomUUID()
+  const built = options.provider === 'antigravity'
+    ? buildAntigravityArgs(options, safeSessionId)
+    : options.provider === 'claude-code'
+      ? buildClaudeArgs(options, safeSessionId)
+      : buildCodexArgs(options)
 
+  const providerLabel = options.provider === 'antigravity' ? 'Antigravity' : options.provider === 'claude-code' ? 'Claude Code' : 'Codex'
   yield {
     type: 'status',
     provider: options.provider,
-    content: `${options.provider === 'claude-code' ? 'Claude Code' : 'Codex'} 正在运行…`,
+    content: `${providerLabel} 正在运行…`,
   }
 
   let child: ChildProcessWithoutNullStreams
@@ -302,12 +398,14 @@ export async function* runLocalAgent(options: LocalAgentRunOptions): AsyncGenera
     child = spawn(built.executable, built.args, {
       cwd: options.cwd,
       windowsHide: true,
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: ['pipe', 'pipe', 'pipe'],
     })
+    try { child.stdin.end() } catch {}
   } catch (error: any) {
     yield { type: 'error', provider: options.provider, content: error?.message || '本地 Agent 启动失败' }
     return
   }
+
 
   let emittedText = ''
   let stderr = ''
@@ -362,21 +460,35 @@ export async function* runLocalAgent(options: LocalAgentRunOptions): AsyncGenera
   options.signal?.removeEventListener('abort', abortHandler)
 
   if (spawnError) {
+    let friendlyMessage = spawnError.message || '本地 Agent 启动失败'
+    if (friendlyMessage.includes('ENOENT')) {
+      if (options.provider === 'claude-code') {
+        friendlyMessage = `未在系统环境变量 PATH 中检测到 Claude Code 命令行程序 (claude)。\n\n💡 **快速解决指引**：\n1. **直接聊天（推荐）**：请点击页面顶部的【☁️ 云端双核】标签，即可直接使用配置的 DeepSeek / Claude 云端大模型进行伴学问答；\n2. **如需本地 Agent**：请在电脑终端中执行 \`npm install -g @anthropic-ai/claude-code\` 完成全局安装。`
+      } else if (options.provider === 'codex') {
+        friendlyMessage = `未在系统环境变量 PATH 中检测到 Codex 命令行程序 (codex)。\n\n💡 **快速解决指引**：\n1. **直接聊天（推荐）**：请点击页面顶部的【☁️ 云端双核】标签；\n2. **如需使用 Codex**：请检查本地 Codex 安装与系统 PATH 环境变量配置。`
+      }
+    }
     yield {
       type: 'error',
       provider: options.provider,
-      content: spawnError.message || 'Local agent start failed',
+      content: friendlyMessage,
     }
     return
   }
+
   if (exitCode !== 0 && !options.signal?.aborted) {
+    let errText = stderr.trim()
+    if (errText.includes('models_cache.json') || errText.includes('model_catalog_json')) {
+      errText = `Codex 运行时缓存文件损坏 (缺少新版字段)。\n\n💡 **解决指引**：\n1. **直接聊天**：请点击页面顶部的【☁️ 云端双核】标签；\n2. **修复 Codex**：请删除或重命名 \`C:\\Users\\QTS的天选\\.codex\\models_cache.json\` 缓存文件，让 Codex 自动重新同步。`
+    }
     yield {
       type: 'error',
       provider: options.provider,
-      content: stderr.trim() || `${options.provider} 退出码：${exitCode}`,
+      content: errText || `${options.provider} 进程异常退出 (退出码：${exitCode})`,
     }
     return
   }
+
   if (!emittedText && stderr.trim()) {
     yield { type: 'text', provider: options.provider, content: stderr.trim() }
   }

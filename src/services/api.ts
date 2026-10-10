@@ -145,6 +145,7 @@ export interface TreeNode {
   path: string
   type: 'folder' | 'file'
   children?: TreeNode[]
+  ext?: string
 }
 
 export interface ChatResponse {
@@ -162,10 +163,15 @@ export interface IngestResult {
   originalName: string
   markdownPath: string
   wordCount: number
+  domain?: string
+  subject?: string
   tags: string[]
   entities: string[]
   wikilinks: number
+  mocPath?: string
+  questionsCount?: number
   preview: string
+  method?: string
 }
 
 export interface IngestStatus {
@@ -248,16 +254,35 @@ export interface ReviewDueData {
   stats: SubjectStats[]
 }
 
+export interface CloudEndpoint {
+  id: string
+  name: string
+  apiFormat: 'anthropic' | 'openai'
+  baseURL: string
+  apiKey: string
+  models: string[]
+  defaultModel?: string
+}
+
 export interface AppSettings {
   vaultPath: string
   port: number
   proxy?: string
-  ai?: { apiKey: string; baseURL: string; model?: string; provider?: 'anthropic' | 'openai-compatible'; apiFormat?: 'anthropic' | 'openai' }
+  ai?: {
+    apiKey: string
+    baseURL: string
+    model?: string
+    models?: string[]
+    provider?: 'anthropic' | 'openai-compatible'
+    apiFormat?: 'anthropic' | 'openai'
+    endpoints?: CloudEndpoint[]
+    activeEndpointId?: string
+  }
   configPath?: string
 }
 
 export interface LocalAgentStatus {
-  provider: 'claude-code' | 'codex' | 'ollama' | 'lm-studio'
+  provider: 'antigravity' | 'claude-code' | 'codex' | 'ollama' | 'lm-studio'
   available: boolean
   command: string
   resolvedPath?: string
@@ -590,7 +615,18 @@ export const api = {
   // Settings
   getSettings: () => fetchJSON<AppSettings>('/settings'),
 
-  updateSettings: (settings: Partial<AppSettings> & { ai?: { apiKey: string; baseURL: string; model?: string; provider?: 'anthropic' | 'openai-compatible'; apiFormat?: 'anthropic' | 'openai' } }) =>
+  updateSettings: (settings: Partial<AppSettings> & {
+    ai?: {
+      apiKey: string
+      baseURL: string
+      model?: string
+      models?: string[]
+      provider?: 'anthropic' | 'openai-compatible'
+      apiFormat?: 'anthropic' | 'openai'
+      endpoints?: CloudEndpoint[]
+      activeEndpointId?: string
+    }
+  }) =>
     putJSON<{ ok: boolean; vaultPath: string; aiConfigured: boolean }>('/settings', settings),
 
   // Filesystem browse (for folder picker)
@@ -603,10 +639,27 @@ export const api = {
     fetchJSON<{ exists: boolean; isDirectory?: boolean }>(`/fs/exists?path=${encodeURIComponent(dirPath)}`),
 
   // AI Models
-  fetchAIModels: () =>
-    fetchJSON<{ models: { id: string; name: string }[]; current: string; source: string }>('/ai/models'),
-  testAI: (model?: string) =>
-    postJSON<{ ok: boolean; provider?: string; model?: string; reply?: string; error?: string; status?: number }>('/ai/test', model ? { model } : {}),
+  fetchAIModels: (params?: { endpointId?: string; baseURL?: string; apiKey?: string }) => {
+    const q = new URLSearchParams()
+    if (params?.endpointId) q.set('endpointId', params.endpointId)
+    if (params?.baseURL) q.set('baseURL', params.baseURL)
+    if (params?.apiKey) q.set('apiKey', params.apiKey)
+    const qs = q.toString()
+    return fetchJSON<{
+      endpoints?: CloudEndpoint[]
+      models: { id: string; name: string; model?: string; endpointId?: string; endpointName?: string }[]
+      current: string
+      source: string
+      message?: string
+    }>(`/ai/models${qs ? `?${qs}` : ''}`)
+  },
+  testAI: (params?: string | { model?: string; endpointId?: string; apiKey?: string; baseURL?: string; apiFormat?: 'anthropic' | 'openai' }) => {
+    const body = typeof params === 'string' ? { model: params } : (params || {})
+    return postJSON<{ ok: boolean; provider?: string; model?: string; reply?: string; error?: string; status?: number }>('/ai/test', body)
+  },
+
+  testProxy: (proxy?: string) =>
+    postJSON<{ ok: boolean; latency: number; message: string }>('/test-proxy', { proxy }),
 
   getLocalAgentStatus: () =>
     fetchJSON<{ agents: LocalAgentStatus[]; defaultCwd: string }>('/local-agents/status'),
@@ -805,7 +858,36 @@ export const api = {
   // Books & Materials
   getBooks: () => fetchJSON<{ books: BookItem[] }>('/books/list'),
   readBook: (relativePath: string) => postJSON<{ content: string; name: string }>('/books/read', { relativePath }),
+
+  // ===== SM-2 艾宾浩斯记忆与考点热力 =====
+  gradeSM2Card: (params: { cardId: string; grade: number; subject?: string; title?: string; syllabusId?: string }) =>
+    postJSON<{ success: boolean; cardId: string; state: any; retentionRate: number }>('/study/sm2/grade', params),
+
+  getSM2DueCards: (subject?: string) =>
+    fetchJSON<{ today: string; totalDue: number; cards: Array<any> }>(`/study/sm2/due${subject ? `?subject=${encodeURIComponent(subject)}` : ''}`),
+
+  getMasteryHeatmap: (domain?: 'cs_408' | 'math') =>
+    fetchJSON<{ timestamp: string; summaries: Array<{ domain: string; totalPoints: number; masteredCount: number; inProgressCount: number; weakCount: number; averageScore: number; tree: any[] }> }>(`/study/mastery-heatmap${domain ? `?domain=${domain}` : ''}`),
+
+  updateMasteryStatus: (params: { syllabusId: string; status: 'red' | 'yellow' | 'green'; score?: number }) =>
+    postJSON<{ success: boolean; record: any }>('/study/mastery-update', params),
+
+  getMasteryNodeDetail: (syllabusId: string) =>
+    fetchJSON<{ success: boolean; detail: { node: any; record: any; errorQuestions: any[] } }>(`/study/mastery-node-detail?syllabusId=${encodeURIComponent(syllabusId)}`),
+
+  // ===== 考研 AI 启发式分步思维链辅导 =====
+  askStepTutor: (params: {
+    mode: 'hint' | 'audit' | 'formula'
+    questionText: string
+    subject?: string
+    studentSteps?: string
+    optionsText?: string
+    provider?: string
+    model?: string
+  }) =>
+    postJSON<{ mode: 'hint' | 'audit' | 'formula'; syllabusMatch?: { id: string; subject: string; level1: string; level2: string; level3: string }; content: string; engineUsed?: string }>('/ai/tutor/step', params),
 }
+
 
 // Check if the API is available
 export async function checkApiHealth(): Promise<boolean> {

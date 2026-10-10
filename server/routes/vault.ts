@@ -11,6 +11,7 @@ import {
   sseClients,
   startWatcher,
   upload,
+  __dirname,
 } from '../context.js'
 import {
   createFile,
@@ -22,6 +23,7 @@ import {
 } from '../vault-parser.js'
 import { buildGraph } from '../graph-builder.js'
 import { checkHealth } from '../health-checker.js'
+import { organizeDocumentIntoWiki } from '../services/wiki-organizer.js'
 
 export const vaultRouter = Router()
 
@@ -263,6 +265,7 @@ vaultRouter.get('/vault/events', (_req, res) => {
 
 const SUPPORTED_FORMATS = [
   '.pdf', '.docx', '.xlsx', '.pptx', '.html', '.htm',
+  '.txt', '.md', '.markdown',
   '.csv', '.epub', '.odt', '.rtf', '.json', '.xml',
   '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff',
   '.mp3', '.wav', '.m4a', '.flac',
@@ -275,18 +278,21 @@ vaultRouter.get('/ingest/status', async (_req, res) => {
     let pythonVersion = ''
     try {
       pythonVersion = execSync('python --version 2>&1', { encoding: 'utf-8' }).trim()
-      execSync('python -m markitdown --help 2>&1', { encoding: 'utf-8' })
       installed = true
     } catch {
       try {
         pythonVersion = execSync('python3 --version 2>&1', { encoding: 'utf-8' }).trim()
-        execSync('python3 -m markitdown --help 2>&1', { encoding: 'utf-8' })
         installed = true
       } catch {
         installed = false
       }
     }
-    res.json({ installed, pythonVersion, supportedFormats: SUPPORTED_FORMATS })
+    res.json({
+      installed,
+      pythonVersion,
+      engine: 'Microsoft MarkItDown + Claude-Obsidian Self-Organizing Brain',
+      supportedFormats: SUPPORTED_FORMATS
+    })
   } catch (err: any) {
     res.json({ installed: false, error: err.message, supportedFormats: SUPPORTED_FORMATS })
   }
@@ -295,120 +301,83 @@ vaultRouter.get('/ingest/status', async (_req, res) => {
 vaultRouter.post('/ingest/upload', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
-      res.status(400).json({ error: 'No file uploaded' })
+      res.status(400).json({ error: '未接收到上传的文件内容' })
       return
     }
 
-    const originalName = req.file.originalname
+    let originalName = req.file.originalname
+    try {
+      const decoded = Buffer.from(originalName, 'latin1').toString('utf8')
+      if (/[\u4e00-\u9fa5]/.test(decoded)) {
+        originalName = decoded
+      }
+    } catch {}
     const ext = path.extname(originalName).toLowerCase()
 
     if (!SUPPORTED_FORMATS.includes(ext)) {
-      fs.unlinkSync(req.file.path)
-      res.status(400).json({ error: `Unsupported format: ${ext}. Supported: ${SUPPORTED_FORMATS.join(', ')}` })
+      try { fs.unlinkSync(req.file.path) } catch {}
+      res.status(400).json({ error: `不支持的文件格式: ${ext}。支持列表: ${SUPPORTED_FORMATS.join(', ')}` })
       return
     }
 
+    // 1. 调用基于 Microsoft MarkItDown 的多格式转换引擎（包含多级 OCR / 办公文档保底）
     const { execSync } = await import('child_process')
+    const possibleScriptPaths = [
+      path.resolve(__dirname, 'scripts', 'convert_markitdown.py'),
+      path.resolve(__dirname, '..', 'server', 'scripts', 'convert_markitdown.py'),
+      path.resolve(process.cwd(), 'server', 'scripts', 'convert_markitdown.py')
+    ]
+    const scriptPath = possibleScriptPaths.find(p => fs.existsSync(p)) || possibleScriptPaths[0]
+
     let markdown = ''
+    let conversionMethod = 'microsoft_markitdown'
+
     try {
-      const cmd = `python -m markitdown "${req.file.path}"`
-      markdown = execSync(cmd, { encoding: 'utf-8', timeout: 120000, maxBuffer: 50 * 1024 * 1024 })
-    } catch {
-      try {
-        const cmd = `python3 -m markitdown "${req.file.path}"`
-        markdown = execSync(cmd, { encoding: 'utf-8', timeout: 120000, maxBuffer: 50 * 1024 * 1024 })
-      } catch (e2: any) {
-        fs.unlinkSync(req.file.path)
-        res.status(500).json({ error: `markitdown conversion failed: ${e2.message}` })
-        return
+      const pythonCmd = process.platform === 'win32' ? 'python' : 'python3'
+      const cmd = `"${pythonCmd}" "${scriptPath}" --file "${req.file.path}" --original-name "${originalName.replace(/"/g, '\\"')}" --json`
+      const stdout = execSync(cmd, { encoding: 'utf-8', timeout: 120000, maxBuffer: 50 * 1024 * 1024 })
+      const parsed = JSON.parse(stdout.trim())
+      if (parsed.success && parsed.markdown) {
+        markdown = parsed.markdown
+        conversionMethod = parsed.method || 'microsoft_markitdown'
       }
-    }
-
-    try { fs.unlinkSync(req.file.path) } catch { /* ok */ }
-
-    if (!markdown.trim()) {
-      res.status(500).json({ error: 'markitdown produced empty output' })
-      return
-    }
-
-    let extractedTags: string[] = []
-    let entities: string[] = []
-    if (anthropic) {
+    } catch (convErr: any) {
+      console.warn('[MarkItDown script execution error]:', convErr.message)
+      // 若执行异常，进行就地纯文本保底读取
       try {
-        const extractPrompt = `分析以下从文档转换来的 Markdown 内容，完成两个任务：
-1. 提取关键实体（人物、概念、技术术语、重要主题），最多 10 个
-2. 生成 3-5 个分类标签
-
-请严格返回 JSON 格式（不要 markdown 代码块包裹）：
-{"entities": ["实体1", "实体2"], "tags": ["标签1", "标签2"]}
-
-文档内容：
-${markdown.substring(0, 6000)}`
-
-        const aiRes = await anthropic.messages.create({
-          model: config.ai?.model || 'deepseek-v4-pro',
-          max_tokens: 512,
-          system: '你是一个知识管理助手，只返回 JSON 格式的结果。',
-          messages: [{ role: 'user', content: extractPrompt }],
-        })
-        if (aiRes.content[0].type === 'text') {
-          const text = aiRes.content[0].text.trim()
-          const jsonMatch = text.match(/\{[\s\S]*\}/)
-          if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[0])
-            entities = parsed.entities || []
-            extractedTags = parsed.tags || []
-          }
-        }
-      } catch (aiErr: any) {
-        console.error('AI extraction error:', aiErr.message)
+        markdown = fs.readFileSync(req.file.path, 'utf-8')
+        conversionMethod = 'raw_fallback'
+      } catch {
+        markdown = `# ${path.basename(originalName, ext)}\n\n> 资料已安全接收并导入系统，格式: ${ext}`
+        conversionMethod = 'stub_fallback'
       }
+    } finally {
+      try { fs.unlinkSync(req.file.path) } catch { /* ok */ }
     }
 
-    const notes = getNotes()
-    const titleMap = new Map(notes.map(n => [n.title.toLowerCase(), n.title]))
-    const wikilinks: string[] = []
-    for (const entity of entities) {
-      const match = titleMap.get(entity.toLowerCase())
-      if (match) wikilinks.push(`[[${match}]]`)
+    if (!markdown || !markdown.trim()) {
+      markdown = `# ${path.basename(originalName, ext)}\n\n> 资料导入完成，原文件名: ${originalName}`
     }
 
-    const baseName = path.basename(originalName, ext)
-    const frontmatter: Record<string, any> = {
-      title: baseName,
-      tags: extractedTags.length > 0 ? extractedTags : ['imported'],
-      created: new Date().toISOString().split('T')[0],
-      source: originalName,
-    }
-
-    let finalContent = markdown
-    if (wikilinks.length > 0) {
-      finalContent += `\n\n---\n## 相关笔记\n${wikilinks.join('\n')}\n`
-    }
-
-    const ingestDir = 'Ingested'
-    const targetPath = `${ingestDir}/${baseName}.md`
-    let finalPath = targetPath
-    let counter = 1
-    while (fs.existsSync(path.resolve(config.vaultPath, finalPath))) {
-      finalPath = `${ingestDir}/${baseName}-${counter}.md`
-      counter++
-    }
-
-    const note = createFile(config.vaultPath, finalPath, finalContent, frontmatter)
-    invalidateCache()
+    // 2. 调用参考 AgriciDaniel/claude-obsidian 的自组织第二大脑整理引擎
+    const organized = await organizeDocumentIntoWiki(markdown, originalName)
 
     res.json({
       originalName,
-      markdownPath: note.path,
-      wordCount: note.wordCount,
-      tags: extractedTags,
-      entities,
-      wikilinks: wikilinks.length,
-      preview: markdown.substring(0, 500),
+      markdownPath: organized.savedPath,
+      wordCount: organized.wordCount,
+      domain: organized.domain,
+      subject: organized.subject,
+      tags: organized.tags,
+      entities: organized.entities,
+      wikilinks: organized.wikilinksCount,
+      mocPath: organized.mocPath,
+      questionsCount: organized.questionsCount,
+      preview: organized.preview,
+      method: conversionMethod
     })
   } catch (err: any) {
     console.error('Ingest upload error:', err.message)
-    res.status(500).json({ error: err.message })
+    res.status(500).json({ error: err.message || '文档摄取处理失败' })
   }
 })

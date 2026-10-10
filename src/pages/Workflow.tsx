@@ -19,12 +19,12 @@ import {
 // ─── Ingestion Pipeline ───────────────────────────────────────────────────────
 
 const initialIngestionSteps: PipelineStep[] = [
-  { id: '1', label: '文档输入', desc: '选择并上传文件', icon: 'FileInput', status: 'pending' },
-  { id: '2', label: '解析 & 转换', desc: 'markitdown 转 Markdown', icon: 'Cog', status: 'pending' },
-  { id: '3', label: 'AI 实体抽取', desc: 'LLM 提取关键实体和标签', icon: 'Search', status: 'pending' },
-  { id: '4', label: '交叉引用', desc: '匹配已有笔记生成 Wikilinks', icon: 'Link', status: 'pending' },
-  { id: '5', label: '标签生成', desc: 'AI 分类标签', icon: 'Binary', status: 'pending' },
-  { id: '6', label: '写入 Wiki', desc: '生成 Markdown 文件到 Vault', icon: 'CheckCircle', status: 'pending' },
+  { id: '1', label: '文档输入', desc: '选择并上传文档', icon: 'FileInput', status: 'pending' },
+  { id: '2', label: 'MarkItDown 转换', desc: '微软多格式 Markdown 解析与智能保底', icon: 'Cog', status: 'pending' },
+  { id: '3', label: 'AI 自组织整理', desc: '自组织第二大脑架构 (claude-obsidian)', icon: 'Search', status: 'pending' },
+  { id: '4', label: '知识图谱织网', desc: '全库匹配自动建立 [[Wikilinks]]', icon: 'Link', status: 'pending' },
+  { id: '5', label: 'MOC 内容地图挂载', desc: '自动挂载入学科 _index.md 索引树', icon: 'Binary', status: 'pending' },
+  { id: '6', label: '写入知识库 & 题库', desc: '标准 Markdown 落盘并沉淀考研真题', icon: 'CheckCircle', status: 'pending' },
 ]
 
 function IngestionPanel() {
@@ -56,28 +56,27 @@ function IngestionPanel() {
     try {
       // Step 1: Document input
       updateStep('1', { status: 'active' })
-      await delay(500)
+      await delay(400)
       updateStep('1', { status: 'done', detail: file.name })
 
-      // Step 2-6: Backend handles everything in one call
+      // Step 2: MarkItDown parsing
       updateStep('2', { status: 'active' })
 
       const res = await api.uploadFile(file)
 
-      // Mark remaining steps as done based on result
-      updateStep('2', { status: 'done', detail: 'markitdown 转换完成' })
-      await delay(200)
+      updateStep('2', { status: 'done', detail: res.method === 'microsoft_markitdown' ? 'MarkItDown 解析成功' : 'MarkItDown + 多级保底' })
+      await delay(250)
 
-      updateStep('3', { status: 'done', detail: `${res.entities.length} 个实体` })
-      await delay(200)
+      updateStep('3', { status: 'done', detail: `${res.subject || '知识提炼完成'} · 提炼 ${res.entities.length} 个实体` })
+      await delay(250)
 
-      updateStep('4', { status: 'done', detail: `${res.wikilinks} 条交叉引用` })
-      await delay(200)
+      updateStep('4', { status: 'done', detail: `${res.wikilinks} 条 [[双链]]` })
+      await delay(250)
 
-      updateStep('5', { status: 'done', detail: res.tags.join(', ') || '已生成' })
-      await delay(200)
+      updateStep('5', { status: 'done', detail: res.mocPath ? `已挂载 MOC: ${res.mocPath}` : '已完成目录分类归档' })
+      await delay(250)
 
-      updateStep('6', { status: 'done', detail: res.markdownPath })
+      updateStep('6', { status: 'done', detail: `${res.markdownPath} · 沉淀 ${res.questionsCount || 0} 道真题` })
 
       setResult(res)
     } catch (err: any) {
@@ -85,7 +84,6 @@ function IngestionPanel() {
         ? '文档解析或写入异常：请确认上传格式在支持列表内（PDF, Word, Excel, Markdown等）且服务正常'
         : err.message
       setError(msg)
-      // Mark current active step as failed
       setSteps(prev => prev.map(s => s.status === 'active' ? { ...s, status: 'pending', desc: '处理中断' } : s))
     } finally {
       setRunning(false)
@@ -99,23 +97,30 @@ function IngestionPanel() {
     <div className="bg-surface border border-cream-200 rounded-xl overflow-hidden flex flex-col h-full">
       <div className="px-5 py-4 border-b border-cream-200 flex items-center gap-3">
         <div className="flex-1">
-          <div className="text-sm font-semibold text-warm-700">文档摄取 Pipeline</div>
-          <div className="text-[11px] text-warm-400 mt-0.5">上传文档 → markitdown 转换 → AI 抽取 → 写入 Vault</div>
+          <div className="text-sm font-semibold text-warm-700 flex items-center gap-2">
+            <span>文档摄取 Pipeline</span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-accent-orange/10 text-accent-orange border border-accent-orange/20">
+              MarkItDown + claude-obsidian 自动化整理
+            </span>
+          </div>
+          <div className="text-[11px] text-warm-400 mt-0.5">
+            上传任意文档 → MarkItDown 转换为 Markdown → AI 知识提炼与双链织网 → 挂载 MOC 并录入题库
+          </div>
         </div>
         <input
           ref={fileInputRef}
           type="file"
-          accept=".pdf,.docx,.xlsx,.pptx,.html,.csv,.epub,.odt,.rtf,.json,.xml,.jpg,.jpeg,.png"
+          accept=".pdf,.docx,.xlsx,.pptx,.html,.htm,.txt,.md,.markdown,.csv,.epub,.odt,.rtf,.json,.xml,.jpg,.jpeg,.png"
           onChange={handleUpload}
           className="hidden"
         />
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={running}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs bg-accent-orange text-white hover:bg-accent-orange/90 disabled:opacity-40 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs bg-accent-orange text-white hover:bg-accent-orange/90 disabled:opacity-40 transition-colors shadow-xs cursor-pointer"
         >
           {running ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-          {running ? '处理中...' : '选择文件'}
+          {running ? '正在转换与整理...' : '选择文件'}
         </button>
       </div>
 
@@ -139,27 +144,44 @@ function IngestionPanel() {
 
       {/* Result panel */}
       {result && (
-        <div className="px-5 py-3 border-t border-cream-200 bg-accent-sage/5">
-          <div className="flex items-center gap-2 text-xs text-accent-sage mb-2">
-            <Check className="w-4 h-4" />
-            摄取完成: {result.originalName} → {result.markdownPath}
+        <div className="px-5 py-4 border-t border-cream-200 bg-emerald-50/50 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs font-bold text-emerald-800">
+              <Check className="w-4 h-4 text-emerald-600" />
+              <span>知识库自动整理入库成功: {result.originalName}</span>
+            </div>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium">
+              {result.domain === 'cs_408' ? '408 统考' : result.domain === 'math' ? '考研数学' : '核心知识库'} · {result.subject || '全学科'}
+            </span>
           </div>
-          <div className="text-[11px] text-warm-500 space-x-4">
-            <span>{result.wordCount} words</span>
-            <span>{result.entities.length} entities</span>
-            <span>{result.tags.length} tags</span>
-            <span>{result.wikilinks} wikilinks</span>
+
+          <div className="p-2.5 rounded-lg bg-white border border-emerald-200/80 text-xs space-y-1">
+            <div className="flex items-center justify-between text-warm-700 font-medium">
+              <span>📄 归档路径: <span className="font-mono text-indigo-700">{result.markdownPath}</span></span>
+              <span>{result.wordCount} 字</span>
+            </div>
+            {result.mocPath && (
+              <div className="text-[11px] text-slate-500">
+                🗺️ 已自动挂载学科 MOC: <span className="font-mono text-slate-700">{result.mocPath}</span>
+              </div>
+            )}
+            <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] text-warm-500">
+              <span className="px-1.5 py-0.5 rounded bg-cream-200 text-warm-700">🔗 {result.wikilinks} 条 [[双向链接]]</span>
+              <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">🎯 沉淀 {result.questionsCount || 0} 道做题库题目</span>
+              <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">🏷️ {result.tags.join(', ')}</span>
+            </div>
           </div>
-          <div className="mt-2 text-[10px] text-warm-400 bg-cream-200 rounded p-2 max-h-24 overflow-auto">
+
+          <div className="text-[11px] text-warm-500 font-mono bg-cream-100 rounded-lg p-2.5 max-h-28 overflow-auto border border-cream-200/70 whitespace-pre-wrap leading-relaxed">
             {result.preview}
           </div>
         </div>
       )}
 
       {error && (
-        <div className="px-5 py-3 border-t border-cream-200 bg-rose-50/50 flex items-center gap-2 text-xs text-rose-400">
-          <AlertTriangle className="w-4 h-4" />
-          {error}
+        <div className="px-5 py-3 border-t border-cream-200 bg-rose-50/80 flex items-center gap-2 text-xs text-rose-600">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          <span>{error}</span>
         </div>
       )}
     </div>

@@ -11,6 +11,11 @@ import {
   __dirname,
 } from '../context.js'
 import { getFile, createFile, updateFile, type VaultNote } from '../vault-parser.js'
+import { database } from '../db/database.js'
+import { calculateSM2, estimateRetentionRate } from '../algorithms/sm2.js'
+import { MasteryEngine } from '../algorithms/mastery.js'
+import { matchSyllabusNode } from '../data/syllabus.js'
+
 
 export const studyRouter = Router()
 
@@ -190,6 +195,162 @@ studyRouter.get('/study/review-due', (_req, res) => {
     res.status(500).json({ error: err.message })
   }
 })
+
+// ===== 真·SuperMemo-2 (SM-2) 艾宾浩斯复习引擎 =====
+
+studyRouter.post('/study/sm2/grade', (req, res) => {
+  try {
+    const { cardId, grade, subject, title, syllabusId } = req.body as {
+      cardId: string
+      grade: number // 0 ~ 5
+      subject?: string
+      title?: string
+      syllabusId?: string
+    }
+
+    if (!cardId || typeof grade !== 'number') {
+      res.status(400).json({ error: 'Missing cardId or valid grade (0-5)' })
+      return
+    }
+
+    const existing = database.getSM2Flashcard(cardId)
+    const updatedState = calculateSM2(
+      existing || { cardId },
+      grade
+    )
+
+    // 解析历史打分记录
+    let history: Array<{ date: string; grade: number }> = []
+    try {
+      if (existing?.historyJson) {
+        history = JSON.parse(existing.historyJson)
+      }
+    } catch {
+      history = []
+    }
+    history.push({ date: updatedState.lastReviewAt, grade: Math.round(grade) })
+
+    const finalSyllabusId = syllabusId || existing?.syllabusId || ''
+    database.upsertSM2Flashcard({
+      cardId,
+      title: title || existing?.title || '知识卡片',
+      subject: subject || existing?.subject || '综合',
+      syllabusId: finalSyllabusId,
+      repetition: updatedState.repetition,
+      intervalDays: updatedState.intervalDays,
+      easinessFactor: updatedState.easinessFactor,
+      reviewCount: updatedState.reviewCount,
+      lastReviewAt: updatedState.lastReviewAt,
+      nextReviewAt: updatedState.nextReviewAt,
+      lastGrade: Math.round(grade),
+      historyJson: JSON.stringify(history.slice(-20)), // 保留最近20次
+    })
+
+    // 同步更新对应考点掌握度 (grade >= 3 判定为回忆成功)
+    if (finalSyllabusId) {
+      MasteryEngine.recordAttempt(finalSyllabusId, grade >= 3)
+    }
+
+    const retention = estimateRetentionRate(updatedState.lastReviewAt, updatedState.intervalDays)
+
+    res.json({
+      success: true,
+      cardId,
+      state: updatedState,
+      retentionRate: retention,
+    })
+  } catch (err: any) {
+    console.error('SM2 grade error:', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+studyRouter.get('/study/sm2/due', (req, res) => {
+  try {
+    const today = new Date().toISOString().split('T')[0]
+    const subject = req.query.subject ? String(req.query.subject) : undefined
+    const dueCards = database.getDueFlashcards(today, subject)
+
+    const mapped = dueCards.map(c => {
+      const retention = estimateRetentionRate(c.lastReviewAt, c.intervalDays)
+      return {
+        ...c,
+        retentionRate: retention,
+        urgency: retention < 0.5 ? 'high' : retention < 0.75 ? 'medium' : 'normal',
+      }
+    })
+
+    res.json({
+      today,
+      totalDue: mapped.length,
+      cards: mapped,
+    })
+  } catch (err: any) {
+    console.error('SM2 due fetch error:', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ===== 考点掌握度热力分布 (408 & 考研数学) =====
+
+studyRouter.get('/study/mastery-heatmap', (req, res) => {
+  try {
+    const domain = req.query.domain as 'cs_408' | 'math' | undefined
+    const heatmap = MasteryEngine.getHierarchyHeatmap(domain)
+    res.json({
+      timestamp: new Date().toISOString(),
+      summaries: heatmap,
+    })
+  } catch (err: any) {
+    console.error('Mastery heatmap error:', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+studyRouter.post('/study/mastery-update', (req, res) => {
+  try {
+    const { syllabusId, status, score } = req.body as {
+      syllabusId: string
+      status: 'red' | 'yellow' | 'green'
+      score?: number
+    }
+    if (!syllabusId || !status) {
+      res.status(400).json({ error: '缺少必填字段: syllabusId 与 status' })
+      return
+    }
+    const record = MasteryEngine.updateManualStatus(syllabusId, status, score)
+    res.json({
+      success: true,
+      record,
+    })
+  } catch (err: any) {
+    console.error('Mastery update error:', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+studyRouter.get('/study/mastery-node-detail', (req, res) => {
+  try {
+    const syllabusId = req.query.syllabusId as string
+    if (!syllabusId) {
+      res.status(400).json({ error: '缺少 syllabusId 参数' })
+      return
+    }
+    const detail = MasteryEngine.getNodeDetail(syllabusId)
+    if (!detail) {
+      res.status(404).json({ error: '未找到对应考点' })
+      return
+    }
+    res.json({
+      success: true,
+      detail,
+    })
+  } catch (err: any) {
+    console.error('Mastery node detail error:', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
 
 // ===== Daily Error Log (错题本) =====
 

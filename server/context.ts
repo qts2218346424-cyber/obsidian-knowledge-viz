@@ -6,10 +6,12 @@ import multer from 'multer'
 import chokidar from 'chokidar'
 import type express from 'express'
 import { scanVault, type VaultNote } from './vault-parser.js'
-import { createAiClient, getAiProvider, type AiClient, type AiConfig } from './ai-client.js'
+import { createAiClient, getAiProvider, type AiClient, type AiConfig, type CloudEndpoint } from './ai-client.js'
 import type { LocalAgentConfig } from './local-agent-bridge.js'
 import { VaultScheduler } from './scheduler.js'
 import { loadScheduleConfig } from './schedule-store.js'
+import { database } from './db/database.js'
+
 
 const __filename = fileURLToPath(import.meta.url)
 export const __dirname = path.dirname(__filename)
@@ -57,15 +59,94 @@ for (const cp of configPaths) {
   }
 }
 
+// 初始化本地 SQLite 关系型数据库持久层
+database.init(path.join(runtimeDataDir, 'data'))
+export { database }
+
+
 // AI client instance
-export let anthropic: AiClient | null = config.ai
+export let anthropic: AiClient | null = config.ai && config.ai.apiKey && config.ai.baseURL
   ? createAiClient(config.ai)
   : null
 
 export function reinitAnthropic() {
-  anthropic = config.ai
+  if (!config.ai) {
+    anthropic = null
+    return
+  }
+
+  // 如果配置了多接口 endpoints，且顶级配置为空，可由激活端点自动兜底顶层配置
+  if (config.ai.endpoints && config.ai.endpoints.length > 0) {
+    const activeEp = config.ai.endpoints.find(e => e.id === config.ai?.activeEndpointId) || config.ai.endpoints[0]
+    if (activeEp && activeEp.apiKey && activeEp.baseURL) {
+      if (!config.ai.apiKey) config.ai.apiKey = activeEp.apiKey
+      if (!config.ai.baseURL) config.ai.baseURL = activeEp.baseURL
+      if (!config.ai.apiFormat) config.ai.apiFormat = activeEp.apiFormat
+      if (!config.ai.model) config.ai.model = activeEp.defaultModel || activeEp.models?.[0] || ''
+    }
+  }
+
+  anthropic = config.ai && config.ai.apiKey && config.ai.baseURL
     ? createAiClient(config.ai)
     : null
+}
+
+export function getAiClientForModel(
+  targetModel?: string,
+  targetEndpointId?: string
+): { client: AiClient; model: string; endpoint?: CloudEndpoint } | null {
+  if (!config.ai) return null
+
+  const endpoints = config.ai.endpoints || []
+  if (endpoints.length > 0) {
+    let matchedEndpoint: CloudEndpoint | undefined
+    let cleanModel = targetModel ? targetModel.trim() : ''
+
+    // 1. 如果明确指定了 targetEndpointId
+    if (targetEndpointId) {
+      matchedEndpoint = endpoints.find(ep => ep.id === targetEndpointId)
+    }
+
+    // 2. 如果 model 形如 "endpointId::modelName"
+    if (!matchedEndpoint && cleanModel.includes('::')) {
+      const idx = cleanModel.indexOf('::')
+      const epId = cleanModel.slice(0, idx)
+      matchedEndpoint = endpoints.find(ep => ep.id === epId)
+      cleanModel = cleanModel.slice(idx + 2)
+    }
+
+    // 3. 如果仍未找到，在各个接口的 models 列表中匹配
+    if (!matchedEndpoint && cleanModel) {
+      matchedEndpoint = endpoints.find(ep => Array.isArray(ep.models) && ep.models.includes(cleanModel))
+    }
+
+    // 4. 回退到 activeEndpointId 或第一个有效的 endpoint
+    if (!matchedEndpoint) {
+      if (config.ai.activeEndpointId) {
+        matchedEndpoint = endpoints.find(ep => ep.id === config.ai.activeEndpointId)
+      }
+      if (!matchedEndpoint) {
+        matchedEndpoint = endpoints.find(ep => Boolean(ep.apiKey && ep.baseURL)) || endpoints[0]
+      }
+    }
+
+    if (matchedEndpoint && matchedEndpoint.apiKey && matchedEndpoint.baseURL) {
+      const epClient = createAiClient({
+        apiKey: matchedEndpoint.apiKey,
+        baseURL: matchedEndpoint.baseURL,
+        apiFormat: matchedEndpoint.apiFormat,
+        provider: matchedEndpoint.apiFormat === 'openai' ? 'openai-compatible' : 'anthropic',
+      })
+      const finalModel = cleanModel || matchedEndpoint.defaultModel || matchedEndpoint.models?.[0] || 'deepseek-v4-pro'
+      return { client: epClient, model: finalModel, endpoint: matchedEndpoint }
+    }
+  }
+
+  if (anthropic) {
+    return { client: anthropic, model: targetModel || config.ai.model || 'deepseek-v4-pro' }
+  }
+
+  return null
 }
 
 export function summarizeAiError(err: any) {
@@ -94,7 +175,7 @@ export function proxyFetch(
 // Ingest uploads directory
 export const uploadDir = path.join(runtimeDataDir, 'uploads')
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true })
-export const upload = multer({ dest: uploadDir, limits: { fileSize: 100 * 1024 * 1024 } })
+export const upload = multer({ dest: uploadDir, limits: { fileSize: 1024 * 1024 * 1024 } })
 
 // Vault notes cache
 let cachedNotes: VaultNote[] | null = null
