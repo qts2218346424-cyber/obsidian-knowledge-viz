@@ -4,6 +4,7 @@ import type { AgentMessage } from '../pages/Chat'
 import { api } from '../services/api'
 import NoteCard from './NoteCard'
 import MarkdownRenderer from './MarkdownRenderer'
+import ToolCallCard from './ToolCallCard'
 
 interface ChatMessageProps {
   message: AgentMessage
@@ -79,20 +80,28 @@ export default function ChatMessage({ message, onNoteClick }: ChatMessageProps) 
   return (
     <div className={`flex items-start gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
       {/* Avatar */}
-      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-        isUser ? 'bg-cream-300 text-warm-600' : 'bg-gradient-to-br from-accent-orange to-accent-peach text-white'
+      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-2xs ${
+        isUser ? 'bg-cream-300 text-warm-600' : 'bg-gradient-to-br from-accent-orange to-blue-600 text-white'
       }`}>
         {isUser ? <User className="w-4 h-4" /> : <BookOpen className="w-4 h-4" />}
       </div>
 
       {/* Message bubble */}
       <div className={`max-w-[75%] ${isUser ? 'text-right' : ''}`}>
-        <div className={`inline-block rounded-xl px-4 py-3 text-sm leading-relaxed ${
+        {message.toolCalls && message.toolCalls.length > 0 && (
+          <div className="mb-2 space-y-1.5 w-full text-left">
+            {message.toolCalls.map((tc, idx) => (
+              <ToolCallCard key={idx} toolCall={tc} />
+            ))}
+          </div>
+        )}
+
+        <div className={`inline-block rounded-2xl px-4 py-3 text-xs leading-relaxed transition-all shadow-2xs ${
           isUser
-            ? 'bg-accent-orange/15 text-warm-800 border border-accent-orange/20'
-            : 'bg-cream-200/50 text-warm-600 border border-cream-300/50'
+            ? 'bg-gradient-to-r from-accent-orange to-blue-600 text-white rounded-br-xs shadow-xs'
+            : 'bg-surface dark:bg-slate-900 text-warm-800 dark:text-slate-200 border border-cream-200/90 dark:border-slate-800 rounded-bl-xs'
         }`}>
-          <MarkdownRenderer content={message.content} className="text-left text-sm" />
+          <MarkdownRenderer content={message.content} isStreaming={message.streaming} className="text-left" />
         </div>
 
         {/* Cited notes */}

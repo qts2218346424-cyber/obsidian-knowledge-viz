@@ -6,6 +6,7 @@ import {
   FolderPlus, Folder, Square, Layers, Globe, Edit3, Undo2, RotateCcw, Play
 } from 'lucide-react'
 import MarkdownRenderer from '../components/MarkdownRenderer'
+import ToolCallCard from '../components/ToolCallCard'
 import { api, type FileDetail, type LocalAgentStatus, type LocalSkill, type AppSettings, type CloudEndpoint } from '../services/api'
 import {
   loadWorkspace,
@@ -844,6 +845,8 @@ export default function Chat() {
       role: 'assistant',
       agentName: activeAgent.name,
       agentIcon: activeAgent.icon,
+      provider,
+      model: selectedModel,
       content: '',
       toolCalls: [],
       timestamp: new Date(),
@@ -2365,7 +2368,7 @@ export default function Chat() {
                         </div>
 
                         <div className="flex-1 text-xs leading-relaxed text-warm-800 dark:text-slate-200 min-h-[60px]">
-                          <MarkdownRenderer content={msg.content} />
+                          <MarkdownRenderer content={msg.content} isStreaming={msg.streaming} />
                           {msg.streaming && <span className="inline-block w-2 h-4 bg-accent-orange animate-pulse ml-1 align-middle" />}
                         </div>
 
@@ -2428,7 +2431,7 @@ export default function Chat() {
                         </div>
 
                         <div className="flex-1 text-xs leading-relaxed text-warm-800 dark:text-slate-200 min-h-[60px]">
-                          <MarkdownRenderer content={msg.peerResponse.content} />
+                          <MarkdownRenderer content={msg.peerResponse.content} isStreaming={msg.peerResponse.streaming} />
                           {msg.peerResponse.streaming && <span className="inline-block w-2 h-4 bg-purple-500 animate-pulse ml-1 align-middle" />}
                         </div>
 
@@ -2483,44 +2486,50 @@ export default function Chat() {
                   )}
 
                   <div className={`max-w-3xl flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
-                    {!isUser && (
-                      <div className="flex items-center gap-2 mb-1 text-xs">
-                        <span className="font-bold text-warm-800 flex items-center gap-1">
-                          <span>{msg.agentIcon || activeAgent.icon}</span>
-                          <span>{msg.agentName || activeAgent.name}</span>
-                        </span>
-                        <span className={`text-[10px] px-1.5 py-0.2 rounded border ${activeAgent.badgeClass}`}>
-                          {activeAgent.title}
-                        </span>
-                      </div>
-                    )}
+                    {!isUser && (() => {
+                      const matchedAgent = STUDY_AGENTS.find(a => a.name === msg.agentName || a.id === msg.agentName) || activeAgent
+                      const provDisplay = msg.provider || provider
+                      const modelDisplay = msg.model || selectedModel
+                      return (
+                        <div className="flex items-center flex-wrap gap-2 mb-1.5 text-xs">
+                          <span className="font-bold text-warm-800 flex items-center gap-1">
+                            <span>{msg.agentIcon || matchedAgent.icon}</span>
+                            <span>{msg.agentName || matchedAgent.name}</span>
+                          </span>
+                          <span className={`inline-flex items-center text-[10px] leading-tight px-1.5 py-0.5 rounded-md border font-medium ${matchedAgent.badgeClass}`}>
+                            {matchedAgent.title}
+                          </span>
+                          {(provDisplay || modelDisplay) && (
+                            <span className="text-[10px] text-warm-400 font-mono hidden sm:inline-block">
+                              [{provDisplay}] {modelDisplay ? modelDisplay.replace(/^.*::/, '') : ''}
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })()}
 
                     <div
-                      className={`px-4 py-3 rounded-2xl text-xs leading-relaxed ${
+                      className={`px-4 py-3 rounded-2xl text-xs leading-relaxed transition-all shadow-2xs ${
                         isUser
-                          ? 'bg-accent-orange text-white rounded-br-xs shadow-xs'
-                          : 'bg-cream-100/80 border border-cream-200/80 text-warm-800 rounded-bl-xs'
+                          ? 'bg-gradient-to-r from-accent-orange to-blue-600 text-white rounded-br-xs shadow-xs'
+                          : 'bg-surface dark:bg-slate-900 border border-cream-200/90 dark:border-slate-800 text-warm-800 dark:text-slate-200 rounded-bl-xs'
                       }`}
                     >
-                      {/* Tool calls execution badge */}
+                      {/* Tool calls execution badge - 升级为顶级智能体折叠卡 */}
                       {msg.toolCalls && msg.toolCalls.length > 0 && (
-                        <div className="mb-2.5 pb-2 border-b border-cream-200/80 space-y-1">
+                        <div className="mb-3 space-y-1.5 w-full">
                           {msg.toolCalls.map((tc, idx) => (
-                            <div key={idx} className="flex items-center gap-1.5 text-[10px] text-warm-500 font-mono bg-cream-200/50 px-2 py-0.5 rounded">
-                              <Wrench className="w-3 h-3 text-orange-500 shrink-0" />
-                              <span>已调用工具: {tc.tool}</span>
-                              {tc.success && <CheckCircle2 className="w-3 h-3 text-emerald-500 ml-auto" />}
-                            </div>
+                            <ToolCallCard key={idx} toolCall={tc} />
                           ))}
                         </div>
                       )}
 
                       {/* Content */}
-                      <MarkdownRenderer content={msg.content} />
+                      <MarkdownRenderer content={msg.content} isStreaming={msg.streaming} />
 
                       {/* Streaming cursor */}
                       {msg.streaming && (
-                        <span className="inline-block w-2 h-4 bg-accent-orange animate-pulse ml-1 align-middle" />
+                        <span className="inline-block w-1.5 h-4 ml-1 rounded-full bg-accent-orange animate-pulse align-middle shadow-xs" />
                       )}
                     </div>
 

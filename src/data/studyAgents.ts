@@ -62,14 +62,14 @@ export const STUDY_AGENTS: StudyAgent[] = [
   {
     id: 'agent-vault',
     name: '墨卷',
-    title: '知识库笔记管家 (Claudian)',
+    title: '知识库双链与笔记管家',
     role: 'Obsidian 笔记双向管理、双链图谱重构与知识治理',
     domain: 'vault',
     icon: '🗂️',
     themeColor: 'purple',
-    badgeClass: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-    description: '类似 Obsidian Claudian 插件，具备直连本地知识库工具权限，能真正查阅、创建、更新、重构笔记并建立 [[wikilinks]]。',
-    systemPrompt: `你是一个具备类似 Obsidian Claudian 自主 Agent 权限的知识库管理专家「墨卷」。
+    badgeClass: 'bg-purple-500/10 text-purple-600 border-purple-500/30',
+    description: '具备直连本地知识库工具权限，能真正查阅、创建、更新、重构笔记并建立 [[wikilinks]]。',
+    systemPrompt: `你是一个具备自主 Agent 权限的知识库管理专家「墨卷」。
 【你的核心职责】：
 1. 协助用户管理和治理真实知识库中的 Markdown 笔记；
 2. 提炼结构清晰、具有原子化与高内聚特性的卡片笔记；
@@ -90,7 +90,7 @@ export const STUDY_AGENTS: StudyAgent[] = [
     domain: 'quiz',
     icon: '🎯',
     themeColor: 'orange',
-    badgeClass: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
+    badgeClass: 'bg-orange-500/10 text-orange-600 border-orange-500/30',
     description: '根据你正在学习的知识点，现场命制 3 道高质量 408 或考研数学风格的选择题/填空题，并提供诊断解析。',
     systemPrompt: `你是一个深谙历年考研真题出题风格与命题陷阱的高考研命题官「真题官」。
 【你的核心任务】：
@@ -107,13 +107,13 @@ export const STUDY_AGENTS: StudyAgent[] = [
   {
     id: 'agent-code',
     name: '码道',
-    title: '代码实战与算法重构 (Codex)',
+    title: '408 算法实战与代码重构教练',
     role: '408 算法大题代码编写、复杂度优化与边界调试',
     domain: 'code',
     icon: '⚡',
     themeColor: 'cyan',
-    badgeClass: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-    description: '依托 Codex 代码引擎，专注 408 数据结构算法大题（10~15分）：双指针、链表原地逆置、树遍历剪枝、图最短路代码手写与复杂度证明。',
+    badgeClass: 'bg-cyan-500/10 text-cyan-700 border-cyan-500/30',
+    description: '专注 408 数据结构算法大题（10~15分）：双指针、链表原地逆置、树遍历剪枝、图最短路代码手写与复杂度证明。',
     systemPrompt: `你是一个专注于全国计算机统考 408 算法大题与系统级编码的实战教练「码道」。
 【你的代码规范】：
 1. 必须使用标准规范、考场认可的 C 或 C++ 语法书写核心算法；

@@ -16,6 +16,7 @@ import {
   X,
 } from 'lucide-react'
 import MarkdownRenderer from './MarkdownRenderer'
+import ToolCallCard from './ToolCallCard'
 import { AI_SKILLS, getSkills } from '../data/ai-skills'
 import { api, type LocalAgentStatus } from '../services/api'
 import {
@@ -583,16 +584,34 @@ function MessageBubble({ message }: { message: AIWorkspaceMessage }) {
   const isUser = message.role === 'user'
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-sm leading-6 ${isUser ? 'rounded-br-md bg-warm-900 text-white' : 'rounded-bl-md border border-slate-200 bg-white text-warm-700'}`}>
+      <div
+        className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed transition-all shadow-2xs ${
+          isUser
+            ? 'rounded-br-xs bg-gradient-to-r from-accent-orange to-blue-600 text-white shadow-xs'
+            : 'rounded-bl-xs border border-cream-200/90 dark:border-slate-800 bg-surface dark:bg-slate-900 text-warm-800 dark:text-slate-200'
+        }`}
+      >
         {message.toolCalls && message.toolCalls.length > 0 && (
-          <div className="mb-2 rounded-xl bg-slate-50 px-2.5 py-2 text-[10px] text-warm-400">
-            已调用 {message.toolCalls.length} 个知识库工具：{message.toolCalls.map(call => call.tool).join('、')}
+          <div className="mb-2.5 space-y-1.5 w-full">
+            {message.toolCalls.map((call, idx) => (
+              <ToolCallCard key={idx} toolCall={call as any} />
+            ))}
           </div>
         )}
-        {isUser
-          ? <div className="whitespace-pre-wrap">{message.content}</div>
-          : <div className="prose prose-sm max-w-none [&_p]:my-1.5 [&_ul]:my-1.5 [&_ol]:my-1.5 [&_code]:text-accent-sage">{message.content ? <MarkdownRenderer content={message.content} /> : <Loader2 className="h-4 w-4 animate-spin text-accent-orange" />}</div>}
-        {message.streaming && message.content && <span className="ml-1 inline-block h-4 w-1 animate-pulse rounded bg-accent-orange align-middle" />}
+        {isUser ? (
+          <div className="whitespace-pre-wrap">{message.content}</div>
+        ) : (
+          <div className="leading-relaxed">
+            {message.content ? (
+              <MarkdownRenderer content={message.content} isStreaming={message.streaming} />
+            ) : (
+              <Loader2 className="h-4 w-4 animate-spin text-accent-orange" />
+            )}
+          </div>
+        )}
+        {message.streaming && message.content && (
+          <span className="ml-1 inline-block h-3.5 w-1.5 animate-pulse rounded-full bg-accent-orange align-middle shadow-xs" />
+        )}
       </div>
     </div>
   )
