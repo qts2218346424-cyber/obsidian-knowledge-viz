@@ -285,7 +285,7 @@ export async function* runAgentLoop(
   const finishWithCollectedContext = async function* () {
     const finalResponse = await anthropic.messages.create({
       model,
-      max_tokens: 2048,
+      max_tokens: 8192,
       system: `${systemPrompt}
 
 你已经收集到足够的知识库信息。现在停止调用工具，直接基于已经返回的工具结果给用户一个完整、简洁、可执行的总结。
@@ -305,7 +305,7 @@ export async function* runAgentLoop(
     try {
       const response = await anthropic.messages.create({
         model,
-        max_tokens: 2048,
+        max_tokens: 8192,
         system: systemPrompt,
         messages: conversationMessages as Anthropic.MessageParam[],
         tools: tools.length > 0 ? tools : undefined,
@@ -409,7 +409,7 @@ export async function* runAgentLoop(
         try {
           const fallbackResponse = await anthropic.messages.create({
             model,
-            max_tokens: 2048,
+            max_tokens: 8192,
             system: systemPrompt + '\n\n注意：工具调用不可用，请直接基于你的知识回答用户的问题。如果用户需要操作文件，请给出具体的操作建议。',
             messages: messages as Anthropic.MessageParam[],
           })

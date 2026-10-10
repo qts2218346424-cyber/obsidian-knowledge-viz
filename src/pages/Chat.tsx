@@ -3,7 +3,7 @@ import {
   Send, Loader2, FolderTree, X, Wrench, ChevronDown,
   Plus, Trash2, MessageSquare, Save, Sparkles, CheckCircle2, Target,
   Copy, Check, Bot, FileText, Brain, RefreshCw, Settings, Users,
-  FolderPlus, Folder, Square, Layers, Globe
+  FolderPlus, Folder, Square, Layers, Globe, Edit3, Undo2, RotateCcw, Play
 } from 'lucide-react'
 import MarkdownRenderer from '../components/MarkdownRenderer'
 import { api, type FileDetail, type LocalAgentStatus, type LocalSkill, type AppSettings, type CloudEndpoint } from '../services/api'
@@ -1229,6 +1229,175 @@ export default function Chat() {
     } catch { /* silent */ }
   }
 
+  // 核心功能 1：撤回消息（若是用户消息，撤回该提问及智能体的回答）
+  const handleRecallMessage = useCallback((msgId: string) => {
+    if (!activeConvId) return
+    updateConversation(activeConvId, conv => {
+      const idx = conv.messages.findIndex(m => m.id === msgId)
+      if (idx === -1) return conv
+      const target = conv.messages[idx]
+      let nextMsgs: AgentMessage[] = []
+      if (target.role === 'user') {
+        // 撤回该提问及后续的回答
+        nextMsgs = conv.messages.slice(0, idx)
+      } else {
+        // 单独删除此条回复
+        nextMsgs = conv.messages.filter(m => m.id !== msgId)
+      }
+      return { ...conv, messages: nextMsgs }
+    })
+  }, [activeConvId, updateConversation])
+
+  // 核心功能 2：编辑用户消息（将内容填回输入框，并撤回此轮对话）
+  const handleEditMessage = useCallback((msgId: string) => {
+    const targetMsg = messages.find(m => m.id === msgId)
+    if (!targetMsg) return
+    setInput(targetMsg.content)
+    handleRecallMessage(msgId)
+    setTimeout(() => {
+      inputRef.current?.focus()
+    }, 50)
+  }, [messages, handleRecallMessage])
+
+  // 核心功能 3：删除单条消息
+  const handleDeleteMessage = useCallback((msgId: string) => {
+    if (!activeConvId) return
+    updateConversation(activeConvId, conv => ({
+      ...conv,
+      messages: conv.messages.filter(m => m.id !== msgId),
+    }))
+  }, [activeConvId, updateConversation])
+
+  // 核心功能 4：重新生成（Regenerate）
+  const handleRegenerate = useCallback((assistantMsgId: string) => {
+    if (!activeConvId || isCurrentRunning) return
+    const conv = conversations.find(c => c.id === activeConvId)
+    if (!conv) return
+    const idx = conv.messages.findIndex(m => m.id === assistantMsgId)
+    if (idx === -1) return
+    const prevUserMsg = [...conv.messages.slice(0, idx)].reverse().find(m => m.role === 'user')
+    if (!prevUserMsg) return
+
+    updateConversation(activeConvId, c => ({
+      ...c,
+      messages: c.messages.slice(0, idx),
+    }))
+
+    setTimeout(() => {
+      handleSend(prevUserMsg.content)
+    }, 100)
+  }, [activeConvId, isCurrentRunning, conversations, updateConversation, handleSend])
+
+  // 核心功能 5：断点续写 / 继续生成（彻底解决说一半截断没后续的痛点）
+  const handleContinue = async (assistantMsgId: string) => {
+    if (!activeConvId || isCurrentRunning) return
+    const conv = conversations.find(c => c.id === activeConvId)
+    if (!conv) return
+    const targetMsg = conv.messages.find(m => m.id === assistantMsgId)
+    if (!targetMsg) return
+
+    const continuePrompt = `【用户指令：请继续往下写】\n你上一段回答在末尾处暂停了，请紧密承接上一段末尾断点继续往下写，不要重复上文已经说过的内容，直接继续输出后续内容、推导或代码：`
+
+    updateConversation(activeConvId, c => ({
+      ...c,
+      messages: c.messages.map(m => m.id === assistantMsgId ? { ...m, streaming: true } : m),
+    }))
+
+    const convId = activeConvId
+    const initStatus = `正在让【${activeAgent.name}】(${provider}) 接续未完内容...`
+    setRunningConvs(prev => ({
+      ...prev,
+      [convId]: { status: initStatus, streaming: true },
+    }))
+
+    const convController = new AbortController()
+    abortControllersRef.current.set(convId, convController)
+
+    try {
+      const history = (conv.messages || [])
+        .filter(m => m.content && m.content.trim().length > 0 && m.id !== 'welcome')
+        .slice(-16)
+        .map(m => ({ role: m.role, content: m.content }))
+
+      const body = {
+        provider,
+        prompt: continuePrompt,
+        model: selectedModel || undefined,
+        sessionId: convId,
+        history,
+        agentPrompt: `${activeAgent.systemPrompt}\n【续写要求】：请直接承接断点无缝续写，不要客套，不要重复上文。`,
+        projectName: activeProject?.name || '考研 408 & 数学研学工作台',
+        projectDescription: activeProject?.description || '',
+        cwd: activeProject?.cwd || undefined,
+        pageContext: `AI 伴学主页面 (${activeAgent.name}) · 继续生成`,
+      }
+
+      const res = await fetch('/api/local-agents/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: convController.signal,
+      })
+
+      if (!res.ok) throw new Error(`服务响应异常: HTTP ${res.status}`)
+
+      const reader = res.body?.getReader()
+      if (!reader) throw new Error('流式传输不可用')
+
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (!trimmed.startsWith('data: ')) continue
+          const jsonStr = trimmed.slice(6)
+
+          try {
+            const event = JSON.parse(jsonStr)
+            if (event.type === 'text' && event.content) {
+              const delta = event.content
+              updateConversation(convId, c => ({
+                ...c,
+                messages: c.messages.map(m => m.id === assistantMsgId ? { ...m, content: m.content + delta } : m),
+              }))
+            } else if (event.type === 'status' && event.content) {
+              setRunningConvs(prev => prev[convId] ? {
+                ...prev,
+                [convId]: { ...prev[convId], status: event.content }
+              } : prev)
+            }
+          } catch {}
+        }
+      }
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        updateConversation(convId, c => ({
+          ...c,
+          messages: c.messages.map(m => m.id === assistantMsgId ? { ...m, content: m.content + `\n\n❌ **续写异常**: ${err.message}` } : m),
+        }))
+      }
+    } finally {
+      updateConversation(convId, c => ({
+        ...c,
+        messages: c.messages.map(m => m.id === assistantMsgId ? { ...m, streaming: false } : m),
+      }))
+      abortControllersRef.current.delete(convId)
+      setRunningConvs(prev => {
+        const next = { ...prev }
+        delete next[convId]
+        return next
+      })
+    }
+  }
+
   // Practical Tool 1: Save message as Obsidian Markdown Note
   const handleSaveMessage = async (msg: AgentMessage) => {
     if (!msg.content) return
@@ -2219,10 +2388,17 @@ export default function Chat() {
                             </button>
                             <button
                               onClick={() => handleTriggerPracticeFromChat({ ...msg, content: msg.content })}
-                              className="hover:text-orange-600 flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-orange-50 text-orange-600 font-medium transition-colors cursor-pointer ml-auto"
+                              className="hover:text-orange-600 flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-orange-50 text-orange-600 font-medium transition-colors cursor-pointer"
                             >
                               <Target className="w-3 h-3" />
                               <span>考我3道题</span>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteMessage(msg.id)}
+                              className="hover:text-red-500 p-0.5 rounded hover:bg-red-50 transition-colors cursor-pointer ml-auto"
+                              title="删除此研讨"
+                            >
+                              <Trash2 className="w-3 h-3" />
                             </button>
                           </div>
                         )}
@@ -2275,10 +2451,17 @@ export default function Chat() {
                             </button>
                             <button
                               onClick={() => handleTriggerPracticeFromChat({ ...msg, content: msg.peerResponse!.content })}
-                              className="hover:text-orange-600 flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-orange-50 text-orange-600 font-medium transition-colors cursor-pointer ml-auto"
+                              className="hover:text-orange-600 flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-orange-50 text-orange-600 font-medium transition-colors cursor-pointer"
                             >
                               <Target className="w-3 h-3" />
                               <span>考我3道题</span>
+                            </button>
+                            <button
+                              onClick={() => handleDeleteMessage(msg.id)}
+                              className="hover:text-red-500 p-0.5 rounded hover:bg-red-50 transition-colors cursor-pointer ml-auto"
+                              title="删除此研讨"
+                            >
+                              <Trash2 className="w-3 h-3" />
                             </button>
                           </div>
                         )}
@@ -2341,13 +2524,65 @@ export default function Chat() {
                       )}
                     </div>
 
+                    {/* 用户提问消息操作栏：撤回、编辑、复制 */}
+                    {isUser && (
+                      <div className="flex items-center gap-1.5 mt-1 text-[11px] text-warm-400 opacity-70 hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => handleEditMessage(msg.id)}
+                          className="hover:text-accent-orange flex items-center gap-0.5 px-1.5 py-0.5 rounded hover:bg-cream-200 transition-colors cursor-pointer"
+                          title="编辑问题并撤回后续回复"
+                        >
+                          <Edit3 className="w-3 h-3" />
+                          <span>编辑</span>
+                        </button>
+                        <button
+                          onClick={() => handleRecallMessage(msg.id)}
+                          className="hover:text-red-500 flex items-center gap-0.5 px-1.5 py-0.5 rounded hover:bg-red-50 transition-colors cursor-pointer"
+                          title="撤回本条提问及智能体的回答"
+                        >
+                          <Undo2 className="w-3 h-3" />
+                          <span>撤回</span>
+                        </button>
+                        <button
+                          onClick={() => handleCopy(msg.id, msg.content)}
+                          className="hover:text-warm-700 flex items-center gap-0.5 px-1.5 py-0.5 rounded hover:bg-cream-200 transition-colors cursor-pointer"
+                          title="复制内容"
+                        >
+                          {copiedId === msg.id ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                          <span>{copiedId === msg.id ? '已复制' : '复制'}</span>
+                        </button>
+                      </div>
+                    )}
+
                     {/* Bottom action buttons on assistant messages */}
                     {!isUser && !msg.streaming && msg.content && (
-                      <div className="flex items-center gap-2 mt-1.5 text-[11px] text-warm-400">
+                      <div className="flex items-center gap-2 mt-1.5 text-[11px] text-warm-400 flex-wrap">
+                        {/* 核心：继续生成按钮（一键接续未完成断点，彻底解决半截截断问题） */}
+                        <button
+                          onClick={() => handleContinue(msg.id)}
+                          disabled={isCurrentRunning}
+                          className="text-accent-orange hover:bg-accent-orange/10 border border-accent-orange/30 font-semibold flex items-center gap-1 px-2 py-0.5 rounded-lg transition-all cursor-pointer shadow-2xs active:scale-95 disabled:opacity-50"
+                          title="若回答未讲完或断在半句，一键让智能体紧接着断点无缝续写"
+                        >
+                          <Play className="w-3 h-3 fill-current" />
+                          <span>继续生成</span>
+                        </button>
+
+                        {/* 重新生成按钮 */}
+                        <button
+                          onClick={() => handleRegenerate(msg.id)}
+                          disabled={isCurrentRunning}
+                          className="hover:text-warm-700 flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-cream-200 transition-colors cursor-pointer disabled:opacity-50"
+                          title="重新生成该条回答"
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                          <span>重新生成</span>
+                        </button>
+
                         {/* Copy button */}
                         <button
                           onClick={() => handleCopy(msg.id, msg.content)}
-                          className="hover:text-warm-700 flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-cream-200 transition-colors"
+                          className="hover:text-warm-700 flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-cream-200 transition-colors cursor-pointer"
                           title="复制完整回复 Markdown"
                         >
                           {copiedId === msg.id ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
@@ -2357,7 +2592,7 @@ export default function Chat() {
                         {/* Practical Tool 1: Save as Note */}
                         <button
                           onClick={() => handleSaveMessage(msg)}
-                          className="hover:text-warm-700 flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-cream-200 transition-colors"
+                          className="hover:text-warm-700 flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-cream-200 transition-colors cursor-pointer"
                           title="一键将此讲解沉淀为知识库 Markdown 真实笔记"
                         >
                           <Save className="w-3 h-3 text-purple-500" />
@@ -2367,11 +2602,20 @@ export default function Chat() {
                         {/* Practical Tool 2: Test 3 Questions */}
                         <button
                           onClick={() => handleTriggerPracticeFromChat(msg)}
-                          className="hover:text-orange-600 flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-orange-50 text-orange-600 font-medium transition-colors"
+                          className="hover:text-orange-600 flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-orange-50 text-orange-600 font-medium transition-colors cursor-pointer"
                           title="针对本条考点讲解，现场命制 3 道真题自测"
                         >
                           <Target className="w-3 h-3" />
                           <span>考我3道题</span>
+                        </button>
+
+                        {/* 删除此条回复 */}
+                        <button
+                          onClick={() => handleDeleteMessage(msg.id)}
+                          className="hover:text-red-500 p-0.5 rounded hover:bg-red-50 transition-colors cursor-pointer ml-auto"
+                          title="删除此条回复"
+                        >
+                          <Trash2 className="w-3 h-3" />
                         </button>
                       </div>
                     )}
