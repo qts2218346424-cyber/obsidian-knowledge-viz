@@ -181,6 +181,7 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
       `项目说明：${body.projectDescription || '当前 Obsidian 知识库项目'}`,
       `工作目录：${cwd}`,
       body.agentPrompt ? `【当前研学智能体定位与人设要求】：\n${body.agentPrompt}` : '',
+      '【排版交付强制准则】：首句结论先行直击答案，严禁“同学你好/我是XX导师/根据历年命题规律”等任何客套寒暄；使用 ### 分级标题与加粗清单项（- **要点**：...），杜绝密集大段纯文本墙；概念与方案对比使用 Markdown 表格，易错考点使用 > ⚠️ 引用块高亮，文末附 1~2 句速记口诀。',
       body.pageContext ? `当前页面：${body.pageContext}` : '',
       body.skillPrompt ? `已启用 Skill：\n${body.skillPrompt}` : '',
       historySummary ? `【此前会话历史脉络（请基于此上下文连续作答）】：\n${historySummary}` : '',
@@ -188,7 +189,7 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
       `用户最新请求：${body.prompt.trim()}`,
     ].filter(Boolean).join('\n')
 
-    res.setHeader('Content-Type', 'text/event-stream')
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8')
     res.setHeader('Cache-Control', 'no-cache')
     res.setHeader('Connection', 'keep-alive')
     res.flushHeaders()
@@ -279,9 +280,10 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
       `【知识库工作区】：当前绑定的本地 Obsidian Vault 路径为：${config.vaultPath}。`,
       '【核心交互准则】：',
       '1. 直接使用规范严谨的纯中文作答，思维清晰、逻辑严密；',
-      '2. 具备完整的知识库工具箱（search_notes, read_file, write_file, create_error_note, organize_vault），在用户提问考研408、数学知识点或要求整理笔记时，积极调用工具探索或操作知识库。',
+      '2. 工具调用规范：对于通识问答、考研理论概念讲解、普通打招呼交流，请直接运用你的专业知识深入作答，【严禁】在无明确需求时无故调用文件工具；仅在用户明确提出“查找笔记”、“读取某笔记”、“创建笔记”或“整理知识库”时，才调用对应的知识库工具。',
       body.agentPrompt || '',
     ].filter(Boolean).join('\n')
+
 
     try {
       for await (const event of runAgentLoop(

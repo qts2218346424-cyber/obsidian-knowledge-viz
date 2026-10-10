@@ -260,6 +260,53 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
   // 2. 自定义渲染组件映射
   const components = useMemo(() => {
     return {
+      // 标题分级高亮展示
+      h1({ children }: any) {
+        return (
+          <h1 className="text-base sm:text-lg font-bold text-warm-900 dark:text-slate-100 mt-4 mb-2 pb-1.5 border-b border-cream-300 dark:border-slate-800 flex items-center gap-2">
+            <span className="w-1.5 h-4.5 rounded-full bg-accent-orange shrink-0" />
+            <span>{children}</span>
+          </h1>
+        )
+      },
+      h2({ children }: any) {
+        return (
+          <h2 className="text-sm sm:text-base font-bold text-warm-900 dark:text-slate-100 mt-3.5 mb-1.5 flex items-center gap-2">
+            <span className="w-1.5 h-3.5 rounded-full bg-blue-500 shrink-0" />
+            <span>{children}</span>
+          </h2>
+        )
+      },
+      h3({ children }: any) {
+        return (
+          <h3 className="text-xs sm:text-sm font-bold text-warm-900 dark:text-slate-100 mt-3 mb-1 flex items-center gap-1.5">
+            <span className="w-1 h-3 rounded-full bg-purple-500 shrink-0" />
+            <span>{children}</span>
+          </h3>
+        )
+      },
+      p({ children }: any) {
+        return <p className="my-2 leading-relaxed text-warm-800 dark:text-slate-200">{children}</p>
+      },
+      ul({ children }: any) {
+        return <ul className="my-2 pl-4 list-disc space-y-1 text-warm-800 dark:text-slate-200">{children}</ul>
+      },
+      ol({ children }: any) {
+        return <ol className="my-2 pl-4 list-decimal space-y-1 text-warm-800 dark:text-slate-200">{children}</ol>
+      },
+      li({ children }: any) {
+        return <li className="leading-relaxed marker:text-accent-orange marker:font-bold">{children}</li>
+      },
+      strong({ children }: any) {
+        return (
+          <strong className="font-semibold text-warm-950 dark:text-white bg-amber-500/10 dark:bg-amber-400/15 px-1 py-0.5 rounded text-[0.96em]">
+            {children}
+          </strong>
+        )
+      },
+      hr() {
+        return <hr className="my-3.5 border-t border-cream-200 dark:border-slate-800" />
+      },
       // 拦截 pre 标签，交由 code 标签统筹渲染
       pre({ children }: any) {
         return <>{children}</>
@@ -290,16 +337,27 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
       table({ children }: any) {
         return (
           <div className="my-3 overflow-x-auto rounded-xl border border-cream-200 dark:border-slate-800 shadow-2xs">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-left text-xs sm:text-sm border-collapse">
               {children}
             </table>
           </div>
         )
       },
-      // 引用块：左侧高亮强调卡片
+      // 引用块：智能根据避坑 / 提分口诀等类型渲染专业高亮卡片
       blockquote({ children }: any) {
+        const raw = extractTextFromChildren(children)
+        const isWarning = /⚠️|避坑|注意|警惕|易错|陷阱|warning|caution/i.test(raw)
+        const isTip = /💡|口诀|技巧|秒杀|速记|tip|note/i.test(raw)
+
+        let cardStyle = 'border-l-4 border-accent-orange bg-cream-100/70 dark:bg-slate-900/60 text-warm-800 dark:text-slate-200'
+        if (isWarning) {
+          cardStyle = 'border-l-4 border-amber-500 bg-amber-500/10 dark:bg-amber-950/25 text-amber-950 dark:text-amber-200'
+        } else if (isTip) {
+          cardStyle = 'border-l-4 border-emerald-500 bg-emerald-500/10 dark:bg-emerald-950/25 text-emerald-950 dark:text-emerald-200'
+        }
+
         return (
-          <blockquote className="my-3 pl-3.5 pr-3 py-2 border-l-4 border-accent-orange bg-cream-100/60 dark:bg-slate-900/60 rounded-r-xl text-warm-700 dark:text-slate-300 italic text-xs">
+          <blockquote className={`my-2.5 pl-3.5 pr-3 py-2 rounded-r-xl text-xs sm:text-sm leading-relaxed transition-colors ${cardStyle}`}>
             {children}
           </blockquote>
         )

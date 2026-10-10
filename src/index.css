@@ -363,26 +363,77 @@ body {
 
 .prose-math {
   color: var(--color-warm-800);
-  line-height: 1.68;
+  line-height: 1.75;
   font-size: 0.9375rem;
+  letter-spacing: -0.01em;
 }
 
 .prose-math p {
-  margin: 0.65rem 0;
+  margin: 0.55rem 0;
+  line-height: 1.75;
+}
+
+.prose-math h1,
+.prose-math h2,
+.prose-math h3,
+.prose-math h4 {
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+.dark .prose-math h1,
+.dark .prose-math h2,
+.dark .prose-math h3,
+.dark .prose-math h4 {
+  color: #f8fafc;
+}
+
+/* 列表样式优化 */
+.prose-math ul {
+  list-style-type: disc;
+  margin: 0.5rem 0;
+  padding-left: 1.25rem;
+}
+
+.prose-math ol {
+  list-style-type: decimal;
+  margin: 0.5rem 0;
+  padding-left: 1.25rem;
+}
+
+.prose-math li {
+  margin: 0.25rem 0;
+  line-height: 1.68;
+}
+
+.prose-math strong {
+  font-weight: 650;
+  color: #0f172a;
+}
+
+.dark .prose-math strong {
+  color: #f8fafc;
 }
 
 /* 块级数学公式：学术卡片化展示 */
 .prose-math .katex-display {
-  margin: 1rem 0;
+  margin: 0.85rem 0;
   padding: 0.85rem 1.25rem;
-  background: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(8px);
   border: 1px solid rgba(226, 232, 240, 0.9);
-  border-left: 3px solid #0071E3;
-  border-radius: 1rem;
+  border-left: 3.5px solid #0071E3;
+  border-radius: 0.875rem;
   overflow-x: auto;
   overflow-y: hidden;
   box-shadow: 0 2px 10px -2px rgba(15, 23, 42, 0.03);
+}
+
+.dark .prose-math .katex-display {
+  background: rgba(15, 23, 42, 0.65);
+  border-color: rgba(30, 41, 59, 0.8);
+  border-left-color: #38bdf8;
 }
 
 .prose-math .katex-display > .katex {
@@ -397,44 +448,58 @@ body {
   text-rendering: auto;
 }
 
-/* 瑞士极简三线表格 (Swiss Grid Academic Table) */
+/* 瑞士极简学术表格 (Swiss Grid Academic Table) */
 .prose-math table {
   width: 100%;
-  margin: 1.25rem 0;
+  margin: 0.85rem 0;
   border-collapse: collapse;
   font-size: 0.875rem;
   border-top: 2px solid #0F172A;
   border-bottom: 2px solid #0F172A;
 }
 
+.dark .prose-math table {
+  border-top: 2px solid #94A3B8;
+  border-bottom: 2px solid #94A3B8;
+}
+
 .prose-math th {
-  padding: 0.65rem 1rem;
+  padding: 0.6rem 0.85rem;
   font-weight: 600;
   text-align: left;
-  background: rgba(241, 245, 249, 0.8);
+  background: rgba(241, 245, 249, 0.85);
   border-bottom: 1px solid #CBD5E1;
   color: #1E293B;
 }
 
+.dark .prose-math th {
+  background: rgba(30, 41, 59, 0.8);
+  border-bottom: 1px solid #475569;
+  color: #F1F5F9;
+}
+
 .prose-math td {
-  padding: 0.6rem 1rem;
+  padding: 0.55rem 0.85rem;
   border-bottom: 1px solid #E2E8F0;
   color: #334155;
+}
+
+.dark .prose-math td {
+  border-bottom: 1px solid #334155;
+  color: #CBD5E1;
 }
 
 .prose-math tr:last-child td {
   border-bottom: none;
 }
 
-/* 瑞士学术引用块 (Academic Blockquote) */
+/* 学术引用块 (Academic Blockquote) */
 .prose-math blockquote {
-  margin: 0.9rem 0;
-  padding: 0.6rem 1rem;
-  background: rgba(248, 250, 252, 0.85);
-  border-left: 3.5px solid #6366F1;
+  margin: 0.75rem 0;
+  padding: 0.65rem 1rem;
   border-radius: 0 0.75rem 0.75rem 0;
-  color: #475569;
   font-size: 0.9em;
+  line-height: 1.65;
 }
 
 /* 行内代码与代码块 */
@@ -450,10 +515,16 @@ body {
   font-weight: 500;
 }
 
+.dark .prose-math code:not(pre code) {
+  background: #1E293B;
+  border-color: #334155;
+  color: #F8FAFC;
+}
+
 .prose-math pre {
-  margin: 1rem 0;
+  margin: 0.85rem 0;
   padding: 1rem 1.25rem;
-  border-radius: 1rem;
+  border-radius: 0.875rem;
   background: #0F172A;
   color: #F8FAFC;
   font-family: 'JetBrains Mono', monospace;
@@ -463,6 +534,7 @@ body {
   border: 1px solid #1E293B;
   box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.1);
 }
+
 
 
 

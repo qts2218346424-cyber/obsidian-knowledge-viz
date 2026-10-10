@@ -207,11 +207,30 @@ export default function Chat() {
   const messages = activeConv?.messages || []
   const isCurrentRunning = Boolean(runningConvs[activeConvId]?.streaming)
 
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
+  const isAtBottomRef = useRef(true)
+  const [showScrollBottomBtn, setShowScrollBottomBtn] = useState(false)
+
+  const handleMessagesScroll = useCallback(() => {
+    const el = messagesContainerRef.current
+    if (!el) return
+    const threshold = 120
+    const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight <= threshold
+    isAtBottomRef.current = isAtBottom
+    setShowScrollBottomBtn(!isAtBottom)
   }, [])
 
-  useEffect(() => { scrollToBottom() }, [messages, scrollToBottom])
+  const scrollToBottom = useCallback((smooth = false) => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' })
+    }
+  }, [])
+
+  useEffect(() => {
+    if (isAtBottomRef.current) {
+      scrollToBottom(false)
+    }
+  }, [messages, scrollToBottom])
 
   // 刷新发散提问或考点速问
   const handleRefreshPrompts = useCallback((forceRandom = true) => {
@@ -785,11 +804,14 @@ export default function Chat() {
     setActiveConvId(id)
   }, [activeAgent, provider, selectedModel, activeProject])
 
-  // 本地自动持久化会话列表
+  // 本地自动持久化会话列表（安全防溢出 + 允许保存空会话）
   useEffect(() => {
-    if (conversations.length > 0) {
+    try {
+      localStorage.setItem('coreforge_study_conversations', JSON.stringify(conversations.slice(0, 50)))
+    } catch {
+      // 若存储超额 (QuotaExceededError)，逐级精简保留最近 15 组对话防白屏
       try {
-        localStorage.setItem('coreforge_study_conversations', JSON.stringify(conversations.slice(0, 50)))
+        localStorage.setItem('coreforge_study_conversations', JSON.stringify(conversations.slice(0, 15)))
       } catch {}
     }
   }, [conversations])
@@ -831,6 +853,10 @@ export default function Chat() {
     const convId = activeConvId
     if (!text || !convId || runningConvs[convId]?.streaming) return
 
+    isAtBottomRef.current = true
+    setShowScrollBottomBtn(false)
+    setTimeout(() => scrollToBottom(true), 50)
+
     const userMsg: AgentMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
@@ -870,11 +896,18 @@ export default function Chat() {
     const convController = new AbortController()
     abortControllersRef.current.set(convId, convController)
 
-    // Construct tone instruction
+    // Construct tone instruction & intuitive presentation rules
+    const intuitiveFormattingRules = `
+【排版与直观交付黄金法则（强制遵守）】：
+1. 结论先行：第一句直接输出核心答案/结论/计算结果，严禁“同学你好/我是XX导师/根据历年命题规律”等任何客套与空洞开场白。
+2. 视觉分层：严禁大段未拆分的文字墙！使用 ### 小标题划分模块，概念必须拆分为带加粗标签的清单项（如 - **核心机制**：精炼说明）。
+3. 对比表格：多方案、多概念、优缺点异同必须优先采用 Markdown 表格展示。
+4. 考点高亮：易错陷阱使用 > ⚠️ **考场避坑**，速记与关键技巧使用 > 💡 **提分口诀**。`
+
     let toneInstruction = ''
-    if (studyTone === 'rigorous') toneInstruction = '【作答风格要求】：学术严谨模式，考纲对齐，公式推导严谨规范，杜绝一切幻觉。'
-    else if (studyTone === 'vivid') toneInstruction = '【作答风格要求】：通俗直观模式，多打比方与生动类比，帮助快速构建底层脑海图景。'
-    else toneInstruction = '【作答风格要求】：考场冲刺模式，直击采分点与答题模板，快速提炼考场必背避坑口诀。'
+    if (studyTone === 'rigorous') toneInstruction = `【作答风格要求】：学术严谨模式，考纲对齐，公式推导严谨规范，杜绝一切幻觉。\n${intuitiveFormattingRules}`
+    else if (studyTone === 'vivid') toneInstruction = `【作答风格要求】：通俗直观模式，多打比方与生动类比，帮助快速构建底层脑海图景。\n${intuitiveFormattingRules}`
+    else toneInstruction = `【作答风格要求】：考场冲刺模式，直击采分点与答题模板，快速提炼考场必背避坑口诀。\n${intuitiveFormattingRules}`
 
     const executeStreamRequest = async (
       tgtProvider: ProviderType,
@@ -950,6 +983,10 @@ export default function Chat() {
                 onDelta(event.content)
               } else if (event.type === 'status' && event.content) {
                 onStatus?.(event.content)
+              } else if (event.type === 'tool_call') {
+                onStatus?.(`🔍 正在调用工具「${event.tool}」探索知识库...`)
+              } else if (event.type === 'tool_result') {
+                onStatus?.(`⚡ 工具「${event.tool}」执行完毕，正在组织回答...`)
               } else if (event.type === 'done') {
                 onDone?.()
               } else if (event.type === 'error') {
@@ -1198,8 +1235,13 @@ export default function Chat() {
       updateConversation(convId, conv => {
         const msgs = [...conv.messages]
         const idx = msgs.findIndex(m => m.id === assistantMsgId)
-        if (idx !== -1 && msgs[idx].streaming) {
-          msgs[idx] = { ...msgs[idx], streaming: false }
+        if (idx !== -1) {
+          const rawText = msgs[idx].content?.trim() || accumulatedAssistantText.trim()
+          msgs[idx] = {
+            ...msgs[idx],
+            content: rawText || '💡 智能体已完成推演，但模型未返回文本，请检查网络或重新提问。',
+            streaming: false,
+          }
         }
         return { ...conv, messages: msgs }
       })
@@ -2327,7 +2369,11 @@ export default function Chat() {
           </div>
 
           {/* Messages list */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div
+            ref={messagesContainerRef}
+            onScroll={handleMessagesScroll}
+            className="flex-1 overflow-y-auto p-4 space-y-4 relative"
+          >
             {messages.map(msg => {
               const isUser = msg.role === 'user'
 
@@ -2367,7 +2413,7 @@ export default function Chat() {
                           )}
                         </div>
 
-                        <div className="flex-1 text-xs leading-relaxed text-warm-800 dark:text-slate-200 min-h-[60px]">
+                        <div className="flex-1 text-sm leading-relaxed sm:text-[14.5px] text-warm-800 dark:text-slate-200 min-h-[60px]">
                           <MarkdownRenderer content={msg.content} isStreaming={msg.streaming} />
                           {msg.streaming && <span className="inline-block w-2 h-4 bg-accent-orange animate-pulse ml-1 align-middle" />}
                         </div>
@@ -2430,7 +2476,7 @@ export default function Chat() {
                           )}
                         </div>
 
-                        <div className="flex-1 text-xs leading-relaxed text-warm-800 dark:text-slate-200 min-h-[60px]">
+                        <div className="flex-1 text-sm leading-relaxed sm:text-[14.5px] text-warm-800 dark:text-slate-200 min-h-[60px]">
                           <MarkdownRenderer content={msg.peerResponse.content} isStreaming={msg.peerResponse.streaming} />
                           {msg.peerResponse.streaming && <span className="inline-block w-2 h-4 bg-purple-500 animate-pulse ml-1 align-middle" />}
                         </div>
@@ -2485,7 +2531,7 @@ export default function Chat() {
                     </div>
                   )}
 
-                  <div className={`max-w-3xl flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
+                  <div className={`max-w-4xl flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
                     {!isUser && (() => {
                       const matchedAgent = STUDY_AGENTS.find(a => a.name === msg.agentName || a.id === msg.agentName) || activeAgent
                       const provDisplay = msg.provider || provider
@@ -2509,9 +2555,9 @@ export default function Chat() {
                     })()}
 
                     <div
-                      className={`px-4 py-3 rounded-2xl text-xs leading-relaxed transition-all shadow-2xs ${
+                      className={`px-4.5 py-3.5 sm:px-5 sm:py-4 rounded-2xl text-sm leading-relaxed sm:text-[14.5px] transition-all shadow-2xs ${
                         isUser
-                          ? 'bg-gradient-to-r from-accent-orange to-blue-600 text-white rounded-br-xs shadow-xs'
+                          ? 'bg-gradient-to-r from-accent-orange to-blue-600 text-white rounded-br-xs shadow-xs text-xs sm:text-sm'
                           : 'bg-surface dark:bg-slate-900 border border-cream-200/90 dark:border-slate-800 text-warm-800 dark:text-slate-200 rounded-bl-xs'
                       }`}
                     >
@@ -2693,6 +2739,23 @@ export default function Chat() {
                     </button>
                   ))}
                 </div>
+              </div>
+            )}
+            {/* 悬浮回到底部快捷按钮 */}
+            {showScrollBottomBtn && (
+              <div className="sticky bottom-2 flex justify-center w-full pointer-events-none z-10">
+                <button
+                  type="button"
+                  onClick={() => {
+                    isAtBottomRef.current = true
+                    setShowScrollBottomBtn(false)
+                    scrollToBottom(true)
+                  }}
+                  className="pointer-events-auto px-3 py-1 rounded-full bg-surface/95 dark:bg-slate-800/95 border border-cream-300 dark:border-slate-700 shadow-md text-[11px] font-semibold text-warm-700 dark:text-slate-200 hover:text-accent-orange flex items-center gap-1 transition-all animate-in fade-in zoom-in-95 cursor-pointer backdrop-blur-xs hover:border-accent-orange/40"
+                >
+                  <ChevronDown className="w-3.5 h-3.5 text-accent-orange" />
+                  <span>回到底部</span>
+                </button>
               </div>
             )}
             <div ref={messagesEndRef} />

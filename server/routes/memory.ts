@@ -22,6 +22,39 @@ import { createFile } from '../vault-parser.js'
 export const memoryRouter = Router()
 
 /**
+ * 获取三层认知记忆架构状态 (Global, Project, Session)
+ */
+memoryRouter.get('/memory/tier', (_req, res) => {
+  try {
+    const agentConfig = loadAgentMemoryConfig(config.vaultPath)
+    res.json({
+      success: true,
+      tiers: {
+        global: {
+          name: '全局长期记忆层',
+          scope: '跨项目共享，始终生效',
+          rulesCount: agentConfig.config.rules?.length || 0,
+          directivesCount: agentConfig.config.directives?.length || 0,
+          persona: agentConfig.config.persona,
+        },
+        project: {
+          name: '项目专属记忆层',
+          scope: '物理工作区严格隔离',
+          isolationKey: 'projectId',
+        },
+        session: {
+          name: '会话短期工作记忆层',
+          scope: '单次独立推理上下文，撤回与重发无污染',
+          isolationKey: 'conversationId',
+        },
+      },
+    })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+/**
  * Get AI Agent Memory Config & agent.md
  */
 memoryRouter.get('/memory/agent-config', (_req, res) => {

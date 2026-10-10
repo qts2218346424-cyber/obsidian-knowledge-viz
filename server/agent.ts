@@ -379,10 +379,12 @@ export async function* runAgentLoop(
       const toolResults: Anthropic.ToolResultBlockParam[] = []
 
       for (const call of toolCalls) {
+        yield { type: 'status', content: `🔍 正在调用工具「${call.name}」探索知识库...` }
         yield { type: 'tool_call', tool: call.name, input: call.input }
 
         const result = executeTool(call.name, call.input, vaultPath)
         yield { type: 'tool_result', tool: call.name, output: result.output, success: result.success }
+        yield { type: 'status', content: `⚡ 工具「${call.name}」已执行完毕，正在整合思考...` }
 
         toolResults.push({
           type: 'tool_result',
