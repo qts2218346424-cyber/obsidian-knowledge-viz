@@ -581,7 +581,7 @@ export const ChatMessageItem = memo(
                 </span>
               </div>
             ) : isUser ? (
-              <div className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</div>
+              <div className="whitespace-pre-wrap break-words leading-relaxed text-[11.5px] sm:text-xs">{msg.content}</div>
             ) : (
               <>
                 <MarkdownRenderer content={msg.content} isStreaming={msg.streaming} />

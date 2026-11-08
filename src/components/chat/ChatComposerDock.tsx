@@ -111,8 +111,8 @@ export const ChatComposerDock = memo(function ChatComposerDock({
       return
     }
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 640
-    const minHeight = isMobile ? 26 : 34
-    const maxHeight = isMobile ? 120 : 160
+    const minHeight = isMobile ? 20 : 28
+    const maxHeight = isMobile ? 110 : 150
 
     // 当输入为空或空白字符时，瞬间强制重置归位为极简单行高度，杜绝多余高度滞留
     if (!input || !input.trim()) {
@@ -379,8 +379,8 @@ export const ChatComposerDock = memo(function ChatComposerDock({
             </div>
           )}
 
-          {/* 3.2 多行自适应输入区 (超轻量自适应：根据打字自动收缩) */}
-          <div className="relative px-2 sm:px-3.5 pt-1 sm:pt-2 pb-0 sm:pb-0.5 flex items-start gap-1 sm:gap-2">
+          {/* 3.2 多行自适应输入区 (超轻量微缩自适应：打字字体缩小，纵向高度更低) */}
+          <div className="relative px-2 sm:px-3 pt-0.5 sm:pt-1.5 pb-0 flex items-start gap-1 sm:gap-1.5">
             <textarea
               ref={textareaRef}
               value={input}
@@ -398,7 +398,7 @@ export const ChatComposerDock = memo(function ChatComposerDock({
                   : `向 ${activeAgent.name} 提问，或粘贴题目...`
               }
               rows={1}
-              className="flex-1 bg-transparent border-none text-[12px] sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-hidden resize-none leading-snug sm:leading-relaxed py-0"
+              className="flex-1 bg-transparent border-none text-[11px] sm:text-xs text-slate-800 placeholder-slate-400 placeholder:text-[10.5px] sm:placeholder:text-xs focus:outline-hidden resize-none leading-[1.38] sm:leading-[1.45] py-0 tracking-tight"
             />
             {(input.length > 60 || isExpandedEditor) && (
               <button
@@ -417,7 +417,7 @@ export const ChatComposerDock = memo(function ChatComposerDock({
           </div>
 
           {/* 3.3 输入舱底栏：统一轻量工具组 + 柔和语调与发送 (轻量微缩贴底) */}
-          <div className="px-1.5 sm:px-3 pb-1 sm:pb-2 pt-0.5 flex items-center justify-between gap-1 sm:gap-2">
+          <div className="px-1.5 sm:px-3 pb-0.5 sm:pb-1.5 pt-0.5 flex items-center justify-between gap-1 sm:gap-2">
             <div className="flex items-center gap-0.5 sm:gap-1 shrink min-w-0">
               <button
                 type="button"
