@@ -497,12 +497,12 @@ export const ChatMessageItem = memo(
             </div>
           )}
 
-          {/* 消息卡片主体 */}
+          {/* 消息卡片主体 (高密度精致排版：紧凑适度，保持可读性) */}
           <div
-            className={`px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl max-w-full overflow-x-hidden ${fontSizeClass} shadow-2xs ${
+            className={`px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-2xl max-w-full overflow-x-hidden ${fontSizeClass} shadow-2xs ${
               isUser
                 ? 'bg-neutral-900 text-white rounded-2xl rounded-br-xs shadow-xs border border-neutral-800'
-                : 'w-full bg-white border border-slate-200/60 text-slate-900 rounded-2xl rounded-tl-xs shadow-[0_2px_10px_rgba(0,0,0,0.02)] leading-[1.62] academic-body'
+                : 'w-full bg-white border border-slate-200/60 text-slate-900 rounded-2xl rounded-tl-xs shadow-[0_2px_10px_rgba(0,0,0,0.02)] leading-[1.56] academic-body'
             }`}
           >
             {/* 工具调用折叠卡 */}

@@ -642,9 +642,9 @@ body {
 
 .prose-math {
   color: var(--color-warm-800);
-  line-height: 1.65;
-  font-size: 0.9375rem;
-  letter-spacing: -0.01em;
+  line-height: 1.58;
+  font-size: inherit; /* 优先继承父级设定的紧凑精致字号 */
+  letter-spacing: -0.012em;
   /* 现代中文避头尾排版与标点禁则规范 */
   line-break: strict;
   word-break: normal;
@@ -653,8 +653,8 @@ body {
 }
 
 .prose-math p {
-  margin: 0.38rem 0;
-  line-height: 1.65;
+  margin: 0.28rem 0;
+  line-height: 1.58;
 }
 
 .prose-math p:first-child {
@@ -963,16 +963,16 @@ body {
   }
 
   .prose-math {
-    font-size: 0.875rem;
-    line-height: 1.6;
+    font-size: inherit;
+    line-height: 1.55;
     line-break: strict;
     word-break: normal;
     overflow-wrap: break-word;
     text-wrap: pretty;
   }
   .prose-math p {
-    margin: 0.28rem 0 !important;
-    line-height: 1.6 !important;
+    margin: 0.22rem 0 !important;
+    line-height: 1.55 !important;
   }
 
   .prose-math .katex-display {
@@ -1401,12 +1401,12 @@ code, pre, kbd, samp, .font-mono {
   font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
 }
 
-/* 题干与 AI 解析区域的正文行高与段间距：紧凑适度，符合中文阅读观察习惯 */
+/* 题干与 AI 解析区域的正文行高与段间距：高密度精致排版，保持清晰可读性 */
 .academic-body,
 .ai-explanation,
 .quiz-content,
 .prose-math {
-  line-height: 1.65 !important;
+  line-height: 1.58 !important;
   line-break: strict;
   word-break: normal;
   overflow-wrap: break-word;
@@ -1417,8 +1417,8 @@ code, pre, kbd, samp, .font-mono {
 .ai-explanation p,
 .quiz-content p,
 .prose-math p {
-  line-height: 1.65 !important;
-  margin: 0.36rem 0 !important;
+  line-height: 1.58 !important;
+  margin: 0.26rem 0 !important;
 }
 
 .academic-body p:first-child,

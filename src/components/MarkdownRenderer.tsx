@@ -386,39 +386,39 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
       },
       h1({ children }: any) {
         return (
-          <h1 className="text-sm sm:text-base font-bold text-warm-900 dark:text-white mt-2 mb-1 pb-0.5 border-b border-cream-300 dark:border-white/10 flex items-center gap-1.5">
-            <span className="w-1.5 h-3.5 rounded-full bg-accent-orange shrink-0" />
+          <h1 className="text-[13px] sm:text-[14px] font-bold text-warm-900 dark:text-white mt-1.5 mb-0.5 pb-0.5 border-b border-cream-300 dark:border-white/10 flex items-center gap-1.5">
+            <span className="w-1.5 h-3 rounded-full bg-accent-orange shrink-0" />
             <span>{children}</span>
           </h1>
         )
       },
       h2({ children }: any) {
         return (
-          <h2 className="text-xs sm:text-[14px] font-bold text-warm-900 dark:text-white mt-1.5 mb-0.5 flex items-center gap-1.5">
-            <span className="w-1.5 h-3 rounded-full bg-blue-400 shrink-0" />
+          <h2 className="text-[12px] sm:text-[13px] font-bold text-warm-900 dark:text-white mt-1.2 mb-0.5 flex items-center gap-1.2">
+            <span className="w-1.5 h-2.5 rounded-full bg-blue-400 shrink-0" />
             <span>{children}</span>
           </h2>
         )
       },
       h3({ children }: any) {
         return (
-          <h3 className="text-xs sm:text-[13px] font-bold text-warm-900 dark:text-slate-100 mt-1 mb-0.5 flex items-center gap-1">
-            <span className="w-1 h-2.5 rounded-full bg-purple-400 shrink-0" />
+          <h3 className="text-[11.5px] sm:text-xs font-bold text-warm-900 dark:text-slate-100 mt-1 mb-0.5 flex items-center gap-1">
+            <span className="w-1 h-2 rounded-full bg-purple-400 shrink-0" />
             <span>{children}</span>
           </h3>
         )
       },
       p({ children }: any) {
-        return <p className="my-1 sm:my-1.2 leading-[1.62] text-warm-800 dark:text-slate-100">{children}</p>
+        return <p className="my-0.8 sm:my-1 leading-[1.56] text-warm-800 dark:text-slate-100">{children}</p>
       },
       ul({ children }: any) {
-        return <ul className="my-1 pl-4 list-disc space-y-0.5 text-warm-800 dark:text-slate-200">{children}</ul>
+        return <ul className="my-0.8 pl-3.5 list-disc space-y-0.5 text-warm-800 dark:text-slate-200 text-inherit">{children}</ul>
       },
       ol({ children }: any) {
-        return <ol className="my-1 pl-4 list-decimal space-y-0.5 text-warm-800 dark:text-slate-200">{children}</ol>
+        return <ol className="my-0.8 pl-3.5 list-decimal space-y-0.5 text-warm-800 dark:text-slate-200 text-inherit">{children}</ol>
       },
       li({ children }: any) {
-        return <li className="leading-relaxed marker:text-accent-orange marker:font-bold text-warm-800 dark:text-slate-200">{children}</li>
+        return <li className="leading-[1.55] marker:text-accent-orange marker:font-bold text-warm-800 dark:text-slate-200">{children}</li>
       },
       strong({ children }: any) {
         return (
@@ -460,7 +460,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
       table({ children }: any) {
         return (
           <div className="my-3 overflow-x-auto rounded-xl border border-cream-200 dark:border-white/10 shadow-2xs">
-            <table className="w-full text-left text-xs sm:text-sm border-collapse">
+            <table className="w-full text-left text-[11px] sm:text-xs border-collapse">
               {children}
             </table>
           </div>
@@ -480,7 +480,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
         }
 
         return (
-          <blockquote className={`my-2.5 pl-3.5 pr-3 py-2 rounded-r-xl text-xs sm:text-sm leading-relaxed transition-colors ${cardStyle}`}>
+          <blockquote className={`my-2.5 pl-3.5 pr-3 py-2 rounded-r-xl text-[11.5px] sm:text-xs leading-[1.55] transition-colors ${cardStyle}`}>
             {children}
           </blockquote>
         )
