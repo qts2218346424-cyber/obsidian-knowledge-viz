@@ -180,11 +180,12 @@ function ThinkingAccordion({
   isThinkingActive: boolean
   defaultOpen?: boolean
 }) {
-  const [isOpen, setIsOpen] = useState(defaultOpen || isThinkingActive)
+  // 思考中若未显式展开则保持紧凑折叠，推演完成后默认收起，极大释放垂直屏幕高度
+  const [isOpen, setIsOpen] = useState(defaultOpen)
 
   useEffect(() => {
-    if (isThinkingActive) {
-      setIsOpen(true)
+    if (!isThinkingActive) {
+      setIsOpen(false)
     }
   }, [isThinkingActive])
 
@@ -309,6 +310,14 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
         /\[\[([^\]]+)\]\]/g,
         (_match, note) => `[${note.trim()}](#wikilink:${encodeURIComponent(note.trim())})`
       )
+      // 4. 规整连续多余空行：防止上下被拉得太长（至多允许 1 个空行，即 2 个 \n）
+      .replace(/\n{3,}/g, '\n\n')
+      // 5. 清理每行行尾多余的空白字符
+      .replace(/[ \t]+\n/g, '\n')
+      // 6. 中文排版避头尾规整：修复孤立掉落在行首的标点符号（，。！？；：、）将其上移贴回上一行行末
+      .replace(/\n([，。！？；：、])/g, '$1')
+      // 7. 规整中文全角标点后紧随的多余普通空格（符合中文观察阅读习惯）
+      .replace(/([，。！？；：、“”《》]) +/g, '$1')
 
     if (isStreaming) {
       const blockMathMatches = processed.match(/\$\$/g)
@@ -377,36 +386,36 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
       },
       h1({ children }: any) {
         return (
-          <h1 className="text-sm sm:text-base font-bold text-warm-900 dark:text-white mt-3 mb-1.5 pb-1 border-b border-cream-300 dark:border-white/10 flex items-center gap-2">
-            <span className="w-1.5 h-4.5 rounded-full bg-accent-orange shrink-0" />
+          <h1 className="text-sm sm:text-base font-bold text-warm-900 dark:text-white mt-2 mb-1 pb-0.5 border-b border-cream-300 dark:border-white/10 flex items-center gap-1.5">
+            <span className="w-1.5 h-3.5 rounded-full bg-accent-orange shrink-0" />
             <span>{children}</span>
           </h1>
         )
       },
       h2({ children }: any) {
         return (
-          <h2 className="text-xs sm:text-[14px] font-bold text-warm-900 dark:text-white mt-2.5 mb-1 flex items-center gap-2">
-            <span className="w-1.5 h-3.5 rounded-full bg-blue-400 shrink-0" />
+          <h2 className="text-xs sm:text-[14px] font-bold text-warm-900 dark:text-white mt-1.5 mb-0.5 flex items-center gap-1.5">
+            <span className="w-1.5 h-3 rounded-full bg-blue-400 shrink-0" />
             <span>{children}</span>
           </h2>
         )
       },
       h3({ children }: any) {
         return (
-          <h3 className="text-xs sm:text-[13px] font-bold text-warm-900 dark:text-slate-100 mt-2 mb-1 flex items-center gap-1.5">
-            <span className="w-1 h-3 rounded-full bg-purple-400 shrink-0" />
+          <h3 className="text-xs sm:text-[13px] font-bold text-warm-900 dark:text-slate-100 mt-1 mb-0.5 flex items-center gap-1">
+            <span className="w-1 h-2.5 rounded-full bg-purple-400 shrink-0" />
             <span>{children}</span>
           </h3>
         )
       },
       p({ children }: any) {
-        return <p className="my-1.5 leading-[1.62] text-warm-800 dark:text-slate-100">{children}</p>
+        return <p className="my-1 sm:my-1.2 leading-[1.62] text-warm-800 dark:text-slate-100">{children}</p>
       },
       ul({ children }: any) {
-        return <ul className="my-1.5 pl-4 list-disc space-y-0.5 text-warm-800 dark:text-slate-200">{children}</ul>
+        return <ul className="my-1 pl-4 list-disc space-y-0.5 text-warm-800 dark:text-slate-200">{children}</ul>
       },
       ol({ children }: any) {
-        return <ol className="my-1.5 pl-4 list-decimal space-y-0.5 text-warm-800 dark:text-slate-200">{children}</ol>
+        return <ol className="my-1 pl-4 list-decimal space-y-0.5 text-warm-800 dark:text-slate-200">{children}</ol>
       },
       li({ children }: any) {
         return <li className="leading-relaxed marker:text-accent-orange marker:font-bold text-warm-800 dark:text-slate-200">{children}</li>
