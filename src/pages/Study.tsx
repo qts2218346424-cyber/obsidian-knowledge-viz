@@ -464,7 +464,8 @@ export default function Study() {
       if (subjectFilter !== 'all') {
         if (subjectFilter === 'cs_408' && h.domain !== 'cs_408') return false
         if (subjectFilter === 'math' && h.domain !== 'math') return false
-        if (['数据结构', '计算机组成原理', '操作系统', '计算机网络', '高等数学', '线性代数', '概率论'].includes(subjectFilter)) {
+        if (subjectFilter === 'politics' && h.domain !== 'politics') return false
+        if (['数据结构', '计算机组成原理', '操作系统', '计算机网络', '高等数学', '线性代数', '概率论', '马克思主义基本原理', '马克思著作', '时事政治'].includes(subjectFilter)) {
           if (h.subject !== subjectFilter) return false
         }
       }
@@ -502,7 +503,7 @@ export default function Study() {
         if (subjectFilter === 'cs_408' && c.domain !== 'cs_408') return false
         if (subjectFilter === 'math' && c.domain !== 'math') return false
         if (subjectFilter === 'politics' && c.domain !== 'politics') return false
-        if (['数据结构', '计算机组成原理', '操作系统', '计算机网络', '高等数学', '线性代数', '概率论', '政治史纲'].includes(subjectFilter)) {
+        if (['数据结构', '计算机组成原理', '操作系统', '计算机网络', '高等数学', '线性代数', '概率论', '政治史纲', '马克思主义基本原理', '时事政治'].includes(subjectFilter)) {
           if (!c.subject.includes(subjectFilter)) return false
         }
       }
@@ -697,6 +698,9 @@ export default function Study() {
             <option value="概率论">概率统计</option>
             <option value="politics">考研政治</option>
             <option value="政治史纲">政治史纲</option>
+            <option value="马克思主义基本原理">马克思主义基本原理</option>
+            <option value="马克思著作">马克思经典著作</option>
+            <option value="时事政治">时事政治</option>
           </select>
         </div>
       </div>

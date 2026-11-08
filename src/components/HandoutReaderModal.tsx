@@ -46,6 +46,7 @@ export default function HandoutReaderModal({
 
   const domainColor = handout.domain === 'cs_408'
     ? 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+    : handout.domain === 'politics' ? 'bg-red-500/10 text-red-400 border-red-500/20'
     : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
 
   const modalContent = (
@@ -60,7 +61,7 @@ export default function HandoutReaderModal({
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 sm:gap-2">
                 <span className={`px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-semibold border ${domainColor} truncate max-w-[130px] sm:max-w-none`}>
-                  {handout.domain === 'cs_408' ? '408' : '数学'} · {handout.subject}
+                  {handout.domain === 'cs_408' ? '408' : handout.domain === 'politics' ? '政治' : '数学'} · {handout.subject}
                 </span>
                 <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[11px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
                   {handout.difficulty}
