@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { useState, useEffect } from 'react'
 import {
   X,
@@ -262,7 +263,7 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
     return '学生只读'
   }
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-fade-in">
       <div
         className="w-full max-w-4xl rounded-2xl bg-white border border-slate-200/90 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up"
@@ -851,4 +852,6 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
       </div>
     </div>
   )
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent
 }

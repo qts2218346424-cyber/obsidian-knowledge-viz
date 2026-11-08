@@ -721,7 +721,7 @@ export default function Politics() {
             </div>
 
             {/* 中间：全屏黑金发光中国矢量地图 (5列) */}
-            <div className="lg:col-span-5 flex flex-col justify-between p-4 sm:p-5 rounded-2xl bg-[#090e1a] border border-amber-500/30 shadow-[inset_0_0_40px_rgba(0,0,0,0.8)] relative overflow-hidden min-h-[420px] sm:min-h-[460px]">
+            <div className="lg:col-span-5 flex flex-col justify-between p-3.5 sm:p-4 rounded-2xl bg-[#090e1a] border border-amber-500/30 shadow-[inset_0_0_40px_rgba(0,0,0,0.8)] relative overflow-hidden min-h-[390px] sm:min-h-[420px]">
               {/* 地图顶部控制条 */}
               <div className="flex items-center justify-between z-10 text-xs">
                 <div className="flex items-center gap-2">
@@ -745,7 +745,7 @@ export default function Politics() {
                 <button
                   type="button"
                   onClick={() => setShowMobileMap(prev => !prev)}
-                  className="w-full py-2 px-3 rounded-xl bg-slate-900 border border-amber-500/30 text-amber-300 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer active:scale-98 transition-all"
+                  className="w-full py-1.5 px-3 rounded-xl bg-slate-900 border border-amber-500/30 text-amber-300 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer active:scale-98 transition-all"
                 >
                   <MapPin className="w-3.5 h-3.5 text-amber-400" />
                   <span>{showMobileMap ? '收起历史地理地图' : '展开中国历史发光地图 (名城联动)'}</span>
@@ -753,8 +753,8 @@ export default function Politics() {
               </div>
 
               {/* 阿里 DataV 阿里标准高精矢量发光中国地图 */}
-              <div className={`relative my-2 flex-1 flex items-center justify-center ${
-                !showMobileMap ? 'hidden sm:flex min-h-[360px]' : 'flex min-h-[280px]'
+              <div className={`relative my-1 flex-1 flex items-center justify-center ${
+                !showMobileMap ? 'hidden sm:flex min-h-[290px] sm:min-h-[320px]' : 'flex min-h-[250px]'
               }`}>
                 <ChinaHistoricalMap
                   activeCoordinates={activeItem?.coordinates}
@@ -764,19 +764,79 @@ export default function Politics() {
                 />
               </div>
 
-              {/* 地图底部信息与肖秀荣真题直达 */}
-              <div className="flex items-center justify-between z-10 pt-2 border-t border-slate-800/80 text-xs">
-                <span className="text-slate-400">
-                  史实坐标：<strong className="text-amber-400">{activeItem?.location || activeItem?.cityName}</strong>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => jumpToXiaoByHistory(activeYear)}
-                  className="inline-flex items-center gap-1 text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer"
-                >
-                  <span>刷当年真题 (肖秀荣1000题)</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
+              {/* ── 🗺️ 地图底沿贴身时空微控滑轨 (0 距离手眼合一 · 实时拖动点亮地图) ── */}
+              <div className="z-10 pt-2 pb-1 px-2 border-t border-slate-800/90 bg-[#070b14]/90 rounded-xl space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      disabled={prevKeyYear === null}
+                      onClick={() => prevKeyYear !== null && setActiveYear(prevKeyYear)}
+                      className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold disabled:opacity-30 cursor-pointer text-[11px] transition-colors"
+                      title="上一年历史节点"
+                    >
+                      ◀
+                    </button>
+                    <span className="text-slate-400 text-[11px]">年份：</span>
+                    <span className="text-amber-400 text-sm font-black font-mono tracking-wider animate-pulse">
+                      {activeYear}年
+                    </span>
+                    <button
+                      type="button"
+                      disabled={nextKeyYear === null}
+                      onClick={() => nextKeyYear !== null && setActiveYear(nextKeyYear)}
+                      className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold disabled:opacity-30 cursor-pointer text-[11px] transition-colors"
+                      title="下一年历史节点"
+                    >
+                      ▶
+                    </button>
+                    <span className="text-slate-400 text-[11px] truncate max-w-[120px] hidden sm:inline ml-1">
+                      {activeItem?.title}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-400 text-[11px]">
+                      坐标：<strong className="text-amber-400">{activeItem?.location || activeItem?.cityName || '中国'}</strong>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => jumpToXiaoByHistory(activeYear)}
+                      className="inline-flex items-center gap-0.5 text-[11px] font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer"
+                    >
+                      <span>刷真题</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 贴身滑轨 */}
+                <div className="relative flex items-center">
+                  <input
+                    type="range"
+                    min={0}
+                    max={Math.max(0, availableYears.length - 1)}
+                    step={1}
+                    value={Math.max(0, availableYears.indexOf(activeYear))}
+                    onChange={(e) => {
+                      const target = availableYears[Number(e.target.value)]
+                      if (target !== undefined) setActiveYear(target)
+                    }}
+                    className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-400"
+                    title="拖动即刻点亮地图对应城市"
+                  />
+                </div>
+
+                {/* 紧贴滑轨的关键年份地标 */}
+                <div className="flex justify-between text-[10px] font-mono text-slate-500 select-none px-0.5">
+                  <span className="hover:text-amber-400 cursor-pointer" onClick={() => setActiveYear(1840)}>1840</span>
+                  <span className="hover:text-amber-400 cursor-pointer" onClick={() => setActiveYear(1911)}>1911</span>
+                  <span className="text-amber-400 font-bold hover:underline cursor-pointer" onClick={() => setActiveYear(1921)}>1921</span>
+                  <span className="hover:text-amber-400 cursor-pointer" onClick={() => setActiveYear(1935)}>1935</span>
+                  <span className="text-amber-400 font-bold hover:underline cursor-pointer" onClick={() => setActiveYear(1949)}>1949</span>
+                  <span className="hover:text-amber-400 cursor-pointer" onClick={() => setActiveYear(1978)}>1978</span>
+                  <span className="hover:text-amber-400 cursor-pointer" onClick={() => setActiveYear(2024)}>2024</span>
+                </div>
               </div>
             </div>
 
@@ -860,11 +920,11 @@ export default function Politics() {
           </div>
 
           {/* ── 底部沉浸式时间轴控制底座（带跟随滑块的浮动事件徽章气泡） ── */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-[#090e1a] border border-amber-500/20 shadow-xl relative mt-2">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 text-xs">
+          <div className="p-3 sm:p-3.5 rounded-2xl bg-[#090e1a] border border-amber-500/20 shadow-xl relative mt-1.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mb-2 text-xs">
               <div className="flex items-center gap-2">
                 <span className="font-extrabold text-amber-400">📅 考研史纲全编年轴 (1840–2024)</span>
-                <span className="text-slate-400 hidden sm:inline">| 拖动滑块查看当年发生的大事件或政治会议</span>
+                <span className="text-slate-400 hidden sm:inline">| 全量事件直选与纪念年份速查</span>
               </div>
               <div className="font-mono text-slate-300">
                 当前焦点：<strong className="text-amber-400 text-sm font-black">{activeYear}</strong> 年（收录 {currentYearItems.length} 项史实）
@@ -872,17 +932,17 @@ export default function Politics() {
             </div>
 
             {/* 现代滑轨容器 (带绝对定位的浮动事件跟随标签) */}
-            <div className="relative pt-8 pb-3">
+            <div className="relative pt-6 pb-2">
               {/* 动态跟随滑块位移的悬浮事件气泡 (对标抖音视频核心亮点) */}
               <div
                 className="absolute top-0 transition-all duration-100 pointer-events-none transform -translate-x-1/2 flex flex-col items-center z-20"
                 style={{ left: `${sliderPercent}%` }}
               >
-                <div className="px-2.5 py-1 rounded-lg bg-[#080d1a] border border-amber-400/90 shadow-[0_0_15px_rgba(245,158,11,0.5)] text-[11px] font-black text-amber-300 whitespace-nowrap flex items-center gap-1.5">
+                <div className="px-2 py-0.5 rounded bg-[#080d1a] border border-amber-400/90 shadow-[0_0_12px_rgba(245,158,11,0.5)] text-[10.5px] font-black text-amber-300 whitespace-nowrap flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
                   <span>{activeYear} {activeItem?.title || '历史节点'}</span>
                 </div>
-                <div className="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-amber-400/90" />
+                <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-amber-400/90" />
               </div>
 
               {/* 原生拖动进度条 */}
@@ -896,12 +956,12 @@ export default function Politics() {
                   const target = availableYears[Number(e.target.value)]
                   if (target !== undefined) setActiveYear(target)
                 }}
-                className="w-full h-2.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-400"
+                className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-400"
               />
             </div>
 
             {/* 刻度地标 */}
-            <div className="flex justify-between text-[11px] font-mono text-slate-400 mt-1 select-none">
+            <div className="flex justify-between text-[10.5px] font-mono text-slate-400 mt-0.5 select-none">
               <span className="hover:text-amber-400 cursor-pointer" onClick={() => setActiveYear(1840)}>1840 鸦片战争</span>
               <span className="hidden sm:inline hover:text-amber-400 cursor-pointer" onClick={() => setActiveYear(1851)}>1851 太平天国</span>
               <span className="hidden md:inline hover:text-amber-400 cursor-pointer" onClick={() => setActiveYear(1911)}>1911 辛亥革命</span>
@@ -913,7 +973,7 @@ export default function Politics() {
             </div>
 
             {/* 年份胶囊高频直达尺 */}
-            <div className="flex items-end gap-1.5 overflow-x-auto no-scrollbar pt-3 mt-2 border-t border-slate-800/80">
+            <div className="flex items-end gap-1.5 overflow-x-auto no-scrollbar pt-2 mt-1.5 border-t border-slate-800/80">
               {availableYears.map((yr) => {
                 const isCurr = yr === activeYear
                 const yrCount = filteredItems.filter((i) => i.year === yr).length

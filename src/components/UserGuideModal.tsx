@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -178,7 +179,7 @@ export default function UserGuideModal({ isOpen, onClose, onStartInteractiveTour
     navigate('/editor?file=💡 新手指引 · CoreForge 研核完全使用手册.md')
   }
 
-  return (
+  const modalContent = (
     <div 
       className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-5 bg-black/40 backdrop-blur-sm animate-fade-in font-sans"
       onClick={handleClose}
@@ -518,4 +519,6 @@ export default function UserGuideModal({ isOpen, onClose, onStartInteractiveTour
       </div>
     </div>
   )
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent
 }

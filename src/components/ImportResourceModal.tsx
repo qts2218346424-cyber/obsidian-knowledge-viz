@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { getAuthHeaders } from '../services/auth'
 import React, { useState, useEffect, useRef } from 'react'
 import {
@@ -578,7 +579,7 @@ export default function ImportResourceModal({
 
   if (!isOpen) return null
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/70 backdrop-blur-md">
       <div className="relative flex flex-col w-full max-w-5xl h-[88vh] rounded-2xl bg-white border border-slate-200/80 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         
@@ -1626,4 +1627,6 @@ D. 5
       )}
     </div>
   )
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent
 }

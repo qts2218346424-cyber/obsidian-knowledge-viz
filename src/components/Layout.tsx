@@ -24,6 +24,7 @@ import {
   Sparkles,
   Coins,
   Palette,
+  Bot,
 } from 'lucide-react'
 import { useVaultStats, useApiHealth } from '../hooks/useVaultData'
 import { useThemeStyle } from '../hooks/useThemeStyle'
@@ -250,9 +251,9 @@ export default function Layout({ children }: LayoutProps) {
   const mobileBottomTabs = [
     { to: '/dashboard', label: '首页', icon: Home },
     { to: '/quiz', label: '做题', icon: ClipboardList },
+    { to: '/chat', label: 'AI伴学', icon: Bot, isCenter: true },
     { to: '/politics', label: '政治', icon: Landmark },
-    { to: '/english', label: '英语', icon: BookOpen },
-    { to: '/study', label: '讲义', icon: GraduationCap },
+    { to: '__tools__', label: '全部功能', icon: LayoutGrid, isAction: true },
   ]
 
   return (
@@ -277,8 +278,18 @@ export default function Layout({ children }: LayoutProps) {
             </div>
           </Link>
 
-          {/* 右侧：精炼工具胶囊阵列 (杜绝小屏撑爆换行) */}
-          <div className="flex items-center gap-1 shrink-0">
+          {/* 右侧：精炼工具胶囊阵列 (直达 AI 伴学 + 全站功能入口) */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* 顶栏快速进入 AI 伴学胶囊 */}
+            <Link
+              to="/chat"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-[11px] font-extrabold shadow-2xs active:scale-95 transition-all shrink-0"
+              title="一键进入 AI 伴学导师"
+            >
+              <Bot className="w-3.5 h-3.5" />
+              <span>伴学</span>
+            </Link>
+
             <button
               type="button"
               onClick={toggleThemeStyle}
@@ -316,16 +327,12 @@ export default function Layout({ children }: LayoutProps) {
             <button
               type="button"
               onClick={() => setMobileNavOpen(true)}
-              aria-label="全站工具箱"
-              className="w-8 h-8 inline-flex items-center justify-center rounded-xl bg-neutral-900 text-white shadow-xs active:scale-95 cursor-pointer"
+              aria-label="全站功能与工具箱"
+              title="查看全站所有功能矩阵"
+              className="h-8 px-2 inline-flex items-center justify-center gap-1 rounded-xl bg-neutral-900 text-white shadow-xs active:scale-95 cursor-pointer"
             >
-              {user ? (
-                <span className="text-xs font-bold font-mono">
-                  {user.displayName ? user.displayName.slice(0, 1).toUpperCase() : user.username.slice(0, 1).toUpperCase()}
-                </span>
-              ) : (
-                <LayoutGrid className="w-3.5 h-3.5" />
-              )}
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span className="text-[10px] font-bold">功能</span>
             </button>
           </div>
         </div>
@@ -487,9 +494,19 @@ export default function Layout({ children }: LayoutProps) {
             </NavLink>
           </nav>
 
-          {/* ── 右侧极简 3 核心组件：搜索 ⌘K、算力胶囊与用户矩阵头像 ── */}
+          {/* ── 右侧极简 3 核心组件：AI 伴学直达、搜索 ⌘K、算力胶囊与用户矩阵头像 ── */}
           <div className="ml-auto flex items-center gap-2 shrink-0">
-            {/* 0. 视觉风格一键切换胶囊 (鲜艳风 / 极简风) */}
+            {/* 0. 常驻 AI 伴学导师专属高亮胶囊 */}
+            <Link
+              to="/chat"
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold shadow-xs hover:shadow-indigo-500/25 active:scale-95 transition-all shrink-0 cursor-pointer"
+              title="考研 AI 伴学导师 · 随时答疑解惑、分步推导定理"
+            >
+              <Bot className="h-3.5 w-3.5 text-amber-300 animate-pulse" />
+              <span>AI 伴学导师</span>
+            </Link>
+
+            {/* 0.1 视觉风格一键切换胶囊 (鲜艳风 / 极简风) */}
             <button
               type="button"
               onClick={toggleThemeStyle}
@@ -935,36 +952,95 @@ export default function Layout({ children }: LayoutProps) {
         aria-label="移动端底部导航"
         className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 border-t border-slate-200/90 px-1.5 pt-1 flex items-center justify-around shadow-[0_-4px_24px_rgba(15,23,42,0.06)] backdrop-blur-2xl pb-[max(0.45rem,env(safe-area-inset-bottom))]"
       >
-        {mobileBottomTabs.map(tab => (
-          <NavLink
-            key={tab.to}
-            to={tab.to}
-            onPointerEnter={() => prefetchRoute(tab.to)}
-            onTouchStart={() => prefetchRoute(tab.to)}
-            className="flex flex-col items-center justify-center flex-1 py-1 select-none group cursor-pointer"
-          >
-            {({ isActive }) => (
-              <>
-                <div
-                  className={`relative flex items-center justify-center w-12 h-7 rounded-xl transition-all duration-150 ${
-                    isActive
-                      ? 'bg-neutral-900 text-white shadow-xs scale-105'
-                      : 'text-neutral-500 group-active:scale-95'
-                  }`}
-                >
+        {mobileBottomTabs.map(tab => {
+          if ((tab as any).isAction) {
+            return (
+              <button
+                key={tab.label}
+                type="button"
+                onClick={() => setMobileNavOpen(true)}
+                className="flex flex-col items-center justify-center flex-1 py-1 select-none group cursor-pointer"
+                title="打开全站所有功能矩阵"
+              >
+                <div className="relative flex items-center justify-center w-11 h-7 rounded-xl bg-slate-100 text-slate-700 group-active:scale-95 transition-transform">
                   <tab.icon className="h-4 w-4" />
                 </div>
-                <span
-                  className={`text-[10.5px] tracking-tight mt-0.5 transition-colors ${
-                    isActive ? 'text-neutral-900 font-extrabold' : 'text-neutral-500 font-medium'
-                  }`}
-                >
+                <span className="text-[10px] tracking-tight mt-0.5 text-slate-700 font-extrabold">
                   {tab.label}
                 </span>
-              </>
-            )}
-          </NavLink>
-        ))}
+              </button>
+            )
+          }
+
+          if ((tab as any).isCenter) {
+            return (
+              <NavLink
+                key={tab.to}
+                to={tab.to}
+                onPointerEnter={() => prefetchRoute(tab.to)}
+                onTouchStart={() => prefetchRoute(tab.to)}
+                className="flex flex-col items-center justify-center flex-1 py-1 select-none group cursor-pointer relative -top-2"
+                title="进入考研 AI 伴学导师"
+              >
+                {({ isActive }) => (
+                  <>
+                    <div
+                      className={`relative flex items-center justify-center w-12 h-10 rounded-2xl transition-all duration-200 shadow-md ${
+                        isActive
+                          ? 'bg-gradient-to-tr from-indigo-600 via-indigo-700 to-purple-600 text-white ring-2 ring-indigo-400 scale-105'
+                          : 'bg-gradient-to-tr from-slate-900 to-indigo-950 text-amber-300 border border-indigo-400/40 group-active:scale-95'
+                      }`}
+                    >
+                      <tab.icon className="h-5 w-5" />
+                      <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-400" />
+                      </span>
+                    </div>
+                    <span
+                      className={`text-[10px] tracking-tight mt-0.5 transition-colors font-black ${
+                        isActive ? 'text-indigo-600' : 'text-slate-800'
+                      }`}
+                    >
+                      {tab.label}
+                    </span>
+                  </>
+                )}
+              </NavLink>
+            )
+          }
+
+          return (
+            <NavLink
+              key={tab.to}
+              to={tab.to}
+              onPointerEnter={() => prefetchRoute(tab.to)}
+              onTouchStart={() => prefetchRoute(tab.to)}
+              className="flex flex-col items-center justify-center flex-1 py-1 select-none group cursor-pointer"
+            >
+              {({ isActive }) => (
+                <>
+                  <div
+                    className={`relative flex items-center justify-center w-11 h-7 rounded-xl transition-all duration-150 ${
+                      isActive
+                        ? 'bg-neutral-900 text-white shadow-xs scale-105'
+                        : 'text-neutral-500 group-active:scale-95'
+                    }`}
+                  >
+                    <tab.icon className="h-4 w-4" />
+                  </div>
+                  <span
+                    className={`text-[10.5px] tracking-tight mt-0.5 transition-colors ${
+                      isActive ? 'text-neutral-900 font-extrabold' : 'text-neutral-500 font-medium'
+                    }`}
+                  >
+                    {tab.label}
+                  </span>
+                </>
+              )}
+            </NavLink>
+          )
+        })}
       </nav>
 
       {/* Floating Desktop Companion Pet */}

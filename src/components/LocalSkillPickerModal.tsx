@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useState, useEffect, useMemo } from 'react'
 import {
@@ -145,7 +146,7 @@ export default function LocalSkillPickerModal({
     }
   }
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="w-full max-w-5xl h-[86vh] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
         {/* Header */}
@@ -409,4 +410,6 @@ export default function LocalSkillPickerModal({
       </div>
     </div>
   )
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent
 }

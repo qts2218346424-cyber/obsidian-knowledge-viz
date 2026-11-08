@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import React, { useState, useEffect } from 'react'
 import {
   Sparkles,
@@ -256,7 +257,7 @@ export const BookExtractModal: React.FC<BookExtractModalProps> = ({
     )
   }
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-black/60 backdrop-blur-sm animate-fadeIn">
       <div className="bg-surface border border-cream-200 w-full max-w-4xl rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
         {/* 顶部标题栏 */}
@@ -778,4 +779,6 @@ export const BookExtractModal: React.FC<BookExtractModalProps> = ({
       </div>
     </div>
   )
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent
 }

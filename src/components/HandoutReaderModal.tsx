@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { useState, useMemo } from 'react'
 import {
   X, BookOpen, Clock, Target, CheckCircle2,
@@ -47,7 +48,7 @@ export default function HandoutReaderModal({
     ? 'bg-blue-500/10 text-blue-500 border-blue-500/20'
     : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-xs modal-backdrop-contain">
       <div className="dark bg-[#0e121d] border-0 sm:border border-white/10 rounded-none sm:rounded-2xl w-full max-w-6xl h-dvh sm:h-[92dvh] flex flex-col shadow-[0_24px_70px_rgba(0,0,0,0.85)] overflow-hidden text-slate-100 ring-1 ring-white/10">
         {/* Header */}
@@ -223,4 +224,6 @@ export default function HandoutReaderModal({
       </div>
     </div>
   )
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent
 }

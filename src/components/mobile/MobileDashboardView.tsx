@@ -236,6 +236,30 @@ export default function MobileDashboardView({
         </div>
       </section>
 
+      {/* ── 2.5 🤖 考研 AI 伴学导师专属工作舱 (首屏吸睛直达) ── */}
+      <section className="p-3.5 rounded-2xl bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-900 text-white border border-indigo-500/30 shadow-md flex items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-sm">
+            🤖
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <h4 className="text-xs font-black text-white truncate">考研 AI 伴学导师</h4>
+              <span className="px-1.5 py-0.2 rounded-full bg-amber-400 text-slate-950 text-[9px] font-black shrink-0">
+                在线伴读
+              </span>
+            </div>
+            <p className="text-[10px] text-slate-300 mt-0.5 truncate">多智能体答疑 · 严谨推导数学与408错因</p>
+          </div>
+        </div>
+        <Link
+          to="/chat"
+          className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 text-xs font-black shadow-xs active:scale-95 transition-all shrink-0 cursor-pointer"
+        >
+          立即伴学 →
+        </Link>
+      </section>
+
       {/* ── 3. 今日提分直通卡 (考点掌握度热力图 & 10题速测) ── */}
       <section className="p-3.5 rounded-2xl bg-gradient-to-r from-rose-50 via-amber-50 to-indigo-50 border border-rose-200/80 space-y-2.5">
         <div className="flex items-center justify-between">
@@ -271,10 +295,56 @@ export default function MobileDashboardView({
         </div>
       </section>
 
-      {/* ── 4. 研学辅助高频胶囊 (轻量双列/药丸排版，彻底告别 4 列挤压) ── */}
+      {/* ── 4. 全站提分功能与工具矩阵 (高频九宫格，一览无遗) ── */}
       <section className="space-y-1.5">
-        <div className="text-xs font-extrabold text-slate-700 px-0.5">常用研学工具</div>
+        <div className="flex items-center justify-between px-0.5">
+          <div className="text-xs font-extrabold text-slate-700">全站研学与提分功能</div>
+          <button
+            type="button"
+            onClick={() => navigate('/settings')}
+            className="text-[10.5px] text-indigo-600 font-bold hover:underline"
+          >
+            系统设置 ⚙️
+          </button>
+        </div>
         <div className="grid grid-cols-2 gap-2">
+          {/* 错题本直达 */}
+          <Link
+            to="/quiz"
+            className="p-2.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-2.5 text-left"
+          >
+            <span className="text-lg">📕</span>
+            <div className="min-w-0">
+              <div className="text-xs font-bold text-slate-800">错题本与真题</div>
+              <div className="text-[10px] text-slate-400 truncate">408沙箱·拍照导题</div>
+            </div>
+          </Link>
+
+          {/* 知识图谱 */}
+          <Link
+            to="/graph"
+            className="p-2.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-2.5 text-left"
+          >
+            <span className="text-lg">🕸️</span>
+            <div className="min-w-0">
+              <div className="text-xs font-bold text-slate-800">考点知识图谱</div>
+              <div className="text-[10px] text-slate-400 truncate">全库双链网络拓扑</div>
+            </div>
+          </Link>
+
+          {/* 核心讲义 */}
+          <Link
+            to="/study"
+            className="p-2.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-2.5 text-left"
+          >
+            <span className="text-lg">📚</span>
+            <div className="min-w-0">
+              <div className="text-xs font-bold text-slate-800">考研核心讲义</div>
+              <div className="text-[10px] text-slate-400 truncate">大纲知识与课件</div>
+            </div>
+          </Link>
+
+          {/* 随手速记 */}
           <button
             type="button"
             onClick={onOpenQuickNote}
@@ -287,6 +357,7 @@ export default function MobileDashboardView({
             </div>
           </button>
 
+          {/* 番茄专注 */}
           <Link
             to="/pomodoro"
             className="p-2.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-2.5 text-left"
@@ -298,6 +369,7 @@ export default function MobileDashboardView({
             </div>
           </Link>
 
+          {/* 白噪音伴学 */}
           <Link
             to="/music"
             className="p-2.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-2.5 text-left"
@@ -308,37 +380,7 @@ export default function MobileDashboardView({
               <div className="text-[10px] text-slate-400 truncate">自习室与雨声</div>
             </div>
           </Link>
-
-          <Link
-            to="/study"
-            className="p-2.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-2.5 text-left"
-          >
-            <span className="text-lg">📚</span>
-            <div className="min-w-0">
-              <div className="text-xs font-bold text-slate-800">考研核心讲义</div>
-              <div className="text-[10px] text-slate-400 truncate">大纲知识清单</div>
-            </div>
-          </Link>
         </div>
-      </section>
-
-      {/* ── 5. AI 伴学导师专属横幅 ── */}
-      <section className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between gap-2.5">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-base shrink-0">
-            🤖
-          </div>
-          <div className="min-w-0">
-            <h4 className="text-xs font-bold text-slate-900 truncate">考研 AI 伴学导师</h4>
-            <p className="text-[10px] text-slate-500 mt-0.5 truncate">答疑解惑 · 分步推导定理</p>
-          </div>
-        </div>
-        <Link
-          to="/chat"
-          className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-2xs active:scale-95 transition-all shrink-0 cursor-pointer"
-        >
-          立即提问 →
-        </Link>
       </section>
     </div>
   )

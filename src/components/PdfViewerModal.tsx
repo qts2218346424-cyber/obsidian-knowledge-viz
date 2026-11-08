@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { useState } from 'react'
 import {
   X, FileText, Sparkles, Download, Maximize2, Minimize2, ExternalLink, Loader2
@@ -27,7 +28,7 @@ export default function PdfViewerModal({
   const rawDownloadUrl = `/api/books/raw?path=${encodeURIComponent(book.relativePath)}`
   const sizeMb = (book.size / (1024 * 1024)).toFixed(2)
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
       <div className={`bg-[#181b24] border border-white/10 rounded-2xl flex flex-col shadow-2xl overflow-hidden transition-all duration-200 ${
         isFullscreen ? 'w-full h-full rounded-none' : 'w-full max-w-6xl h-[92vh]'
@@ -126,4 +127,6 @@ export default function PdfViewerModal({
       </div>
     </div>
   )
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent
 }

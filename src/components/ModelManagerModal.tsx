@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { useState, useEffect, useMemo } from 'react'
 import {
   X,
@@ -208,7 +209,7 @@ export default function ModelManagerModal({
     return ag.models.filter(m => !deletedSet.has(m.trim().toLowerCase())).length
   }
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in">
       <div className="relative w-full max-w-2xl bg-surface border border-cream-300 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
         {/* Modal Header */}
@@ -417,4 +418,6 @@ export default function ModelManagerModal({
       </div>
     </div>
   )
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent
 }

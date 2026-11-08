@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { useState, useEffect } from 'react'
 import {
   X,
@@ -184,7 +185,7 @@ export default function QuickPracticeModal({
   ).length
 
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 md:p-4 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="bg-white dark:bg-slate-900 border-0 md:border md:border-cream-200 md:dark:border-slate-800 rounded-none md:rounded-3xl shadow-2xl w-full h-[100dvh] md:h-auto md:max-w-2xl md:max-h-[88vh] flex flex-col overflow-hidden">
         {/* Android M3 Top App Bar */}
@@ -568,4 +569,6 @@ export default function QuickPracticeModal({
       </div>
     </div>
   )
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent
 }

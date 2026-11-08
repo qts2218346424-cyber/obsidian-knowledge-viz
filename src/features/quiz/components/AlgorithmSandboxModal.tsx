@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import React, { useState, useMemo } from 'react'
 import {
   X,
@@ -104,7 +105,7 @@ export default function AlgorithmSandboxModal({
     setTimeout(() => setCopiedCode(false), 2000)
   }
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-md animate-fade-in font-sans">
       <div className="relative w-full max-w-6xl h-[92vh] flex flex-col rounded-3xl bg-white border border-slate-200/90 shadow-2xl overflow-hidden">
         {/* ── 顶部 Header ── */}
@@ -489,4 +490,6 @@ export default function AlgorithmSandboxModal({
       </div>
     </div>
   )
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent
 }

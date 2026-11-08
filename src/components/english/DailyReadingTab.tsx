@@ -24,6 +24,7 @@ import {
   Check,
   MessageSquare,
   Award,
+  X,
 } from 'lucide-react'
 import {
   DAILY_READING_ARTICLES,
@@ -60,6 +61,7 @@ export default function DailyReadingTab() {
   const [activeSentence, setActiveSentence] = useState<ReadingSentence | null>(null)
   const [showBilingual, setShowBilingual] = useState(true)
   const [highlightHardOnly, setHighlightHardOnly] = useState(false)
+  const [mobileCompanionOpen, setMobileCompanionOpen] = useState(false)
 
   // 4. 右侧 AI 伴读侧边栏选项卡：'companion' | 'vocab' | 'quiz'
   const [sideTab, setSideTab] = useState<'companion' | 'vocab' | 'quiz'>('companion')
@@ -278,6 +280,273 @@ export default function DailyReadingTab() {
   const totalCheckedIn = Object.values(checkinMap).filter(Boolean).length
   const totalSavedWordsCount = Object.values(savedWords).filter(Boolean).length
 
+  // 渲染 AI 伴读导师核心工作卡片 (支持桌面端右栏固定与移动端全屏抽屉复用)
+  const renderCompanionCard = (isModal = false) => {
+    return (
+      <div className={`space-y-4 ${isModal ? '' : 'bento-card rounded-3xl p-4 sm:p-5 bg-white border border-slate-200/90 shadow-md'}`}>
+        {/* 伴读舱顶部切换头 */}
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <span className="flex h-3 w-3 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+            </span>
+            <div className="flex flex-col">
+              <div className="text-xs font-black text-slate-900 flex items-center gap-1">
+                <Bot className="w-3.5 h-3.5 text-indigo-600" />
+                <span>考研英语 AI 伴读导师</span>
+              </div>
+              <span className="text-[10px] text-slate-400">实时交互 · 答疑长难句与同义替换</span>
+            </div>
+          </div>
+
+          {/* 右侧小切页 */}
+          <div className="inline-flex rounded-xl bg-slate-100 p-0.5 text-xs font-bold">
+            <button
+              type="button"
+              onClick={() => setSideTab('companion')}
+              className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                sideTab === 'companion' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500'
+              }`}
+            >
+              伴读对话
+            </button>
+            <button
+              type="button"
+              onClick={() => setSideTab('vocab')}
+              className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                sideTab === 'vocab' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500'
+              }`}
+            >
+              生词速查
+            </button>
+            <button
+              type="button"
+              onClick={() => setSideTab('quiz')}
+              className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                sideTab === 'quiz' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500'
+              }`}
+            >
+              真题模考
+            </button>
+          </div>
+        </div>
+
+        {/* TAB 1: AI 伴读对话互动流 */}
+        {sideTab === 'companion' && (
+          <div className="space-y-3">
+            {/* 对话消息区 */}
+            <div className={`${isModal ? 'h-[42dvh]' : 'h-[360px]'} overflow-y-auto space-y-3 p-2.5 rounded-2xl bg-slate-50/80 border border-slate-100 text-xs no-scrollbar`}>
+              {chatMessages.map((msg) => {
+                const isUser = msg.role === 'user'
+                return (
+                  <div
+                    key={msg.id}
+                    className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} space-y-1`}
+                  >
+                    <div
+                      className={`max-w-[90%] p-3 rounded-2xl leading-relaxed whitespace-pre-wrap ${
+                        isUser
+                          ? 'bg-slate-900 text-white rounded-tr-none'
+                          : 'bg-white text-slate-800 border border-slate-200/80 shadow-2xs rounded-tl-none'
+                      }`}
+                    >
+                      {msg.content}
+                    </div>
+                    <span className="text-[9.5px] text-slate-400 font-mono px-1">
+                      {msg.timestamp}
+                    </span>
+                  </div>
+                )
+              })}
+              {isAiReplying && (
+                <div className="flex items-center gap-2 p-3 bg-white rounded-2xl border border-slate-200/80 text-xs text-indigo-600 animate-pulse">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>考研英语 AI 伴读导师正在解析长难句与命题点...</span>
+                </div>
+              )}
+              <div ref={chatBottomRef} />
+            </div>
+
+            {/* 快捷提问提词器 */}
+            <div className="space-y-1.5">
+              <div className="text-[11px] font-bold text-slate-500 flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-amber-500" />
+                <span>伴读快捷探针：</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  '总结核心论点与作者态度',
+                  '提炼考研熟词生义清单',
+                  '预测这篇出题的同义替换点',
+                  '解析当前选中的长难句',
+                ].map((promptText) => (
+                  <button
+                    key={promptText}
+                    type="button"
+                    onClick={() => handleSendMessage(promptText)}
+                    className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition-all cursor-pointer"
+                  >
+                    {promptText}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 消息输入框 */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                handleSendMessage()
+              }}
+              className="flex items-center gap-2 pt-1"
+            >
+              <input
+                type="text"
+                value={inputQuestion}
+                onChange={(e) => setInputQuestion(e.target.value)}
+                placeholder="向 AI 伴读提问（如：这段为什么用这个词？怎么同义替换？）..."
+                className="flex-1 py-2 px-3 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              <button
+                type="submit"
+                disabled={!inputQuestion.trim() || isAiReplying}
+                className="p-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-40 transition-all cursor-pointer shadow-xs"
+              >
+                <Send className="w-3.5 h-3.5" />
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* TAB 2: 生词与熟词生义速查本 */}
+        {sideTab === 'vocab' && (
+          <div className={`space-y-3 ${isModal ? 'max-h-[55dvh]' : 'max-h-[460px]'} overflow-y-auto no-scrollbar`}>
+            <div className="text-xs text-slate-500">
+              收录本篇文献中出现的考研核心真题词汇与熟词生义警告，点击右侧可一键加入生词本：
+            </div>
+            <div className="space-y-2">
+              {currentArticle.keyVocab.map((v) => {
+                const isSaved = savedWords[v.word]
+                return (
+                  <div
+                    key={v.word}
+                    className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start justify-between gap-2"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-black text-slate-900">{v.word}</span>
+                        <span className="text-[11px] font-mono text-slate-400">{v.phonetic}</span>
+                        {v.isKaoYanCrucial && (
+                          <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-500/15 text-amber-800">
+                            核心考词
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-slate-700 leading-relaxed">{v.meaning}</div>
+                      {v.familiarMeaningDifferent && (
+                        <div className="text-[11px] font-bold text-rose-600 bg-rose-50 p-1.5 rounded-lg border border-rose-200">
+                          {v.familiarMeaningDifferent}
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => toggleSaveWord(v.word)}
+                      className={`p-1.5 rounded-xl transition-all cursor-pointer ${
+                        isSaved
+                          ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                          : 'bg-white text-slate-400 hover:text-slate-700 border border-slate-200'
+                      }`}
+                      title={isSaved ? '已收藏在生词本' : '加入生词本'}
+                    >
+                      {isSaved ? <BookmarkCheck className="w-4 h-4 text-amber-600" /> : <Bookmark className="w-4 h-4" />}
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: 真题级配套模考题 */}
+        {sideTab === 'quiz' && (
+          <div className={`space-y-4 ${isModal ? 'max-h-[55dvh]' : 'max-h-[460px]'} overflow-y-auto no-scrollbar`}>
+            <div className="text-xs font-bold text-slate-500">
+              基于本篇外刊命制的考研真题同源模考题 (共 {currentArticle.mockQuestions.length} 题)：
+            </div>
+            {currentArticle.mockQuestions.map((q, idx) => {
+              const chosen = userAnswers[q.id]
+              const isSubmitted = Boolean(chosen)
+              const isCorrect = chosen === q.answer
+
+              return (
+                <div
+                  key={q.id}
+                  className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-2.5"
+                >
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-500">
+                    <span>第 {idx + 1} 题 · {q.type}</span>
+                    {isSubmitted && (
+                      <span className={`font-black ${isCorrect ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {isCorrect ? '✓ 回答正确' : `✗ 回答错误 (正确答案: ${q.answer})`}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="text-xs sm:text-[13px] font-extrabold text-slate-900 leading-snug">
+                    {q.stem}
+                  </div>
+
+                  {/* 选项组 */}
+                  <div className="space-y-1.5 font-sans">
+                    {(['A', 'B', 'C', 'D'] as const).map((optKey) => {
+                      const isPicked = chosen === optKey
+                      return (
+                        <button
+                          key={optKey}
+                          type="button"
+                          onClick={() => {
+                            setUserAnswers((prev) => ({ ...prev, [q.id]: optKey }))
+                            setShowAnalysis((prev) => ({ ...prev, [q.id]: true }))
+                          }}
+                          className={`w-full text-left p-2.5 rounded-xl text-xs font-medium border transition-all cursor-pointer flex items-center gap-2 ${
+                            isPicked
+                              ? isCorrect
+                                ? 'bg-emerald-50 border-emerald-400 text-emerald-950 font-bold'
+                                : 'bg-rose-50 border-rose-400 text-rose-950 font-bold'
+                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                          }`}
+                        >
+                          <span className="w-5 h-5 rounded-lg bg-slate-100 text-slate-700 font-bold flex items-center justify-center shrink-0">
+                            {optKey}
+                          </span>
+                          <span className="leading-relaxed">{q.options[optKey]}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  {/* 考研名师解析与同义替换 */}
+                  {showAnalysis[q.id] && (
+                    <div className="p-3 rounded-xl bg-white border border-slate-200 text-xs space-y-1.5">
+                      <div className="font-bold text-slate-800">📋 考研真题命题解析：</div>
+                      <p className="text-slate-600 leading-relaxed">{q.analysis}</p>
+                      <div className="text-[11px] font-bold text-indigo-700 bg-indigo-50 p-2 rounded-lg">
+                        🔍 考点同义替换还原：{q.paraphrasePoint}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4 animate-fade-in-up text-slate-900">
       {/* ── 顶部仪表盘：外刊源刊档案与今日精读打卡 ── */}
@@ -378,6 +647,16 @@ export default function DailyReadingTab() {
 
         {/* 视图调节工具 */}
         <div className="flex items-center gap-2">
+          {/* 移动端快速呼出 AI 伴读导师胶囊 */}
+          <button
+            type="button"
+            onClick={() => setMobileCompanionOpen(true)}
+            className="md:hidden inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-2xs cursor-pointer active:scale-95 transition-all"
+          >
+            <Bot className="w-3.5 h-3.5" />
+            <span>AI 伴读</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setShowBilingual((v) => !v)}
@@ -441,9 +720,9 @@ export default function DailyReadingTab() {
       )}
 
       {/* ── 主体双栏：左侧段落句句精读 + 右侧 AI 伴读导师舱 ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-        {/* 左侧：文献段落交互区 (7列) */}
-        <div className="lg:col-span-7 space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+        {/* 左侧：文献段落交互区 (md及以上占 7 列，移动端占满) */}
+        <div className="md:col-span-7 space-y-4">
           {currentArticle.paragraphs.map((p) => {
             return (
               <div
@@ -528,6 +807,21 @@ export default function DailyReadingTab() {
                                 💡 {sen.kaoyanNote}
                               </div>
                             )}
+
+                            {/* 一键呼出伴读对话并深度剖析 */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleSendMessage(`请对当前这个考研长难句做深入语法解剖与同义替换考点推演：\n"${sen.en}"`)
+                                setSideTab('companion')
+                                setMobileCompanionOpen(true)
+                              }}
+                              className="mt-2 w-full py-2 px-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-98"
+                            >
+                              <Bot className="w-3.5 h-3.5" />
+                              <span>呼出 AI 伴读：深度解构此句与命题点 →</span>
+                            </button>
                           </div>
                         )}
 
@@ -558,271 +852,73 @@ export default function DailyReadingTab() {
           })}
         </div>
 
-        {/* 右侧：AI 伴读导师工作舱 (5列) */}
-        <div className="lg:col-span-5 space-y-3.5 sticky top-20">
-          <div className="bento-card rounded-3xl p-4 sm:p-5 bg-white border border-slate-200/90 shadow-md space-y-4">
-            {/* 伴读舱顶部切换头 */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <span className="flex h-3 w-3 relative">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
-                </span>
-                <div className="flex flex-col">
-                  <div className="text-xs font-black text-slate-900 flex items-center gap-1">
-                    <Bot className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>考研英语 AI 伴读导师</span>
-                  </div>
-                  <span className="text-[10px] text-slate-400">实时交互 · 答疑长难句与同义替换</span>
-                </div>
-              </div>
-
-              {/* 右侧小切页 */}
-              <div className="inline-flex rounded-xl bg-slate-100 p-0.5 text-xs font-bold">
-                <button
-                  type="button"
-                  onClick={() => setSideTab('companion')}
-                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                    sideTab === 'companion' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500'
-                  }`}
-                >
-                  伴读对话
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSideTab('vocab')}
-                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                    sideTab === 'vocab' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500'
-                  }`}
-                >
-                  生词速查
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSideTab('quiz')}
-                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                    sideTab === 'quiz' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500'
-                  }`}
-                >
-                  真题模考
-                </button>
-              </div>
-            </div>
-
-            {/* TAB 1: AI 伴读对话互动流 */}
-            {sideTab === 'companion' && (
-              <div className="space-y-3">
-                {/* 对话消息区 */}
-                <div className="h-[360px] overflow-y-auto space-y-3 p-2 rounded-2xl bg-slate-50/80 border border-slate-100 text-xs no-scrollbar">
-                  {chatMessages.map((msg) => {
-                    const isUser = msg.role === 'user'
-                    return (
-                      <div
-                        key={msg.id}
-                        className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} space-y-1`}
-                      >
-                        <div
-                          className={`max-w-[90%] p-3 rounded-2xl leading-relaxed whitespace-pre-wrap ${
-                            isUser
-                              ? 'bg-slate-900 text-white rounded-tr-none'
-                              : 'bg-white text-slate-800 border border-slate-200/80 shadow-2xs rounded-tl-none'
-                          }`}
-                        >
-                          {msg.content}
-                        </div>
-                        <span className="text-[9.5px] text-slate-400 font-mono px-1">
-                          {msg.timestamp}
-                        </span>
-                      </div>
-                    )
-                  })}
-                  {isAiReplying && (
-                    <div className="flex items-center gap-2 p-3 bg-white rounded-2xl border border-slate-200/80 text-xs text-indigo-600 animate-pulse">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>考研英语 AI 伴读导师正在解析长难句与命题点...</span>
-                    </div>
-                  )}
-                  <div ref={chatBottomRef} />
-                </div>
-
-                {/* 快捷提问提词器 */}
-                <div className="space-y-1.5">
-                  <div className="text-[11px] font-bold text-slate-500 flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-amber-500" />
-                    <span>伴读快捷探针：</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {[
-                      '总结核心论点与作者态度',
-                      '提炼考研熟词生义清单',
-                      '预测这篇出题的同义替换点',
-                      '解析当前选中的长难句',
-                    ].map((promptText) => (
-                      <button
-                        key={promptText}
-                        type="button"
-                        onClick={() => handleSendMessage(promptText)}
-                        className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition-all cursor-pointer"
-                      >
-                        {promptText}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 消息输入框 */}
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault()
-                    handleSendMessage()
-                  }}
-                  className="flex items-center gap-2 pt-1"
-                >
-                  <input
-                    type="text"
-                    value={inputQuestion}
-                    onChange={(e) => setInputQuestion(e.target.value)}
-                    placeholder="向 AI 伴读提问（如：这段为什么用这个词？怎么同义替换？）..."
-                    className="flex-1 py-2 px-3 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                  <button
-                    type="submit"
-                    disabled={!inputQuestion.trim() || isAiReplying}
-                    className="p-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-40 transition-all cursor-pointer shadow-xs"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                  </button>
-                </form>
-              </div>
-            )}
-
-            {/* TAB 2: 生词与熟词生义速查本 */}
-            {sideTab === 'vocab' && (
-              <div className="space-y-3 max-h-[460px] overflow-y-auto no-scrollbar">
-                <div className="text-xs text-slate-500">
-                  收录本篇文献中出现的考研核心真题词汇与熟词生义警告，点击右侧可一键加入生词本：
-                </div>
-                <div className="space-y-2">
-                  {currentArticle.keyVocab.map((v) => {
-                    const isSaved = savedWords[v.word]
-                    return (
-                      <div
-                        key={v.word}
-                        className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start justify-between gap-2"
-                      >
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-black text-slate-900">{v.word}</span>
-                            <span className="text-[11px] font-mono text-slate-400">{v.phonetic}</span>
-                            {v.isKaoYanCrucial && (
-                              <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-500/15 text-amber-800">
-                                核心考词
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-xs text-slate-700 leading-relaxed">{v.meaning}</div>
-                          {v.familiarMeaningDifferent && (
-                            <div className="text-[11px] font-bold text-rose-600 bg-rose-50 p-1.5 rounded-lg border border-rose-200">
-                              {v.familiarMeaningDifferent}
-                            </div>
-                          )}
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => toggleSaveWord(v.word)}
-                          className={`p-1.5 rounded-xl transition-all cursor-pointer ${
-                            isSaved
-                              ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                              : 'bg-white text-slate-400 hover:text-slate-700 border border-slate-200'
-                          }`}
-                          title={isSaved ? '已收藏在生词本' : '加入生词本'}
-                        >
-                          {isSaved ? <BookmarkCheck className="w-4 h-4 text-amber-600" /> : <Bookmark className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* TAB 3: 真题级配套模考题 */}
-            {sideTab === 'quiz' && (
-              <div className="space-y-4 max-h-[460px] overflow-y-auto no-scrollbar">
-                <div className="text-xs font-bold text-slate-500">
-                  基于本篇外刊命制的考研真题同源模考题 (共 {currentArticle.mockQuestions.length} 题)：
-                </div>
-                {currentArticle.mockQuestions.map((q, idx) => {
-                  const chosen = userAnswers[q.id]
-                  const isSubmitted = Boolean(chosen)
-                  const isCorrect = chosen === q.answer
-
-                  return (
-                    <div
-                      key={q.id}
-                      className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-2.5"
-                    >
-                      <div className="flex items-center justify-between text-xs font-bold text-slate-500">
-                        <span>第 {idx + 1} 题 · {q.type}</span>
-                        {isSubmitted && (
-                          <span className={`font-black ${isCorrect ? 'text-emerald-600' : 'text-rose-600'}`}>
-                            {isCorrect ? '✓ 回答正确' : `✗ 回答错误 (正确答案: ${q.answer})`}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="text-xs sm:text-[13px] font-extrabold text-slate-900 leading-snug">
-                        {q.stem}
-                      </div>
-
-                      {/* 选项组 */}
-                      <div className="space-y-1.5 font-sans">
-                        {(['A', 'B', 'C', 'D'] as const).map((optKey) => {
-                          const isPicked = chosen === optKey
-                          return (
-                            <button
-                              key={optKey}
-                              type="button"
-                              onClick={() => {
-                                setUserAnswers((prev) => ({ ...prev, [q.id]: optKey }))
-                                setShowAnalysis((prev) => ({ ...prev, [q.id]: true }))
-                              }}
-                              className={`w-full text-left p-2.5 rounded-xl text-xs font-medium border transition-all cursor-pointer flex items-center gap-2 ${
-                                isPicked
-                                  ? isCorrect
-                                    ? 'bg-emerald-50 border-emerald-400 text-emerald-950 font-bold'
-                                    : 'bg-rose-50 border-rose-400 text-rose-950 font-bold'
-                                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
-                              }`}
-                            >
-                              <span className="w-5 h-5 rounded-lg bg-slate-100 text-slate-700 font-bold flex items-center justify-center shrink-0">
-                                {optKey}
-                              </span>
-                              <span className="leading-relaxed">{q.options[optKey]}</span>
-                            </button>
-                          )
-                        })}
-                      </div>
-
-                      {/* 考研名师解析与同义替换 */}
-                      {showAnalysis[q.id] && (
-                        <div className="p-3 rounded-xl bg-white border border-slate-200 text-xs space-y-1.5">
-                          <div className="font-bold text-slate-800">📋 考研真题命题解析：</div>
-                          <p className="text-slate-600 leading-relaxed">{q.analysis}</p>
-                          <div className="text-[11px] font-bold text-indigo-700 bg-indigo-50 p-2 rounded-lg">
-                            🔍 考点同义替换还原：{q.paraphrasePoint}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
+        {/* 右侧：AI 伴读导师工作舱 (在 md 及以上宽屏固定在右侧文章旁边，移动端通过悬浮与抽屉呈现) */}
+        <div className="hidden md:block md:col-span-5 space-y-3.5 sticky top-20">
+          {renderCompanionCard(false)}
         </div>
       </div>
+
+      {/* ── 📱 移动端专属：常驻右侧灵动 AI 伴读胶囊 (杜绝滑至底端，随时在手边一键呼出) ── */}
+      <div className="md:hidden fixed right-3 bottom-20 z-40">
+        <button
+          type="button"
+          onClick={() => setMobileCompanionOpen(true)}
+          className="flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 text-white shadow-[0_4px_24px_rgba(79,70,229,0.45)] border border-indigo-400/50 active:scale-95 transition-all cursor-pointer"
+        >
+          <span className="flex h-2.5 w-2.5 relative">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400" />
+          </span>
+          <Bot className="w-4 h-4 text-white" />
+          <span className="text-xs font-black">AI 伴读</span>
+          {activeSentence && (
+            <span className="px-1.5 py-0.2 rounded-full bg-amber-400 text-slate-950 text-[9.5px] font-black">
+              已锁定第{activeSentence.sentenceIndex}句
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* ── 📱 移动端 AI 伴读全功能底部抽屉 (BottomSheet) ── */}
+      {mobileCompanionOpen && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col justify-end md:hidden bg-slate-950/60 backdrop-blur-xs"
+          onClick={() => setMobileCompanionOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full bg-white rounded-t-3xl shadow-2xl border-t border-slate-200 max-h-[86dvh] flex flex-col overflow-hidden animate-sheet-up"
+          >
+            {/* 抽屉顶部下拉手柄与标题 */}
+            <div className="flex justify-center pt-2.5 pb-1 shrink-0">
+              <div className="w-10 h-1 rounded-full bg-slate-300" />
+            </div>
+            <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <Bot className="w-4 h-4 text-indigo-600 shrink-0" />
+                <span className="text-xs font-black text-slate-900 truncate">考研英语 AI 伴读工作舱</span>
+                {activeSentence && (
+                  <span className="text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full font-mono shrink-0">
+                    第{activeSentence.sentenceIndex}句
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setMobileCompanionOpen(false)}
+                className="p-1 rounded-full bg-slate-100 text-slate-500 hover:text-slate-800 cursor-pointer"
+                aria-label="关闭伴读"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            {/* 抽屉内容区 */}
+            <div className="p-3.5 overflow-y-auto flex-1">
+              {renderCompanionCard(true)}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { useState, useEffect } from 'react'
 import {
   X, Lightbulb, ShieldAlert, BookOpen, Sparkles, Loader2,
@@ -79,7 +80,7 @@ export default function StepTutorModal({
     setTimeout(() => setCopied(false), 2000)
   }
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
       <div className="relative w-full max-w-3xl bg-surface border border-cream-200 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
@@ -288,4 +289,6 @@ export default function StepTutorModal({
       </div>
     </div>
   )
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent
 }

@@ -1431,11 +1431,8 @@ code, pre, kbd, samp, .font-mono {
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04) !important;
   }
 
-  /* 开启硬件合成层加速，保证列表上下滑动如丝般顺滑 */
-  main,
-  #root,
+  /* 仅针对独立的局部平滑滚动区域启用 touch 动量，绝不在 main 和 #root 上滥用 transform 避免打破全站 fixed 弹窗视口坐标系 */
   .scroll-gpu {
     -webkit-overflow-scrolling: touch;
-    transform: translateZ(0);
   }
 }

@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { Sparkles, ShieldAlert, CheckCircle2, AlertTriangle, ArrowRight, Play, BookOpen, X, Flame } from 'lucide-react'
 import type { MasteryPoint } from '../data/masteryData'
 
@@ -47,7 +48,7 @@ export default function MasteryRescueModal({
     ? 'from-amber-500/10 via-amber-50/50 to-yellow-50/40 border-amber-200'
     : 'from-emerald-500/10 via-emerald-50/50 to-teal-50/40 border-emerald-200'
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className={`relative w-full max-w-xl rounded-2xl bg-white border ${themeGradient} shadow-2xl overflow-hidden flex flex-col max-h-[88dvh]`}>
         {/* 顶部 Banner 状态条 */}
@@ -218,4 +219,6 @@ export default function MasteryRescueModal({
       </div>
     </div>
   )
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent
 }

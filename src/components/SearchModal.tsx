@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { Search, X, FileText, Loader2 } from 'lucide-react'
 import { api, type FileListItem } from '../services/api'
@@ -73,7 +74,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
 
   if (!isOpen) return null
 
-  return (
+  const modalContent = (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center pt-[max(0.75rem,env(safe-area-inset-top))] sm:pt-[12dvh] px-3 sm:px-4 modal-backdrop-contain"
       onClick={onClose}

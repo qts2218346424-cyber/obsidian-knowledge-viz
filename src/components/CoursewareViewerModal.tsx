@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { useState, useMemo, useEffect } from 'react'
 import {
   X,
@@ -204,7 +205,7 @@ export default function CoursewareViewerModal({
 
   const srcUrl = item.rawPath ? `/api/books/raw?path=${encodeURIComponent(item.rawPath)}` : undefined
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-3 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
       <div
         className={`dark bg-[#0a0e17] border-0 sm:border sm:border-white/10 flex flex-col shadow-[0_24px_70px_rgba(0,0,0,0.85)] overflow-hidden transition-all duration-200 ${
@@ -384,4 +385,6 @@ export default function CoursewareViewerModal({
       </div>
     </div>
   )
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent
 }

@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   X, Brain, CheckCircle2, AlertTriangle,
@@ -250,7 +251,7 @@ export default function AIMemoryModal({
 
   if (!isOpen) return null
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fade-in">
       <div className="flex h-[90vh] w-full max-w-5xl flex-col rounded-2xl border border-cream-300 bg-surface shadow-2xl overflow-hidden">
         {/* Header */}
@@ -1005,4 +1006,6 @@ export default function AIMemoryModal({
       )}
     </div>
   )
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent
 }
