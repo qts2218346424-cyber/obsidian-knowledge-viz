@@ -205,7 +205,7 @@ export class OpenAICompatibleClient implements AiClient {
         body.tool_choice = 'auto'
       }
 
-      const response = await fetch(resolveOpenAIChatURL(this.baseURL), {
+      let response = await fetch(resolveOpenAIChatURL(this.baseURL), {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${this.apiKey}`,
@@ -214,9 +214,48 @@ export class OpenAICompatibleClient implements AiClient {
         body: JSON.stringify(body),
       })
 
-      const raw = await response.text()
+      let raw = await response.text()
       let data: any = {}
       try { data = raw ? JSON.parse(raw) : {} } catch { /* keep raw error */ }
+
+      // 智能多模态视觉容错降级：若底层模型不支持 image_url 导致 400，自动剥离图片转换为纯文本优雅重试
+      const hasImageParts = messages.some(m => Array.isArray(m.content) && (m.content as any[]).some(p => p.type === 'image_url'))
+      if (!response.ok && hasImageParts) {
+        const errMsg = String(data?.error?.message || raw || '').toLowerCase()
+        if (response.status === 400 || errMsg.includes('image') || errMsg.includes('multimodal') || errMsg.includes('vision') || errMsg.includes('unsupported')) {
+          console.warn('[OpenAICompatibleClient] Model does not support image_url, falling back to text-only mode...')
+          const sanitizedMessages = messages.map(m => {
+            if (!Array.isArray(m.content)) return m
+            const textParts = (m.content as any[])
+              .filter(p => p.type === 'text')
+              .map(p => p.text || '')
+              .join(' ')
+            return {
+              ...m,
+              content: textParts ? `[已上传题目图片附件]
+${textParts}` : '[已上传考研真题/手写笔记图片附件]',
+            }
+          })
+
+          const fallbackBody = {
+            ...body,
+            messages: sanitizedMessages,
+          }
+
+          response = await fetch(resolveOpenAIChatURL(this.baseURL), {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${this.apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(fallbackBody),
+          })
+
+          raw = await response.text()
+          try { data = raw ? JSON.parse(raw) : {} } catch { /* keep raw error */ }
+        }
+      }
+
       if (!response.ok) {
         const message = data?.error?.message || raw || `HTTP ${response.status}`
         const error = new Error(message) as Error & { status?: number }
