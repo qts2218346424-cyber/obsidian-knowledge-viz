@@ -403,7 +403,7 @@ export const ChatMessageItem = memo(
         } ${isDeferred ? 'chat-message-deferred' : ''}`}
       >
         {!isUser && (
-          <div className="hidden sm:flex w-8 h-8 rounded-xl bg-indigo-50/80 items-center justify-center shrink-0 border border-indigo-200/60 shadow-2xs mt-0.5">
+          <div className="hidden sm:flex w-8 h-8 rounded-xl bg-neutral-100 items-center justify-center shrink-0 border border-neutral-200/80 shadow-2xs mt-0.5">
             <LuluAvatar size="xs" mood={msg.streaming ? 'thinking' : 'idle'} />
           </div>
         )}
@@ -417,7 +417,7 @@ export const ChatMessageItem = memo(
           {!isUser && (
             <div className="flex items-center justify-between gap-2 mb-1.5 px-1 text-xs w-full">
               <div className="flex items-center flex-wrap gap-1.5 min-w-0">
-                <span className="sm:hidden inline-flex items-center justify-center w-5 h-5 rounded-md bg-indigo-50 border border-indigo-200/70 shrink-0">
+                <span className="sm:hidden inline-flex items-center justify-center w-5 h-5 rounded-md bg-neutral-100 border border-neutral-200/80 shrink-0">
                   <LuluAvatar size="xs" mood={msg.streaming ? 'thinking' : 'idle'} />
                 </span>
                 <span className="font-bold text-slate-800 flex items-center gap-1">
@@ -501,8 +501,8 @@ export const ChatMessageItem = memo(
           <div
             className={`px-4 py-3 sm:px-5 sm:py-4 rounded-2xl max-w-full overflow-x-hidden ${fontSizeClass} shadow-2xs ${
               isUser
-                ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-br-xs shadow-xs text-sm'
-                : 'w-full bg-white border border-slate-200/85 text-slate-800 rounded-tl-xs'
+                ? 'bg-neutral-900 text-white rounded-2xl rounded-br-xs shadow-xs text-sm border border-neutral-800'
+                : 'w-full bg-white border border-neutral-200/80 text-neutral-900 rounded-2xl rounded-tl-xs shadow-xs'
             }`}
           >
             {/* 工具调用折叠卡 */}
@@ -535,7 +535,7 @@ export const ChatMessageItem = memo(
                 {msg.files.map((file, fileIdx) => (
                   <div
                     key={fileIdx}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-black/15 border border-white/20 text-white text-xs backdrop-blur-xs shadow-2xs"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-100 text-xs backdrop-blur-xs shadow-2xs"
                     title={file.name}
                   >
                     {file.ext &&
@@ -575,7 +575,7 @@ export const ChatMessageItem = memo(
                   📌 <span className="text-slate-400 mr-1">[已折叠]</span>
                   {summaryPreview}
                 </p>
-                <span className="text-[11px] font-semibold text-indigo-600 shrink-0 flex items-center gap-1 bg-indigo-50 px-2.5 py-1 rounded-lg">
+                <span className="text-[11px] font-semibold text-neutral-800 shrink-0 flex items-center gap-1 bg-neutral-100 border border-neutral-200 px-2.5 py-1 rounded-lg">
                   <ChevronDown className="w-3.5 h-3.5" />
                   展开全文 ({msg.content.length} 字)
                 </span>

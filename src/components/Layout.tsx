@@ -103,6 +103,7 @@ export default function Layout({ children }: LayoutProps) {
   const [userManagementOpen, setUserManagementOpen] = useState(false)
   const [guideOpen, setGuideOpen] = useState(false)
   const [checkinOpen, setCheckinOpen] = useState(false)
+  const [checkinTab, setCheckinTab] = useState<'checkin' | 'redeem' | 'recharge' | 'logs'>('checkin')
 
   const noteCount = stats?.totalNotes ?? null
   const connected = apiHealthy === true
@@ -119,7 +120,15 @@ export default function Layout({ children }: LayoutProps) {
     window.addEventListener('open-quick-note', onOpenQuickNote)
     const onOpenGuide = () => setGuideOpen(true)
     window.addEventListener('open-user-guide', onOpenGuide)
-    const onOpenCheckin = () => setCheckinOpen(true)
+    const onOpenCheckin = (e?: Event) => {
+      const custom = e as CustomEvent<{ tab?: 'checkin' | 'redeem' | 'recharge' | 'logs' }>
+      if (custom?.detail?.tab) {
+        setCheckinTab(custom.detail.tab)
+      } else {
+        setCheckinTab('checkin')
+      }
+      setCheckinOpen(true)
+    }
     window.addEventListener('open-checkin-modal', onOpenCheckin)
 
     // 新用户首次登录智能唤起指引
@@ -374,6 +383,55 @@ export default function Layout({ children }: LayoutProps) {
                         </div>
                       </div>
 
+                      <Link
+                        to="/"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900 transition-colors cursor-pointer"
+                      >
+                        <Home className="h-3.5 w-3.5 text-neutral-500" />
+                        <span>产品官网与下载中心</span>
+                      </Link>
+
+                      {/* 伴学积分与充值兑换入口 */}
+                      <button
+                        onClick={() => {
+                          setUserMenuOpen(false)
+                          setCheckinTab('checkin')
+                          setCheckinOpen(true)
+                        }}
+                        className="w-full flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-50 transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Coins className="h-3.5 w-3.5 text-amber-600" />
+                          <span>伴学积分中心</span>
+                        </div>
+                        <span className="font-mono font-bold text-amber-900">{points.toFixed(1)} 分</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setUserMenuOpen(false)
+                          setCheckinTab('redeem')
+                          setCheckinOpen(true)
+                        }}
+                        className="w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-50 transition-colors cursor-pointer"
+                      >
+                        <Coins className="h-3.5 w-3.5 text-indigo-600" />
+                        <span>兑换优惠码 / 卡密</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setUserMenuOpen(false)
+                          setCheckinTab('recharge')
+                          setCheckinOpen(true)
+                        }}
+                        className="w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
+                      >
+                        <Coins className="h-3.5 w-3.5 text-emerald-600" />
+                        <span>自主充值伴学积分</span>
+                      </button>
+
                       {isAdmin && (
                         <button
                           onClick={() => {
@@ -416,7 +474,11 @@ export default function Layout({ children }: LayoutProps) {
       </header>
       <UserManagementModal isOpen={userManagementOpen} onClose={() => setUserManagementOpen(false)} />
       <UserGuideModal isOpen={guideOpen} onClose={() => setGuideOpen(false)} />
-      <CheckinModal isOpen={checkinOpen} onClose={() => setCheckinOpen(false)} />
+      <CheckinModal
+        isOpen={checkinOpen}
+        onClose={() => setCheckinOpen(false)}
+        defaultTab={checkinTab}
+      />
 
       {/* Mobile Full-Featured Bottom Sheet Navigation */}
       {mobileNavOpen && (

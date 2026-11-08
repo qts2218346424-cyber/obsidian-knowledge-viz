@@ -375,7 +375,7 @@ export default function Settings() {
       </div>
 
       {/* Configuration status overview */}
-      <section className="bg-surface border border-cream-200 rounded-xl p-5">
+      <section className="bento-card bg-white border border-neutral-200/80 rounded-xl shadow-xs p-5">
         <div className="flex items-center gap-2 text-sm font-medium text-warm-700 mb-4">
           <Zap className="w-4 h-4 text-accent-amber" />
           配置状态
@@ -437,7 +437,7 @@ export default function Settings() {
       )}
 
       {/* Vault Settings */}
-      <section className="bg-cream-200/50 border border-cream-200 rounded-xl p-5 space-y-4">
+      <section className="bento-card bg-white border border-neutral-200/80 rounded-xl shadow-xs p-5 space-y-4">
         <div className="flex items-center gap-2 text-sm font-medium text-warm-700">
           <FolderOpen className="w-4 h-4 text-accent-orange" />
           Vault 配置
@@ -536,7 +536,7 @@ export default function Settings() {
       </section>
 
       {/* AI Settings (Multi-Endpoint Architecture) */}
-      <section className="bg-cream-200/50 border border-cream-200 rounded-xl p-5 space-y-4">
+      <section className="bento-card bg-white border border-neutral-200/80 rounded-xl shadow-xs p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-cream-200/60 pb-3">
           <div className="flex items-center gap-2 text-sm font-medium text-warm-700">
             <Cpu className="w-4 h-4 text-accent-sage" />
@@ -914,7 +914,7 @@ export default function Settings() {
       </section>
 
       {/* Obsidian Plugin Import */}
-      <section className="bg-cream-200/50 border border-cream-200 rounded-xl p-5 space-y-4">
+      <section className="bento-card bg-white border border-neutral-200/80 rounded-xl shadow-xs p-5 space-y-4">
         <div className="flex items-center gap-2 text-sm font-medium text-warm-700">
           <Plug className="w-4 h-4 text-accent-mint" />
           从 Obsidian 插件导入
@@ -983,7 +983,7 @@ export default function Settings() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-accent-orange hover:bg-accent-orange/85 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="subframe-btn-black px-6 py-2.5 flex items-center gap-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
         >
           <Save className="w-4 h-4" />
           {saving ? '保存中...' : '保存设置'}

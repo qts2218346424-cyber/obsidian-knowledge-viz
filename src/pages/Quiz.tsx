@@ -648,60 +648,60 @@ export default function Quiz() {
 
     return (
       <div className="mx-auto max-w-[1520px] space-y-4 sm:space-y-6 pb-16 md:pb-0 animate-fade-in-up">
-        {/* Header Hero */}
-        <div className="relative overflow-hidden rounded-3xl border border-slate-200/85 bg-gradient-to-br from-white via-white to-indigo-50/45 p-4 sm:p-8 shadow-[0_12px_36px_-8px_rgba(15,23,42,0.05)]">
+        {/* Subframe Workspace Header */}
+        <div className="bento-card rounded-2xl border border-neutral-200/85 bg-white p-5 sm:p-7 shadow-xs">
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
             <div>
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200/80 bg-indigo-50 px-2.5 py-0.5 sm:px-3 sm:py-1 text-[11px] sm:text-xs font-bold text-indigo-700">
+              <div className="subframe-pill mb-2.5">
                 <Flame className="h-3.5 w-3.5 text-amber-500" />
                 <span>全真题库 · 分步推导 · 错题闭环</span>
               </div>
-              <h1 className="mt-2.5 sm:mt-3 fluid-hero-title font-extrabold text-slate-900">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900">
                 研考做题中心（408 专业课 + 考研数学）
               </h1>
-              <p className="mt-1.5 text-xs sm:text-sm text-slate-500 max-w-2xl leading-relaxed">
-                支持 408 四门统考科目与数一/二/三针对性专项演练，全量 KaTeX 公式推导与错题一键沉淀。
+              <p className="mt-1.5 text-xs sm:text-sm text-neutral-500 max-w-2xl leading-relaxed">
+                支持 408 四门统考科目与数一/二/三专项演练，全量 KaTeX 公式推导与错题自动归因。
               </p>
             </div>
 
             <div className="hidden md:flex items-center gap-3 shrink-0">
-              <WarmButton
-                size="lg"
+              <button
+                type="button"
                 onClick={startQuiz}
                 disabled={availableCount === 0}
-                className="bg-slate-900 hover:bg-indigo-600 text-white shadow-lg shadow-slate-900/15 px-8 py-3.5 text-sm font-bold transition-all"
+                className="subframe-btn-black px-6 py-2.5 text-xs font-semibold cursor-pointer disabled:opacity-50"
               >
                 {availableCount > 0 ? `开始做题 (${effectiveCount} 题) →` : '暂无匹配试题'}
-              </WarmButton>
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Filter Controls Bar */}
-        <div className="glass-panel rounded-2xl p-4 flex flex-wrap items-center gap-3 justify-between">
+        {/* Filter Controls Bar (Subframe Segmented Control) */}
+        <div className="bento-card rounded-xl p-3.5 flex flex-wrap items-center gap-3 justify-between">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold text-slate-500 mr-1">学科领域:</span>
-            <div className="flex rounded-xl border border-slate-200 bg-slate-100/80 p-1">
+            <span className="text-xs font-medium text-neutral-500 mr-1">学科领域:</span>
+            <div className="flex rounded-lg border border-neutral-200/80 bg-neutral-100/90 p-1">
               <button
                 onClick={() => handleDomainFilterChange('all')}
-                className={`rounded-lg px-3.5 py-1.5 text-xs font-medium transition-all ${
-                  domainFilter === 'all' ? 'bg-white text-slate-900 shadow-sm font-semibold' : 'text-slate-600 hover:text-slate-900'
+                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all cursor-pointer ${
+                  domainFilter === 'all' ? 'bg-white text-neutral-900 shadow-xs font-semibold' : 'text-neutral-600 hover:text-neutral-900'
                 }`}
               >
                 全部学科
               </button>
               <button
                 onClick={() => handleDomainFilterChange('math')}
-                className={`rounded-lg px-3.5 py-1.5 text-xs font-medium transition-all ${
-                  domainFilter === 'math' ? 'bg-white text-pink-600 shadow-sm font-semibold' : 'text-slate-600 hover:text-slate-900'
+                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all cursor-pointer ${
+                  domainFilter === 'math' ? 'bg-white text-neutral-900 shadow-xs font-semibold' : 'text-neutral-600 hover:text-neutral-900'
                 }`}
               >
                 📐 考研数学
               </button>
               <button
                 onClick={() => handleDomainFilterChange('cs_408')}
-                className={`rounded-lg px-3.5 py-1.5 text-xs font-medium transition-all ${
-                  domainFilter === 'cs_408' ? 'bg-white text-blue-600 shadow-sm font-semibold' : 'text-slate-600 hover:text-slate-900'
+                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all cursor-pointer ${
+                  domainFilter === 'cs_408' ? 'bg-white text-neutral-900 shadow-xs font-semibold' : 'text-neutral-600 hover:text-neutral-900'
                 }`}
               >
                 🖥️ 408 计算机
@@ -709,14 +709,14 @@ export default function Quiz() {
             </div>
 
             {(domainFilter === 'math' || domainFilter === 'all') && (
-              <div className="flex items-center gap-1 ml-2 rounded-xl border border-slate-200 bg-slate-100/80 p-1 text-xs">
-                <span className="text-slate-400 pl-2 pr-1 text-[11px]">数学卷种:</span>
+              <div className="flex items-center gap-1 ml-2 rounded-lg border border-neutral-200/80 bg-neutral-100/90 p-1 text-xs">
+                <span className="text-neutral-400 pl-2 pr-1 text-[11px]">卷种:</span>
                 {(['all', '数一', '数二', '数三'] as const).map((cat) => (
                   <button
                     key={cat}
                     onClick={() => setMathCategory(cat)}
-                    className={`rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all ${
-                      mathCategory === cat ? 'bg-white text-accent-orange shadow-sm font-semibold' : 'text-slate-600 hover:text-slate-900'
+                    className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition-all cursor-pointer ${
+                      mathCategory === cat ? 'bg-white text-neutral-900 shadow-xs font-semibold' : 'text-neutral-600 hover:text-neutral-900'
                     }`}
                   >
                     {cat === 'all' ? '全部卷' : cat}
@@ -728,7 +728,7 @@ export default function Quiz() {
 
           <button
             onClick={() => setSelectedSubjects(new Set(displayedSubjects.map(s => s.key)))}
-            className="text-xs font-medium text-accent-orange hover:underline"
+            className="text-xs font-medium text-neutral-700 hover:text-neutral-900 hover:underline cursor-pointer"
           >
             全选当前组学科
           </button>
@@ -750,7 +750,7 @@ export default function Quiz() {
                 key={s.key}
                 type="button"
                 onClick={() => toggleSubject(s.key)}
-                className={`glass-panel rounded-2xl p-4 text-left transition-all relative border-2 ${
+                className={`bento-card rounded-xl border border-neutral-200/80 bg-white shadow-xs p-4 text-left transition-all relative border-2 ${
                   isSelected
                     ? `${s.bgColor} border-current shadow-md`
                     : 'bg-white/60 border-slate-200/60 opacity-60 hover:opacity-100'
@@ -776,7 +776,7 @@ export default function Quiz() {
         {/* Mode & Settings Config Cards */}
         <div className="grid gap-5 md:grid-cols-2">
           {/* Mode Selector */}
-          <div className="glass-panel rounded-3xl p-6 space-y-4">
+          <div className="bento-card rounded-xl border border-neutral-200/80 bg-white shadow-xs p-6 space-y-4">
             <h2 className="text-sm font-bold text-slate-900">演练模式选择</h2>
             <div className="grid grid-cols-2 gap-3">
               <button
@@ -816,7 +816,7 @@ export default function Quiz() {
           </div>
 
           {/* Question Count Slider */}
-          <div className="glass-panel rounded-3xl p-6 space-y-4">
+          <div className="bento-card rounded-xl border border-neutral-200/80 bg-white shadow-xs p-6 space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-sm font-bold text-slate-900">单次抽题数量</span>
               <span className="text-base font-bold text-accent-orange">{effectiveCount} 题</span>
@@ -839,7 +839,7 @@ export default function Quiz() {
         </div>
 
         {/* Resource Ingestion & Student Analytics Banner Card */}
-        <div className="glass-panel rounded-3xl p-5 border border-indigo-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 bg-gradient-to-r from-indigo-50/70 via-white to-blue-50/60">
+        <div className="bento-card rounded-xl border border-neutral-200/80 bg-white shadow-xs p-5 border border-indigo-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 bg-gradient-to-r from-indigo-50/70 via-white to-blue-50/60">
           <div className="flex items-center gap-3.5">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-md shadow-indigo-500/20">
               <BookOpen className="h-5 w-5" />
@@ -898,7 +898,7 @@ export default function Quiz() {
             type="button"
             onClick={startQuiz}
             disabled={availableCount === 0}
-            className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-indigo-500 hover:bg-indigo-400 disabled:opacity-40 px-4 py-2 text-xs font-extrabold text-white shadow-sm active:scale-95 transition-all cursor-pointer"
+            className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-neutral-900 hover:bg-black disabled:opacity-40 px-4 py-2 text-xs font-medium text-white shadow-xs active:scale-95 transition-all cursor-pointer rounded-lg"
           >
             <Flame className="h-3.5 w-3.5 text-amber-300" />
             <span>立即开始</span>
@@ -934,7 +934,7 @@ export default function Quiz() {
     return (
       <div className="mx-auto max-w-[1560px] space-y-3 sm:space-y-4 pb-16 lg:pb-0 animate-fade-in-up">
         {/* Top Slim Progress Header */}
-        <div className="glass-panel rounded-2xl px-3.5 sm:px-5 py-2.5 flex items-center justify-between gap-2 shadow-sm border border-slate-200/90 relative overflow-hidden">
+        <div className="bento-card rounded-xl border border-neutral-200/80 bg-white shadow-xs px-3.5 sm:px-5 py-2.5 flex items-center justify-between gap-2 shadow-sm border border-slate-200/90 relative overflow-hidden">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
               onClick={() => {
@@ -958,18 +958,41 @@ export default function Quiz() {
             )}
           </div>
 
-          {/* Linear HUD Shortcut Bar */}
-          <div className="hidden md:flex items-center gap-2.5 text-[11px] font-mono text-slate-500 bg-slate-100/90 px-3 py-1 rounded-xl border border-slate-200/80 shadow-2xs">
-            <span className="text-slate-400">⌨️ 快捷盲操:</span>
-            <span className="inline-flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 rounded bg-white text-slate-700 border border-slate-200 font-bold shadow-2xs">A-D</kbd>
-              <span>选答案</span>
-            </span>
-            <span className="text-slate-300">·</span>
-            <span className="inline-flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 rounded bg-white text-slate-700 border border-slate-200 font-bold shadow-2xs">← / →</kbd>
-              <span>翻题</span>
-            </span>
+          {/* Subframe Screen 5 Replica: Center Design / Prototype / Code Mode Switcher */}
+          <div className="hidden md:inline-flex items-center bg-white rounded-xl p-1 shadow-xs border border-zinc-200/80 text-[12px]">
+            <button
+              type="button"
+              onClick={() => setActiveSideTab('palette')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs transition-all cursor-pointer ${
+                activeSideTab === 'palette'
+                  ? 'bg-[#f2f2f4] text-[#18181b] font-semibold shadow-2xs'
+                  : 'text-[#52525b] hover:text-[#18181b]'
+              }`}
+            >
+              <span>📖 真题测验</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveSideTab('scratchpad')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs transition-all cursor-pointer ${
+                activeSideTab === 'scratchpad'
+                  ? 'bg-[#f2f2f4] text-[#18181b] font-semibold shadow-2xs'
+                  : 'text-[#52525b] hover:text-[#18181b]'
+              }`}
+            >
+              <span>📝 草稿推演</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveSideTab('hints')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs transition-all cursor-pointer ${
+                activeSideTab === 'hints'
+                  ? 'bg-[#f2f2f4] text-[#18181b] font-semibold shadow-2xs'
+                  : 'text-[#52525b] hover:text-[#18181b]'
+              }`}
+            >
+              <span>📐 核心公式</span>
+            </button>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
@@ -1006,7 +1029,30 @@ export default function Quiz() {
         <div className="grid grid-cols-1 lg:grid-cols-[1.22fr_0.78fr] gap-5 items-start">
           {/* ───────────────── LEFT PANEL: Question & Solution ───────────────── */}
           <div className="space-y-3.5 sm:space-y-4 min-w-0">
-            <div className="glass-panel rounded-3xl p-4 sm:p-7 space-y-4 sm:space-y-5 relative shadow-md">
+            <div className="bento-card rounded-xl border border-neutral-200/80 bg-white shadow-xs p-4 sm:p-7 space-y-4 sm:space-y-5 relative">
+              {/* Floating Canvas Action Pill (Subframe Screen 5 Replica) */}
+              <div className="absolute right-4 top-4 z-10 hidden sm:inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-neutral-50/90 border border-neutral-200/80 text-neutral-600 text-[11px] shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setActiveSideTab('hints')}
+                  className="hover:text-black font-mono font-medium flex items-center gap-1 cursor-pointer"
+                  title="速查本题定理与公式 (⌘)"
+                >
+                  <kbd className="px-1 py-0.2 bg-white rounded border border-neutral-200 text-[10px]">⌘</kbd>
+                  <span>定理</span>
+                </button>
+                <span className="text-neutral-300">·</span>
+                <button
+                  type="button"
+                  onClick={() => setActiveSideTab('scratchpad')}
+                  className="hover:text-black font-mono font-medium flex items-center gap-1 cursor-pointer"
+                  title="呼出草稿纸 (⊞)"
+                >
+                  <kbd className="px-1 py-0.2 bg-white rounded border border-neutral-200 text-[10px]">⊞</kbd>
+                  <span>草稿</span>
+                </button>
+              </div>
+
               {/* Question Meta Badges */}
               <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3.5">
                 <div className="flex flex-wrap items-center gap-2">
@@ -1056,15 +1102,15 @@ export default function Quiz() {
                     const isCorrectAnswer = key.toUpperCase() === currentQ.answer.toUpperCase()
                     const showResult = mode === 'practice' && showFeedback
 
-                    let btnStyle = 'border-slate-200/90 bg-white hover:border-slate-300 hover:bg-slate-50/80 text-slate-800'
+                    let btnStyle = 'border-neutral-200/85 bg-white hover:border-neutral-300 hover:bg-neutral-50/60 text-neutral-800'
                     if (isSelected && !showResult) {
-                      btnStyle = 'border-accent-orange bg-accent-orange/8 ring-2 ring-accent-orange/30 text-slate-900 font-medium shadow-sm'
+                      btnStyle = 'border-neutral-900 bg-neutral-50/90 ring-1 ring-neutral-900 text-neutral-900 font-semibold shadow-xs'
                     }
                     if (showResult && isCorrectAnswer) {
-                      btnStyle = 'border-emerald-500 bg-emerald-50 text-emerald-900 font-semibold ring-2 ring-emerald-300 shadow-sm'
+                      btnStyle = 'border-emerald-500 bg-emerald-50/60 text-emerald-900 font-semibold ring-1 ring-emerald-400 shadow-xs'
                     }
                     if (showResult && isSelected && !isCorrectAnswer) {
-                      btnStyle = 'border-rose-400 bg-rose-50 text-rose-900 ring-2 ring-rose-300 shadow-sm'
+                      btnStyle = 'border-rose-400 bg-rose-50/60 text-rose-900 ring-1 ring-rose-300 shadow-xs'
                     }
 
                     return (
@@ -1079,11 +1125,11 @@ export default function Quiz() {
                             : 'cursor-pointer hover:scale-[1.006] active:scale-[0.99] hover:shadow-sm'
                         }`}
                       >
-                        <span className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 transition-colors shadow-2xs ${
-                          isSelected && !showResult ? 'bg-accent-orange text-white' :
-                          showResult && isCorrectAnswer ? 'bg-emerald-500 text-white' :
-                          showResult && isSelected && !isCorrectAnswer ? 'bg-rose-500 text-white' :
-                          'bg-slate-100 text-slate-600 group-hover:bg-slate-200'
+                        <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-semibold shrink-0 transition-colors shadow-2xs ${
+                          isSelected && !showResult ? 'bg-neutral-900 text-white' :
+                          showResult && isCorrectAnswer ? 'bg-emerald-600 text-white' :
+                          showResult && isSelected && !isCorrectAnswer ? 'bg-rose-600 text-white' :
+                          'bg-neutral-100 text-neutral-600 group-hover:bg-neutral-200/80'
                         }`}>
                           {key}
                         </span>
@@ -1162,7 +1208,7 @@ export default function Quiz() {
 
             {/* Explanation & Step-by-Step Derivation (Notion / Brilliant Style) */}
             {mode === 'practice' && showFeedback && (
-              <div className="glass-panel rounded-3xl p-6 border-l-4 border-l-emerald-500 space-y-4 animate-fade-in-up">
+              <div className="bento-card rounded-xl border border-neutral-200/80 bg-white shadow-xs p-6 border-l-4 border-l-emerald-500 space-y-4 animate-fade-in-up">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
                     <span className="text-base">💡</span>
@@ -1247,7 +1293,7 @@ export default function Quiz() {
                     <button
                       onClick={() => handleSaveToErrorBook(currentQ)}
                       disabled={savingError}
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 text-white text-xs font-bold shadow-md shadow-rose-500/20 hover:opacity-90 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-neutral-900 hover:bg-black text-white text-xs font-medium rounded-lg px-4 py-2 shadow-xs transition-all cursor-pointer disabled:opacity-50"
                     >
                       <Save size={14} />
                       <span>{savingError ? '正在写入知识库...' : '💾 存入 Obsidian 错题本'}</span>
@@ -1256,7 +1302,7 @@ export default function Quiz() {
                     <button
                       onClick={() => handleGenerateVariants(currentQ)}
                       disabled={generatingVariants}
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-50 border border-indigo-200/80 text-indigo-700 text-xs font-semibold hover:bg-indigo-100 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl subframe-btn-secondary px-3.5 py-2 text-xs font-medium text-neutral-800"
                     >
                       <Sparkles size={13} className="text-indigo-600" />
                       <span>{generatingVariants ? 'AI 命题中...' : '🔄 AI 变式题强化'}</span>
@@ -1275,7 +1321,7 @@ export default function Quiz() {
           </div>
 
           {/* ───────────────── RIGHT PANEL: Strategic Workbench (桌面宽屏常驻) ───────────────── */}
-          <div className="hidden lg:block glass-panel rounded-3xl p-5 space-y-4 sticky top-20 shadow-md">
+          <div className="hidden lg:block bento-card rounded-xl border border-neutral-200/80 bg-white shadow-xs p-5 space-y-4 sticky top-20 shadow-md">
             {/* Tab Header */}
             <div className="flex rounded-xl bg-slate-100 p-1">
               <button
@@ -1644,7 +1690,7 @@ export default function Quiz() {
     return (
       <div className="mx-auto max-w-[1280px] space-y-6 animate-fade-in-up">
         {/* Results Hero Header */}
-        <div className="glass-panel rounded-3xl p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="bento-card rounded-xl border border-neutral-200/80 bg-white shadow-xs p-8 flex flex-col md:flex-row items-center justify-between gap-6">
           <div>
             <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">做题测评结算</div>
             <h1 className="mt-1 text-2xl font-bold text-slate-900 flex items-center gap-2">
@@ -1655,7 +1701,7 @@ export default function Quiz() {
             </p>
           </div>
 
-          <div className="flex items-center gap-8 bg-slate-50 px-6 py-4 rounded-2xl border border-slate-200">
+          <div className="flex items-center gap-8 bg-neutral-50 px-6 py-4 rounded-xl border border-neutral-200/80">
             <div className="text-center">
               <div className="text-xs text-slate-400">总得分率</div>
               <div className={`text-4xl font-extrabold ${gradeColor}`}>{percentage}%</div>
@@ -1678,7 +1724,7 @@ export default function Quiz() {
             const pct = data.total > 0 ? Math.round((data.correct / data.total) * 100) : 0
             const info = ALL_SUBJECTS.find(s => s.key === subject)
             return (
-              <div key={subject} className="glass-panel rounded-2xl p-4 space-y-2">
+              <div key={subject} className="bento-card rounded-xl border border-neutral-200/80 bg-white shadow-xs p-4 space-y-2">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-bold text-slate-800 flex items-center gap-1.5">
                     <span>{info?.emoji || '📖'}</span>
@@ -1701,7 +1747,7 @@ export default function Quiz() {
 
         {/* Wrong Questions Breakdown */}
         {result.wrongQuestions.length > 0 && (
-          <div className="glass-panel rounded-3xl p-6 space-y-4">
+          <div className="bento-card rounded-xl border border-neutral-200/80 bg-white shadow-xs p-6 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <span className="text-rose-500">✗</span>
@@ -1710,7 +1756,7 @@ export default function Quiz() {
               <button
                 onClick={handleSaveAllWrongQuestions}
                 disabled={savingAllErrors}
-                className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 text-white text-xs font-bold shadow-md shadow-rose-500/20 hover:opacity-90 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-neutral-900 hover:bg-black text-white text-xs font-medium rounded-lg px-4 py-2 shadow-xs transition-all cursor-pointer disabled:opacity-50"
               >
                 <Save size={14} />
                 <span>{savingAllErrors ? '正在批量写入知识库...' : '📦 一键将全部错题归档至 Obsidian'}</span>
@@ -1802,7 +1848,7 @@ export default function Quiz() {
                         <button
                           onClick={() => handleSaveToErrorBook(q)}
                           disabled={savingError}
-                          className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 text-white text-xs font-bold shadow-xs hover:opacity-90 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                          className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl subframe-btn-secondary text-rose-600 hover:text-rose-700 px-3.5 py-2 font-medium"
                         >
                           <Save size={13} />
                           <span>{isSaved ? '✅ 已存入错题本' : '💾 存入 Obsidian 错题本'}</span>
@@ -1811,7 +1857,7 @@ export default function Quiz() {
                         <button
                           onClick={() => handleGenerateVariants(q)}
                           disabled={generatingVariants}
-                          className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-50 border border-indigo-200/80 text-indigo-700 text-xs font-semibold hover:bg-indigo-100 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                          className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl subframe-btn-secondary px-3.5 py-2 text-xs font-medium text-neutral-800"
                         >
                           <Sparkles size={13} className="text-indigo-600" />
                           <span>AI 变式题强化</span>

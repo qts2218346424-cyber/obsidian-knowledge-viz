@@ -11,6 +11,7 @@ import {
   invalidateCache,
   startWatcher,
   saveConfig,
+  __dirname,
 } from '../context.js'
 import { getAiProvider, type AiConfig } from '../ai-client.js'
 
@@ -438,5 +439,145 @@ systemRouter.post('/obsidian/plugins/import-ai-config', (req, res) => {
     })
   } catch (err: any) {
     res.status(500).json({ error: err.message })
+  }
+})
+
+// ==================== 全平台客户端下载服务 ====================
+
+function getReleaseFiles() {
+  const releaseDir = path.resolve(__dirname, '..', 'release')
+  if (!fs.existsSync(releaseDir)) {
+    return { desktop: null, android: null }
+  }
+
+  const files = fs.readdirSync(releaseDir)
+
+  // 匹配 Windows 安装包，如 Knowledge-Viz-Setup-1.2.0.exe 或 CoreForge-Setup-*.exe
+  const exeFiles = files.filter(f => f.endsWith('.exe'))
+  let latestExe: { filename: string; path: string; size: number; sizeFormatted: string; version: string; mtime: Date } | null = null
+
+  if (exeFiles.length > 0) {
+    // 按修改时间倒序排列，取最新的安装包
+    const sortedExes = exeFiles.map(filename => {
+      const filePath = path.join(releaseDir, filename)
+      const stat = fs.statSync(filePath)
+      const match = filename.match(/(\d+\.\d+\.\d+)/)
+      const version = match ? match[1] : '1.4.0'
+      const sizeMb = (stat.size / (1024 * 1024)).toFixed(1)
+      return {
+        filename,
+        path: filePath,
+        size: stat.size,
+        sizeFormatted: `${sizeMb} MB`,
+        version,
+        mtime: stat.mtime,
+      }
+    }).sort((a, b) => b.mtime.getTime() - a.mtime.getTime())
+
+    latestExe = sortedExes[0]
+  }
+
+  // 匹配 Android APK 文件
+  const apkFiles = files.filter(f => f.endsWith('.apk'))
+  let latestApk: { filename: string; path: string; size: number; sizeFormatted: string; version: string; mtime: Date } | null = null
+
+  if (apkFiles.length > 0) {
+    const sortedApks = apkFiles.map(filename => {
+      const filePath = path.join(releaseDir, filename)
+      const stat = fs.statSync(filePath)
+      const match = filename.match(/(\d+\.\d+\.\d+)/)
+      const version = match ? match[1] : '1.4.0'
+      const sizeMb = (stat.size / (1024 * 1024)).toFixed(1)
+      return {
+        filename,
+        path: filePath,
+        size: stat.size,
+        sizeFormatted: `${sizeMb} MB`,
+        version,
+        mtime: stat.mtime,
+      }
+    }).sort((a, b) => b.mtime.getTime() - a.mtime.getTime())
+
+    latestApk = sortedApks[0]
+  }
+
+  return { desktop: latestExe, android: latestApk }
+}
+
+// 获取各端下载元数据 (版本号、体积、发布时间等)
+systemRouter.get('/downloads/info', (_req, res) => {
+  try {
+    const { desktop, android } = getReleaseFiles()
+
+    res.json({
+      status: 'ok',
+      desktop: desktop ? {
+        available: true,
+        filename: desktop.filename,
+        version: desktop.version,
+        size: desktop.sizeFormatted,
+        releaseDate: desktop.mtime.toISOString().split('T')[0],
+        downloadUrl: '/api/downloads/desktop',
+        platform: 'Windows 64位',
+        recommended: true,
+      } : {
+        available: false,
+        message: '暂无编译安装包',
+      },
+      android: android ? {
+        available: true,
+        filename: android.filename,
+        version: android.version,
+        size: android.sizeFormatted,
+        releaseDate: android.mtime.toISOString().split('T')[0],
+        downloadUrl: '/api/downloads/android',
+        platform: 'Android 8.0+',
+      } : {
+        available: false,
+        pwaSupported: true,
+        message: '支持扫码即用免安装 PWA 应用',
+      },
+      web: {
+        available: true,
+        version: '1.4.0',
+        pwaSupported: true,
+      },
+    })
+  } catch (err: any) {
+    res.status(500).json({ error: '获取下载信息失败: ' + err.message })
+  }
+})
+
+// 下载 Windows 桌面端安装包
+systemRouter.get('/downloads/desktop', (_req, res) => {
+  try {
+    const { desktop } = getReleaseFiles()
+    if (!desktop || !fs.existsSync(desktop.path)) {
+      res.status(404).json({ error: '未找到 Windows 安装包，请稍后再试或联系管理员。' })
+      return
+    }
+
+    res.setHeader('Content-Type', 'application/octet-stream')
+    res.setHeader('Content-Disposition', `attachment; filename="${desktop.filename}"`)
+    res.download(desktop.path, desktop.filename)
+  } catch (err: any) {
+    res.status(500).json({ error: '下载失败: ' + err.message })
+  }
+})
+
+// 下载 Android 原生 APK 安装包
+systemRouter.get('/downloads/android', (_req, res) => {
+  try {
+    const { android } = getReleaseFiles()
+    if (!android || !fs.existsSync(android.path)) {
+      res.status(404).json({ error: 'Android 原生 APK 正在编译就绪中，您可使用手机浏览器扫码体验 PWA 桌面快捷方式，体验丝滑一致。' })
+      return
+    }
+
+    res.setHeader('Content-Type', 'application/vnd.android.package-archive')
+    res.setHeader('Content-Disposition', `attachment; filename="${android.filename}"`)
+    res.download(android.path, android.filename)
+  } catch (err: any) {
+    res.status(500).json({ error: '下载失败: ' + err.message })
   }
 })

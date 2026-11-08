@@ -7,6 +7,7 @@ import MiniPlayer from './components/music/MiniPlayer'
 import Dashboard from './pages/Dashboard'
 import Chat from './pages/Chat'
 import Login from './pages/Login'
+import LandingPage from './pages/LandingPage'
 
 // 路由加载器定义，支持按需加载与空闲/悬浮即时预取 (Route Prefetching)
 export const routeLoaders = {
@@ -128,6 +129,8 @@ function App() {
       <AudioProvider>
         <BrowserRouter>
           <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/home" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/*" element={<ProtectedRoutes />} />
           </Routes>

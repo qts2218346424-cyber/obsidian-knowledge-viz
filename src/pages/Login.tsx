@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate, Link } from 'react-router-dom'
 import {
   ShieldCheck,
   Lock,
@@ -13,6 +13,8 @@ import {
   BookOpen,
   UserPlus,
   LogIn,
+  ArrowLeft,
+  Laptop,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -82,266 +84,281 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-slate-950 to-indigo-950 relative overflow-hidden font-sans">
-      {/* 背景动态装饰微光 */}
-      <div className="absolute top-1/4 -left-20 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-
-      <div className="w-full max-w-md relative z-10 animate-fade-in-up">
-        {/* 系统品牌 LOGO 与名称 */}
-        <div className="text-center mb-7">
-          <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-slate-900 border border-slate-700/80 shadow-xl shadow-indigo-500/10 p-2.5 mb-4 group transition-transform hover:scale-105">
-            <img src="/favicon.svg" alt="研核图标" className="h-full w-full object-contain" />
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center justify-center gap-2">
-            CoreForge <span className="text-indigo-400">研核</span>
-          </h1>
-          <p className="mt-2 text-xs sm:text-sm text-slate-400">
-            408 & 考研数学 · 知识库智能研学空间
-          </p>
+    <div className="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 subframe-landing-bg relative overflow-hidden font-sans text-[#171719]">
+      <div className="w-full max-w-[940px] relative z-10 animate-fade-in-up">
+        {/* 返回官网与下载门户导航条 */}
+        <div className="mb-4 flex items-center justify-between px-1">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-600 hover:text-zinc-950 transition-colors group"
+          >
+            <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+            <span>返回产品官方首页与下载中心</span>
+          </Link>
+          <span className="text-[11px] font-mono text-zinc-600 bg-black/[0.04] px-2.5 py-0.5 rounded-full border border-black/[0.06]">
+            v1.4.0 · Subframe UI
+          </span>
         </div>
 
-        {/* 核心登录/注册卡片 */}
-        <div className="rounded-3xl border border-slate-800 bg-slate-900/85 p-6 sm:p-8 backdrop-blur-2xl shadow-2xl shadow-black/40">
-          {/* 首航初始化管理员专属标头 */}
-          {isInitMode ? (
-            <div className="mb-6 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-amber-400" />
-                  初始化超级管理员
-                </h2>
-                <p className="mt-1 text-xs text-slate-400">
-                  检测到系统首次启动，请创建掌舵管理员账户
-                </p>
-              </div>
-              <span className="px-2.5 py-1 text-[11px] font-semibold rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                首航配置
-              </span>
-            </div>
-          ) : (
-            /* 已有用户时的 登录 / 注册 Tab 切换栏 */
-            <div className="mb-6 flex p-1 rounded-2xl bg-slate-950/60 border border-slate-800">
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('login')
-                  setError(null)
-                }}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
-                  activeTab === 'login'
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <LogIn className="h-3.5 w-3.5" />
-                <span>账户登录</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('register')
-                  setError(null)
-                }}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
-                  activeTab === 'register'
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <UserPlus className="h-3.5 w-3.5" />
-                <span>注册研学账号</span>
-              </button>
-            </div>
-          )}
-
-          {error && (
-            <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300 animate-shake">
-              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-rose-400" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* 用户名 */}
+        {/* Subframe 标志性外框与卡片 */}
+        <div className="rounded-[18px] bg-[#e3e3e6] p-2 sm:p-3 shadow-[0_28px_70px_rgba(0,0,0,0.25)] border border-white/60 grid grid-cols-1 lg:grid-cols-12 gap-3 overflow-hidden">
+          {/* 左栏：核心登录与注册交互 */}
+          <div className="lg:col-span-5 bg-[#efefef] rounded-[14px] p-6 sm:p-7 flex flex-col justify-between text-left border border-white/70">
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                账号名称
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                  <User className="h-4 w-4" />
+              {/* Logo 标识 */}
+              <div className="flex items-center gap-2 mb-5">
+                <div className="w-8 h-8 rounded-lg bg-[#18181b] text-white flex items-center justify-center shadow-sm">
+                  <svg className="w-5 h-5 text-white" viewBox="0 0 28 28" fill="none">
+                    <rect x="4" y="4" width="17" height="5.5" rx="1" fill="currentColor" />
+                    <path d="M4 12.2H14.5L4 22.5V12.2Z" fill="currentColor" />
+                    <circle cx="17.8" cy="17.8" r="3.4" fill="currentColor" />
+                  </svg>
                 </div>
-                <input
-                  type="text"
-                  required
-                  autoFocus
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder={
-                    isInitMode
-                      ? '如：admin'
-                      : activeTab === 'register'
-                      ? '支持字母与数字，至少 3 位'
-                      : '请输入用户名'
-                  }
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950/60 pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all"
-                />
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-base tracking-tight text-[#18181b]">CoreForge</span>
+                  <span className="text-xs font-semibold text-zinc-500 bg-black/[0.04] px-1.5 py-0.5 rounded">研核</span>
+                </div>
               </div>
-            </div>
 
-            {/* 昵称输入（注册模式或首次初始化可见） */}
-            {(isInitMode || activeTab === 'register') && (
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                  显示昵称（选填）
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                    <GraduationCap className="h-4 w-4" />
-                  </div>
+              {/* 标题 */}
+              <h2 className="text-[22px] sm:text-[25px] leading-[1.18] tracking-[-0.03em] font-bold text-[#18181b] mb-1">
+                {isInitMode ? '初始化系统' : activeTab === 'register' ? '注册研学账号' : '登入研学空间'}
+              </h2>
+              <p className="text-xs text-[#8d9096] mb-5">
+                408 计算机综合 & 考研数学 · 智能双核空间
+              </p>
+
+              {/* 错误提示 */}
+              {error && (
+                <div className="mb-4 flex items-start gap-2 rounded-xl border border-rose-300 bg-rose-50 p-2.5 text-xs text-rose-700 animate-shake">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-rose-500" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              {/* Tab 切换 */}
+              {!isInitMode && (
+                <div className="mb-4 flex p-1 rounded-xl bg-[#e2e2e5] border border-black/[0.04]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('login')
+                      setError(null)
+                    }}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer ${
+                      activeTab === 'login'
+                        ? 'bg-white text-zinc-900 shadow-sm font-semibold'
+                        : 'text-zinc-500 hover:text-zinc-900'
+                    }`}
+                  >
+                    <LogIn className="h-3.5 w-3.5" />
+                    <span>账户登录</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('register')
+                      setError(null)
+                    }}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer ${
+                      activeTab === 'register'
+                        ? 'bg-white text-zinc-900 shadow-sm font-semibold'
+                        : 'text-zinc-500 hover:text-zinc-900'
+                    }`}
+                  >
+                    <UserPlus className="h-3.5 w-3.5" />
+                    <span>注册新账号</span>
+                  </button>
+                </div>
+              )}
+
+              {/* 表单 */}
+              <form onSubmit={handleSubmit} className="space-y-3">
+                <div>
                   <input
                     type="text"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder={isInitMode ? '如：研核掌舵人' : '如：考研学子小明'}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950/60 pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all"
+                    required
+                    autoFocus
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder={
+                      isInitMode
+                        ? '管理员账号 (如 admin)'
+                        : activeTab === 'register'
+                        ? '用户名 (字母/数字，至少 3 位)'
+                        : '请输入账号名称'
+                    }
+                    className="w-full py-2.5 px-3 rounded-[9px] bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-[13px] focus:outline-none focus:ring-2 focus:ring-zinc-400 transition-all"
                   />
                 </div>
-              </div>
-            )}
 
-            {/* 密码 */}
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                登录密码
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                  <Lock className="h-4 w-4" />
-                </div>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="至少 6 位密码"
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950/60 pl-10 pr-10 py-2.5 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-slate-300 transition-colors"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-
-            {/* 注册模式下的确认密码 */}
-            {!isInitMode && activeTab === 'register' && (
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                  确认密码
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
-                    <CheckCircle2 className="h-4 w-4" />
+                {(isInitMode || activeTab === 'register') && (
+                  <div>
+                    <input
+                      type="text"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      placeholder={isInitMode ? '显示昵称 (如：研核掌舵人)' : '显示昵称 (选填)'}
+                      className="w-full py-2.5 px-3 rounded-[9px] bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-[13px] focus:outline-none focus:ring-2 focus:ring-zinc-400 transition-all"
+                    />
                   </div>
+                )}
+
+                <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}
                     required
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="请再次输入相同密码"
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950/60 pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="登录密码 (至少 6 位)"
+                    className="w-full py-2.5 pl-3 pr-10 rounded-[9px] bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-[13px] focus:outline-none focus:ring-2 focus:ring-zinc-400 transition-all"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-400 hover:text-zinc-700 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+
+                {!isInitMode && activeTab === 'register' && (
+                  <div>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="请再次输入相同密码确认"
+                      className="w-full py-2.5 px-3 rounded-[9px] bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-[13px] focus:outline-none focus:ring-2 focus:ring-zinc-400 transition-all"
+                    />
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={submitting || isLoading}
+                  className="w-full mt-1 flex items-center justify-center gap-2 rounded-[9px] bg-[#1c1c1f] hover:bg-[#2a2a2e] active:scale-[0.98] py-2.5 px-4 text-[13px] font-semibold text-white shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {submitting ? (
+                    <span>正在处理...</span>
+                  ) : (
+                    <span>
+                      {isInitMode
+                        ? '创建管理员并登入'
+                        : activeTab === 'register'
+                        ? '完成注册并进入空间'
+                        : '进入研学工作台'}
+                    </span>
+                  )}
+                </button>
+              </form>
+
+              {/* 超级管理员快捷通道 */}
+              {!isInitMode && activeTab === 'login' && (
+                <div className="mt-3.5 pt-3 border-t border-zinc-200/80 flex items-center justify-between text-[11px] text-zinc-500">
+                  <span>站长测试账号：<code className="text-zinc-800 font-mono font-semibold">admin</code></span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUsername('admin')
+                      setPassword('AdminPassword123!')
+                      setError(null)
+                    }}
+                    className="font-medium text-zinc-900 hover:underline cursor-pointer"
+                  >
+                    一键填入
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-zinc-200 mt-4 text-[11px] text-zinc-400 leading-relaxed">
+              自主注册账号默认具备只读学生研学权限，受防误删改保护。
+            </div>
+          </div>
+
+          {/* 右栏：研学实景三栏画板缩略图 (Subframe Editor Preview) */}
+          <div className="lg:col-span-7 flex items-center justify-center p-2 sm:p-4 overflow-hidden">
+            <div className="w-full bg-white rounded-[13px] shadow-[0_12px_34px_rgba(0,0,0,0.1)] border border-black/[0.08] overflow-hidden text-left select-none">
+              <div className="h-8 px-3 bg-[#fafafa] border-b border-zinc-200/80 flex items-center justify-between text-[10px] text-zinc-500">
+                <div className="flex items-center gap-3">
+                  <span className="font-semibold text-zinc-800">Pages</span>
+                  <span>Layers</span>
+                  <span className="text-zinc-900 font-semibold">+ 考点笔记</span>
+                </div>
+                <div className="flex items-center gap-1.5 font-medium text-zinc-800">
+                  <span>408 & 数学研学中枢</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="px-1.5 py-0.5 rounded bg-zinc-200 text-zinc-900 font-medium">双核驱动</span>
                 </div>
               </div>
-            )}
 
-            {/* 提交按钮 */}
-            <button
-              type="submit"
-              disabled={submitting || isLoading}
-              className="w-full mt-2 flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-600/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-            >
-              {submitting ? (
-                <>
-                  <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  <span>
-                    {isInitMode
-                      ? '正在创建管理员...'
-                      : activeTab === 'register'
-                      ? '正在注册账号...'
-                      : '正在登录验证...'}
-                  </span>
-                </>
-              ) : (
-                <>
-                  {isInitMode ? (
-                    <>
-                      <CheckCircle2 className="h-4 w-4" />
-                      <span>创建管理员并进入系统</span>
-                    </>
-                  ) : activeTab === 'register' ? (
-                    <>
-                      <UserPlus className="h-4 w-4" />
-                      <span>注册并直接登入</span>
-                    </>
-                  ) : (
-                    <>
-                      <ShieldCheck className="h-4 w-4" />
-                      <span>进入研学空间</span>
-                    </>
-                  )}
-                </>
-              )}
-            </button>
+              <div className="grid grid-cols-12 h-[310px] bg-white text-[10px]">
+                {/* 笔记侧栏 */}
+                <div className="col-span-4 border-r border-zinc-200/80 p-2.5 bg-[#fbfbfc] flex flex-col gap-2">
+                  <div className="px-2 py-1 rounded bg-white border border-zinc-200 text-[10px] text-zinc-600 flex justify-between">
+                    <span>🔍 检索知识点...</span>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="p-1.5 rounded border border-zinc-200 bg-white font-medium text-zinc-800 truncate">
+                      408 错题归因本
+                    </div>
+                    <div className="p-1.5 rounded border border-zinc-200 bg-white text-zinc-600 truncate">
+                      泰勒展开与极值
+                    </div>
+                    <div className="p-1.5 rounded border border-zinc-200 bg-white text-zinc-600 truncate">
+                      SM-2 今日闪卡 (18)
+                    </div>
+                  </div>
+                </div>
 
-            {/* 超级管理员快捷通道提示 */}
-            {!isInitMode && activeTab === 'login' && (
-              <div className="mt-4 pt-3.5 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-                <span className="flex items-center gap-1.5 text-slate-300">
-                  <ShieldCheck className="h-4 w-4 text-amber-400 shrink-0" />
-                  <span>站长特权：<code className="text-amber-300 font-mono px-1 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">admin</code></span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUsername('admin')
-                    setPassword('AdminPassword123!')
-                    setError(null)
-                  }}
-                  className="text-xs font-bold text-amber-400 hover:text-amber-300 underline underline-offset-2 cursor-pointer transition-colors"
-                >
-                  一键填入超级管理员
-                </button>
-              </div>
-            )}
-          </form>
+                {/* 画板区域 */}
+                <div className="col-span-5 p-3 bg-white flex flex-col justify-between">
+                  <div className="space-y-2 my-auto">
+                    <div className="p-2 rounded-lg bg-zinc-50 border border-zinc-200/80 text-[9px] text-zinc-600">
+                      <div className="font-semibold text-zinc-800 mb-0.5">高数定理 · Lagrange 中值定理</div>
+                      <p className="text-zinc-500 leading-relaxed">f(b) - f(a) = f&apos;(ξ)(b - a), ξ ∈ (a, b)</p>
+                    </div>
+                    <div className="p-2 rounded-lg bg-blue-50/40 border-2 border-blue-500 text-[9px]">
+                      <div className="font-semibold text-zinc-900 mb-0.5">408 计网 · TCP 拥塞避免</div>
+                      <p className="text-zinc-600">拥塞窗口 cwnd 线性递增 +1，超时触发乘法减半。</p>
+                    </div>
+                  </div>
+                  <div className="text-[9px] text-zinc-400">已启用本地优先实时保存</div>
+                </div>
 
-          {/* 权限说明 */}
-          <div className="mt-6 pt-5 border-t border-slate-800/80">
-            <div className="flex items-start gap-2.5 text-slate-400 text-xs leading-relaxed">
-              <BookOpen className="h-4 w-4 shrink-0 text-slate-500 mt-0.5" />
-              <div>
-                <p className="font-medium text-slate-300">
-                  {activeTab === 'register' ? '自主注册须知：' : '多用户权限规则：'}
-                </p>
-                {activeTab === 'register' ? (
-                  <p className="mt-1 text-slate-400 text-[11px]">
-                    自主注册的账户将自动获得 <strong className="text-emerald-300">学生只读 (Student)</strong> 权限，可立即查阅笔记、图谱并进行真题自测与闪卡复习。如需参与笔记协作，可联系管理员升级为编辑者。
-                  </p>
-                ) : (
-                  <ul className="mt-1 space-y-0.5 list-disc list-inside text-slate-400 text-[11px]">
-                    <li><strong className="text-indigo-300">超级管理员</strong>：具有全权读写、用户开户与知识库设置权限。</li>
-                    <li><strong className="text-emerald-300">学生只读</strong>：可研学做题，受系统防误删改保护。</li>
-                  </ul>
-                )}
+                {/* 属性栏 */}
+                <div className="col-span-3 border-l border-zinc-200/80 p-2.5 bg-[#fbfbfc] text-[9px] text-zinc-600 space-y-2">
+                  <div className="font-semibold text-zinc-800 pb-1 border-b border-zinc-200">研学统计</div>
+                  <div>
+                    <div className="text-zinc-400">今日做题</div>
+                    <div className="text-zinc-800 font-bold">42 道</div>
+                  </div>
+                  <div>
+                    <div className="text-zinc-400">记忆闪卡</div>
+                    <div className="text-zinc-800 font-bold">128 张</div>
+                  </div>
+                  <div>
+                    <div className="text-zinc-400">倒计时</div>
+                    <div className="text-indigo-600 font-bold font-mono">备考冲刺中</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
+        </div>
+
+        {/* 底部客户端下载指引 */}
+        <div className="mt-4 text-center">
+          <Link
+            to="/#download"
+            className="inline-flex items-center gap-2 text-xs text-zinc-600 hover:text-zinc-900 transition-colors bg-white/60 px-4 py-2 rounded-xl border border-zinc-200/80 shadow-2xs"
+          >
+            <Laptop className="h-3.5 w-3.5 text-zinc-700" />
+            <span>需要离线本地优先？前往官网一键下载 Windows 桌面端安装包</span>
+          </Link>
         </div>
       </div>
     </div>

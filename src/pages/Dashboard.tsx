@@ -236,29 +236,53 @@ export default function Dashboard() {
 
   return (
     <div className="mx-auto max-w-[1560px] space-y-6 animate-fade-in-up">
-      {/* ── Subframe Top Workspace Status Bar ── */}
-      <div className="flex items-center justify-between pb-3 border-b border-neutral-200/80 text-xs text-neutral-500">
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-neutral-900 text-sm tracking-tight">{vaultName}</span>
-          <span className="text-neutral-300">/</span>
-          <span className="subframe-pill text-[11px]">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            双核知识网络就绪
-          </span>
-          <span className="hidden sm:inline-flex subframe-pill text-[11px] font-mono">
-            距 12.19 初试还有 {daysToExam} 天
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="hidden md:inline text-neutral-400">{getTimeGreeting()}</span>
-          <button
-            type="button"
-            onClick={openQuickNote}
-            className="subframe-btn-secondary h-7 px-2.5 text-xs font-medium cursor-pointer"
+      {/* ── Subframe Screen 3 Floating Corner Pills Bar ── */}
+      <div className="w-full flex items-center justify-between gap-3">
+        {/* Top-Left Pill: Vault Logo + Review tasks left (Screen 3 8 pages left replica) */}
+        <div className="inline-flex items-center gap-2 p-1.5 rounded-2xl bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-zinc-200/80">
+          <Link to="/graph" className="p-1 rounded-lg hover:bg-zinc-100 transition-colors" title="进入全景知识图谱">
+            <svg className="w-5 h-5 text-[#141416]" viewBox="0 0 28 28" fill="none">
+              <rect x="4" y="4" width="17" height="5.5" rx="1" fill="currentColor" />
+              <path d="M4 12.2H14.5L4 22.5V12.2Z" fill="currentColor" />
+              <circle cx="17.8" cy="17.8" r="3.4" fill="currentColor" />
+            </svg>
+          </Link>
+          <Link
+            to="/study"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#f3f3f5] hover:bg-[#e8e8ec] text-[12px] font-medium text-[#27272a] transition-colors"
+            title="查看今日待温习的考研笔记"
           >
-            <PenLine className="h-3 w-3 text-neutral-500" />
-            <span>随手速记</span>
-          </button>
+            <Sparkles className="w-3.5 h-3.5 text-[#3f3f46]" />
+            <span>8 篇待复盘考点</span>
+          </Link>
+        </div>
+
+        {/* Top-Right Pill: Multi-AI Connection Icons + Avatar (Screen 3 Connect to code replica) */}
+        <div className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-2xl bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-zinc-200/80">
+          <Link
+            to="/chat"
+            className="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded-lg hover:bg-zinc-100 transition-colors text-[12px] font-medium text-[#18181b]"
+            title="推理引擎已连接：Antigravity · Codex · Claude"
+          >
+            {/* Anthropic / Spark Icon */}
+            <svg className="w-3.5 h-3.5 text-[#d97757]" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+              <path d="M8 1.5V14.5M1.5 8H14.5M3.4 3.4L12.6 12.6M12.6 3.4L3.4 12.6" />
+            </svg>
+            {/* Cube Codex Icon */}
+            <svg className="w-3.5 h-3.5 text-zinc-700" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round">
+              <path d="M8 1.8L13.5 5V11L8 14.2L2.5 11V5L8 1.8Z" />
+              <path d="M2.5 5L8 8.2L13.5 5M8 8.2V14.2" />
+            </svg>
+            {/* OpenAI Swirl Icon */}
+            <svg className="w-3.5 h-3.5 text-zinc-700" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+              <circle cx="8" cy="8" r="5.5" />
+              <circle cx="8" cy="8" r="2.2" />
+            </svg>
+            <span className="ml-0.5 hidden sm:inline">AI 伴学舱就绪</span>
+          </Link>
+          <div className="w-6 h-6 rounded-full bg-[#18181b] text-white text-[12px] font-medium flex items-center justify-center shadow-sm select-none">
+            考
+          </div>
         </div>
       </div>
 

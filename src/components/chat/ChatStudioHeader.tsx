@@ -43,22 +43,22 @@ const PROVIDER_META: Record<
   antigravity: {
     short: '✨ AGY',
     label: '✨ Antigravity',
-    badgeBg: 'text-indigo-700 bg-indigo-50 border-indigo-200/80',
+    badgeBg: 'text-neutral-900 bg-neutral-100 border-neutral-200',
   },
   codex: {
     short: '🤖 Codex',
     label: '🤖 Codex',
-    badgeBg: 'text-emerald-700 bg-emerald-50 border-emerald-200/80',
+    badgeBg: 'text-emerald-800 bg-emerald-50 border-emerald-200',
   },
   'claude-code': {
     short: '⚡ Claude',
     label: '⚡ Claude',
-    badgeBg: 'text-amber-700 bg-amber-50 border-amber-200/80',
+    badgeBg: 'text-amber-800 bg-amber-50 border-amber-200',
   },
   web: {
     short: '☁️ 云端',
     label: '☁️ 云端接口',
-    badgeBg: 'text-sky-700 bg-sky-50 border-sky-200/80',
+    badgeBg: 'text-sky-800 bg-sky-50 border-sky-200',
   },
 }
 
@@ -188,10 +188,12 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
 
   const activeProviderMeta = PROVIDER_META[provider]
 
+  const isAnyPopoverOpen = modelPopoverOpen || skillsDropdownOpen || hubPopoverOpen || agentDropdownOpen
+
   return (
-    <div className="shrink-0 space-y-2">
+    <div className={`shrink-0 space-y-2 relative ${isAnyPopoverOpen ? 'z-40' : 'z-20'}`}>
       {/* 📱 移动端单行高能顶栏 */}
-      <div className="flex md:hidden items-center justify-between gap-1.5 px-2.5 py-1.5 bg-white border-b border-slate-200/90">
+      <div className="flex md:hidden items-center justify-between gap-1.5 px-2.5 py-1.5 bg-white border-b border-slate-200/90 relative z-20">
         <div className="flex items-center gap-1 min-w-0">
           <button
             type="button"
@@ -344,7 +346,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
       </div>
 
       {/* 🖥️ 桌面端：清爽呼吸感双组工作台顶栏 */}
-      <div className="hidden md:flex items-center justify-between gap-4 bg-white/95 border border-slate-200/85 rounded-2xl px-3.5 py-2 shadow-2xs backdrop-blur-md">
+      <div className={`hidden md:flex items-center justify-between gap-4 bg-white border border-neutral-200/80 rounded-xl px-3.5 py-2 shadow-xs backdrop-blur-md relative ${isAnyPopoverOpen ? 'z-40' : 'z-20'}`}>
         {/* 左组：侧栏开关 + 当值导师切换 + 新对话 */}
         <div className="flex items-center gap-2 min-w-0">
           <button
@@ -364,7 +366,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
           </button>
 
           {/* 宽屏 (xl+)：舒展无挤压的 5 导师分段胶囊 */}
-          <div className="hidden xl:flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/60 shrink-0">
+          <div className="hidden xl:flex items-center gap-1 bg-neutral-100 p-1 rounded-lg border border-neutral-200/70 shrink-0">
             {STUDY_AGENTS.map(agent => {
               const isSelected = activeAgent.id === agent.id
               return (
@@ -373,10 +375,10 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                   type="button"
                   onClick={() => onSelectAgent(agent)}
                   title={`${agent.name} (${agent.title})：${agent.description}`}
-                  className={`px-2.5 py-1 rounded-lg text-xs whitespace-nowrap shrink-0 transition-all flex items-center gap-1.5 cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-md text-xs whitespace-nowrap shrink-0 transition-all flex items-center gap-1.5 cursor-pointer ${
                     isSelected
-                      ? 'bg-white text-slate-900 shadow-xs font-bold ring-1 ring-slate-200/80'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/60 font-medium'
+                      ? 'bg-neutral-900 text-white shadow-xs font-semibold'
+                      : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200/60 font-medium'
                   }`}
                 >
                   <span>{agent.icon}</span>
@@ -387,7 +389,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
           </div>
 
           {/* 中等桌面屏 (md ~ xl)：精致导师选择下拉，杜绝分屏挤压截断 */}
-          <div className="relative xl:hidden">
+          <div className={`relative xl:hidden ${agentDropdownOpen ? 'z-50' : ''}`}>
             <button
               type="button"
               onClick={() => {
@@ -407,8 +409,8 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
 
             {agentDropdownOpen && (
               <>
-                <div className="fixed inset-0 z-30" onClick={() => setAgentDropdownOpen(false)} />
-                <div className="absolute left-0 top-full mt-1.5 w-72 bg-white border border-slate-200/90 rounded-2xl shadow-xl p-2 z-40 space-y-1 animate-fade-in-up">
+                <div className="fixed inset-0 z-40" onClick={() => setAgentDropdownOpen(false)} />
+                <div className="absolute left-0 top-full mt-1.5 w-72 bg-white border border-neutral-200 rounded-xl shadow-xl p-2 z-50 space-y-1 animate-fade-in-up max-h-[calc(100vh-6rem)] overflow-y-auto">
                   <div className="px-2.5 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                     切换当值伴学导师
                   </div>
@@ -447,7 +449,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
           <button
             type="button"
             onClick={onCreateNewConversation}
-            className="h-9 px-3 rounded-xl bg-indigo-50/90 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 active:scale-95"
+            className="h-9 px-3 rounded-lg bg-neutral-900 hover:bg-black text-white text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer shrink-0 active:scale-95 shadow-xs"
             title="开启全新伴学对话"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -460,7 +462,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
           {!isFocusMode && (
             <>
               {/* 一体化「AI 引擎 · 模型」选择舱 */}
-              <div className="relative">
+              <div className={`relative ${modelPopoverOpen ? 'z-50' : ''}`}>
                 <button
                   type="button"
                   onClick={() => {
@@ -468,10 +470,10 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                     closeAllPopovers()
                     setModelPopoverOpen(next)
                   }}
-                  className={`h-9 px-3 rounded-xl border text-xs flex items-center gap-2 transition-all cursor-pointer ${
+                  className={`h-9 px-3 rounded-lg border text-xs flex items-center gap-2 transition-all cursor-pointer ${
                     modelPopoverOpen
-                      ? 'bg-indigo-50/60 border-indigo-300 text-slate-900 shadow-2xs'
-                      : 'bg-slate-50/90 hover:bg-slate-100 border-slate-200/85 text-slate-700'
+                      ? 'bg-neutral-100 border-neutral-900 text-neutral-900 shadow-xs'
+                      : 'bg-neutral-50 hover:bg-neutral-100 border-neutral-200/80 text-neutral-800'
                   }`}
                   title={`当前引擎：${activeProviderMeta.label} · 模型：${displayModelName}`}
                 >
@@ -490,10 +492,10 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                 {modelPopoverOpen && (
                   <>
                     <div
-                      className="fixed inset-0 z-30"
+                      className="fixed inset-0 z-40"
                       onClick={() => setModelPopoverOpen(false)}
                     />
-                    <div className="absolute right-0 top-full mt-1.5 w-84 bg-white border border-slate-200/90 rounded-2xl shadow-xl p-3.5 z-40 space-y-3 animate-fade-in-up">
+                    <div className="absolute right-0 top-full mt-1.5 w-84 sm:w-96 bg-white border border-neutral-200 rounded-xl shadow-xl p-3.5 z-50 space-y-3 animate-fade-in-up max-h-[calc(100vh-6rem)] overflow-y-auto">
                       {/* 1. 引擎切换 */}
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
@@ -709,7 +711,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
           </button>
 
           {/* 考研专项 Skills 快选下拉 */}
-          <div className="relative">
+          <div className={`relative ${skillsDropdownOpen ? 'z-50' : ''}`}>
             <button
               type="button"
               onClick={() => {
@@ -738,10 +740,10 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
             {skillsDropdownOpen && (
               <>
                 <div
-                  className="fixed inset-0 z-30"
+                  className="fixed inset-0 z-40"
                   onClick={() => setSkillsDropdownOpen(false)}
                 />
-                <div className="absolute right-0 top-full mt-1.5 w-72 bg-white border border-slate-200/90 rounded-2xl shadow-xl p-2 z-40 space-y-1 animate-fade-in-up">
+                <div className="absolute right-0 top-full mt-1.5 w-72 bg-white border border-neutral-200 rounded-xl shadow-xl p-2 z-50 space-y-1 animate-fade-in-up max-h-[calc(100vh-6rem)] overflow-y-auto">
                   <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-slate-100">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                       考研自动化专项技能
@@ -788,7 +790,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
           </div>
 
           {/* 偏好、记忆与视图控制聚合按钮 */}
-          <div className="relative">
+          <div className={`relative ${hubPopoverOpen ? 'z-50' : ''}`}>
             <button
               type="button"
               onClick={() => {
@@ -808,8 +810,8 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
 
             {hubPopoverOpen && (
               <>
-                <div className="fixed inset-0 z-30" onClick={() => setHubPopoverOpen(false)} />
-                <div className="absolute right-0 top-full mt-1.5 w-80 bg-white border border-slate-200/90 rounded-2xl shadow-xl p-3.5 z-40 space-y-3.5 animate-fade-in-up">
+                <div className="fixed inset-0 z-40" onClick={() => setHubPopoverOpen(false)} />
+                <div className="absolute right-0 top-full mt-1.5 w-80 bg-white border border-neutral-200 rounded-xl shadow-xl p-3.5 z-50 space-y-3.5 animate-fade-in-up max-h-[calc(100vh-6rem)] overflow-y-auto">
                   {/* 1. 认知记忆与本机技能中心 */}
                   <div>
                     <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">

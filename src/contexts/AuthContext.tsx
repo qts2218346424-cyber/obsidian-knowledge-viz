@@ -6,7 +6,13 @@ import {
   useCallback,
   type ReactNode,
 } from 'react'
-import type { UserProfile, UserRole, CheckinResult } from '../types/auth'
+import type {
+  UserProfile,
+  UserRole,
+  CheckinResult,
+  RedeemCouponResult,
+  RechargeResult,
+} from '../types/auth'
 import * as authService from '../services/auth'
 
 export interface AuthContextValue {
@@ -23,6 +29,8 @@ export interface AuthContextValue {
   canCheckinToday: boolean
   lastCheckinAt?: string
   checkin: () => Promise<CheckinResult>
+  redeemCoupon: (code: string) => Promise<RedeemCouponResult>
+  recharge: (amount: number, channel?: string) => Promise<RechargeResult>
   refreshPoints: () => Promise<void>
   updatePointsDirectly: (newPoints: number) => void
   login: (username: string, password: string) => Promise<void>
@@ -136,6 +144,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return res
   }, [])
 
+  const handleRedeemCoupon = useCallback(async (code: string): Promise<RedeemCouponResult> => {
+    const res = await authService.redeemCoupon(code)
+    if (res.success) {
+      setPoints(res.points)
+      await refreshPoints()
+    }
+    return res
+  }, [refreshPoints])
+
+  const handleRecharge = useCallback(async (amount: number, channel?: string): Promise<RechargeResult> => {
+    const res = await authService.rechargePoints(amount, channel)
+    if (res.success) {
+      setPoints(res.points)
+      await refreshPoints()
+    }
+    return res
+  }, [refreshPoints])
+
   const handleLogin = async (username: string, password: string) => {
     setIsLoading(true)
     try {
@@ -216,6 +242,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         canCheckinToday,
         lastCheckinAt,
         checkin: handleCheckin,
+        redeemCoupon: handleRedeemCoupon,
+        recharge: handleRecharge,
         refreshPoints,
         updatePointsDirectly,
         login: handleLogin,

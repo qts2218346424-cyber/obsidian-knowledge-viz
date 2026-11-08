@@ -506,3 +506,92 @@ authRouter.get('/admin/users/:id/point-logs', requireAuth, requireRole('admin'),
   const logs = database.listPointLogs(id, limit)
   res.json({ logs })
 })
+
+/**
+ * 用户自主充值伴学积分接口
+ */
+authRouter.post('/user/recharge', requireAuth, (req, res) => {
+  const userId = req.user!.id
+  const { amount, channel } = req.body || {}
+  const numAmount = Number(amount)
+  if (isNaN(numAmount) || numAmount <= 0) {
+    res.status(400).json({ error: '请选择或输入有效的充值积分额度（大于 0）' })
+    return
+  }
+  const result = database.rechargeUserPoints(
+    userId,
+    numAmount,
+    typeof channel === 'string' ? channel.trim() : '研学自主充值'
+  )
+  if (!result.success) {
+    res.status(400).json(result)
+    return
+  }
+  res.json(result)
+})
+
+/**
+ * 用户使用优惠码/卡密兑换伴学积分
+ */
+authRouter.post('/user/redeem-coupon', requireAuth, (req, res) => {
+  const userId = req.user!.id
+  const { code } = req.body || {}
+  if (!code || typeof code !== 'string' || !code.trim()) {
+    res.status(400).json({ error: '请输入优惠兑换码' })
+    return
+  }
+  const result = database.redeemCoupon(userId, code)
+  if (!result.success) {
+    res.status(400).json(result)
+    return
+  }
+  res.json(result)
+})
+
+/**
+ * 管理员获取所有优惠码列表
+ */
+authRouter.get('/admin/coupons', requireAuth, requireRole('admin'), (_req, res) => {
+  const coupons = database.listCoupons()
+  res.json({ coupons })
+})
+
+/**
+ * 管理员批量/单个生成优惠码
+ */
+authRouter.post('/admin/coupons', requireAuth, requireRole('admin'), (req, res) => {
+  const { points, count, maxUses, description, expiresAt, customCode } = req.body || {}
+  const numPoints = Number(points)
+  if (isNaN(numPoints) || numPoints <= 0) {
+    res.status(400).json({ error: '请输入有效的积分面额（大于 0）' })
+    return
+  }
+  const coupons = database.createCoupons(
+    {
+      points: numPoints,
+      count: Number(count) || 1,
+      maxUses: Number(maxUses) || 1,
+      description: typeof description === 'string' ? description.trim() : undefined,
+      expiresAt: typeof expiresAt === 'string' ? expiresAt.trim() : undefined,
+      customCode: typeof customCode === 'string' ? customCode.trim() : undefined,
+    },
+    req.user!.username || req.user!.id
+  )
+  res.status(201).json({
+    message: `成功生成 ${coupons.length} 张优惠兑换码`,
+    coupons,
+  })
+})
+
+/**
+ * 管理员删除/作废优惠码
+ */
+authRouter.delete('/admin/coupons/:code', requireAuth, requireRole('admin'), (req, res) => {
+  const { code } = req.params
+  const success = database.deleteCoupon(code)
+  if (!success) {
+    res.status(404).json({ error: '优惠码不存在或删除失败' })
+    return
+  }
+  res.json({ message: `优惠码 [${code.toUpperCase()}] 已成功作废删除` })
+})

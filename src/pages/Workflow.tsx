@@ -94,8 +94,8 @@ function IngestionPanel() {
   const { nodes, edges } = useMemo(() => getLayoutedElements(steps), [steps])
 
   return (
-    <div className="bg-surface border border-cream-200 rounded-xl overflow-hidden flex flex-col h-full">
-      <div className="px-5 py-4 border-b border-cream-200 flex items-center gap-3">
+    <div className="bg-white border border-neutral-200/80 rounded-xl overflow-hidden flex flex-col h-full">
+      <div className="px-5 py-4 border-b border-neutral-200/80 flex items-center gap-3">
         <div className="flex-1">
           <div className="text-sm font-semibold text-warm-700 flex items-center gap-2">
             <span>文档摄取 Pipeline</span>
@@ -134,17 +134,17 @@ function IngestionPanel() {
           proOptions={{ hideAttribution: true }}
           nodesDraggable={true}
           nodesConnectable={false}
-          className="!bg-cream-100"
+          className="!bg-neutral-50"
         >
           <Background color="#E8D5BC" gap={20} />
-          <Controls className="!bg-surface !border-cream-300 !rounded-lg" showInteractive={false} />
-          <MiniMap nodeColor="#D4B896" maskColor="rgba(255,251,245,0.8)" className="!bg-surface !border-cream-200 !rounded-lg" />
+          <Controls className="!bg-white !border-neutral-200/80 !rounded-lg" showInteractive={false} />
+          <MiniMap nodeColor="#D4B896" maskColor="rgba(255,251,245,0.8)" className="!bg-white !border-neutral-200/80 !rounded-lg" />
         </ReactFlow>
       </div>
 
       {/* Result panel */}
       {result && (
-        <div className="px-5 py-4 border-t border-cream-200 bg-emerald-50/50 space-y-2">
+        <div className="px-5 py-4 border-t border-neutral-200/80 bg-emerald-50/50 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs font-bold text-emerald-800">
               <Check className="w-4 h-4 text-emerald-600" />
@@ -172,14 +172,14 @@ function IngestionPanel() {
             </div>
           </div>
 
-          <div className="text-[11px] text-warm-500 font-mono bg-cream-100 rounded-lg p-2.5 max-h-28 overflow-auto border border-cream-200/70 whitespace-pre-wrap leading-relaxed">
+          <div className="text-[11px] text-warm-500 font-mono bg-cream-100 rounded-lg p-2.5 max-h-28 overflow-auto border border-neutral-200/80/70 whitespace-pre-wrap leading-relaxed">
             {result.preview}
           </div>
         </div>
       )}
 
       {error && (
-        <div className="px-5 py-3 border-t border-cream-200 bg-rose-50/80 flex items-center gap-2 text-xs text-rose-600">
+        <div className="px-5 py-3 border-t border-neutral-200/80 bg-rose-50/80 flex items-center gap-2 text-xs text-rose-600">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           <span>{error}</span>
         </div>
@@ -264,8 +264,8 @@ function ResearchPanel() {
   const { nodes, edges } = useMemo(() => getLayoutedElements(steps), [steps])
 
   return (
-    <div className="bg-surface border border-cream-200 rounded-xl overflow-hidden flex flex-col h-full">
-      <div className="px-5 py-4 border-b border-cream-200 flex items-center gap-3">
+    <div className="bg-white border border-neutral-200/80 rounded-xl overflow-hidden flex flex-col h-full">
+      <div className="px-5 py-4 border-b border-neutral-200/80 flex items-center gap-3">
         <div className="flex-1">
           <div className="text-sm font-semibold text-warm-700">自动研究工作流</div>
           <div className="text-[11px] text-warm-400 mt-0.5">发现知识缺口 → AI 生成结构化笔记</div>
@@ -290,7 +290,7 @@ function ResearchPanel() {
 
       {/* Gap selector */}
       {gaps.length > 0 && !running && (
-        <div className="px-5 py-3 border-b border-cream-200 bg-surface/50">
+        <div className="px-5 py-3 border-b border-neutral-200/80 bg-white/50">
           <div className="text-[11px] text-warm-500 mb-2">选择知识缺口或输入自定义话题:</div>
           <div className="flex flex-wrap gap-2">
             {gaps.map(g => (
@@ -300,7 +300,7 @@ function ResearchPanel() {
                 className={`px-2.5 py-1 rounded-lg text-xs border transition-colors ${
                   selectedGap === g.topic
                     ? 'bg-accent-orange/15 text-accent-orange border-accent-orange/30'
-                    : 'bg-cream-200 text-warm-500 border-cream-300 hover:border-warm-400'
+                    : 'bg-cream-200 text-warm-500 border-neutral-200/80 hover:border-warm-400'
                 }`}
               >
                 {g.topic} <span className="text-warm-400">({g.references})</span>
@@ -313,7 +313,7 @@ function ResearchPanel() {
               value={customTopic}
               onChange={e => { setCustomTopic(e.target.value); setSelectedGap('') }}
               placeholder="或输入自定义研究话题..."
-              className="w-full bg-cream-200 border border-cream-300 rounded-lg px-3 py-1.5 text-xs text-warm-700 outline-none focus:border-accent-orange"
+              className="w-full bg-cream-200 border border-neutral-200/80 rounded-lg px-3 py-1.5 text-xs text-warm-700 outline-none focus:border-accent-orange"
             />
           </div>
         </div>
@@ -329,16 +329,16 @@ function ResearchPanel() {
           proOptions={{ hideAttribution: true }}
           nodesDraggable={true}
           nodesConnectable={false}
-          className="!bg-cream-100"
+          className="!bg-neutral-50"
         >
           <Background color="#E8D5BC" gap={20} />
-          <Controls className="!bg-surface !border-cream-300 !rounded-lg" showInteractive={false} />
-          <MiniMap nodeColor="#D4B896" maskColor="rgba(255,251,245,0.8)" className="!bg-surface !border-cream-200 !rounded-lg" />
+          <Controls className="!bg-white !border-neutral-200/80 !rounded-lg" showInteractive={false} />
+          <MiniMap nodeColor="#D4B896" maskColor="rgba(255,251,245,0.8)" className="!bg-white !border-neutral-200/80 !rounded-lg" />
         </ReactFlow>
       </div>
 
       {result && (
-        <div className="px-5 py-3 border-t border-cream-200 bg-accent-sage/5">
+        <div className="px-5 py-3 border-t border-neutral-200/80 bg-accent-sage/5">
           <div className="flex items-center gap-2 text-xs text-accent-sage mb-2">
             <Check className="w-4 h-4" />
             研究完成: {result.topic}
@@ -353,7 +353,7 @@ function ResearchPanel() {
       )}
 
       {error && (
-        <div className="px-5 py-3 border-t border-cream-200 bg-rose-50/50 flex items-center gap-2 text-xs text-rose-400">
+        <div className="px-5 py-3 border-t border-neutral-200/80 bg-rose-50/50 flex items-center gap-2 text-xs text-rose-400">
           <AlertTriangle className="w-4 h-4" />
           {error}
         </div>
@@ -474,8 +474,8 @@ function LintPanel() {
   }
 
   return (
-    <div className="bg-surface border border-cream-200 rounded-xl overflow-hidden flex flex-col h-full">
-      <div className="px-5 py-4 border-b border-cream-200 flex items-center gap-3">
+    <div className="bg-white border border-neutral-200/80 rounded-xl overflow-hidden flex flex-col h-full">
+      <div className="px-5 py-4 border-b border-neutral-200/80 flex items-center gap-3">
         <div className="flex-1">
           <div className="text-sm font-semibold text-warm-700">Vault 健康检查</div>
           <div className="text-[11px] text-warm-400 mt-0.5">扫描 → 检查 → 报告 → 自动修复</div>
@@ -502,18 +502,18 @@ function LintPanel() {
             proOptions={{ hideAttribution: true }}
             nodesDraggable={true}
             nodesConnectable={false}
-            className="!bg-cream-100"
+            className="!bg-neutral-50"
           >
             <Background color="#E8D5BC" gap={20} />
-            <Controls className="!bg-surface !border-cream-300 !rounded-lg" showInteractive={false} />
-            <MiniMap nodeColor="#D4B896" maskColor="rgba(255,251,245,0.8)" className="!bg-surface !border-cream-200 !rounded-lg" />
+            <Controls className="!bg-white !border-neutral-200/80 !rounded-lg" showInteractive={false} />
+            <MiniMap nodeColor="#D4B896" maskColor="rgba(255,251,245,0.8)" className="!bg-white !border-neutral-200/80 !rounded-lg" />
           </ReactFlow>
         </div>
 
         {/* Issues sidebar */}
         {report && steps[2].status === 'done' && (
-          <div className="w-72 shrink-0 border-l border-cream-200 overflow-auto bg-cream-100/50">
-            <div className="px-3 py-2 text-xs font-medium text-warm-600 border-b border-cream-200">
+          <div className="w-72 shrink-0 border-l border-neutral-200/80 overflow-auto bg-neutral-50/50">
+            <div className="px-3 py-2 text-xs font-medium text-warm-600 border-b border-neutral-200/80">
               健康评分: <span className={`font-bold ${report.overallScore >= 80 ? 'text-accent-sage' : report.overallScore >= 60 ? 'text-accent-amber' : 'text-rose-400'}`}>{report.overallScore}</span>
             </div>
             <div className="p-2 space-y-2">
@@ -523,7 +523,7 @@ function LintPanel() {
                 const fixResult = fixResults[cat.name]
 
                 return (
-                  <div key={cat.name} className="bg-surface border border-cream-200 rounded-lg p-2.5">
+                  <div key={cat.name} className="bg-white border border-neutral-200/80 rounded-lg p-2.5">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-[11px] font-medium text-warm-600">{cat.label}</span>
                       <span className="text-[10px] text-warm-400">{cat.score}/{cat.maxScore}</span>
@@ -557,7 +557,7 @@ function LintPanel() {
             </div>
 
             {/* Schedule control */}
-            <div className="p-3 border-t border-cream-200">
+            <div className="p-3 border-t border-neutral-200/80">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-medium text-warm-600">定时整理</span>
                 <button
@@ -585,7 +585,7 @@ function LintPanel() {
                         await api.updateScheduleConfig({ intervalMinutes: v })
                         await loadSchedule()
                       }}
-                      className="w-14 bg-cream-200 border border-cream-300 rounded px-1.5 py-0.5 text-[10px] text-warm-600 outline-none"
+                      className="w-14 bg-cream-200 border border-neutral-200/80 rounded px-1.5 py-0.5 text-[10px] text-warm-600 outline-none"
                     />
                     <span className="text-[10px] text-warm-400">分钟</span>
                   </div>
@@ -610,7 +610,7 @@ function LintPanel() {
       </div>
 
       {error && (
-        <div className="px-5 py-3 border-t border-cream-200 bg-rose-50/50 flex items-center gap-2 text-xs text-rose-400">
+        <div className="px-5 py-3 border-t border-neutral-200/80 bg-rose-50/50 flex items-center gap-2 text-xs text-rose-400">
           <AlertTriangle className="w-4 h-4" />
           {error}
         </div>
@@ -642,10 +642,10 @@ export default function Workflow() {
           <button
             key={p.key}
             onClick={() => setActivePipeline(p.key)}
-            className={`px-4 py-2 rounded-lg text-sm transition-all ${
+            className={`px-4 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
               activePipeline === p.key
-                ? 'bg-cream-200 text-warm-800 border border-cream-300'
-                : 'bg-surface text-warm-400 border border-cream-200 hover:text-warm-600 hover:border-cream-300'
+                ? 'bg-neutral-900 text-white shadow-xs border border-neutral-900'
+                : 'subframe-btn-secondary text-neutral-600 hover:text-neutral-900'
             }`}
           >
             {p.label}

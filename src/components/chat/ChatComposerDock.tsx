@@ -195,7 +195,7 @@ export const ChatComposerDock = memo(function ChatComposerDock({
                 onClick={() => onSend(qp)}
                 disabled={isCurrentRunning}
                 title={`点击直接提问：${qp}`}
-                className="px-2.5 py-1 rounded-full text-[11px] text-slate-600 bg-white border border-slate-200/80 hover:border-indigo-300 hover:text-indigo-700 hover:bg-indigo-50/40 transition-all shrink-0 truncate max-w-[240px] sm:max-w-xs cursor-pointer active:scale-95"
+                className="px-3 py-1 rounded-full text-[11px] font-medium text-neutral-700 bg-white border border-neutral-200 hover:border-neutral-900 hover:bg-neutral-50 transition-all shrink-0 truncate max-w-[240px] sm:max-w-xs cursor-pointer active:scale-95 shadow-2xs"
               >
                 {qp}
               </button>
@@ -238,11 +238,11 @@ export const ChatComposerDock = memo(function ChatComposerDock({
               onAddGeneralFiles(e.dataTransfer.files)
             }
           }}
-          className="rounded-2xl border border-slate-200/95 bg-white focus-within:border-indigo-400 focus-within:ring-4 focus-within:ring-indigo-500/10 transition-all shadow-sm overflow-hidden"
+          className="rounded-xl border border-neutral-200/90 bg-white focus-within:border-neutral-900 focus-within:ring-1 focus-within:ring-neutral-900/10 transition-all shadow-xs overflow-hidden"
         >
           {/* 3.1 顶部已挂载上下文胶囊条（笔记伴读、激活技能、待发图片/文件） */}
           {hasContextPills && (
-            <div className="px-3.5 py-2 bg-slate-50/90 border-b border-slate-100 flex items-center gap-2 overflow-x-auto no-scrollbar">
+            <div className="px-3.5 py-2 bg-neutral-50 border-b border-neutral-200/70 flex items-center gap-2 overflow-x-auto no-scrollbar">
               {selectedNote && (
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold shrink-0">
                   <BookOpen className="w-3.5 h-3.5 text-amber-600 shrink-0" />
@@ -524,7 +524,7 @@ export const ChatComposerDock = memo(function ChatComposerDock({
                     <button
                       type="button"
                       onClick={() => onSend(undefined, true)}
-                      className="h-8 px-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95 flex items-center gap-1"
+                      className="h-8 px-4 rounded-lg bg-neutral-900 hover:bg-black text-white text-xs font-medium transition-all cursor-pointer shadow-xs active:scale-95 flex items-center gap-1.5"
                       title="打断当前回答并立即发送新问题"
                     >
                       <Send className="w-3.5 h-3.5" />

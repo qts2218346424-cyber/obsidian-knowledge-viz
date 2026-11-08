@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import type { PetMood } from './DesktopPet'
+import type { PetMood, HitZone } from './NailongRigAvatar'
+import NailongRigAvatar from './NailongRigAvatar'
 
 export type LuluTheme = 'yellow' | 'pink' | 'purple'
 
@@ -20,10 +21,9 @@ export const PET_PERSONAS: Record<LuluTheme, PetPersonaMeta> = {
     theme: 'yellow',
     id: 'nailong',
     name: '奶龙',
-    fullTitle: '呆傻贪吃大肚皮 · 奶龙',
+    fullTitle: '真·呆傻贪吃大肚皮 · 奶龙',
     emoji: '🐲',
     src: '/pets/nailong.png?v=2',
-    spriteSrc: '/pets/nailong_sprite.png?v=2',
     glowColor: 'rgba(250, 204, 21, 0.48)',
     ringColor: 'rgba(245, 158, 11, 0.55)',
   },
@@ -56,7 +56,7 @@ export function getSavedPetTheme(): LuluTheme {
   return 'yellow'
 }
 
-interface LuluAvatarProps {
+export interface LuluAvatarProps {
   mood?: PetMood
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
   theme?: LuluTheme
@@ -65,6 +65,15 @@ interface LuluAvatarProps {
   isSpeaking?: boolean
   onClick?: () => void
   showAccessories?: boolean
+  // 新增骨骼与交互增强支持
+  dragTilt?: number
+  wearingHeadphones?: boolean
+  holdingDrumstick?: boolean
+  eyeOffset?: { x: number; y: number }
+  bellyJiggle?: boolean
+  headPatting?: boolean
+  landingBounce?: boolean
+  onZoneTrigger?: (zone: HitZone, e: React.MouseEvent) => void
 }
 
 interface Particle {
@@ -76,17 +85,6 @@ interface Particle {
 
 const SPARKLE_SYMBOLS = ['🍗', '💖', '✨', '⭐', '🍖', '🎵', '💫', '🫧']
 
-/**
- * 奶龙 8 帧精灵表索引定义 (nailong_sprite.png):
- * 0: idle_1 (左歪头+左脚踏步+右爪招手+尾巴上翘)
- * 1: idle_2 (右歪头+右脚踏步+左爪下扑+肚皮微鼓)
- * 2: blink  (呆萌闭眼眨眼帧)
- * 3: derp   (呆傻斗鸡眼 + ω波浪嘴流口水 + 歪头扭屁股犯傻)
- * 4: talk_1 (开口说话小张嘴 + 挥爪)
- * 5: talk_2 (哇啦哇啦张大嘴露粉舌头 + 拍大肚皮)
- * 6: happy_1(弯弯月牙笑眼 + 哈哈大笑嘴 + 蹦跳)
- * 7: happy_2(斗鸡眼哈哈傻笑 + 换脚扭屁股)
- */
 export default function LuluAvatar({
   mood = 'idle',
   size = 'md',
@@ -96,14 +94,19 @@ export default function LuluAvatar({
   isSpeaking = false,
   onClick,
   showAccessories = true,
+  dragTilt = 0,
+  wearingHeadphones = false,
+  holdingDrumstick = false,
+  eyeOffset,
+  bellyJiggle = false,
+  headPatting = false,
+  landingBounce = false,
+  onZoneTrigger,
 }: LuluAvatarProps) {
   const [syncedTheme, setSyncedTheme] = useState<LuluTheme>(() => theme || getSavedPetTheme())
   const [particles, setParticles] = useState<Particle[]>([])
-  const [headTilt, setHeadTilt] = useState(0)
-  const [frameIdx, setFrameIdx] = useState<number>(0)
-  const [goofyAct, setGoofyAct] = useState<'none' | 'derp' | 'wiggle' | 'boing'>('none')
+  const [internalEyeOffset, setInternalEyeOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const petRef = useRef<HTMLDivElement>(null)
-  const tickRef = useRef<number>(0)
 
   useEffect(() => {
     if (theme) {
@@ -122,11 +125,11 @@ export default function LuluAvatar({
   const activeTheme = theme || syncedTheme
   const persona = PET_PERSONAS[activeTheme] || PET_PERSONAS.yellow
   const isMini = size === 'xs'
-  const isNailong = persona.id === 'nailong' && !isMini
+  const isNailong = persona.id === 'nailong'
 
-  // 光标靠近时奶龙自动变成斗鸡眼流口水或者歪头盯你看
+  // 如果未从外部提供 eyeOffset，则内部自动进行简单的光标视差追踪计算
   useEffect(() => {
-    if (typeof window === 'undefined' || isMini) return
+    if (eyeOffset !== undefined || typeof window === 'undefined' || isMini) return
     let rafId = 0
     const handlePointerMove = (e: PointerEvent) => {
       if (e.pointerType !== 'mouse') return
@@ -138,12 +141,10 @@ export default function LuluAvatar({
         const cy = rect.top + rect.height / 2
         const dx = e.clientX - cx
         const dy = e.clientY - cy
-        const dist = Math.hypot(dx, dy)
-        if (dist < 180 && dist > 6) {
-          setHeadTilt(Number(Math.max(-8, Math.min(8, (dx / 180) * 8)).toFixed(2)))
-        } else {
-          setHeadTilt(0)
-        }
+        const maxDist = 240
+        const nx = Math.max(-1, Math.min(1, dx / maxDist))
+        const ny = Math.max(-1, Math.min(1, dy / maxDist))
+        setInternalEyeOffset({ x: Number(nx.toFixed(2)), y: Number(ny.toFixed(2)) })
       })
     }
     window.addEventListener('pointermove', handlePointerMove, { passive: true })
@@ -151,73 +152,19 @@ export default function LuluAvatar({
       window.removeEventListener('pointermove', handlePointerMove)
       cancelAnimationFrame(rafId)
     }
-  }, [isMini])
+  }, [eyeOffset, isMini])
 
-  // 奶龙全天候动态帧状态机（说话高频张嘴同步 / 戳肚皮大笑 / 待机踏步招手眨眼犯傻）
-  useEffect(() => {
-    if (!isNailong) return
+  const effectiveEyeOffset = eyeOffset ?? internalEyeOffset
 
-    if (isSpeaking) {
-      // 说话或大笑时：135ms 高速切换张嘴露舌头、大笑、斗鸡眼傻笑与招手踏步帧
-      const talkSeq = [4, 5, 4, 6, 5, 0, 4, 7, 5, 6]
-      let i = 0
-      const timer = window.setInterval(() => {
-        setFrameIdx(talkSeq[i % talkSeq.length])
-        i++
-      }, 135)
-      return () => window.clearInterval(timer)
-    }
+  const sizePixelMap = {
+    xs: 28,
+    sm: 68,
+    md: 86,
+    lg: 96,
+    xl: 128,
+  }
 
-    if (isSquishing || mood === 'happy') {
-      // 被戳肚皮或开心时：在月牙眼大笑 (6) 与 斗鸡眼傻笑 (7) 之间欢快切换
-      const happySeq = [6, 7, 6, 3, 7, 6]
-      let i = 0
-      const timer = window.setInterval(() => {
-        setFrameIdx(happySeq[i % happySeq.length])
-        i++
-      }, 170)
-      return () => window.clearInterval(timer)
-    }
-
-    if (isDragging) {
-      // 被拎起来摇晃时：斗鸡眼流口水 (3) 与 张大嘴惊呼 (5) 交替
-      const dragSeq = [3, 5, 3, 7]
-      let i = 0
-      const timer = window.setInterval(() => {
-        setFrameIdx(dragSeq[i % dragSeq.length])
-        i++
-      }, 180)
-      return () => window.clearInterval(timer)
-    }
-
-    // 日常待机：每 300ms 踏步招手扭屁股，穿插眨眼 (2)、斗鸡眼流口水犯傻 (3) 与偷笑 (6)
-    const idleTimer = window.setInterval(() => {
-      tickRef.current += 1
-      const t = tickRef.current
-      const mod = t % 20
-      if (mod === 5 || mod === 13) {
-        setFrameIdx(2) // 呆萌眨眼
-      } else if (mod >= 8 && mod <= 10) {
-        setFrameIdx(3) // 连续3拍斗鸡眼流口水犯傻
-        if (mod === 8) {
-          setGoofyAct('derp')
-          setTimeout(() => setGoofyAct('none'), 900)
-        }
-      } else if (mod === 16 || mod === 17) {
-        setFrameIdx(6) // 傻笑两拍
-        if (mod === 16) {
-          setGoofyAct('wiggle')
-          setTimeout(() => setGoofyAct('none'), 700)
-        }
-      } else {
-        setFrameIdx(t % 2 === 0 ? 0 : 1) // 左右踏步招手摇尾巴
-      }
-    }, 310)
-
-    return () => window.clearInterval(idleTimer)
-  }, [isNailong, isSpeaking, isSquishing, isDragging, mood])
-
-  const sizeMap = {
+  const sizeClassMap = {
     xs: 'w-7 h-7',
     sm: 'w-[68px] h-[68px]',
     md: 'w-[86px] h-[86px]',
@@ -240,9 +187,13 @@ export default function LuluAvatar({
     }, 950)
   }
 
-  const handleTap = () => {
+  const handleTap = (e: React.MouseEvent) => {
     spawnParticles()
     onClick?.()
+    if (!onZoneTrigger && isNailong) {
+      // 默认如果没有区分热区，则默认判定为肚皮触摸
+      // onZoneTrigger?.('belly', e)
+    }
   }
 
   const moodBadge =
@@ -250,8 +201,6 @@ export default function LuluAvatar({
       ? null
       : isSpeaking
       ? '🎵'
-      : goofyAct === 'derp'
-      ? '🍗'
       : mood === 'thinking'
       ? '💭'
       : mood === 'happy'
@@ -260,13 +209,17 @@ export default function LuluAvatar({
       ? '💤'
       : mood === 'focus'
       ? '🔥'
+      : mood === 'eating'
+      ? '🍗'
+      : mood === 'derp'
+      ? '🤪'
       : null
 
   return (
     <div
       ref={petRef}
       onClick={handleTap}
-      className={`relative ${sizeMap[size]} flex items-center justify-center select-none ${
+      className={`relative ${sizeClassMap[size]} flex items-center justify-center select-none ${
         onClick ? 'cursor-pointer' : ''
       }`}
     >
@@ -277,51 +230,18 @@ export default function LuluAvatar({
           50% { transform: translateY(0px) rotate(2.5deg) scale(1.01, 0.99); }
           75% { transform: translateY(-4px) rotate(0deg) scale(0.99, 1.02); }
         }
-        @keyframes pet-talk-bop {
-          0%, 100% { transform: translateY(0px) rotate(-4deg) scale(1.04, 0.96); }
-          50% { transform: translateY(-8px) rotate(4deg) scale(0.96, 1.06); }
-        }
-        @keyframes pet-belly-boing {
-          0% { transform: scale(1, 1); }
-          20% { transform: scale(1.30, 0.74) translateY(7px) rotate(-5deg); }
-          45% { transform: scale(0.84, 1.20) translateY(-10px) rotate(5deg); }
-          68% { transform: scale(1.14, 0.88) translateY(3px) rotate(-3deg); }
-          85% { transform: scale(0.96, 1.04) translateY(-2px); }
-          100% { transform: scale(1, 1); }
-        }
-        @keyframes pet-derp-shake {
-          0%, 100% { transform: rotate(0deg) scale(1); }
-          25% { transform: rotate(7deg) scale(1.05, 0.96); }
-          75% { transform: rotate(-7deg) scale(1.05, 0.96); }
-        }
-        @keyframes pet-drag-dangle {
-          0%, 100% { transform: translateY(-7px) rotate(-9deg) scale(1.06); }
-          50% { transform: translateY(-10px) rotate(9deg) scale(1.06); }
-        }
         @keyframes pet-shadow-breathe {
-          0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.30; }
-          50% { transform: translateX(-50%) scale(0.80); opacity: 0.16; }
+          0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.28; }
+          50% { transform: translateX(-50%) scale(0.82); opacity: 0.16; }
         }
         @keyframes pet-particle-rise {
           0% { transform: translate(0, 0) scale(0.5); opacity: 1; }
           100% { transform: translate(var(--tx), -46px) scale(1.25); opacity: 0; }
         }
         .anim-pet-idle { animation: pet-waddle-dance 1.24s ease-in-out infinite; }
-        .anim-pet-talk { animation: pet-talk-bop 0.42s ease-in-out infinite; }
-        .anim-pet-squish { animation: pet-belly-boing 0.62s cubic-bezier(0.34, 1.56, 0.64, 1); }
-        .anim-pet-derp { animation: pet-derp-shake 0.45s ease-in-out infinite; }
-        .anim-pet-drag { animation: pet-drag-dangle 0.48s ease-in-out infinite; }
       `}</style>
 
-      {/* 底部立体软萌呼吸阴影 */}
-      {!isMini && (
-        <div
-          className="absolute bottom-0.5 left-1/2 w-[62%] h-2.5 rounded-full bg-slate-900/40 blur-[3px] pointer-events-none"
-          style={{ animation: 'pet-shadow-breathe 1.24s ease-in-out infinite' }}
-        />
-      )}
-
-      {/* 柔和氛围背光光环 */}
+      {/* 底部柔和光环 */}
       {!isMini && (isSpeaking || mood === 'focus' || mood === 'happy') && (
         <div
           className="absolute inset-0.5 rounded-full blur-md pointer-events-none transition-opacity duration-300"
@@ -334,49 +254,40 @@ export default function LuluAvatar({
         />
       )}
 
-      {/* 角色主体：奶龙使用 8 帧无缝动态精灵引擎，其他皮肤使用高清立绘 */}
-      <div
-        className={`relative w-full h-full flex items-center justify-center origin-bottom will-change-transform ${
-          isDragging
-            ? 'anim-pet-drag'
-            : isSquishing
-            ? 'anim-pet-squish'
-            : isSpeaking
-            ? 'anim-pet-talk'
-            : goofyAct === 'derp' || goofyAct === 'wiggle'
-            ? 'anim-pet-derp'
-            : 'anim-pet-idle'
-        }`}
-      >
-        {isNailong && persona.spriteSrc ? (
-          <div
-            style={{
-              transform: headTilt ? `rotate(${headTilt}deg)` : undefined,
-              transition: 'transform 0.18s ease-out',
-              filter: 'drop-shadow(0 5px 10px rgba(15, 23, 42, 0.24))',
-            }}
-            className="w-full h-full overflow-hidden pointer-events-none select-none relative"
-          >
-            <img
-              src={persona.spriteSrc}
-              alt={persona.name}
-              draggable={false}
-              style={{
-                width: '800%',
-                height: '100%',
-                maxWidth: 'none',
-                transform: `translate3d(-${frameIdx * 12.5}%, 0, 0)`,
-              }}
-              className="block h-full object-fill pointer-events-none select-none"
+      {/* 角色核心渲染 */}
+      {isNailong ? (
+        // 真·骨骼分层矢量奶龙：彻底淘汰黑狗鼻子与猫爪肉垫贴图，自带 360° 视差眼睛与物理弹簧
+        <div className="w-full h-full flex items-center justify-center pointer-events-auto">
+          <NailongRigAvatar
+            mood={mood}
+            isSpeaking={isSpeaking}
+            isDragging={isDragging}
+            dragTilt={dragTilt}
+            wearingHeadphones={wearingHeadphones || mood === 'focus'}
+            holdingDrumstick={holdingDrumstick || mood === 'eating'}
+            eyeOffset={effectiveEyeOffset}
+            bellyJiggle={bellyJiggle || isSquishing}
+            headPatting={headPatting}
+            landingBounce={landingBounce}
+            size={sizePixelMap[size]}
+            onZoneTrigger={onZoneTrigger}
+          />
+        </div>
+      ) : (
+        // 其他皮肤：保留原高精立绘和呼吸动效
+        <div className="relative w-full h-full flex items-center justify-center origin-bottom will-change-transform anim-pet-idle">
+          {!isMini && (
+            <div
+              className="absolute bottom-0.5 left-1/2 w-[62%] h-2.5 rounded-full bg-slate-900/40 blur-[3px] pointer-events-none"
+              style={{ animation: 'pet-shadow-breathe 1.24s ease-in-out infinite' }}
             />
-          </div>
-        ) : (
+          )}
           <img
             src={persona.src}
             alt={persona.name}
             draggable={false}
             style={{
-              transform: headTilt ? `rotate(${headTilt}deg)` : undefined,
+              transform: effectiveEyeOffset.x ? `rotate(${effectiveEyeOffset.x * 6}deg)` : undefined,
               transition: 'transform 0.22s ease-out',
               filter: isMini
                 ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.16))'
@@ -384,20 +295,20 @@ export default function LuluAvatar({
             }}
             className="w-full h-full object-contain pointer-events-none select-none"
           />
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* 状态小气泡角标（唱歌音符 / 贪吃大鸡腿 / 专注小火苗） */}
+      {/* 状态小气泡角标 */}
       {moodBadge && (
         <span
-          className="absolute -top-1 -right-0.5 text-sm leading-none drop-shadow-sm animate-bounce pointer-events-none select-none"
+          className="absolute -top-1 -right-0.5 text-sm leading-none drop-shadow-sm animate-bounce pointer-events-none select-none z-10"
           aria-hidden="true"
         >
           {moodBadge}
         </span>
       )}
 
-      {/* 摸头/戳肚皮飘浮粒子 */}
+      {/* 触摸粒子 */}
       {particles.map(p => (
         <span
           key={p.id}

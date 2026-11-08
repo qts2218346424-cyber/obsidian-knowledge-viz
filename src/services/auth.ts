@@ -8,6 +8,9 @@ import type {
   CheckinResult,
   AdminGrantResult,
   PointLogItem,
+  CouponCodeItem,
+  RedeemCouponResult,
+  RechargeResult,
 } from '../types/auth'
 
 const TOKEN_KEY = 'coreforge_auth_token'
@@ -220,4 +223,49 @@ export async function adminListPointLogs(
   limit = 30
 ): Promise<{ logs: PointLogItem[] }> {
   return requestJSON<{ logs: PointLogItem[] }>(`/api/admin/users/${userId}/point-logs?limit=${limit}`)
+}
+
+// ===== 优惠码与自主充值 API =====
+
+/** 用户使用优惠码兑换积分 */
+export async function redeemCoupon(code: string): Promise<RedeemCouponResult> {
+  return requestJSON<RedeemCouponResult>('/api/user/redeem-coupon', {
+    method: 'POST',
+    body: JSON.stringify({ code }),
+  })
+}
+
+/** 用户自主充值积分 */
+export async function rechargePoints(amount: number, channel?: string): Promise<RechargeResult> {
+  return requestJSON<RechargeResult>('/api/user/recharge', {
+    method: 'POST',
+    body: JSON.stringify({ amount, channel }),
+  })
+}
+
+/** 管理员获取所有优惠码 */
+export async function adminListCoupons(): Promise<{ coupons: CouponCodeItem[] }> {
+  return requestJSON<{ coupons: CouponCodeItem[] }>('/api/admin/coupons')
+}
+
+/** 管理员批量/单个创建优惠码 */
+export async function adminCreateCoupons(data: {
+  points: number
+  count: number
+  maxUses?: number
+  description?: string
+  expiresAt?: string
+  customCode?: string
+}): Promise<{ message: string; coupons: CouponCodeItem[] }> {
+  return requestJSON<{ message: string; coupons: CouponCodeItem[] }>('/api/admin/coupons', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+/** 管理员删除优惠码 */
+export async function adminDeleteCoupon(code: string): Promise<{ message: string }> {
+  return requestJSON<{ message: string }>(`/api/admin/coupons/${code}`, {
+    method: 'DELETE',
+  })
 }

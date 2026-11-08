@@ -520,33 +520,51 @@ export default function KnowledgeGraph() {
         </div>
       </div>
 
-      {/* 🖥️ 桌面端 Header */}
-      <div className="hidden md:flex flex-col justify-between gap-3 shrink-0 lg:flex-row lg:items-center">
+      {/* 🖥️ 桌面端顶部双轨角落胶囊 (Subframe Screen 3 Corner Pills) */}
+      <div className="hidden md:flex items-center justify-between gap-3 pt-1">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-neutral-200/80 shadow-xs">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-xs font-semibold text-neutral-800">全景双链知识网络</span>
+            <span className="text-neutral-300">|</span>
+            <span className="text-[11px] text-neutral-500 font-mono">D3.js 动力拓扑</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-100 border border-neutral-200/80 text-xs text-neutral-600 font-medium">
+            <span>双击节点：右侧属性检查器</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 🖥️ 桌面端 Header (Subframe Team Header Bar) */}
+      <div className="hidden md:flex flex-col justify-between gap-3 shrink-0 lg:flex-row lg:items-center bg-white rounded-[16px] border border-black/[0.08] p-4 sm:p-5 shadow-xs">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold tracking-tight text-slate-900">知识图谱</h1>
+            <h1 className="text-xl font-bold tracking-tight text-neutral-900">考研全库拓扑知识图谱</h1>
             {isRealData && (
-              <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">实时同步</span>
+              <span className="rounded-full bg-neutral-100 border border-neutral-200 px-2 py-0.5 text-[10px] font-mono font-medium text-neutral-700">实时网络</span>
             )}
           </div>
-          <p className="mt-0.5 text-xs text-slate-500">
-            从笔记双向链接构建拓扑知识网络。支持自由平移缩放、智能标签分级、单击跳至编辑、双击侧栏预览。
+          <p className="mt-0.5 text-xs text-neutral-500">
+            从笔记双向链接构建拓扑知识网络。支持平移缩放、智能标签分级、单击跳至编辑、双击检查器透视。
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
             onClick={resetView}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 shadow-2xs cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-700 text-xs font-medium cursor-pointer shadow-xs transition-colors"
           >
             <Maximize2 className="h-3.5 w-3.5" />
-            适配视图
+            适配全景
           </button>
           <button
             onClick={() => setShowAllLabels(prev => !prev)}
-            className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition-colors shadow-2xs cursor-pointer ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shadow-xs cursor-pointer ${
               showAllLabels
-                ? 'border-indigo-300 bg-indigo-50 text-indigo-700 font-semibold'
-                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                ? 'bg-neutral-900 text-white font-semibold'
+                : 'border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50'
             }`}
           >
             <Eye className="h-3.5 w-3.5" />
@@ -555,24 +573,24 @@ export default function KnowledgeGraph() {
           <button
             onClick={clearFilters}
             disabled={!hasFilter}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium transition-colors shadow-xs cursor-pointer"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             清除筛选
           </button>
           <button
             onClick={reload}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 shadow-2xs cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold cursor-pointer shadow-xs transition-colors"
           >
             <RefreshCw className="h-3.5 w-3.5" />
-            刷新
+            重新构建
           </button>
         </div>
       </div>
 
       {/* 🖥️ 桌面端 Metrics Row */}
       <div className="hidden md:grid grid-cols-4 gap-2.5 shrink-0">
-        <GraphMetric label="节点总数" value={totalNodes} color="text-indigo-600" />
+        <GraphMetric label="节点总数" value={totalNodes} color="text-neutral-900" />
         <GraphMetric label="双向连接" value={rawLinks.length} color="text-emerald-600" />
         <GraphMetric label="孤立笔记" value={orphanNotes} color="text-rose-500" />
         <GraphMetric label="健康度" value={overallScore || '—'} color={scoreColor} suffix={overallScore ? '/100' : undefined} />
@@ -596,12 +614,12 @@ export default function KnowledgeGraph() {
 
           <div
             ref={containerRef}
-            className="relative flex-1 min-h-0 overflow-hidden sm:rounded-2xl sm:border sm:border-slate-200/90 bg-[#FDFBF7] shadow-inner select-none"
+            className="relative flex-1 min-h-0 overflow-hidden sm:rounded-xl sm:border sm:border-neutral-200/80 bg-neutral-50/50 shadow-xs select-none"
           >
             <svg ref={svgRef} width={dimensions.width} height={dimensions.height} className="block h-full w-full" />
 
             {/* Floating on-canvas controls (top-left) */}
-            <div className="absolute top-3 left-3 z-10 flex flex-col gap-1 rounded-xl border border-cream-200/90 bg-surface/90 p-1 shadow-sm backdrop-blur-md">
+            <div className="absolute top-3 left-3 z-10 flex flex-col gap-1 rounded-lg border border-neutral-200/80 bg-white/95 p-1 shadow-xs backdrop-blur-md">
               <button
                 onClick={() => {
                   if (!svgRef.current || !zoomRef.current) return
@@ -748,53 +766,73 @@ export default function KnowledgeGraph() {
           </div>
         </div>
 
-        {/* Right Preview Drawer */}
+        {/* Right Node Inspector (Subframe Screen 2 Node Inspector) */}
         {(previewNode || previewLoading) && (
-          <div className="fixed inset-x-3 bottom-16 top-24 z-40 md:static md:w-80 md:inset-auto md:z-auto shrink-0 h-auto md:h-full flex flex-col rounded-2xl border border-cream-200 bg-surface/95 backdrop-blur-xl p-4 shadow-2xl md:shadow-lg overflow-hidden animate-fade-in">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold text-warm-800 truncate flex-1">
-                {previewLoading ? '加载中...' : previewNode?.title}
-              </h3>
+          <div className="fixed inset-x-3 bottom-16 top-24 z-40 md:static md:w-80 md:inset-auto md:z-auto shrink-0 h-auto md:h-full flex flex-col rounded-[16px] border border-black/[0.08] bg-white p-4 shadow-xl md:shadow-xs overflow-hidden animate-fade-in">
+            <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-neutral-100">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <span className="text-[11px] font-bold tracking-wider uppercase text-neutral-400 font-mono">NODE INSPECTOR</span>
+              </div>
               <button
                 onClick={() => setPreviewNode(null)}
-                className="p-1 rounded-lg hover:bg-cream-200 text-warm-400 hover:text-warm-600 ml-2 transition-colors"
+                className="p-1 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
             {previewLoading && (
               <div className="flex-1 flex items-center justify-center">
-                <Loader2 className="w-5 h-5 text-accent-orange animate-spin" />
+                <Loader2 className="w-5 h-5 text-neutral-900 animate-spin" />
               </div>
             )}
             {previewNode && !previewLoading && (
-              <div className="flex-1 flex flex-col min-h-0">
-                <div className="text-[10px] text-warm-400 font-mono mb-2 truncate">{previewNode.path}</div>
+              <div className="flex-1 flex flex-col min-h-0 space-y-3">
+                <div>
+                  <h3 className="text-sm font-bold text-neutral-900 truncate">
+                    {previewNode.title}
+                  </h3>
+                  <div className="text-[10px] text-neutral-400 font-mono mt-0.5 truncate">{previewNode.path}</div>
+                </div>
+
+                {/* 字段属性网格 (Inspector Grid) */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="p-2 rounded-xl bg-neutral-50/80 border border-neutral-200/80">
+                    <div className="text-[10px] text-neutral-400 font-medium">双链拓扑度</div>
+                    <div className="font-bold font-mono text-neutral-900 mt-0.5">{previewNode.links.length} Degree</div>
+                  </div>
+                  <div className="p-2 rounded-xl bg-neutral-50/80 border border-neutral-200/80">
+                    <div className="text-[10px] text-neutral-400 font-medium">总词字数</div>
+                    <div className="font-bold font-mono text-neutral-900 mt-0.5">{previewNode.wordCount} 字</div>
+                  </div>
+                </div>
+
                 {previewNode.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-2">
+                  <div className="flex flex-wrap gap-1">
                     {previewNode.tags.map(tag => (
-                      <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded bg-accent-orange/15 text-accent-orange">#{tag}</span>
+                      <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-100 border border-neutral-200 text-neutral-600 font-medium">#{tag}</span>
                     ))}
                   </div>
                 )}
-                <div className="text-[11px] text-warm-400 mb-2">
-                  {previewNode.wordCount} 字 · {previewNode.links.length} 条双向链接
-                </div>
-                <div className="flex-1 overflow-y-auto text-xs text-warm-600 leading-relaxed whitespace-pre-wrap pr-1 border-t border-cream-100 pt-2">
-                  {previewNode.content.substring(0, 2000)}
-                  {previewNode.content.length > 2000 && (
-                    <div className="mt-2 text-warm-400 italic">... (内容较长，点击下方按钮在完整编辑器中阅读)</div>
+
+                <div className="flex-1 overflow-y-auto text-xs text-neutral-600 leading-relaxed whitespace-pre-wrap pr-1 border-t border-neutral-100 pt-2 font-mono">
+                  {previewNode.content.substring(0, 1500)}
+                  {previewNode.content.length > 1500 && (
+                    <div className="mt-2 text-neutral-400 italic text-[11px]">... (内容较长，点击下方按钮在完整编辑器中阅读)</div>
                   )}
                 </div>
-                <button
-                  onClick={() => {
-                    navigate(`/editor?path=${encodeURIComponent(previewNode.path)}`)
-                    setPreviewNode(null)
-                  }}
-                  className="mt-3 w-full py-2 rounded-xl bg-accent-orange text-white text-xs font-medium hover:bg-accent-orange/90 transition-colors shadow-sm"
-                >
-                  在编辑器中打开完整笔记
-                </button>
+
+                <div className="pt-2 border-t border-neutral-100">
+                  <button
+                    onClick={() => {
+                      navigate(`/editor?path=${encodeURIComponent(previewNode.path)}`)
+                      setPreviewNode(null)
+                    }}
+                    className="w-full py-2.5 rounded-[10px] bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <span>在编辑器中打开沉浸研读</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -811,11 +849,11 @@ function GraphMetric({ label, value, color, suffix }: {
   suffix?: string
 }) {
   return (
-    <div className="rounded-2xl border border-cream-200 bg-surface px-3.5 py-2.5 shadow-[0_4px_16px_rgba(0,0,0,0.03)]">
-      <div className="text-[11px] text-warm-400">{label}</div>
-      <div className={`mt-0.5 text-lg font-semibold ${color}`}>
+    <div className="rounded-[14px] border border-black/[0.08] bg-white px-3.5 py-2.5 shadow-xs">
+      <div className="text-[11px] font-medium text-neutral-400">{label}</div>
+      <div className={`mt-0.5 text-lg font-bold font-mono ${color}`}>
         {value}
-        {suffix && <span className="ml-1 text-[10px] font-normal text-warm-400">{suffix}</span>}
+        {suffix && <span className="ml-1 text-[10px] font-normal text-neutral-400 font-sans">{suffix}</span>}
       </div>
     </div>
   )

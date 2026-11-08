@@ -93,6 +93,27 @@ export type PointLogType =
   | 'admin_grant'
   | 'admin_deduct'
   | 'initial_grant'
+  | 'coupon_redeem'
+  | 'recharge'
+
+export interface DbCouponCode {
+  code: string
+  points: number
+  maxUses: number
+  usedCount: number
+  expiresAt?: string
+  description?: string
+  createdBy?: string
+  createdAt: string
+}
+
+export interface DbCouponRedemption {
+  id: string
+  code: string
+  userId: string
+  points: number
+  redeemedAt: string
+}
 
 export interface DbPointLog {
   id: string
@@ -291,6 +312,31 @@ class CoreForgeDatabase {
       );
       CREATE INDEX IF NOT EXISTS idx_point_logs_user ON point_logs(user_id);
       CREATE INDEX IF NOT EXISTS idx_point_logs_created ON point_logs(created_at);
+    `)
+
+    // 8. 优惠码/卡密积分兑换表 (coupon_codes & coupon_redemptions)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS coupon_codes (
+        code TEXT PRIMARY KEY,
+        points REAL NOT NULL,
+        max_uses INTEGER NOT NULL DEFAULT 1,
+        used_count INTEGER NOT NULL DEFAULT 0,
+        expires_at TEXT,
+        description TEXT,
+        created_by TEXT,
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_coupons_created ON coupon_codes(created_at);
+
+      CREATE TABLE IF NOT EXISTS coupon_redemptions (
+        id TEXT PRIMARY KEY,
+        code TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        points REAL NOT NULL,
+        redeemed_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_redemptions_user ON coupon_redemptions(user_id);
+      CREATE INDEX IF NOT EXISTS idx_redemptions_code ON coupon_redemptions(code);
     `)
 
     // 8. 多租户数据隔离字段与积分字段自动补齐 (向后兼容)
@@ -935,6 +981,209 @@ class CoreForgeDatabase {
       }))
     } catch {
       return []
+    }
+  }
+
+  // ===== 优惠码兑换与自主充值操作 =====
+
+  redeemCoupon(userId: string, rawCode: string): { success: boolean; points: number; earned: number; message: string } {
+    if (!this.db || !userId) {
+      return { success: false, points: 0, earned: 0, message: '系统未就绪或未登录' }
+    }
+    const code = String(rawCode || '').trim().toUpperCase()
+    if (!code) {
+      return { success: false, points: 0, earned: 0, message: '请输入有效的兑换码' }
+    }
+
+    const user = this.findUserById(userId)
+    if (!user) {
+      return { success: false, points: 0, earned: 0, message: '用户不存在' }
+    }
+
+    const coupon = this.db.prepare('SELECT * FROM coupon_codes WHERE code = ?').get(code) as any
+    if (!coupon) {
+      return { success: false, points: user.points, earned: 0, message: '兑换码不存在或输入有误，请核对后重试' }
+    }
+
+    // 检查是否过期
+    if (coupon.expires_at && new Date(coupon.expires_at).getTime() < Date.now()) {
+      return { success: false, points: user.points, earned: 0, message: '该优惠码已过期失效' }
+    }
+
+    // 检查使用次数
+    if (coupon.used_count >= coupon.max_uses) {
+      return { success: false, points: user.points, earned: 0, message: '该优惠码已达到最大兑换次数上限' }
+    }
+
+    // 检查当前用户是否已兑换过该优惠码
+    const existing = this.db.prepare('SELECT id FROM coupon_redemptions WHERE code = ? AND user_id = ?').get(code, userId)
+    if (existing) {
+      return { success: false, points: user.points, earned: 0, message: '您已经使用过该优惠码，不可重复兑换' }
+    }
+
+    const earned = Number(coupon.points)
+    const newPoints = Math.round((user.points + earned) * 100) / 100
+    const now = new Date().toISOString()
+    const redemptionId = `red_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+    const logId = `pl_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+
+    // 原子更新优惠码使用计数与用户积分
+    this.db.prepare('UPDATE coupon_codes SET used_count = used_count + 1 WHERE code = ?').run(code)
+    this.db.prepare('UPDATE users SET points = ?, updated_at = ? WHERE id = ?').run(newPoints, now, userId)
+    this.db.prepare(`
+      INSERT INTO coupon_redemptions (id, code, user_id, points, redeemed_at)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(redemptionId, code, userId, earned, now)
+
+    const remark = coupon.description ? `优惠码兑换[${code}]: ${coupon.description}` : `优惠码兑换[${code}]`
+    this.db.prepare(`
+      INSERT INTO point_logs (id, user_id, type, amount, balance_after, remark, operator_id, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(logId, userId, 'coupon_redeem', earned, newPoints, remark, null, now)
+
+    return {
+      success: true,
+      points: newPoints,
+      earned,
+      message: `🎉 成功兑换 ${earned} 伴学积分！当前可用余额: ${newPoints} 积分`,
+    }
+  }
+
+  createCoupons(
+    data: {
+      points: number
+      count: number
+      maxUses?: number
+      description?: string
+      expiresAt?: string
+      customCode?: string
+    },
+    createdBy?: string
+  ): DbCouponCode[] {
+    if (!this.db) return []
+    const points = Math.max(0.1, Number(data.points) || 10)
+    const count = Math.min(100, Math.max(1, Number(data.count) || 1))
+    const maxUses = Math.max(1, Number(data.maxUses) || 1)
+    const now = new Date().toISOString()
+    const stmt = this.db.prepare(`
+      INSERT INTO coupon_codes (code, points, max_uses, used_count, expires_at, description, created_by, created_at)
+      VALUES (?, ?, ?, 0, ?, ?, ?, ?)
+    `)
+
+    const generated: DbCouponCode[] = []
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789' // 去除易混淆字符 0, 1, I, O
+
+    const generateRandomCode = () => {
+      let part1 = ''
+      let part2 = ''
+      for (let i = 0; i < 4; i++) {
+        part1 += alphabet[Math.floor(Math.random() * alphabet.length)]
+        part2 += alphabet[Math.floor(Math.random() * alphabet.length)]
+      }
+      return `CF-${part1}-${part2}`
+    }
+
+    for (let i = 0; i < count; i++) {
+      let code = (count === 1 && data.customCode)
+        ? data.customCode.trim().toUpperCase()
+        : generateRandomCode()
+
+      // 确保 code 唯一
+      let attempts = 0
+      while (attempts < 10) {
+        const exist = this.db.prepare('SELECT code FROM coupon_codes WHERE code = ?').get(code)
+        if (!exist) break
+        code = generateRandomCode()
+        attempts++
+      }
+
+      try {
+        stmt.run(
+          code,
+          points,
+          maxUses,
+          data.expiresAt || null,
+          data.description || null,
+          createdBy || null,
+          now
+        )
+        generated.push({
+          code,
+          points,
+          maxUses,
+          usedCount: 0,
+          expiresAt: data.expiresAt,
+          description: data.description,
+          createdBy,
+          createdAt: now,
+        })
+      } catch (err: any) {
+        console.error('[Database] 生成优惠码异常:', err.message)
+      }
+    }
+
+    return generated
+  }
+
+  listCoupons(): DbCouponCode[] {
+    if (!this.db) return []
+    try {
+      const rows = this.db.prepare('SELECT * FROM coupon_codes ORDER BY created_at DESC').all() as any[]
+      return rows.map(r => ({
+        code: r.code,
+        points: r.points,
+        maxUses: r.max_uses,
+        usedCount: r.used_count,
+        expiresAt: r.expires_at || undefined,
+        description: r.description || undefined,
+        createdBy: r.created_by || undefined,
+        createdAt: r.created_at,
+      }))
+    } catch {
+      return []
+    }
+  }
+
+  deleteCoupon(code: string): boolean {
+    if (!this.db || !code) return false
+    try {
+      this.db.prepare('DELETE FROM coupon_codes WHERE code = ?').run(code.trim().toUpperCase())
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  rechargeUserPoints(
+    userId: string,
+    amount: number,
+    channel: string = '在线快捷充值'
+  ): { success: boolean; points: number; recharged: number; message: string } {
+    if (!this.db || !userId) {
+      return { success: false, points: 0, recharged: 0, message: '服务不可用' }
+    }
+    const user = this.findUserById(userId)
+    if (!user) {
+      return { success: false, points: 0, recharged: 0, message: '用户不存在' }
+    }
+    const recharged = Math.max(0.1, Math.round(Number(amount) * 100) / 100)
+    const newPoints = Math.round((user.points + recharged) * 100) / 100
+    const now = new Date().toISOString()
+    const logId = `pl_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+
+    this.db.prepare('UPDATE users SET points = ?, updated_at = ? WHERE id = ?')
+      .run(newPoints, now, userId)
+
+    this.db.prepare(`
+      INSERT INTO point_logs (id, user_id, type, amount, balance_after, remark, operator_id, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(logId, userId, 'recharge', recharged, newPoints, `自主充值: ${channel}`, null, now)
+
+    return {
+      success: true,
+      points: newPoints,
+      recharged,
+      message: `充值成功！已到账 ${recharged} 伴学积分，当前余额: ${newPoints} 积分`,
     }
   }
 

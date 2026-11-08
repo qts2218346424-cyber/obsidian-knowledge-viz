@@ -54,6 +54,7 @@ desktop.ini
 # package-lock.json
 
 # Database files
+data/
 *.sqlite
 *.sqlite3
 *.sqlite-journal

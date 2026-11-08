@@ -38,7 +38,7 @@ import { STUDY_AGENTS, type StudyAgent } from '../data/studyAgents'
 import { type StudySkill } from '../data/studySkills'
 import { extractFollowUpPrompts, getRandomPromptsForAgent } from '../data/studyPrompts'
 import ChatMessageItem from '../components/chat/ChatMessageItem'
-import NoteCompanionPanel from '../components/chat/NoteCompanionPanel'
+import { NoteCompanionPanel } from '../components/chat/NoteCompanionPanel'
 import ChatStudioHeader, {
   PROVIDER_PRESET_MODELS,
   type ProviderType,
@@ -287,6 +287,7 @@ export default function Chat() {
 
   const [activeConvId, setActiveConvId] = useState<string>('')
   const [isHistoryLoaded, setIsHistoryLoaded] = useState(false)
+  const isDirtyRef = useRef(false)
 
   // 核心：当账号加载或切换时，严格隔离并拉取属于当前账号独享的聊天历史与会话，严禁竞态覆盖
   useEffect(() => {
@@ -609,6 +610,7 @@ export default function Chat() {
 
   const updateConversation = useCallback(
     (convId: string, updater: (conv: Conversation) => Conversation) => {
+      isDirtyRef.current = true
       setConversations(prev => prev.map(c => (c.id === convId ? updater(c) : c)))
     },
     []
@@ -1231,6 +1233,7 @@ export default function Chat() {
         messages: [buildWelcomeMessage(initialAgent, activeProject?.name)],
         createdAt: new Date(),
       }
+      isDirtyRef.current = true
       setConversations(prev => [newConv, ...prev])
       setActiveConvId(id)
     },
@@ -1255,9 +1258,13 @@ export default function Chat() {
           )
         } catch {}
       }
-      // 异步同步到云端沙箱与 SQLite 数据库
-      if (user?.id && conversations.length > 0) {
-        api.saveAiConversations(conversations.slice(0, 40)).catch(() => {})
+      // 异步同步到云端沙箱与 SQLite 数据库 (仅在有本地改动时才同步上云，防止挂载时空写触发刷新)
+      if (user?.id && conversations.length > 0 && isDirtyRef.current) {
+        api.saveAiConversations(conversations.slice(0, 40))
+          .then(() => {
+            isDirtyRef.current = false
+          })
+          .catch(() => {})
       }
     }, 600)
     return () => clearTimeout(timer)
@@ -1281,6 +1288,7 @@ export default function Chat() {
   const deleteConversation = useCallback(
     (convId: string) => {
       handleStopConversation(convId)
+      isDirtyRef.current = true
       api.deleteAiConversation(convId).catch(() => {})
       setConversations(prev => {
         const next = prev.filter(c => c.id !== convId)
@@ -2254,7 +2262,7 @@ export default function Chat() {
       />
 
       {/* 2. 主体三栏弹性工作区：左侧会话栏 + 中间主伴学流 + 右侧知识库伴读分栏 */}
-      <div className="flex-1 flex gap-3 min-h-0 overflow-hidden">
+      <div className="flex-1 flex gap-3 min-h-0 overflow-hidden relative z-0">
         {/* 2.1 左侧：项目与历史会话栏 */}
         {showSessions && (
           <div
@@ -2272,7 +2280,7 @@ export default function Chat() {
           }}
           className={`fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-2xl transition-transform duration-200 md:static md:z-auto md:shadow-2xs md:transition-none ${
             showSessions ? 'translate-x-0' : '-translate-x-full md:hidden'
-          } overflow-hidden md:border md:border-slate-200/85 md:rounded-2xl shrink-0 complex-panel-contain`}
+          } overflow-hidden md:border md:border-neutral-200/80 md:rounded-xl shrink-0 shadow-xs complex-panel-contain`}
         >
           <div className="h-full flex flex-col bg-white">
             {/* 项目工作区与快捷操作一体顶栏 */}
@@ -2371,10 +2379,10 @@ export default function Chat() {
                         handleSelectConversation(conv.id)
                         if (window.innerWidth < 768) setShowSessions(false)
                       }}
-                      className={`group flex items-center gap-2.5 px-3 py-2.5 mx-2 rounded-xl cursor-pointer text-xs transition-all ${
+                      className={`group flex items-center gap-2.5 px-3 py-2.5 mx-2 rounded-lg cursor-pointer text-xs transition-all ${
                         isCurrent
-                          ? 'bg-indigo-50/85 text-indigo-950 font-semibold ring-1 ring-indigo-200/70'
-                          : 'text-slate-600 hover:bg-slate-50'
+                          ? 'bg-neutral-900 text-white font-medium shadow-xs'
+                          : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
                       }`}
                     >
                       {isConvRunning ? (
@@ -2382,7 +2390,7 @@ export default function Chat() {
                       ) : (
                         <MessageSquare
                           className={`w-3.5 h-3.5 shrink-0 mt-0.5 self-start ${
-                            isCurrent ? 'text-indigo-600' : 'text-slate-400'
+                            isCurrent ? 'text-white' : 'text-neutral-400'
                           }`}
                         />
                       )}
@@ -2464,12 +2472,12 @@ export default function Chat() {
         )}
 
         {/* 2.2 中间：主伴学对话流 + 一体化智能输入舱 */}
-        <div className="flex-1 flex flex-col bg-white sm:border sm:border-slate-200/85 sm:rounded-2xl overflow-hidden min-w-0 shadow-2xs complex-panel-contain">
+        <div className="flex-1 flex flex-col bg-white sm:border sm:border-neutral-200/80 sm:rounded-xl overflow-hidden min-w-0 shadow-xs complex-panel-contain">
           {/* 消息滚动列表 */}
           <div
             ref={messagesContainerRef}
             onScroll={handleMessagesScroll}
-            className="flex-1 overflow-y-auto px-3 py-4 sm:px-6 sm:py-6 space-y-5 relative bg-gradient-to-b from-slate-50/40 to-white"
+            className="flex-1 overflow-y-auto px-3 py-4 sm:px-6 sm:py-6 space-y-5 relative bg-neutral-50/20"
           >
             {isWelcomeState ? (
               <div
@@ -2477,7 +2485,7 @@ export default function Chat() {
               >
                 {/* 清爽通透的居中导师欢迎区 (Clean Studio Hero) */}
                 <div className="flex flex-col items-center text-center max-w-2xl mx-auto mb-7 sm:mb-9">
-                  <div className="w-14 h-14 rounded-2xl bg-indigo-50/80 border border-indigo-100 flex items-center justify-center text-2xl shadow-2xs mb-3.5">
+                  <div className="w-14 h-14 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center text-2xl shadow-2xs mb-3.5">
                     {activeAgent.icon}
                   </div>
                   <div className="flex items-center gap-2 flex-wrap justify-center mb-2">
@@ -2537,7 +2545,7 @@ export default function Chat() {
                           type="button"
                           onClick={() => handleSend(promptText)}
                           disabled={isCurrentRunning}
-                          className="p-4 text-left rounded-2xl border border-slate-200/85 bg-white hover:bg-indigo-50/30 hover:border-indigo-300 hover:shadow-xs transition-all flex flex-col gap-1.5 group cursor-pointer"
+                          className="p-4 text-left rounded-xl border border-neutral-200/80 bg-white hover:border-neutral-900 hover:shadow-xs transition-all flex flex-col gap-1.5 group cursor-pointer"
                         >
                           <span className="text-[11px] font-semibold text-indigo-600/90">
                             {badges[idx % badges.length]}
@@ -2684,9 +2692,9 @@ export default function Chat() {
           <NoteCompanionPanel
             tree={tree}
             selectedNote={selectedNote}
-            onSelectNotePath={path => handleNoteClick(path)}
+            onSelectNotePath={(path: string) => handleNoteClick(path)}
             onClearSelectedNote={() => setSelectedNote(null)}
-            onQuickActionWithNote={promptText => {
+            onQuickActionWithNote={(promptText: string) => {
               handleSend(promptText)
               if (window.innerWidth < 768) setShowFiles(false)
             }}

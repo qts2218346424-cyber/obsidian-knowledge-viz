@@ -26,7 +26,7 @@ const FlashcardsTab = lazy(() => import('../components/study/FlashcardsTab'))
 // 内存级缓存，避免切页时出现空白等待
 let cachedBooksList: BookItem[] | null = null
 
-type Tab = 'topology' | 'flashcards' | 'handouts' | 'pdfs' | 'coursewares' | 'errors' | 'progress'
+type Tab = 'topology' | 'mastery' | 'flashcards' | 'handouts' | 'pdfs' | 'coursewares' | 'errors' | 'progress'
 
 // Palette for charts
 const colorPalette = [
@@ -34,12 +34,204 @@ const colorPalette = [
   '#06b6d4', '#f59e0b', '#6366f1', '#14b8a6', '#84cc16',
 ]
 
+
+// ── Subframe Screen 4 Replica: 考点掌握度状态色谱 (Mastery Palette) ──
+const CS_408_SWATCHES = [
+  { name: '二叉树遍历', stage: 'Gray 50', hex: '#F9FAFB', desc: '先序中序后序与线索化', border: true },
+  { name: 'AVL/红黑树', stage: 'Gray 100', hex: '#F3F4F6', desc: '平衡旋转与插入调整', border: true },
+  { name: 'Dijkstra算法', stage: 'Gray 200', hex: '#E5E7EB', desc: '单源最短路与贪心推演', border: false },
+  { name: 'IEEE754浮点', stage: 'Gray 300', hex: '#BFC4CD', desc: '阶码尾数与规格化移码', border: false },
+  { name: '流水线冒险', stage: 'Gray 400', hex: '#9CA3AF', desc: '结构/数据/控制冲突与转发', border: false },
+  { name: '虚拟页式存储', stage: 'Gray 500', hex: '#6B7280', desc: '快表TLB命中率与多级页表', border: false },
+  { name: 'PV信号量机制', stage: 'Gray 600', hex: '#4B5563', desc: '生产者消费者与哲学家就餐', border: false },
+  { name: 'TCP拥塞控制', stage: 'Gray 700', hex: '#374151', desc: '慢开始/拥塞避免/快重传', border: false },
+  { name: 'BGP/OSPF路由', stage: 'Gray 800', hex: '#1F2937', desc: '距离向量与链路状态算法', border: false },
+  { name: '快速排序手撕', stage: 'Gray 900', hex: '#111827', desc: '双向划分与时间复杂度证明', border: false },
+  { name: '408真题压轴', stage: 'Gray 950', hex: '#030712', desc: '软硬件协同综合应用大题', border: false },
+]
+
+const MATH_SWATCHES = [
+  { name: '等价无穷小代换', stage: 'Violet 50', hex: '#F1EEFF', desc: '常见8组泰勒前置代换', border: false },
+  { name: '洛必达与导数定义', stage: 'Violet 100', hex: '#E6E1FF', desc: '未定式极限判定法则', border: false },
+  { name: '泰勒展开8大公式', stage: 'Violet 200', hex: '#D2CBFF', desc: '高阶无穷小精确截断展开', border: false },
+  { name: '拉格朗日中值定理', stage: 'Violet 300', hex: '#B7ACFF', desc: '单调性与根的存在性证明', border: false },
+  { name: '柯西中值与积分中值', stage: 'Violet 400', hex: '#9C8CFF', desc: '构造辅助函数的经典法门', border: false },
+  { name: '反常积分审敛法', stage: 'Violet 500', hex: '#8470FF', desc: 'p级数对比判别法与极限法', border: false },
+  { name: '多元微积分黑塞矩阵', stage: 'Violet 600', hex: '#755FF8', desc: '二次型正定与极值充分条件', border: false },
+  { name: '伴随矩阵公式群', stage: 'Violet 700', hex: '#5D47DE', desc: '特征多项式与反矩阵乘积', border: false },
+  { name: '特征值正交对角化', stage: 'Violet 800', hex: '#4634B1', desc: '实对称矩阵正交相似对角化', border: false },
+  { name: '大数定律中心极限', stage: 'Violet 900', hex: '#2F227C', desc: '切比雪夫/辛钦/独立同分布', border: false },
+  { name: '数一二三压轴精通', stage: 'Violet 950', hex: '#1C1357', desc: '微积分构造与矩阵方程秒杀', border: false },
+]
+
+function MasteryPaletteSection({ onSelectTopic }: { onSelectTopic: (topic: string) => void }) {
+  const [copiedTopic, setCopiedTopic] = useState<string | null>(null)
+
+  const handleCopyTopic = (topic: string, hex: string) => {
+    navigator.clipboard?.writeText?.(topic)
+    setCopiedTopic(topic)
+    setTimeout(() => setCopiedTopic(null), 2500)
+  }
+
+  return (
+    <div className="space-y-4 pb-8 animate-fade-in-up">
+      {/* Top Floating Action Bar (Subframe Screen 4 Replica) */}
+      <div className="flex flex-wrap items-center justify-between gap-2 py-1">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white shadow-xs border border-zinc-200/70 text-xs font-semibold text-[#18181b]">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span>考研考点掌握度状态色谱 (Mastery Palette)</span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="inline-flex items-center bg-white rounded-xl p-0.5 shadow-xs border border-zinc-200/70 text-xs font-medium text-[#27272a]">
+            <button
+              type="button"
+              onClick={() => alert('已将当前 22 个核心考点掌握度进度导出为本地配置 JSON')}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg hover:bg-zinc-100 transition-colors cursor-pointer"
+            >
+              <span>导出进度</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => alert('已从本地知识库同步最新考点状态')}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg hover:bg-zinc-100 transition-colors cursor-pointer"
+            >
+              <span>同步 Vault</span>
+            </button>
+          </div>
+
+          <a
+            href="/chat"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-900 text-white shadow-xs text-xs font-medium hover:bg-black transition-colors"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Ask AI: 生成自测卷</span>
+          </a>
+        </div>
+      </div>
+
+      {copiedTopic && (
+        <div className="px-3.5 py-2 rounded-xl bg-neutral-900 text-white text-xs font-medium shadow-lg border border-neutral-800 flex items-center gap-2 animate-in fade-in">
+          <Check className="w-3.5 h-3.5 text-emerald-400" />
+          <span>已就绪考点「{copiedTopic}」，可直接前往做题中心或向 AI 导师提问</span>
+        </div>
+      )}
+
+      {/* 408 Gray Palette Card (Screen 4 Exact Replica) */}
+      <div className="bg-white rounded-2xl border border-zinc-200/70 p-5 sm:p-6 shadow-xs">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h2 className="text-sm sm:text-base font-semibold text-[#18181b] flex items-center gap-2">
+              <span>🖥️ 408 计算机学科专业基础 · 掌握度阶度</span>
+            </h2>
+            <p className="text-xs text-zinc-400 mt-0.5">从初识概念 (Gray 50) 到压轴综合大题手撕精通 (Gray 950)</p>
+          </div>
+          <span className="subframe-pill text-[11px]">11 级阶度</span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-12 gap-y-6 gap-x-3 justify-items-center">
+          {CS_408_SWATCHES.map((item, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => handleCopyTopic(item.name, item.hex)}
+              className="group flex flex-col items-center focus:outline-none cursor-pointer text-center max-w-[84px]"
+              title={`点击考查「${item.name}」：${item.desc}`}
+            >
+              <div
+                className={`w-[54px] h-[54px] sm:w-[60px] sm:h-[60px] rounded-full mb-2 transition-transform group-hover:scale-105 shadow-xs flex items-center justify-center text-[10px] font-mono ${
+                  item.border ? 'border border-zinc-200/90' : ''
+                }`}
+                style={{ backgroundColor: item.hex }}
+              />
+              <div className="text-[11px] font-semibold text-[#18181b] leading-tight group-hover:text-black line-clamp-1">
+                {item.name}
+              </div>
+              <div className="text-[10px] text-[#8e9196] font-mono mt-0.5">
+                {item.stage}
+              </div>
+            </button>
+          ))}
+
+          {/* Add custom topic button */}
+          <button
+            type="button"
+            onClick={() => {
+              const name = prompt('输入你想攻坚的 408 自定义考点名称:')
+              if (name) alert(`已成功将「${name}」添加至 408 色谱掌握度跟踪器`)
+            }}
+            className="group flex flex-col items-center justify-start focus:outline-none cursor-pointer text-center"
+            title="添加自建 408 考点"
+          >
+            <div className="w-[54px] h-[54px] sm:w-[60px] sm:h-[60px] rounded-full border border-dashed border-zinc-300 group-hover:border-zinc-400 group-hover:bg-zinc-50 flex items-center justify-center text-zinc-500 text-lg transition-colors mb-2">
+              +
+            </div>
+            <div className="text-[11px] font-medium text-zinc-500">自建考点</div>
+          </button>
+        </div>
+      </div>
+
+      {/* Math Violet Palette Card (Screen 4 Exact Replica) */}
+      <div className="bg-white rounded-2xl border border-zinc-200/70 p-5 sm:p-6 shadow-xs">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h2 className="text-sm sm:text-base font-semibold text-[#18181b] flex items-center gap-2">
+              <span>📐 考研数学 · 核心公式与定理掌握度色谱</span>
+            </h2>
+            <p className="text-xs text-zinc-400 mt-0.5">从公式初识 (Violet 50) 到压轴中值构造与证明秒杀 (Violet 950)</p>
+          </div>
+          <span className="subframe-pill text-[11px]">11 级阶度</span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-12 gap-y-6 gap-x-3 justify-items-center">
+          {MATH_SWATCHES.map((item, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => handleCopyTopic(item.name, item.hex)}
+              className="group flex flex-col items-center focus:outline-none cursor-pointer text-center max-w-[84px]"
+              title={`点击考查「${item.name}」：${item.desc}`}
+            >
+              <div
+                className="w-[54px] h-[54px] sm:w-[60px] sm:h-[60px] rounded-full mb-2 transition-transform group-hover:scale-105 shadow-xs flex items-center justify-center text-[10px] font-mono"
+                style={{ backgroundColor: item.hex }}
+              />
+              <div className="text-[11px] font-semibold text-[#18181b] leading-tight group-hover:text-black line-clamp-1">
+                {item.name}
+              </div>
+              <div className="text-[10px] text-[#8e9196] font-mono mt-0.5">
+                {item.stage}
+              </div>
+            </button>
+          ))}
+
+          {/* Add custom topic button */}
+          <button
+            type="button"
+            onClick={() => {
+              const name = prompt('输入你想攻坚的数学公式或定理名称:')
+              if (name) alert(`已成功将「${name}」添加至考研数学色谱跟踪器`)
+            }}
+            className="group flex flex-col items-center justify-start focus:outline-none cursor-pointer text-center"
+            title="添加自建数学考点"
+          >
+            <div className="w-[54px] h-[54px] sm:w-[60px] sm:h-[60px] rounded-full border border-dashed border-zinc-300 group-hover:border-zinc-400 group-hover:bg-zinc-50 flex items-center justify-center text-zinc-500 text-lg transition-colors mb-2">
+              +
+            </div>
+            <div className="text-[11px] font-medium text-zinc-500">自建定理</div>
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Study() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const initialTab = (searchParams.get('tab') as Tab) || 'handouts'
   const [tab, setTab] = useState<Tab>(
-    ['topology', 'flashcards', 'handouts', 'pdfs', 'coursewares', 'errors', 'progress'].includes(initialTab)
+    ['topology', 'mastery', 'flashcards', 'handouts', 'pdfs', 'coursewares', 'errors', 'progress'].includes(initialTab)
       ? initialTab
       : 'handouts'
   )
@@ -361,7 +553,7 @@ export default function Study() {
   return (
     <div className="min-h-full xl:h-full flex flex-col gap-3 sm:gap-4 overflow-visible xl:overflow-hidden pb-4 xl:pb-0">
       {/* Top Banner / Hero - 响应式智能收拢 */}
-      <div className="bg-surface border border-cream-200 rounded-2xl p-3.5 sm:p-5 shadow-2xs shrink-0 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
+      <div className="bg-surface border border-neutral-200/80 rounded-xl p-3.5 sm:p-5 shadow-2xs shrink-0 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-bold bg-accent-orange/15 text-warm-800 border border-accent-orange/20">
@@ -381,20 +573,19 @@ export default function Study() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0 self-stretch sm:self-auto justify-between sm:justify-end">
-          {/* 手机端/平板快速记笔记入口 */}
           <button
             type="button"
             onClick={() => window.dispatchEvent(new CustomEvent('open-quick-note'))}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2.5 sm:py-2 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold text-xs hover:bg-indigo-100 transition-all active:scale-95 shadow-2xs cursor-pointer"
+            className="subframe-btn-secondary h-8 px-3 text-xs font-medium cursor-pointer"
             title="一键呼出随手记，记录考点与错题"
           >
-            <Edit3 className="w-3.5 h-3.5 text-indigo-600" />
+            <Edit3 className="w-3.5 h-3.5 text-neutral-500" />
             <span>随手记</span>
           </button>
           <button
             type="button"
             onClick={() => setImportModalOpen(true)}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2.5 sm:py-2 rounded-xl bg-accent-orange text-white font-semibold text-xs hover:bg-accent-orange/90 transition-all shadow-xs active:scale-95 cursor-pointer"
+            className="subframe-btn-black h-8 px-3.5 text-xs font-medium cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>导入资料</span>
@@ -403,40 +594,41 @@ export default function Study() {
             type="button"
             onClick={loadMaterials}
             disabled={loadingBooks}
-            className="p-2.5 sm:p-2 rounded-xl bg-cream-200 text-warm-500 hover:text-warm-700 hover:bg-cream-300 transition-colors disabled:opacity-50 shrink-0 cursor-pointer"
+            className="h-8 w-8 rounded-lg border border-neutral-200/90 bg-white text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900 transition-colors disabled:opacity-50 flex items-center justify-center shrink-0 cursor-pointer shadow-2xs"
             title="刷新资料库"
           >
-            <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${loadingBooks ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loadingBooks ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
 
-      {/* Tabs & Search & Filter Bar - 手机端单行横滑，绝不折行占满整屏 */}
-      <div className="bg-surface border border-cream-200 rounded-2xl px-2.5 py-2 sm:px-4 sm:py-2.5 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-2 sm:gap-3 shrink-0">
-        {/* Navigation tabs - 手机端单行水平滚动 */}
-        <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-0.5 scroll-smooth shrink-0">
+      {/* Subframe Navigation Tabs & Search Bar */}
+      <div className="bento-card rounded-xl px-3 py-2 sm:px-4 sm:py-2.5 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-2 sm:gap-3 shrink-0">
+        {/* Navigation tabs - Subframe Pill Design */}
+        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 scroll-smooth shrink-0">
           {[
             { key: 'topology' as Tab, label: '🔥 考点拓扑', count: null },
+            { key: 'mastery' as Tab, label: '🎨 考点色谱', count: 22 },
             { key: 'flashcards' as Tab, label: '🎴 易忘闪卡', count: null },
             { key: 'handouts' as Tab, label: '📖 核心讲义', count: allHandouts.length },
             { key: 'pdfs' as Tab, label: '📑 PDF 教材与真题', count: pdfBooks.length },
-            { key: 'coursewares' as Tab, label: '🌐 交互仿真课件', count: INTERACTIVE_COURSEWARES.length },
+            { key: 'coursewares' as Tab, label: '🌐 仿真课件', count: INTERACTIVE_COURSEWARES.length },
             { key: 'errors' as Tab, label: '📝 每日错题', count: null },
             { key: 'progress' as Tab, label: '📊 研学进度', count: null },
           ].map(t => (
             <button
               key={t.key}
               onClick={() => handleTabChange(t.key)}
-              className={`flex items-center gap-1 px-3 py-2 sm:px-2.5 sm:py-1.5 min-h-[38px] sm:min-h-0 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer active:scale-95 ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap shrink-0 transition-all cursor-pointer active:scale-95 ${
                 tab === t.key
-                  ? 'bg-accent-orange text-white shadow-xs'
-                  : 'text-warm-600 hover:text-warm-900 hover:bg-cream-200/80 bg-cream-100/60'
+                  ? 'bg-neutral-900 text-white shadow-xs font-semibold'
+                  : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100/80'
               }`}
             >
               <span>{t.label}</span>
               {t.count !== null && (
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                  tab === t.key ? 'bg-white/25 text-white font-bold' : 'bg-cream-300 text-warm-500'
+                <span className={`text-[9.5px] px-1.5 py-0.2 rounded-md font-mono ${
+                  tab === t.key ? 'bg-neutral-800 text-neutral-200' : 'bg-neutral-100 text-neutral-500 border border-neutral-200/60'
                 }`}>
                   {t.count}
                 </span>
@@ -446,16 +638,16 @@ export default function Study() {
         </div>
 
         {/* Right Filter & Search */}
-        <div className="flex items-center gap-1.5 sm:gap-2 w-full xl:w-auto pt-1 xl:pt-0 border-t xl:border-t-0 border-cream-200/60">
+        <div className="flex items-center gap-1.5 sm:gap-2 w-full xl:w-auto pt-1 xl:pt-0 border-t xl:border-t-0 border-neutral-200/60">
           {/* Search box */}
           <div className="relative flex-1 xl:w-44">
-            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-warm-400" />
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400" />
             <input
               type="text"
               placeholder="搜索资料/考点..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-2.5 py-2.5 sm:py-1.5 text-xs bg-cream-100/80 border border-cream-200 rounded-xl text-warm-800 placeholder-warm-400 focus:outline-hidden focus:border-accent-orange transition-colors"
+              className="w-full pl-8 pr-2.5 py-1.5 text-xs bg-neutral-100/80 hover:bg-neutral-100 focus:bg-white border border-transparent focus:border-neutral-300 rounded-lg text-neutral-800 placeholder-neutral-400 outline-none transition-all"
             />
           </div>
 
@@ -463,7 +655,7 @@ export default function Study() {
           <select
             value={subjectFilter}
             onChange={e => setSubjectFilter(e.target.value)}
-            className="text-xs bg-cream-100/80 border border-cream-200 rounded-xl px-2 py-2.5 sm:py-1.5 text-warm-700 focus:outline-hidden focus:border-accent-orange shrink-0"
+            className="text-xs bg-neutral-100/80 hover:bg-neutral-100 focus:bg-white border border-transparent focus:border-neutral-300 rounded-lg px-2.5 py-1.5 text-neutral-700 outline-none shrink-0 transition-all cursor-pointer"
           >
             <option value="all">全部学科</option>
             <option value="cs_408">408 计算机</option>
@@ -486,6 +678,9 @@ export default function Study() {
         <Suspense fallback={<div className="py-12 flex justify-center text-xs text-slate-400"><Loader2 className="w-4 h-4 animate-spin mr-2 text-indigo-500" />正在按需渲染视图...</div>}>
           {/* TAB 0: 考点知识拓扑与掌握度热力分布 */}
           {tab === 'topology' && <MasteryTopologyView />}
+
+          {/* TAB 0.2: Subframe Screen 4 考点掌握度状态色谱 */}
+          {tab === 'mastery' && <MasteryPaletteSection onSelectTopic={(topic) => { navigate(`/chat?prompt=${encodeURIComponent('请深度剖析考点：' + topic)}`) }} />}
 
           {/* TAB 0.5: 408 易忘考点记忆闪卡与极速背诵 */}
           {tab === 'flashcards' && <FlashcardsTab />}
@@ -513,7 +708,7 @@ export default function Study() {
                     <div
                       key={handout.id}
                       onClick={() => handleOpenHandout(handout)}
-                      className="bg-surface border border-cream-200 hover:border-accent-orange/40 rounded-2xl p-5 cursor-pointer transition-all duration-200 hover:shadow-md flex flex-col justify-between group"
+                      className="bg-surface border border-cream-200 hover:border-neutral-900 rounded-2xl p-5 cursor-pointer transition-all duration-200 hover:shadow-md flex flex-col justify-between group"
                     >
                       <div>
                         {/* Top tags */}
@@ -597,22 +792,22 @@ export default function Study() {
         {tab === 'pdfs' && (
           <div className="space-y-5">
             {/* 智能解析与知识库/题库归类总控条 */}
-            <div className="bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10 border border-cyan-500/20 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
+            <div className="bento-card rounded-xl border border-neutral-200/80 bg-white p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xs">
               <div className="flex items-center gap-3.5">
-                <div className="p-3 rounded-xl bg-cyan-500/20 text-cyan-600 border border-cyan-500/30 shrink-0">
-                  <Database className="w-6 h-6" />
+                <div className="p-2.5 rounded-lg bg-neutral-900 text-white shrink-0 shadow-xs">
+                  <Database className="w-5 h-5" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm sm:text-base font-bold text-warm-900">
+                    <h3 className="text-sm sm:text-base font-bold text-neutral-900">
                       AI 讲义 & 题目自动解析归类引擎
                     </h3>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-700 border border-cyan-500/30">
+                    <span className="subframe-pill text-[10px]">
                       双轨深度整合
                     </span>
                   </div>
-                  <p className="text-xs text-warm-600 mt-1">
-                    全自动研读超大 PDF 讲义与做题本：<b>提取知识点精讲归入知识图谱</b>，<b>抽取真题与解析批量注入题库</b>。
+                  <p className="text-xs text-neutral-500 mt-1">
+                    全自动研读 PDF 讲义：提取知识点精讲归入知识图谱，抽取真题与解析批量注入题库。
                   </p>
                 </div>
               </div>
@@ -622,7 +817,7 @@ export default function Study() {
                   type="button"
                   onClick={handleBatchExtractAll}
                   disabled={batchExtracting || books.length === 0}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 shadow-sm transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                  className="subframe-btn-black px-4 py-2 flex items-center gap-2 disabled:opacity-50 cursor-pointer text-xs font-medium"
                   title="全自动将当前所有教材与真题卷排队解析入库"
                 >
                   {batchExtracting ? (
@@ -664,7 +859,7 @@ export default function Study() {
             )}
 
             {filteredPdfs.length === 0 ? (
-              <div className="text-center py-16 text-warm-400 space-y-3 bg-surface border border-cream-200 rounded-2xl">
+              <div className="text-center py-16 text-warm-400 space-y-3 bg-surface border border-neutral-200/80 rounded-xl">
                 <FileText className="w-12 h-12 mx-auto opacity-30 text-rose-400" />
                 <div className="text-sm font-medium">暂无匹配的 PDF 电子教材或真题卷</div>
                 <p className="text-xs text-warm-400 max-w-sm mx-auto">
@@ -726,7 +921,7 @@ export default function Study() {
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-start justify-between gap-1">
-                              <h3 className="text-sm font-bold text-warm-800 group-hover:text-cyan-700 transition-colors leading-snug line-clamp-2">
+                              <h3 className="text-sm font-bold text-warm-800 group-hover:text-neutral-900 transition-colors leading-snug line-clamp-2">
                                 {book.name}
                               </h3>
                               <button
@@ -760,7 +955,7 @@ export default function Study() {
                             className={`px-2 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-xs cursor-pointer ${
                               isExtracted
                                 ? 'bg-cream-100 hover:bg-cyan-50 text-warm-700 hover:text-cyan-700 border border-cream-300'
-                                : 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700'
+                                : 'subframe-btn-black'
                             }`}
                             title="AI 智能解析知识点归入知识库，抽取题目存入题库"
                           >
@@ -829,18 +1024,8 @@ export default function Study() {
                       newParams.set('cw', item.id)
                       setSearchParams(newParams, { replace: true })
                     }}
-                    className="relative overflow-hidden bg-surface border border-cream-200/90 hover:border-cyan-400/70 rounded-2xl p-4 sm:p-5 cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.99] flex flex-col justify-between group"
+                    className="bento-card rounded-xl border border-neutral-200/80 bg-white p-5 cursor-pointer transition-all duration-200 hover:border-neutral-900 hover:shadow-xs active:scale-[0.99] flex flex-col justify-between group"
                   >
-                    {/* 顶部学科微光色带 */}
-                    <div
-                      className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${
-                        isPol
-                          ? 'from-rose-500 via-red-500 to-amber-500'
-                          : isCs
-                          ? 'from-cyan-500 via-sky-500 to-indigo-500'
-                          : 'from-orange-500 via-amber-500 to-purple-500'
-                      } opacity-75 group-hover:opacity-100 transition-opacity`}
-                    />
 
                     <div>
                       <div className="flex items-center justify-between gap-2 mb-3">
@@ -862,18 +1047,12 @@ export default function Study() {
 
                       <div className="flex items-start gap-3">
                         <div
-                          className={`w-11 h-11 rounded-xl border shrink-0 flex items-center justify-center text-xl shadow-2xs group-hover:scale-105 transition-transform ${
-                            isPol
-                              ? 'bg-gradient-to-br from-rose-50 to-red-100/70 border-rose-200/80'
-                              : isCs
-                              ? 'bg-gradient-to-br from-cyan-50 to-sky-100/70 border-cyan-200/80'
-                              : 'bg-gradient-to-br from-orange-50 to-purple-100/70 border-purple-200/80'
-                          }`}
+                          className="w-10 h-10 rounded-lg bg-neutral-100 border border-neutral-200 shrink-0 flex items-center justify-center text-lg shadow-2xs group-hover:scale-105 transition-transform text-neutral-800" 
                         >
                           {iconEmoji}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h3 className="text-sm font-bold text-warm-900 group-hover:text-cyan-700 transition-colors leading-snug">
+                          <h3 className="text-sm font-bold text-warm-900 group-hover:text-neutral-900 transition-colors leading-snug">
                             {cleanTitle}
                           </h3>
                           <p className="text-xs text-warm-500 mt-1.5 line-clamp-2 leading-relaxed">
@@ -1166,7 +1345,7 @@ function DailyErrorTab() {
 
   if (!data || data.dueQuestions.length === 0) {
     return (
-      <div className="bg-surface border border-cream-200 rounded-2xl text-center py-16 space-y-4 max-w-xl mx-auto">
+      <div className="bg-surface border border-neutral-200/80 rounded-xl text-center py-16 space-y-4 max-w-xl mx-auto">
         <Check className="w-12 h-12 mx-auto text-accent-sage/40" />
         <div className="text-base font-bold text-warm-800">太棒了！今日没有待复习的错题</div>
         <div className="text-xs text-warm-400">
@@ -1208,7 +1387,7 @@ function DailyErrorTab() {
         </div>
       </div>
 
-      <div className="bg-surface border border-cream-200 rounded-2xl overflow-hidden shadow-xs">
+      <div className="bg-surface border border-neutral-200/80 rounded-xl overflow-hidden shadow-xs">
         <div className="p-6 space-y-4">
           <div className="flex items-center gap-2">
             <XCircle className="w-4 h-4 text-rose-500" />
@@ -1359,7 +1538,7 @@ function ProgressTab() {
       </div>
 
       {/* Chart */}
-      <div className="bg-surface border border-cream-200 rounded-2xl p-5 shadow-xs">
+      <div className="bg-surface border border-neutral-200/80 rounded-xl p-5 shadow-xs">
         <div className="text-xs font-bold text-warm-700 mb-4">408 与 考研数学各科讲义与真题覆盖分布</div>
         <ResponsiveContainer width="100%" height={260}>
           <BarChart data={chartData} barCategoryGap="25%">

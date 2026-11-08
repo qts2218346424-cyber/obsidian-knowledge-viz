@@ -37,6 +37,8 @@ export type PointLogType =
   | 'admin_grant'
   | 'admin_deduct'
   | 'initial_grant'
+  | 'coupon_redeem'
+  | 'recharge'
 
 export interface PointLogItem {
   id: string
@@ -69,4 +71,29 @@ export interface AdminGrantResult {
   points: number
   delta: number
   message?: string
+}
+
+export interface CouponCodeItem {
+  code: string
+  points: number
+  maxUses: number
+  usedCount: number
+  expiresAt?: string
+  description?: string
+  createdBy?: string
+  createdAt: string
+}
+
+export interface RedeemCouponResult {
+  success: boolean
+  points: number
+  earned: number
+  message: string
+}
+
+export interface RechargeResult {
+  success: boolean
+  points: number
+  recharged: number
+  message: string
 }

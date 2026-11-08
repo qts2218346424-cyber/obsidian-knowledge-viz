@@ -15,6 +15,7 @@ import { database } from '../db/database.js'
 import { calculateSM2, estimateRetentionRate } from '../algorithms/sm2.js'
 import { MasteryEngine } from '../algorithms/mastery.js'
 import { matchSyllabusNode } from '../data/syllabus.js'
+import { VOCAB_POOL as SHARED_VOCAB_POOL } from '../../shared/data/vocabulary/index.js'
 
 
 export const studyRouter = Router()
@@ -624,35 +625,9 @@ function loadVocabPool(): Array<{
   roots?: string
   synonyms?: string
 }> {
-  const items: any[] = []
-  const objRegex = /\{\s*word:\s*'([^']*)'[\s,]*phonetic:\s*'([^']*)'[\s,]*definition:\s*'([^']*)'[\s,]*example:\s*'([^']*)'[\s,]*exampleCn:\s*'([^']*)'[\s,]*frequency:\s*'([^']*)'[\s,]*unit:\s*(\d+)(?:[\s,]*roots?:\s*'([^']*)')?(?:[\s,]*synonyms?:\s*'([^']*)')?[\s,]*\}/g
-  for (let i = 1; i <= 4; i++) {
-    try {
-      const fp = path.join(__dirname, '..', 'src', 'data', `vocab-part${i}.ts`)
-      if (!fs.existsSync(fp)) continue
-      const content = fs.readFileSync(fp, 'utf-8')
-      const arrayMatch = content.match(/VOCAB_PART\d.*?=\s*\[([\s\S]*)\]/)
-      if (!arrayMatch) continue
-      let match
-      while ((match = objRegex.exec(arrayMatch[1])) !== null) {
-        items.push({
-          word: match[1],
-          phonetic: match[2],
-          definition: match[3],
-          example: match[4],
-          exampleCn: match[5],
-          frequency: match[6],
-          unit: parseInt(match[7]),
-          roots: match[8] || undefined,
-          synonyms: match[9] || undefined,
-        })
-      }
-      objRegex.lastIndex = 0
-    } catch {
-      // skip failed part
-    }
+  if (SHARED_VOCAB_POOL && SHARED_VOCAB_POOL.length > 0) {
+    return SHARED_VOCAB_POOL
   }
-  if (items.length > 0) return items
   return [
     { word: 'analyze', phonetic: '/ˈænəlaɪz/', definition: '分析', example: 'We need to analyze the data.', exampleCn: '我们需要分析数据。', frequency: '高频', unit: 1 },
     { word: 'significant', phonetic: '/sɪɡˈnɪfɪkənt/', definition: '重要的；显著的', example: 'A significant difference.', exampleCn: '一个显著的差异。', frequency: '高频', unit: 1 },
