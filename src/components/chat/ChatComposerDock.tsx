@@ -102,19 +102,28 @@ export const ChatComposerDock = memo(function ChatComposerDock({
   const { points, isAdmin } = useAuth()
   const [isExpandedEditor, setIsExpandedEditor] = useState(false)
 
-  // 自动调节 Textarea 高度：移动端 32px 紧凑启动，舒展自然不压迫
+  // 自动调节 Textarea 高度：移动端 26px 极简紧凑启动，根据实际打字动态长高与即时收缩归位
   useEffect(() => {
     const el = textareaRef.current
     if (!el) return
     if (isExpandedEditor) {
-      el.style.height = '200px'
+      el.style.height = '180px'
       return
     }
-    el.style.height = 'auto'
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 640
-    const minHeight = isMobile ? 32 : 42
+    const minHeight = isMobile ? 26 : 34
     const maxHeight = isMobile ? 120 : 160
-    const nextHeight = Math.min(Math.max(el.scrollHeight, minHeight), maxHeight)
+
+    // 当输入为空或空白字符时，瞬间强制重置归位为极简单行高度，杜绝多余高度滞留
+    if (!input || !input.trim()) {
+      el.style.height = `${minHeight}px`
+      return
+    }
+
+    // 动态重置高度为 auto 后，根据实际文本内容精确测量 scrollHeight，随着字数增加自动长高，随着文字删除自动收缩
+    el.style.height = 'auto'
+    const scrollH = el.scrollHeight
+    const nextHeight = Math.min(Math.max(scrollH, minHeight), maxHeight)
     el.style.height = `${nextHeight}px`
   }, [input, isExpandedEditor])
 
@@ -141,8 +150,8 @@ export const ChatComposerDock = memo(function ChatComposerDock({
   )
 
   return (
-    <div className="shrink-0 bg-gradient-to-t from-white via-white to-slate-50/40 pt-0.5 sm:pt-1">
-      <div className={`${messageWidthClass} mx-auto w-full px-2 sm:px-6 pb-1 sm:pb-3`}>
+    <div className="shrink-0 bg-gradient-to-t from-white via-white to-slate-50/40 pt-0 sm:pt-1">
+      <div className={`${messageWidthClass} mx-auto w-full px-1.5 sm:px-6 pb-0.5 sm:pb-2.5`}>
         {/* 1. 运行状态实时横幅 */}
         {runningStatus && (
           <div className="mb-2 px-3.5 py-1.5 rounded-xl bg-amber-50/95 border border-amber-200/80 flex items-center justify-between gap-2 text-[11px] text-amber-800 shadow-2xs">
@@ -161,9 +170,9 @@ export const ChatComposerDock = memo(function ChatComposerDock({
           </div>
         )}
 
-        {/* 2. 对话展开后的轻量发散追问条（移动端紧凑排布） */}
+        {/* 2. 对话展开后的轻量发散追问条（移动端微缩紧凑） */}
         {!hideQuickPrompts && promptsList.length > 0 && (
-          <div className="mb-1 sm:mb-2 flex items-center gap-1 sm:gap-1.5 overflow-x-auto whitespace-nowrap no-scrollbar py-0.5">
+          <div className="mb-0.5 sm:mb-1.5 flex items-center gap-1 sm:gap-1.5 overflow-x-auto whitespace-nowrap no-scrollbar py-0.2 sm:py-0.5">
             <div className="flex items-center gap-1 shrink-0">
               <span className="text-[11px] font-semibold text-slate-500 flex items-center gap-1">
                 <span>{activeAgent.icon}</span>
@@ -198,7 +207,7 @@ export const ChatComposerDock = memo(function ChatComposerDock({
                 onClick={() => onSend(qp)}
                 disabled={isCurrentRunning}
                 title={`点击直接提问：${qp}`}
-                className="px-3 py-1 rounded-full text-[11px] font-medium text-neutral-700 bg-white border border-neutral-200 hover:border-neutral-900 hover:bg-neutral-50 transition-all shrink-0 truncate max-w-[240px] sm:max-w-xs cursor-pointer active:scale-95 shadow-2xs"
+                className="px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-[11px] font-medium text-neutral-700 bg-white border border-neutral-200 hover:border-neutral-900 hover:bg-neutral-50 transition-all shrink-0 truncate max-w-[200px] sm:max-w-xs cursor-pointer active:scale-95 shadow-2xs"
               >
                 {qp}
               </button>
@@ -370,8 +379,8 @@ export const ChatComposerDock = memo(function ChatComposerDock({
             </div>
           )}
 
-          {/* 3.2 多行自适应输入区 (移动端瘦身紧凑) */}
-          <div className="relative px-2.5 sm:px-4 pt-1.5 sm:pt-3 pb-0.5 sm:pb-1.5 flex items-start gap-1.5 sm:gap-2">
+          {/* 3.2 多行自适应输入区 (超轻量自适应：根据打字自动收缩) */}
+          <div className="relative px-2 sm:px-3.5 pt-1 sm:pt-2 pb-0 sm:pb-0.5 flex items-start gap-1 sm:gap-2">
             <textarea
               ref={textareaRef}
               value={input}
@@ -386,10 +395,10 @@ export const ChatComposerDock = memo(function ChatComposerDock({
               placeholder={
                 selectedNote
                   ? `围绕《${selectedNote.title || selectedNote.path.split('/').pop()}》提问...`
-                  : `向 ${activeAgent.name} 提问 408 / 数学考点，或粘贴真题...`
+                  : `向 ${activeAgent.name} 提问，或粘贴题目...`
               }
               rows={1}
-              className="flex-1 bg-transparent border-none text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-hidden resize-none leading-normal sm:leading-relaxed py-0.5"
+              className="flex-1 bg-transparent border-none text-[12px] sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-hidden resize-none leading-snug sm:leading-relaxed py-0"
             />
             {(input.length > 60 || isExpandedEditor) && (
               <button
@@ -407,33 +416,33 @@ export const ChatComposerDock = memo(function ChatComposerDock({
             )}
           </div>
 
-          {/* 3.3 输入舱底栏：统一轻量工具组 + 柔和语调与发送 (移动端不换行瘦身) */}
-          <div className="px-2 sm:px-3 pb-1.5 sm:pb-2.5 pt-0.5 sm:pt-1 flex items-center justify-between gap-1 sm:gap-2">
+          {/* 3.3 输入舱底栏：统一轻量工具组 + 柔和语调与发送 (轻量微缩贴底) */}
+          <div className="px-1.5 sm:px-3 pb-1 sm:pb-2 pt-0.5 flex items-center justify-between gap-1 sm:gap-2">
             <div className="flex items-center gap-0.5 sm:gap-1 shrink min-w-0">
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center gap-1 px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+                className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2.5 py-0.5 sm:py-1.5 rounded-md sm:rounded-xl text-[10.5px] sm:text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
                 title="上传题目截图或手写推导照片"
               >
-                <ImageIcon className="w-3.5 h-3.5 text-slate-500" />
-                <span className="text-[11px] sm:text-xs">传图</span>
+                <ImageIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-500" />
+                <span className="text-[10.5px] sm:text-xs">传图</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => docFileInputRef.current?.click()}
-                className="inline-flex items-center gap-1 px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+                className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2.5 py-0.5 sm:py-1.5 rounded-md sm:rounded-xl text-[10.5px] sm:text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
                 title="上传 PDF 讲义、Word、Markdown 文档或代码文件"
               >
-                <Paperclip className="w-3.5 h-3.5 text-slate-500" />
-                <span className="text-[11px] sm:text-xs font-bold text-indigo-700 sm:font-medium sm:text-slate-600">文件</span>
+                <Paperclip className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-slate-500" />
+                <span className="text-[10.5px] sm:text-xs font-bold text-indigo-700 sm:font-medium sm:text-slate-600">文件</span>
               </button>
 
               <button
                 type="button"
                 onClick={onToggleNotePanel}
-                className={`inline-flex items-center gap-1 px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-medium transition-colors cursor-pointer shrink-0 ${
+                className={`inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2.5 py-0.5 sm:py-1.5 rounded-md sm:rounded-xl text-[10.5px] sm:text-xs font-medium transition-colors cursor-pointer shrink-0 ${
                   selectedNote
                     ? 'bg-amber-50 text-amber-800 font-semibold'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -441,9 +450,9 @@ export const ChatComposerDock = memo(function ChatComposerDock({
                 title="关联或伴读知识库中的笔记"
               >
                 <BookOpen
-                  className={`w-3.5 h-3.5 ${selectedNote ? 'text-amber-600' : 'text-slate-500'}`}
+                  className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${selectedNote ? 'text-amber-600' : 'text-slate-500'}`}
                 />
-                <span className="hidden xs:inline text-[11px] sm:text-xs">
+                <span className="hidden xs:inline text-[10.5px] sm:text-xs">
                   {selectedNote ? '换笔记' : '笔记'}
                 </span>
               </button>
@@ -451,10 +460,10 @@ export const ChatComposerDock = memo(function ChatComposerDock({
               <button
                 type="button"
                 onClick={onOpenStepTutor}
-                className="inline-flex items-center gap-1 px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-medium text-slate-600 hover:text-indigo-700 hover:bg-indigo-50/70 transition-colors cursor-pointer shrink-0"
+                className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2.5 py-0.5 sm:py-1.5 rounded-md sm:rounded-xl text-[10.5px] sm:text-xs font-medium text-slate-600 hover:text-indigo-700 hover:bg-indigo-50/70 transition-colors cursor-pointer shrink-0"
                 title="开启考研启发式分步推导辅导 (CoT)"
               >
-                <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-indigo-500" />
                 <span className="hidden sm:inline">分步辅导</span>
               </button>
 
@@ -492,10 +501,10 @@ export const ChatComposerDock = memo(function ChatComposerDock({
               <button
                 type="button"
                 onClick={() => window.dispatchEvent(new CustomEvent('open-checkin-modal'))}
-                className="inline-flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-[11px] px-1.5 sm:px-2 py-0.5 rounded-lg border border-amber-200/80 bg-amber-50/70 hover:bg-amber-100 text-amber-800 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-0.5 text-[9.5px] sm:text-[11px] px-1 sm:px-2 py-0.5 rounded-md border border-amber-200/80 bg-amber-50/70 hover:bg-amber-100 text-amber-800 transition-colors cursor-pointer"
                 title="单次提问消耗 0.1 积分 · 每日签到免费领 1 积分"
               >
-                <Coins className="w-3 h-3 text-amber-600" />
+                <Coins className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-600" />
                 <span className="font-mono font-bold">{points.toFixed(1)}</span>
                 <span className="hidden sm:inline text-[10px] text-amber-700">分 (-0.1/次)</span>
               </button>
@@ -503,7 +512,7 @@ export const ChatComposerDock = memo(function ChatComposerDock({
                 <button
                   type="button"
                   onClick={() => onInputChange('')}
-                  className="text-[11px] sm:text-xs text-slate-400 hover:text-slate-600 px-1 py-0.5 rounded hover:bg-slate-100 cursor-pointer"
+                  className="text-[10.5px] sm:text-xs text-slate-400 hover:text-slate-600 px-1 py-0.5 rounded hover:bg-slate-100 cursor-pointer"
                   title="清空输入框"
                 >
                   清空
@@ -515,24 +524,24 @@ export const ChatComposerDock = memo(function ChatComposerDock({
               </span>
 
               {isCurrentRunning ? (
-                <div className="flex items-center gap-1 sm:gap-1.5">
+                <div className="flex items-center gap-1">
                   <button
                     type="button"
                     onClick={onStop}
-                    className="h-7 sm:h-8 px-2.5 sm:px-3.5 rounded-lg sm:rounded-xl bg-red-500 hover:bg-red-600 text-white text-[11px] sm:text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95 flex items-center gap-1"
+                    className="h-6 sm:h-8 px-2 sm:px-3.5 rounded-md sm:rounded-xl bg-red-500 hover:bg-red-600 text-white text-[10.5px] sm:text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95 flex items-center gap-0.5 sm:gap-1"
                     title="停止当前会话生成"
                   >
-                    <Square className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-current" />
+                    <Square className="w-2.5 h-2.5 fill-current" />
                     <span>停止</span>
                   </button>
                   {(input.trim() || stagedImages.length > 0 || stagedFiles.length > 0) && (
                     <button
                       type="button"
                       onClick={() => onSend(undefined, true)}
-                      className="h-7 sm:h-8 px-2.5 sm:px-4 rounded-lg bg-neutral-900 hover:bg-black text-white text-[11px] sm:text-xs font-medium transition-all cursor-pointer shadow-xs active:scale-95 flex items-center gap-1"
+                      className="h-6 sm:h-8 px-2 sm:px-4 rounded-md sm:rounded-lg bg-neutral-900 hover:bg-black text-white text-[10.5px] sm:text-xs font-medium transition-all cursor-pointer shadow-xs active:scale-95 flex items-center gap-0.5 sm:gap-1"
                       title="打断当前回答并立即发送新问题"
                     >
-                      <Send className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                      <Send className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5" />
                       <span>抢发</span>
                     </button>
                   )}
@@ -541,11 +550,11 @@ export const ChatComposerDock = memo(function ChatComposerDock({
                 <button
                   type="button"
                   onClick={() => window.dispatchEvent(new CustomEvent('open-checkin-modal'))}
-                  className="h-7 sm:h-8 px-2.5 sm:px-3 rounded-lg sm:rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-[11px] sm:text-xs font-bold transition-all shadow-xs active:scale-95 flex items-center gap-1 cursor-pointer animate-pulse"
+                  className="h-6 sm:h-8 px-2 sm:px-3 rounded-md sm:rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-[10.5px] sm:text-xs font-bold transition-all shadow-xs active:scale-95 flex items-center gap-1 cursor-pointer animate-pulse"
                   title="伴学积分不足（单次需 0.1 积分），点击每日签到免费领取"
                 >
-                  <Coins className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                  <span>签到领分</span>
+                  <Coins className="w-3 h-3" />
+                  <span>领分</span>
                 </button>
               ) : (
                 <button
@@ -557,9 +566,9 @@ export const ChatComposerDock = memo(function ChatComposerDock({
                     stagedImages.length === 0 &&
                     stagedFiles.length === 0
                   }
-                  className="h-7 sm:h-8 px-3 sm:px-4 rounded-lg sm:rounded-xl bg-slate-900 hover:bg-indigo-600 text-white text-[11.5px] sm:text-xs font-semibold transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer shadow-xs active:scale-95 flex items-center gap-1 sm:gap-1.5"
+                  className="h-6.5 sm:h-8 px-2.5 sm:px-4 rounded-md sm:rounded-xl bg-slate-900 hover:bg-indigo-600 text-white text-[11px] sm:text-xs font-semibold transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer shadow-xs active:scale-95 flex items-center gap-1"
                 >
-                  <Send className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                  <Send className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5" />
                   <span>发送</span>
                 </button>
               )}

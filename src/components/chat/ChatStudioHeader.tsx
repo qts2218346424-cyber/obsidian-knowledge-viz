@@ -4,6 +4,7 @@ import {
   MessageSquare,
   PanelLeft,
   ChevronDown,
+  ChevronUp,
   FolderTree,
   Settings,
   Plus,
@@ -172,6 +173,18 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
   const [skillsDropdownOpen, setSkillsDropdownOpen] = useState(false)
   const [modelPopoverOpen, setModelPopoverOpen] = useState(false)
   const [agentDropdownOpen, setAgentDropdownOpen] = useState(false)
+  // 支持顶部设置栏收缩与折叠，最大化聊天视野
+  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(() => {
+    return typeof window !== 'undefined' && localStorage.getItem('coreforge_chat_header_collapsed') === 'true'
+  })
+
+  const toggleHeaderCollapse = () => {
+    setIsHeaderCollapsed(prev => {
+      const next = !prev
+      localStorage.setItem('coreforge_chat_header_collapsed', String(next))
+      return next
+    })
+  }
 
   const closeAllPopovers = () => {
     setHubPopoverOpen(false)
@@ -192,8 +205,54 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
 
   return (
     <div className={`shrink-0 space-y-2 relative ${isAnyPopoverOpen ? 'z-40' : 'z-20'}`}>
-      {/* 📱 移动端单行高能顶栏 */}
-      <div className="flex md:hidden items-center justify-between gap-1.5 px-2.5 py-1.5 bg-white border-b border-slate-200/90 relative z-20">
+      {/* 📱 移动端折叠收缩后的极简超细微型胶囊 (高度仅 26px，完全释放上方聊天视野) */}
+      {isHeaderCollapsed && (
+        <div className="flex md:hidden items-center justify-between gap-1 px-2 py-0.5 bg-white/95 border-b border-slate-200/80 shadow-2xs backdrop-blur-md relative z-20">
+          <div className="flex items-center gap-1 min-w-0">
+            <button
+              type="button"
+              onClick={onToggleSessions}
+              className="p-1 rounded-lg text-slate-500 hover:text-slate-900 active:scale-95"
+              title="历史会话列表"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+            </button>
+            <div
+              onClick={toggleHeaderCollapse}
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-800 text-[11px] font-bold cursor-pointer active:scale-95 truncate"
+              title="点击展开完整引擎与导师设置"
+            >
+              <span>{activeAgent.icon}</span>
+              <span className="truncate max-w-[76px]">{activeAgent.name}</span>
+              <span className="w-1 h-1 rounded-full bg-emerald-500 shrink-0" />
+              <span className="font-mono text-[9.5px] text-slate-500 truncate max-w-[65px]">{displayModelName}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-0.5 shrink-0">
+            <button
+              type="button"
+              onClick={onCreateNewConversation}
+              className="p-1 rounded-lg text-slate-600 hover:bg-slate-100 active:scale-95"
+              title="新建对话"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={toggleHeaderCollapse}
+              className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-bold text-[10px] border border-indigo-200/70 active:scale-95 cursor-pointer"
+              title="展开顶部设置"
+            >
+              <span>设置</span>
+              <ChevronDown className="w-2.5 h-2.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 📱 移动端展开态完整顶栏 */}
+      <div className={`${isHeaderCollapsed ? 'hidden' : 'flex'} md:hidden items-center justify-between gap-1.5 px-2.5 py-1.5 bg-white border-b border-slate-200/90 relative z-20`}>
         <div className="flex items-center gap-1 min-w-0">
           <button
             type="button"
@@ -342,11 +401,68 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
           >
             <Plus className="w-4 h-4" />
           </button>
+          <button
+            type="button"
+            onClick={toggleHeaderCollapse}
+            className="h-9 px-1.5 inline-flex items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 active:scale-95 transition-all border border-slate-200/80"
+            title="收起顶部设置栏，扩大聊天视窗"
+          >
+            <ChevronUp className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
 
-      {/* 🖥️ 桌面端：清爽呼吸感双组工作台顶栏 */}
-      <div className={`hidden md:flex items-center justify-between gap-4 bg-white border border-neutral-200/80 rounded-xl px-3.5 py-2 shadow-xs backdrop-blur-md relative ${isAnyPopoverOpen ? 'z-40' : 'z-20'}`}>
+      {/* 🖥️ 桌面端收起态微型悬浮条 */}
+      {isHeaderCollapsed && (
+        <div className="hidden md:flex items-center justify-between gap-3 bg-white/95 border border-neutral-200/80 rounded-xl px-3 py-1 shadow-2xs backdrop-blur-md relative z-20">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onToggleSessions}
+              className="h-6 px-2 rounded-lg text-slate-500 hover:text-slate-900 border border-slate-200/70 text-xs flex items-center gap-1 cursor-pointer"
+              title="切换会话栏"
+            >
+              <PanelLeft className="w-3 h-3" />
+              <span className="text-[10px] font-mono">{conversationsCount}</span>
+            </button>
+            <div
+              onClick={toggleHeaderCollapse}
+              className="flex items-center gap-1.5 text-xs text-slate-700 font-medium cursor-pointer hover:text-indigo-600 transition-colors"
+              title="点击展开完整设置"
+            >
+              <span>{activeAgent.icon}</span>
+              <span className="font-bold">{activeAgent.name}</span>
+              <span className="text-slate-300">·</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span className="font-mono text-slate-500 text-[11px]">{displayModelName}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={onCreateNewConversation}
+              className="h-6 px-2 rounded-lg bg-neutral-900 hover:bg-black text-white text-[11px] font-medium flex items-center gap-1 cursor-pointer shadow-2xs"
+              title="开启全新伴学对话"
+            >
+              <Plus className="w-3 h-3" />
+              <span>新对话</span>
+            </button>
+            <button
+              type="button"
+              onClick={toggleHeaderCollapse}
+              className="h-6 px-2.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+              title="展开完整引擎、模型、技能与双师设置"
+            >
+              <span>展开设置</span>
+              <ChevronDown className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 🖥️ 桌面端：清爽呼吸感双组工作台顶栏 (支持一键收缩) */}
+      <div className={`${isHeaderCollapsed ? 'hidden' : 'hidden md:flex'} items-center justify-between gap-4 bg-white border border-neutral-200/80 rounded-xl px-3.5 py-2 shadow-xs backdrop-blur-md relative ${isAnyPopoverOpen ? 'z-40' : 'z-20'}`}>
         {/* 左组：侧栏开关 + 当值导师切换 + 新对话 */}
         <div className="flex items-center gap-2 min-w-0">
           <button
@@ -994,6 +1110,17 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
             ) : (
               <Maximize2 className="w-4 h-4" />
             )}
+          </button>
+
+          {/* 收起顶部设置按钮 */}
+          <button
+            type="button"
+            onClick={toggleHeaderCollapse}
+            className="h-9 px-2.5 inline-flex items-center justify-center gap-1 rounded-xl border border-slate-200/85 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 text-xs font-medium transition-all cursor-pointer active:scale-95"
+            title="收起顶部设置栏，获得更大聊天屏幕视野"
+          >
+            <ChevronUp className="w-3.5 h-3.5 text-slate-500" />
+            <span className="hidden lg:inline text-[11px]">收起</span>
           </button>
         </div>
       </div>
