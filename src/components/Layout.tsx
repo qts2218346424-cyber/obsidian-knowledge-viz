@@ -260,7 +260,7 @@ export default function Layout({ children }: LayoutProps) {
 
   const mobileBottomTabs = [
     { to: '/dashboard', label: '首页', icon: Home },
-    { to: '/quiz', label: '做题', icon: ClipboardList },
+    { to: '/study', label: '学习中心', icon: BookOpen },
     { to: '/chat', label: 'AI伴学', icon: Bot, isCenter: true },
     { to: '__subject__', label: '学科专攻', icon: GraduationCap, isSubject: true },
     { to: '__tools__', label: '全部功能', icon: LayoutGrid, isAction: true },
