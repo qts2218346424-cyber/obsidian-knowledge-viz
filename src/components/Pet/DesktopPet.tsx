@@ -57,7 +57,7 @@ const NAILONG_VOICE_PACK: PetVoiceItem[] = [
     audio: '/pets/voices/nailong_5.mp3?v=3',
   },
   {
-    text: '芜湖！你居然学了这么久，太酷啦！快看奶龙给你跳个扭屁股舞，12月26号咱们妥妥考上岸，耶！🌟',
+    text: '芜湖！你居然学了这么久，太酷啦！快看奶龙给你跳个扭屁股舞，12月19号咱们妥妥考上岸，耶！🌟',
     audio: '/pets/voices/nailong_6.mp3?v=3',
   },
 ]
@@ -294,7 +294,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
 
   const [isLocalModel, setIsLocalModel] = useState(true)
 
-  // 考研初试统一倒计时（12月26日初试）
+  // 考研初试统一倒计时（12月19日初试）
   const daysToExam = Math.max(
     0,
     getExamCountdownDays()

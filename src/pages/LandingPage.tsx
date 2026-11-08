@@ -13,6 +13,7 @@ import {
   BookOpen,
   Cpu,
   GraduationCap,
+  Landmark,
   Network,
   ClipboardList,
   Clock,
@@ -51,7 +52,7 @@ interface DownloadInfo {
   }
 }
 
-type ModeType = '408' | 'math' | 'ai'
+type ModeType = '408' | 'math' | 'politics' | 'english' | 'ai'
 
 export default function LandingPage() {
   const { isAuthenticated, login, register, initAdmin, initialized } = useAuth()
@@ -181,6 +182,20 @@ export default function LandingPage() {
       heroSubject: '全国硕士研究生考研数学 (数一/二/三)',
       cardDetail: '严格数学排版符号体系，AI 分步点拨证明思路，告别跳步与盲目看答案。',
     },
+    politics: {
+      title: '时空浩瀚，史纲通达。',
+      subtitle: '考研政治 · 全屏史纲时空轴与肖秀荣精选题库。',
+      badge: '当前模式：考研政治 —— 阿里 DataV 高精矢量中国地图、1840~2024 近代史会议、肖秀荣 1000 题与考点遮罩背诵。',
+      heroSubject: '考研政治 · 史纲时空大本营与 1000 题精粹',
+      cardDetail: '金田起义、遵义会议、中共七大与十一届三中全会。时空地图发光轨迹与考点一键收藏。',
+    },
+    english: {
+      title: '笔耕不辍，下笔有神。',
+      subtitle: '考研英语 · 高分作文模板与 AI 智能多维批改。',
+      badge: '当前模式：考研英语 —— 英语一图画/英语二图表万能三段论模板、20 分考研标准分换算、平庸词升级与真题长难句剖析。',
+      heroSubject: '考研英语 · 全题型研学中枢与 AI 智能批改',
+      cardDetail: '建议信、道歉信、招募告示；四维阅卷 0ms 出分；2000+ 大纲核心词汇艾宾浩斯复盘。',
+    },
     ai: {
       title: '多 Agent 协同伴学。',
       subtitle: '本地 Claude Code / Codex 与云端大模型无缝联动。',
@@ -231,7 +246,7 @@ export default function LandingPage() {
             href="#subjects"
             className="px-3.5 py-1 rounded-lg text-[13px] font-medium text-[#6e7178] hover:text-[#171719] hover:bg-white/50 transition-colors"
           >
-            学科双核
+            考研四核
           </a>
           <a
             href="#download"
@@ -326,7 +341,37 @@ export default function LandingPage() {
                 <span>考研数学</span>
               </button>
 
-              {/* Tab 3: 本地 AI 伴学 */}
+                            {/* Tab 3: 考研政治 */}
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveMode('politics')
+                  showToast('已切换至 考研政治 全屏史纲时空轴模式')
+                }}
+                className={`mode-switch-btn relative flex items-center justify-center gap-1.5 px-2.5 sm:px-5 py-2 sm:py-3 rounded-[12px] text-xs sm:text-[14px] font-medium transition-all duration-200 cursor-pointer ${
+                  activeMode === 'politics' ? 'metal-tab-active' : 'metal-tab-inactive'
+                }`}
+              >
+                <Landmark className="w-4 h-4 drop-shadow-[0_0_6px_rgba(255,255,255,0.7)]" />
+                <span>考研政治</span>
+              </button>
+
+              {/* Tab 4: 考研英语 */}
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveMode('english')
+                  showToast('已切换至 考研英语 作文模板与智能批改模式')
+                }}
+                className={`mode-switch-btn relative flex items-center justify-center gap-1.5 px-2.5 sm:px-5 py-2 sm:py-3 rounded-[12px] text-xs sm:text-[14px] font-medium transition-all duration-200 cursor-pointer ${
+                  activeMode === 'english' ? 'metal-tab-active' : 'metal-tab-inactive'
+                }`}
+              >
+                <BookOpen className="w-4 h-4 drop-shadow-[0_0_6px_rgba(255,255,255,0.7)]" />
+                <span>考研英语</span>
+              </button>
+
+              {/* Tab 5: 本地 AI 伴学 */}
               <button
                 type="button"
                 onClick={() => {
@@ -441,7 +486,7 @@ export default function LandingPage() {
             {/* 工作台顶部仿 Chrome 导航条（移动端自适应防挤压） */}
             <div className="h-9 px-3 sm:px-4 bg-[#fafafa] border-b border-zinc-200/80 flex items-center justify-between text-[11px] text-zinc-500 overflow-hidden">
               <div className="flex items-center gap-2 sm:gap-3.5 truncate">
-                <span className="font-semibold text-zinc-900 truncate">408与考研数学工作台</span>
+                <span className="font-semibold text-zinc-900 truncate">408 · 数学 · 政治 · 英语 全科考研工作台</span>
                 <span className="text-zinc-400 hidden sm:inline">·</span>
                 <span className="hidden sm:inline">知识拓扑</span>
                 <span className="text-zinc-800 font-medium hidden sm:inline">+ 真题导入</span>
@@ -755,17 +800,17 @@ export default function LandingPage() {
       <section id="subjects" className="py-20 max-w-[1280px] mx-auto px-4 sm:px-8">
         <div className="text-center max-w-2xl mx-auto mb-14">
           <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest">
-            DUAL-CORE ARCHITECTURE
+            QUAD-CORE ECOSYSTEM
           </span>
           <h2 className="mt-1 text-3xl sm:text-4xl font-bold text-[#18181b] tracking-[-0.03em]">
-            硬核深耕考研两大核心科目
+            全面覆盖考研四大主力科目
           </h2>
           <p className="mt-3 text-sm text-[#71717a]">
-            拒绝泛泛的通用笔记本，CoreForge 为 408 计算机与考研数学量身定制。
+            拒绝泛泛的通用笔记本，CoreForge 为 408 计算机、考研数学、考研政治与考研英语量身定制四核研学生态。
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
           <div className="rounded-[16px] bg-white border border-zinc-200/80 p-7 shadow-[0_2px_12px_rgba(0,0,0,0.04)]">
             <div className="flex items-center gap-3 mb-4">
               <span className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-900 font-bold">
@@ -823,6 +868,71 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
+
+          {/* 3. 考研政治 */}
+          <div className="rounded-[16px] bg-white border border-zinc-200/80 p-6 sm:p-7 shadow-[0_2px_12px_rgba(0,0,0,0.04)] flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <span className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-900 font-bold">
+                  <Landmark className="w-5 h-5 text-rose-600" />
+                </span>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-zinc-900">考研政治 史纲时空大本营</h3>
+                  <span className="text-xs text-zinc-500">时空轴 · 中国地图 · 肖秀荣1000题</span>
+                </div>
+              </div>
+              <p className="text-xs text-zinc-600 leading-relaxed mb-5">
+                阿里 DataV 高精矢量中国地图与球形墨卡托对齐。1840~2024 近代史重要会议与重大事件全屏滑动，肖秀荣 1000 题即时判分与考点遮罩背诵。
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 font-medium text-zinc-800">
+                🗺️ 高精矢量中国地图
+              </div>
+              <div className="p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 font-medium text-zinc-800">
+                ⏱️ 1840~2024 时空大屏
+              </div>
+              <div className="p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 font-medium text-zinc-800">
+                📝 肖秀荣 1000 题精粹
+              </div>
+              <div className="p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 font-medium text-zinc-800">
+                🔒 核心考点遮罩自测
+              </div>
+            </div>
+          </div>
+
+          {/* 4. 考研英语 */}
+          <div className="rounded-[16px] bg-white border border-zinc-200/80 p-6 sm:p-7 shadow-[0_2px_12px_rgba(0,0,0,0.04)] flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <span className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-900 font-bold">
+                  <BookOpen className="w-5 h-5 text-indigo-600" />
+                </span>
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-zinc-900">考研英语 全题型研学中枢</h3>
+                  <span className="text-xs text-zinc-500">作文模板 · AI批改 · 真题精读</span>
+                </div>
+              </div>
+              <p className="text-xs text-zinc-600 leading-relaxed mb-5">
+                英语一图画与英语二图表黄金三段论模板。考研 20 分四维标准分智能批改，识别平庸词并给出高阶替换卡，历年真题长难句树状语法拆解。
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 font-medium text-zinc-800">
+                📜 大小作文高分模板
+              </div>
+              <div className="p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 font-medium text-zinc-800">
+                ⚡ 考研标准分 AI 批改
+              </div>
+              <div className="p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 font-medium text-zinc-800">
+                🌳 长难句树状语法拆解
+              </div>
+              <div className="p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 font-medium text-zinc-800">
+                📈 2000+ 词汇艾宾浩斯
+              </div>
+            </div>
+          </div>
+
         </div>
       </section>
 

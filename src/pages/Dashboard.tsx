@@ -91,7 +91,7 @@ export default function Dashboard() {
   const [recentFiles, setRecentFiles] = useState<FileListItem[]>([])
   const [filesLoading, setFilesLoading] = useState(true)
   const [searchFilter, setSearchFilter] = useState('')
-  const [activeMode, setActiveMode] = useState<'cs' | 'math' | 'ai'>('cs')
+  const [activeMode, setActiveMode] = useState<'cs' | 'math' | 'politics' | 'english' | 'ai'>('cs')
   const [customCount, setCustomCount] = useState(0)
 
   const loadCustomCount = useCallback(() => {
@@ -201,6 +201,34 @@ export default function Dashboard() {
       actionPrimaryLabel: '开始数学高频冲刺',
       actionSecondary: '/chat',
       actionSecondaryLabel: 'AI 严谨公式分步推导',
+    },
+    politics: {
+      headline: '考研政治 史纲时空大本营',
+      subheadline: '全屏史纲时空轴 · 阿里 DataV 高精矢量中国地图 · 肖秀荣 1000 题精选',
+      badge: (
+        <>
+          <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
+          <span>当前激活：<strong>政治总攻舱</strong> — 1840~2024 近代史会议、真题考点收藏与发光地图</span>
+        </>
+      ),
+      actionPrimary: '/politics',
+      actionPrimaryLabel: '开启史纲时空大屏',
+      actionSecondary: '/politics',
+      actionSecondaryLabel: '刷肖秀荣精选题',
+    },
+    english: {
+      headline: '考研英语 全题型研学中枢',
+      subheadline: '大小作文高分模板 · AI 作文四维智能批改 · 历年真题精读与长难句透析',
+      badge: (
+        <>
+          <span className="w-1.5 h-1.5 rounded-full bg-purple-600" />
+          <span>当前激活：<strong>英语总攻舱</strong> — 英语一/二双轨作文三段论、考研 20 分标准换算与大纲词库</span>
+        </>
+      ),
+      actionPrimary: '/english',
+      actionPrimaryLabel: '进入英语作战舱',
+      actionSecondary: '/english',
+      actionSecondaryLabel: 'AI 作文智能批改',
     },
     ai: {
       headline: '研考 AI 导师多智能体伴学',
@@ -364,7 +392,31 @@ export default function Dashboard() {
                 <span>考研数学</span>
               </button>
 
-              {/* Tab 3: AI 伴学 */}
+                            {/* Tab 3: 考研政治 */}
+              <button
+                type="button"
+                onClick={() => setActiveMode('politics')}
+                className={`relative flex items-center justify-center gap-1.5 px-3 sm:px-5 py-2 sm:py-2.5 rounded-[12px] text-xs sm:text-[13px] font-medium transition-all duration-200 cursor-pointer ${
+                  activeMode === 'politics' ? 'metal-tab-active' : 'metal-tab-inactive'
+                }`}
+              >
+                <Landmark className={`h-3.5 w-3.5 ${activeMode === 'politics' ? 'text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.8)]' : ''}`} />
+                <span>考研政治</span>
+              </button>
+
+              {/* Tab 4: 考研英语 */}
+              <button
+                type="button"
+                onClick={() => setActiveMode('english')}
+                className={`relative flex items-center justify-center gap-1.5 px-3 sm:px-5 py-2 sm:py-2.5 rounded-[12px] text-xs sm:text-[13px] font-medium transition-all duration-200 cursor-pointer ${
+                  activeMode === 'english' ? 'metal-tab-active' : 'metal-tab-inactive'
+                }`}
+              >
+                <BookOpen className={`h-3.5 w-3.5 ${activeMode === 'english' ? 'text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.8)]' : ''}`} />
+                <span>考研英语</span>
+              </button>
+
+              {/* Tab 5: AI 伴学 */}
               <button
                 type="button"
                 onClick={() => setActiveMode('ai')}
@@ -432,9 +484,9 @@ export default function Dashboard() {
           to="/graph"
         />
         <MetricCard
-          label="双核真题储备"
+          label="考研四核真题储备"
           value={`${totalQuestions} 题`}
-          subtext="408 + 高数线代概率"
+          subtext="408 + 数学 + 政治1000题 + 英语"
           icon={ClipboardList}
           to="/quiz"
         />
