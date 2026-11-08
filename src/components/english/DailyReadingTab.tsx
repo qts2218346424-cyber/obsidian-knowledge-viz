@@ -667,27 +667,29 @@ export default function DailyReadingTab() {
           <button
             type="button"
             onClick={() => setShowBilingual((v) => !v)}
-            className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+            className={`inline-flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer shrink-0 ${
               showBilingual
                 ? 'bg-slate-100 text-slate-800 border-slate-300'
                 : 'bg-white text-slate-500 border-slate-200'
             }`}
           >
-            {showBilingual ? <Eye className="w-3.5 h-3.5 text-indigo-600" /> : <EyeOff className="w-3.5 h-3.5" />}
-            <span>{showBilingual ? '中英对照' : '纯英文沉浸'}</span>
+            {showBilingual ? <Eye className="w-3.5 h-3.5 text-indigo-600 shrink-0" /> : <EyeOff className="w-3.5 h-3.5 shrink-0" />}
+            <span className="sm:hidden">{showBilingual ? '中英' : '纯英'}</span>
+            <span className="hidden sm:inline">{showBilingual ? '中英对照' : '纯英沉浸'}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setHighlightHardOnly((v) => !v)}
-            className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+            className={`inline-flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer shrink-0 ${
               highlightHardOnly
                 ? 'bg-amber-500 text-white border-amber-500 shadow-xs'
                 : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
             }`}
           >
-            <Flame className="w-3.5 h-3.5" />
-            <span>高亮长难句</span>
+            <Flame className="w-3.5 h-3.5 shrink-0" />
+            <span className="sm:hidden">长难句</span>
+            <span className="hidden sm:inline">高亮长难句</span>
           </button>
         </div>
       </div>

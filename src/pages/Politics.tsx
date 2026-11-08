@@ -411,12 +411,13 @@ export default function Politics() {
       <section className="rounded-3xl p-4 sm:p-5 relative overflow-hidden bg-white border border-slate-200/60 shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2 mb-1.5">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1.5">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-200/60 text-[11px] font-semibold text-indigo-700">
-                <Landmark className="w-3.5 h-3.5 text-indigo-600" />
-                <span>2026/2027 考研政治专攻</span>
+                <Landmark className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                <span className="sm:hidden">考研政治专攻</span>
+                <span className="hidden sm:inline">2026/2027 考研政治专攻</span>
               </span>
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 text-[11px] font-medium text-slate-600 border border-slate-200/60">
+              <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 text-[11px] font-medium text-slate-600 border border-slate-200/60">
                 <Flame className="w-3 h-3 text-amber-500" />
                 <span>史纲时空轴 · 肖秀荣 1000 题 · 易混对比</span>
               </span>
@@ -439,41 +440,44 @@ export default function Politics() {
               <button
                 type="button"
                 onClick={() => setActiveTab('timeline')}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
                   activeTab === 'timeline'
                     ? 'bg-slate-900 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <Compass className="w-3.5 h-3.5" />
-                <span>史纲时空大屏</span>
+                <Compass className="w-3.5 h-3.5 shrink-0" />
+                <span className="sm:hidden">时空轴</span>
+                <span className="hidden sm:inline">史纲时空大屏</span>
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab('xiao1000')}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
                   activeTab === 'xiao1000'
                     ? 'bg-slate-900 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <FileCheck2 className="w-3.5 h-3.5" />
-                <span>肖秀荣精选 (15题)</span>
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-rose-500/15 text-rose-700 font-extrabold">
+                <FileCheck2 className="w-3.5 h-3.5 shrink-0" />
+                <span className="sm:hidden">肖1000题</span>
+                <span className="hidden sm:inline">肖秀荣精选 (15题)</span>
+                <span className="hidden sm:inline px-1.5 py-0.2 rounded-full text-[10px] bg-rose-500/15 text-rose-700 font-extrabold">
                   刷题
                 </span>
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab('favorites')}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
                   activeTab === 'favorites'
                     ? 'bg-slate-900 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <Bookmark className="w-3.5 h-3.5" />
-                <span>考点收藏夹</span>
+                <Bookmark className="w-3.5 h-3.5 shrink-0" />
+                <span className="sm:hidden">考点收藏</span>
+                <span className="hidden sm:inline">考点收藏夹</span>
                 {totalFavCount > 0 && (
                   <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500 text-white font-extrabold">
                     {totalFavCount}
@@ -483,14 +487,15 @@ export default function Politics() {
               <button
                 type="button"
                 onClick={() => setActiveTab('matrices')}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
                   activeTab === 'matrices'
                     ? 'bg-slate-900 text-white shadow-xs'
                     : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <Table2 className="w-3.5 h-3.5" />
-                <span>横向易混矩阵</span>
+                <Table2 className="w-3.5 h-3.5 shrink-0" />
+                <span className="sm:hidden">易混矩阵</span>
+                <span className="hidden sm:inline">横向易混矩阵</span>
               </button>
             </div>
 
@@ -1012,26 +1017,32 @@ export default function Politics() {
         <div className="space-y-4">
           {/* 筛选控制器 */}
           <div className="bento-card rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-bold text-slate-500">学科模块：</span>
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <span className="text-xs font-bold text-slate-500 shrink-0">学科模块：</span>
               {(['all', '中国近现代史纲要', '马克思主义基本原理', '毛泽东思想和中国特色社会主义理论体系', '思想道德与法治'] as const).map(
-                (subj) => (
-                  <button
-                    key={subj}
-                    type="button"
-                    onClick={() => {
-                      setXiaoSubjectFilter(subj)
-                      setActiveQuestionIdx(0)
-                    }}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      xiaoSubjectFilter === subj
-                        ? 'bg-slate-900 text-white shadow-xs'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    {subj === 'all' ? '全部学科' : subj}
-                  </button>
-                )
+                (subj) => {
+                  const shortName = subj === 'all' ? '全部' : subj === '中国近现代史纲要' ? '史纲' : subj === '马克思主义基本原理' ? '马原' : subj === '毛泽东思想和中国特色社会主义理论体系' ? '毛中特' : '思修法基'
+                  const fullName = subj === 'all' ? '全部学科' : subj
+                  return (
+                    <button
+                      key={subj}
+                      type="button"
+                      onClick={() => {
+                        setXiaoSubjectFilter(subj)
+                        setActiveQuestionIdx(0)
+                      }}
+                      className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                        xiaoSubjectFilter === subj
+                          ? 'bg-slate-900 text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                      title={fullName}
+                    >
+                      <span className="sm:hidden">{shortName}</span>
+                      <span className="hidden sm:inline">{fullName}</span>
+                    </button>
+                  )
+                }
               )}
             </div>
 

@@ -377,9 +377,10 @@ ${essayInput.trim()}
       <section className="relative overflow-hidden rounded-3xl border border-slate-200/90 bg-gradient-to-br from-white via-indigo-50/20 to-slate-50 p-4 sm:p-8 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200/80 text-[11px] font-semibold text-indigo-700 shadow-2xs">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-600 animate-spin" style={{ animationDuration: '6s' }} />
-              <span>2026/2027 考研英语总攻作战舱 · 英语一 & 英语二双轨适配</span>
+            <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200/80 text-[11px] font-semibold text-indigo-700 shadow-2xs">
+              <Sparkles className="w-3.5 h-3.5 text-indigo-600 animate-spin shrink-0" style={{ animationDuration: '6s' }} />
+              <span className="sm:hidden">英语一 / 英语二研学总攻</span>
+              <span className="hidden sm:inline">2026/2027 考研英语总攻作战舱 · 英语一 & 英语二双轨适配</span>
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 flex items-center gap-2.5">
@@ -416,19 +417,20 @@ ${essayInput.trim()}
         </div>
 
         {/* 主功能导航切换药丸 */}
-        <div className="mt-6 flex items-center gap-2 overflow-x-auto no-scrollbar border-t border-slate-200/60 pt-4">
+        <div className="mt-5 sm:mt-6 flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar border-t border-slate-200/60 pt-3 sm:pt-4">
           <button
             type="button"
             onClick={() => setActiveTab('dailyReading')}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
               activeTab === 'dailyReading'
                 ? 'bg-slate-900 text-white shadow-md'
                 : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80'
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>每日文献精读 (AI伴读)</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950 font-black">
+            <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span className="sm:hidden">每日精读</span>
+            <span className="hidden sm:inline">每日文献精读 (AI伴读)</span>
+            <span className="hidden sm:inline text-[10px] px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950 font-black">
               外刊题源
             </span>
           </button>
@@ -436,29 +438,31 @@ ${essayInput.trim()}
           <button
             type="button"
             onClick={() => setActiveTab('papers')}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
               activeTab === 'papers'
                 ? 'bg-slate-900 text-white shadow-md'
                 : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80'
             }`}
           >
-            <FileEdit className="w-3.5 h-3.5 text-indigo-500" />
-            <span>历年真题精析与模考</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-white/20">长难句</span>
+            <FileEdit className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+            <span className="sm:hidden">历年真题</span>
+            <span className="hidden sm:inline">历年真题精析与模考</span>
+            <span className="hidden sm:inline text-[10px] px-1.5 py-0.2 rounded-md bg-white/20">长难句</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('grading')}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
               activeTab === 'grading'
                 ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
                 : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80 ring-1 ring-indigo-500/30'
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-            <span>作文批改舱 (大/小作文 20分制)</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950 font-black">
+            <Sparkles className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+            <span className="sm:hidden">作文批改</span>
+            <span className="hidden sm:inline">作文批改舱 (20分制)</span>
+            <span className="hidden sm:inline text-[10px] px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950 font-black">
               墨卷AI精批
             </span>
           </button>
@@ -466,29 +470,31 @@ ${essayInput.trim()}
           <button
             type="button"
             onClick={() => setActiveTab('templates')}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
               activeTab === 'templates'
                 ? 'bg-slate-900 text-white shadow-md'
                 : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80'
             }`}
           >
-            <ScrollText className="w-3.5 h-3.5" />
-            <span>作文高分模板库</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-white/20">大小作文</span>
+            <ScrollText className="w-3.5 h-3.5 shrink-0" />
+            <span className="sm:hidden">高分模板</span>
+            <span className="hidden sm:inline">作文高分模板库</span>
+            <span className="hidden sm:inline text-[10px] px-1.5 py-0.2 rounded-md bg-white/20">大小作文</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('vocab')}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
               activeTab === 'vocab'
                 ? 'bg-slate-900 text-white shadow-md'
                 : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80'
             }`}
           >
-            <BookOpen className="w-3.5 h-3.5" />
-            <span>核心词汇打卡复盘</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-white/20">艾宾浩斯</span>
+            <BookOpen className="w-3.5 h-3.5 shrink-0" />
+            <span className="sm:hidden">核心词汇</span>
+            <span className="hidden sm:inline">核心词汇打卡复盘</span>
+            <span className="hidden sm:inline text-[10px] px-1.5 py-0.2 rounded-md bg-white/20">艾宾浩斯</span>
           </button>
         </div>
       </section>

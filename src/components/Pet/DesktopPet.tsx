@@ -806,14 +806,14 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
         {bubbleText && (
           <div
             className={`pet-interactive absolute ${
-              isNearTop ? 'top-24' : 'bottom-full mb-3'
+              isNearTop ? 'top-20 sm:top-24' : 'bottom-full mb-2.5 sm:mb-3'
             } ${
               isRightSide ? 'right-0' : 'left-0'
-            } w-68 sm:w-72 max-w-[calc(100vw-24px)] p-3.5 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-amber-200/90 dark:border-amber-800/60 shadow-xl shadow-amber-500/10 text-xs text-slate-800 dark:text-slate-100 animate-in fade-in zoom-in-95 pointer-events-auto z-20`}
+            } w-[min(240px,calc(100vw-2rem))] sm:w-72 p-2.5 sm:p-3.5 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-amber-200/90 dark:border-amber-800/60 shadow-xl shadow-amber-500/10 text-xs text-slate-800 dark:text-slate-100 animate-in fade-in zoom-in-95 pointer-events-auto z-20`}
           >
-            <div className="flex items-start justify-between gap-2">
+            <div className="flex items-start justify-between gap-1.5 sm:gap-2">
               <div className="flex flex-col min-w-0">
-                <div className="flex items-center gap-1.5 font-extrabold text-amber-600 dark:text-amber-400">
+                <div className="flex items-center gap-1.5 font-extrabold text-amber-600 dark:text-amber-400 text-[11px] sm:text-xs">
                   <span>{persona.emoji} {persona.name}</span>
             {eyeCareActive && (
               <span className="text-[10px] text-sky-600 font-mono">
@@ -821,7 +821,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
               </span>
             )}
                 </div>
-                <div className="mt-1 leading-relaxed font-medium break-words text-slate-800 dark:text-slate-100">
+                <div className="mt-1 leading-snug sm:leading-relaxed font-medium break-words text-[11.5px] sm:text-xs text-slate-800 dark:text-slate-100 max-h-[120px] sm:max-h-none overflow-y-auto overscroll-contain line-clamp-4 sm:line-clamp-none">
                   {bubbleText}
                 </div>
                 {bubbleSubtext && (
@@ -1121,7 +1121,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                 showBubbleWithVoice(line.text, line.audio, 4800)
               }
             }}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/95 dark:bg-slate-900/95 text-amber-900 dark:text-amber-300 text-xs font-bold shadow-xl border border-amber-300 dark:border-amber-700/60 hover:scale-105 active:scale-95 transition-all cursor-pointer whitespace-nowrap select-none backdrop-blur-md"
+            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-full bg-white/95 dark:bg-slate-900/95 text-amber-900 dark:text-amber-300 text-[11px] sm:text-xs font-bold shadow-xl border border-amber-300 dark:border-amber-700/60 hover:scale-105 active:scale-95 transition-all cursor-pointer whitespace-nowrap select-none backdrop-blur-md max-w-[min(200px,calc(100vw-3rem))]"
             title="点击展开伴学奶龙（可按住自由拖拽）"
           >
             <LuluAvatar size="xs" showAccessories={false} />
