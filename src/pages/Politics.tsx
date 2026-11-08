@@ -1,5 +1,6 @@
 import ChinaHistoricalMap from '../components/ChinaHistoricalMap'
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { useAuth } from '../contexts/AuthContext'
 import {
   Landmark,
   MapPin,
@@ -87,11 +88,17 @@ export default function Politics() {
   const [activeMatrixId, setActiveMatrixId] = useState<string>(COMPARISON_MATRICES[0].id)
 
   // -------------------------------------------------------------
-  // 2. 收藏夹与刷题记录持久化
+  // 2. 用户级隔离：收藏夹与刷题记录持久化（杜绝新用户被历史缓存污染）
   // -------------------------------------------------------------
+  const { user } = useAuth()
+  const userSuffix = user?.id ? `_u_${user.id}` : '_guest'
+  const quizHistoryKey = `${STORAGE_KEY_QUIZ_HISTORY}${userSuffix}`
+  const favItemsKey = `${STORAGE_KEY_FAV_ITEMS}${userSuffix}`
+  const favQuestionsKey = `${STORAGE_KEY_FAV_QUESTIONS}${userSuffix}`
+
   const [favItemIds, setFavItemIds] = useState<Record<string, boolean>>(() => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY_FAV_ITEMS)
+      const raw = localStorage.getItem(favItemsKey)
       return raw ? JSON.parse(raw) : {}
     } catch {
       return {}
@@ -100,7 +107,7 @@ export default function Politics() {
 
   const [favQuestionIds, setFavQuestionIds] = useState<Record<string, boolean>>(() => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY_FAV_QUESTIONS)
+      const raw = localStorage.getItem(favQuestionsKey)
       return raw ? JSON.parse(raw) : {}
     } catch {
       return {}
@@ -109,30 +116,51 @@ export default function Politics() {
 
   const [quizAnswers, setQuizAnswers] = useState<Record<string, string | string[]>>(() => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY_QUIZ_HISTORY)
+      const raw = localStorage.getItem(quizHistoryKey)
       return raw ? JSON.parse(raw) : {}
     } catch {
       return {}
     }
   })
 
+  // 当用户登录状态变更时，重新加载该用户独立的答题历史
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY_FAV_ITEMS, JSON.stringify(favItemIds))
-    } catch {}
-  }, [favItemIds])
+      const raw = localStorage.getItem(quizHistoryKey)
+      setQuizAnswers(raw ? JSON.parse(raw) : {})
+    } catch {
+      setQuizAnswers({})
+    }
+  }, [quizHistoryKey])
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY_FAV_QUESTIONS, JSON.stringify(favQuestionIds))
+      localStorage.setItem(favItemsKey, JSON.stringify(favItemIds))
     } catch {}
-  }, [favQuestionIds])
+  }, [favItemIds, favItemsKey])
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY_QUIZ_HISTORY, JSON.stringify(quizAnswers))
+      localStorage.setItem(favQuestionsKey, JSON.stringify(favQuestionIds))
     } catch {}
-  }, [quizAnswers])
+  }, [favQuestionIds, favQuestionsKey])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(quizHistoryKey, JSON.stringify(quizAnswers))
+    } catch {}
+  }, [quizAnswers, quizHistoryKey])
+
+  // 清空本账号答题记录重新开始自测
+  const handleResetQuizHistory = () => {
+    if (window.confirm('确定要清空当前的政治刷题记录吗？清空后将从第一题重新开始自测。')) {
+      setQuizAnswers({})
+      try {
+        localStorage.removeItem(quizHistoryKey)
+        localStorage.removeItem(STORAGE_KEY_QUIZ_HISTORY) // 同时清除遗留旧缓存
+      } catch {}
+    }
+  }
 
   // -------------------------------------------------------------
   // 3. 肖秀荣 1000 题状态
@@ -900,8 +928,20 @@ export default function Politics() {
               {/* 左侧：题号列表导航抽屉 (3列) */}
               <div className="lg:col-span-3 bento-card rounded-3xl p-4 space-y-3">
                 <div className="flex items-center justify-between text-xs font-bold text-slate-700">
-                  <span>题号导航 (共 {filteredXiaoQuestions.length} 题)</span>
-                  <span className="text-emerald-600 font-mono">已做 {totalAnsweredCount} 题</span>
+                  <span>题号导航 ({filteredXiaoQuestions.length} 题)</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-emerald-600 font-mono">已做 {totalAnsweredCount} 题</span>
+                    {totalAnsweredCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleResetQuizHistory}
+                        className="text-[11px] text-slate-400 hover:text-rose-600 font-normal underline cursor-pointer"
+                        title="清空自测记录重新开始"
+                      >
+                        重置
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="grid grid-cols-5 gap-1.5 max-h-[460px] overflow-y-auto no-scrollbar pr-1">
                   {filteredXiaoQuestions.map((q, idx) => {

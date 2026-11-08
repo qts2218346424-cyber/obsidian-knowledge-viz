@@ -33,6 +33,54 @@ const CATEGORY_ICONS: Record<RadioCategory, typeof Headphones> = {
 
 export default function Music() {
   const { setQueue, play, state } = useAudioContext()
+  // 纯前端本地音频文件导入状态（彻底解决远程 Linux 部署环境下网页用户无法访问服务端本地路径的问题）
+  interface BrowserAudio {
+    id: string
+    name: string
+    size: number
+    url: string
+    type: string
+  }
+  const [browserFiles, setBrowserFiles] = useState<BrowserAudio[]>([])
+  const [localSubMode, setLocalSubMode] = useState<'browser' | 'server'>('browser')
+
+  const handleBrowserAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+    const newItems: BrowserAudio[] = Array.from(files).map(f => ({
+      id: `blob-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: f.name.replace(/\.[^/.]+$/, ''),
+      size: f.size,
+      url: URL.createObjectURL(f),
+      type: f.name.split('.').pop()?.toUpperCase() || 'AUDIO',
+    }))
+    setBrowserFiles(prev => [...prev, ...newItems])
+  }
+
+  const playBrowserAudio = (file: BrowserAudio) => {
+    const tracks = browserFiles.map(f => ({
+      id: f.id,
+      title: f.name,
+      artist: `本地音频 (${f.type})`,
+      src: f.url,
+      type: 'local' as const,
+    }))
+    const idx = browserFiles.findIndex(f => f.id === file.id)
+    setQueue(tracks, idx >= 0 ? idx : 0)
+  }
+
+  const playAllBrowserAudio = () => {
+    if (browserFiles.length === 0) return
+    const tracks = browserFiles.map(f => ({
+      id: f.id,
+      title: f.name,
+      artist: `本地音频 (${f.type})`,
+      src: f.url,
+      type: 'local' as const,
+    }))
+    setQueue(tracks, 0)
+  }
+
   const [musicPath, setMusicPath] = useState('')
   const [savedPath, setSavedPath] = useState('')
   const [localFiles, setLocalFiles] = useState<MusicFile[]>([])
@@ -235,16 +283,17 @@ export default function Music() {
                           {hasError && (
                             <AlertCircle className="h-3.5 w-3.5 text-accent-rose" />
                           )}
-                          {station.website && !isPlaying && !isLoading && !hasError && (
+                          {station.website && (
                             <a
                               href={station.website}
                               target="_blank"
                               rel="noopener noreferrer"
                               onClick={e => e.stopPropagation()}
-                              className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-cream-200 transition-all"
-                              title="访问电台网站"
+                              className="inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-white/90 hover:bg-white text-warm-600 hover:text-accent-orange border border-cream-300 shadow-2xs transition-all"
+                              title="访问电台官方主页 (外部跳转)"
                             >
-                              <ExternalLink className="w-3 h-3 text-warm-400" />
+                              <span>官网</span>
+                              <ExternalLink className="w-2.5 h-2.5" />
                             </a>
                           )}
                         </div>

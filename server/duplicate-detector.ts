@@ -180,19 +180,69 @@ function updateLinksForMerge(vaultPath: string, fromFile: string, toFile: string
  * Combined score = max(prefixScore, jaccardScore * 0.8 + titleScore * 0.2)
  * Pairs with score > 0.6 are returned, sorted descending, max 50.
  */
+
+/**
+ * 考研知识库重复检测智能防误报过滤辅助工具
+ */
+function extractYear(filePath: string): string | null {
+  const match = filePath.match(/\b(19\d\d|20\d\d)\b/)
+  return match ? match[1] : null
+}
+
+function extractSubject(relPath: string): string | null {
+  const lower = relPath.toLowerCase()
+  if (lower.includes('高等数学') || lower.includes('高数')) return 'math_gaoshu'
+  if (lower.includes('线性代数') || lower.includes('线代')) return 'math_xiandai'
+  if (lower.includes('概率') || lower.includes('数理统计')) return 'math_gailv'
+  if (lower.includes('数据结构')) return 'cs_ds'
+  if (lower.includes('操作系统')) return 'cs_os'
+  if (lower.includes('计算机网络') || lower.includes('计网')) return 'cs_net'
+  if (lower.includes('组成原理') || lower.includes('计组')) return 'cs_co'
+  if (lower.includes('01-考研数学')) return 'math'
+  if (lower.includes('02-408计算机')) return 'cs_408'
+  return null
+}
+
+function isDailyOrRecordFile(relPath: string): boolean {
+  const lower = relPath.toLowerCase()
+  if (lower.includes('daily/') || lower.includes('做题记录/') || lower.includes('错题本/')) {
+    return true
+  }
+  // 匹配类似 2024-06-18.md 的流水文件
+  const base = path.basename(relPath)
+  if (/^\d{4}-\d{2}-\d{2}/.test(base)) {
+    return true
+  }
+  return false
+}
+
+function stripFrontmatter(content: string): string {
+  if (content.startsWith('---')) {
+    const endIdx = content.indexOf('\n---', 3)
+    if (endIdx !== -1) {
+      return content.slice(endIdx + 4).trim()
+    }
+  }
+  return content.trim()
+}
+
 export function detectDuplicates(vaultPath: string): DuplicatePair[] {
   const files = walkDir(vaultPath)
 
   // Read all file contents and compute relative paths
-  const fileData: { absPath: string; relPath: string; content: string; tokens: Set<string>; title: string }[] = []
+  const fileData: { absPath: string; relPath: string; content: string; pureBody: string; tokens: Set<string>; title: string; year: string | null; subject: string | null; isDaily: boolean }[] = []
 
   for (const absPath of files) {
     try {
       const content = fs.readFileSync(absPath, 'utf-8')
       const relPath = path.relative(vaultPath, absPath).replace(/\\/g, '/')
-      const tokens = tokenize(content)
+      const pureBody = stripFrontmatter(content)
+      const tokens = tokenize(pureBody || content)
       const title = path.basename(absPath, '.md')
-      fileData.push({ absPath, relPath, content, tokens, title })
+      const year = extractYear(relPath)
+      const subject = extractSubject(relPath)
+      const isDaily = isDailyOrRecordFile(relPath)
+      fileData.push({ absPath, relPath, content, pureBody, tokens, title, year, subject, isDaily })
     } catch {
       // Skip unreadable files
     }
@@ -205,15 +255,30 @@ export function detectDuplicates(vaultPath: string): DuplicatePair[] {
       const a = fileData[i]
       const b = fileData[j]
 
-      // Prefix match: compare first 200 chars, trimmed and lowercased
-      const prefixA = a.content.slice(0, 200).trim().toLowerCase()
-      const prefixB = b.content.slice(0, 200).trim().toLowerCase()
+      // 1. 排除规则：做题记录/每日日志流水不参与重复合并建议
+      if (a.isDaily || b.isDaily) {
+        continue
+      }
+
+      // 2. 排除规则：不同年份的真题解析绝非重复
+      if (a.year && b.year && a.year !== b.year) {
+        continue
+      }
+
+      // 3. 排除规则：不同科目的笔记绝非重复 (如数据结构 vs 操作系统)
+      if (a.subject && b.subject && a.subject !== b.subject) {
+        continue
+      }
+
+      // 4. 正文前缀比对：基于剥离 Frontmatter 后的纯文本，避免 YAML 模板误报
+      const prefixA = a.pureBody.slice(0, 200).trim().toLowerCase()
+      const prefixB = b.pureBody.slice(0, 200).trim().toLowerCase()
       let prefixScore = 0
-      if (prefixA === prefixB && prefixA.length >= 20) {
+      if (prefixA === prefixB && prefixA.length >= 80) {
         prefixScore = 1.0
       }
 
-      // Jaccard similarity on tokenized content
+      // Jaccard similarity on tokenized pure content
       const jScore = jaccardSimilarity(a.tokens, b.tokens)
 
       // Title similarity on filenames
@@ -222,10 +287,10 @@ export function detectDuplicates(vaultPath: string): DuplicatePair[] {
       // Combined score
       const combined = Math.max(prefixScore, jScore * 0.8 + tScore * 0.2)
 
-      if (combined > 0.6) {
-        // Determine match type based on which signal contributed most
+      // 提升阈值：只有真正高度疑似重复 (> 0.85) 才给出合并建议，防止误报删数据
+      if (combined >= 0.85) {
         let matchType: 'prefix' | 'jaccard' | 'title'
-        if (prefixScore >= jScore * 0.8 + tScore * 0.2) {
+        if (prefixScore >= 0.95) {
           matchType = 'prefix'
         } else if (jScore >= tScore) {
           matchType = 'jaccard'
@@ -251,7 +316,6 @@ export function detectDuplicates(vaultPath: string): DuplicatePair[] {
   // Sort by similarity descending
   pairs.sort((a, b) => b.similarity - a.similarity)
 
-  // Limit to 50 pairs
   return pairs.slice(0, 50)
 }
 

@@ -18,6 +18,7 @@ import {
   Database
 } from 'lucide-react'
 import MarkdownRenderer from './MarkdownRenderer'
+import { api } from '../services/api'
 
 interface BookItem {
   id: string
@@ -143,15 +144,9 @@ export default function ImportResourceModal({
   const loadCustomQuestions = async () => {
     setLoadingCustom(true)
     try {
-      const res = await fetch('/api/quiz/custom')
-      const text = await res.text()
-      try {
-        const data = JSON.parse(text)
-        if (data.questions) {
-          setCustomQuestions(data.questions)
-        }
-      } catch {
-        console.error('Custom questions response is not valid JSON:', text.slice(0, 100))
+      const data = await api.getCustomQuestions()
+      if (data && Array.isArray(data.questions)) {
+        setCustomQuestions(data.questions)
       }
     } catch (err) {
       console.error('Failed to fetch custom questions:', err)
@@ -203,7 +198,7 @@ export default function ImportResourceModal({
   const handleDeleteBook = async (book: BookItem, e?: React.MouseEvent) => {
     e?.stopPropagation()
     const confirmDelete = window.confirm(
-      `确定要永久删除参考资料《${book.name}》吗？\n删除后该文件将从本地 raw-sources 归档库彻底移除。`
+      `确定要永久删除参考资料《${book.name}》吗？\n删除后该文件将从个人参考资料库中彻底移除。`
     )
     if (!confirmDelete) return
 
@@ -412,13 +407,10 @@ export default function ImportResourceModal({
         })
         if (data.questions && data.questions.length > 0) {
           // Auto append to custom questions
-          await fetch('/api/quiz/custom', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ questions: data.questions }),
-          })
-          loadCustomQuestions()
+          await api.saveCustomQuestions(data.questions)
+          await loadCustomQuestions()
           onQuestionsUpdated?.()
+          window.dispatchEvent(new CustomEvent('custom-questions-updated'))
         }
       } else {
         alert(data.error || '提炼失败')
@@ -464,18 +456,16 @@ export default function ImportResourceModal({
   const handleCommitParsedQuestions = async () => {
     if (parsedPreviewQuestions.length === 0) return
     try {
-      const res = await fetch('/api/quiz/custom', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questions: parsedPreviewQuestions }),
-      })
-      const data = await res.json()
+      const count = parsedPreviewQuestions.length
+      const data = await api.saveCustomQuestions(parsedPreviewQuestions)
       if (data.success) {
-        setImportFeedback(`成功导入 ${parsedPreviewQuestions.length} 道题目进入做题中心！`)
+        setImportFeedback(`成功导入 ${count} 道题目进入做题中心！`)
         setParsedPreviewQuestions([])
         setRawQuestionText('')
-        loadCustomQuestions()
+        await loadCustomQuestions()
         onQuestionsUpdated?.()
+        window.dispatchEvent(new CustomEvent('custom-questions-updated'))
+        window.dispatchEvent(new CustomEvent('vault-notes-updated'))
       }
     } catch (err: any) {
       alert('导入失败: ' + err.message)
@@ -486,29 +476,27 @@ export default function ImportResourceModal({
     try {
       const parsed = JSON.parse(jsonInput)
       const list = Array.isArray(parsed) ? parsed : [parsed]
-      const res = await fetch('/api/quiz/custom', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questions: list }),
-      })
-      const data = await res.json()
+      const data = await api.saveCustomQuestions(list)
       if (data.success) {
         setImportFeedback(`成功批量导入 ${list.length} 道 JSON 题目！`)
         setJsonInput('')
-        loadCustomQuestions()
+        await loadCustomQuestions()
         onQuestionsUpdated?.()
+        window.dispatchEvent(new CustomEvent('custom-questions-updated'))
+        window.dispatchEvent(new CustomEvent('vault-notes-updated'))
       }
     } catch (err: any) {
       alert('JSON 格式有误: ' + err.message)
     }
   }
-
   const handleDeleteCustomQuestion = async (id: string) => {
     if (!confirm('确定要删除这道自定义题目吗？')) return
     try {
-      await fetch(`/api/quiz/custom/${id}`, { method: 'DELETE' })
-      loadCustomQuestions()
+      await api.deleteCustomQuestion(id)
+      await loadCustomQuestions()
       onQuestionsUpdated?.()
+      window.dispatchEvent(new CustomEvent('custom-questions-updated'))
+      window.dispatchEvent(new CustomEvent('vault-notes-updated'))
     } catch (err) {
       console.error('Delete error:', err)
     }
@@ -670,7 +658,7 @@ export default function ImportResourceModal({
                     ) : (
                       <>
                         <Plus className="h-4 w-4" />
-                        <span>选择文件上传至 raw-sources</span>
+                        <span>选择文件上传至参考资料库</span>
                       </>
                     )}
                   </button>

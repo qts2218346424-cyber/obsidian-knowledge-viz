@@ -29,6 +29,13 @@ const initialIngestionSteps: PipelineStep[] = [
 
 function IngestionPanel() {
   const [steps, setSteps] = useState<PipelineStep[]>(initialIngestionSteps)
+  // 解决初次进入流程画布为空白的问题：挂载后立即自适应重绘一次视窗
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      window.dispatchEvent(new Event('resize'))
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [])
   const [running, setRunning] = useState(false)
   const [result, setResult] = useState<IngestResult | null>(null)
   const [error, setError] = useState('')
@@ -124,7 +131,7 @@ function IngestionPanel() {
         </button>
       </div>
 
-      <div className="flex-1 min-h-[460px] h-full w-full relative">
+      <div className="flex-1 min-h-[480px] h-[540px] w-full relative">
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -407,6 +414,7 @@ function LintPanel() {
     try {
       await api.runScheduleNow()
       await reloadHealth()
+      window.dispatchEvent(new CustomEvent('vault-stats-updated'))
       await loadSchedule()
     } catch { /* ignore */ }
     setScheduleLoading(false)
@@ -429,6 +437,7 @@ function LintPanel() {
 
       updateStep('2', { status: 'active' })
       await reloadHealth()
+      window.dispatchEvent(new CustomEvent('vault-stats-updated'))
       await delay(400)
       updateStep('2', { status: 'done' })
 
@@ -455,6 +464,7 @@ function LintPanel() {
       const res = await api.lintFix(category)
       setFixResults(prev => ({ ...prev, [category]: res }))
       await reloadHealth()
+      window.dispatchEvent(new CustomEvent('vault-stats-updated'))
       updateStep('4', { status: 'done', detail: `修复了 ${res.fixed} 个问题` })
     } catch (err: any) {
       setError(err.message)

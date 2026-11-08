@@ -14,10 +14,11 @@ export default function FileExplorer({ tree, onFileClick, selectedPath }: FileEx
 
   if (tree.length === 0) {
     return (
-      <div className="h-full bg-surface border border-cream-200 rounded-xl p-4 flex items-center justify-center">
-        <p className="text-xs text-warm-400 text-center">
-          未连接到 Vault<br />
-          <span className="text-[10px]">启动后端以加载文件</span>
+      <div className="h-full bg-surface border border-cream-200 rounded-xl p-4 flex flex-col items-center justify-center text-center space-y-2 select-none">
+        <FolderOpen className="w-7 h-7 text-warm-400/50" />
+        <div className="text-xs font-bold text-warm-700">暂无个人考研笔记</div>
+        <p className="text-[11px] text-warm-400 leading-relaxed max-w-[150px]">
+          点击上方「+ 新建笔记」或从考研讲义一键摘录，即可开始构建专属笔记库
         </p>
       </div>
     )
@@ -28,7 +29,7 @@ export default function FileExplorer({ tree, onFileClick, selectedPath }: FileEx
       <div className="border-b border-cream-200">
         <div className="px-3 py-2.5 text-xs font-medium text-warm-600 flex items-center gap-2">
           <FolderOpen className="w-3.5 h-3.5 text-accent-orange" />
-          Vault 文件
+          考研笔记目录
         </div>
         <div className="px-2 pb-2">
           <div className="flex items-center gap-1.5 rounded-lg border border-cream-200 bg-cream-100 px-2 py-1.5">

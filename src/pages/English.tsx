@@ -1,0 +1,1041 @@
+import { useState, useMemo, useEffect, useRef } from 'react'
+import {
+  BookOpen,
+  FileEdit,
+  Sparkles,
+  ScrollText,
+  Copy,
+  Check,
+  Search,
+  Filter,
+  ArrowRight,
+  TrendingUp,
+  Award,
+  Layers,
+  HelpCircle,
+  AlertCircle,
+  CheckCircle2,
+  Bookmark,
+  Share2,
+  RefreshCw,
+  Send,
+  SlidersHorizontal,
+  Flame,
+  ChevronRight,
+  ChevronDown,
+  Volume2,
+  BarChart2,
+} from 'lucide-react'
+import {
+  ESSAY_TEMPLATES,
+  ESSAY_GOLDEN_SENTENCES,
+  ENGLISH_PAST_PAPERS,
+  type EssayTemplate,
+  type GoldenSentence,
+  type PastPaperReading,
+  type EssayCategory,
+  type EnglishExamType,
+} from '../data/englishData'
+import { gradeEssayLocally, type EssayGradingResult } from '../services/essayGrading'
+import VocabTab from '../components/study/VocabTab'
+import WordBrowser from '../components/vocab/WordBrowser'
+import VocabStats from '../components/vocab/VocabStats'
+import WordRelations from '../components/vocab/WordRelations'
+
+type EnglishMainTab = 'vocab' | 'templates' | 'papers' | 'grading'
+
+export default function English() {
+  const [activeTab, setActiveTab] = useState<EnglishMainTab>('templates')
+
+  // -------------------------------------------------------------
+  // 1. 词汇子选项卡
+  // -------------------------------------------------------------
+  const [vocabSubTab, setVocabSubTab] = useState<'review' | 'browse' | 'stats' | 'relations'>('review')
+
+  // -------------------------------------------------------------
+  // 2. 作文模板状态
+  // -------------------------------------------------------------
+  const [templateFilterExam, setTemplateFilterExam] = useState<EnglishExamType | 'all'>('all')
+  const [templateFilterCategory, setTemplateFilterCategory] = useState<EssayCategory | 'all'>('all')
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(ESSAY_TEMPLATES[0].id)
+  const [copiedSectionIdx, setCopiedSectionIdx] = useState<number | null>(null)
+  const [copiedFullTemplate, setCopiedFullTemplate] = useState(false)
+
+  // -------------------------------------------------------------
+  // 3. 万能金句筛选
+  // -------------------------------------------------------------
+  const [goldenSearch, setGoldenSearch] = useState('')
+  const [goldenCategory, setGoldenCategory] = useState<string>('all')
+  const [copiedSentenceId, setCopiedSentenceId] = useState<string | null>(null)
+
+  // -------------------------------------------------------------
+  // 4. 历年真题精读状态
+  // -------------------------------------------------------------
+  const [selectedPaperId, setSelectedPaperId] = useState<string>(ENGLISH_PAST_PAPERS[0].id)
+  const [activeSentenceIdx, setActiveSentenceIdx] = useState<{ p: number; s: number } | null>(null)
+  const [showHardGrammarOnly, setShowHardGrammarOnly] = useState(false)
+  const [userAnswers, setUserAnswers] = useState<Record<string, 'A' | 'B' | 'C' | 'D'>>({})
+
+  // -------------------------------------------------------------
+  // 5. 作文智能批改状态
+  // -------------------------------------------------------------
+  const [gradingEssayType, setGradingEssayType] = useState<'big_essay' | 'small_essay'>('big_essay')
+  const [essayInput, setEssayInput] = useState<string>(
+    'As is vividly depicted in the cartoon, two individuals are standing at a crossroads. One is staring at his phone, while the other is looking at the distant future. This picture is very important because it shows modern technology problems. Many people lose their minds in smartphones. I think it is very good if government can help us make better rules.'
+  )
+  const [gradingResult, setGradingResult] = useState<EssayGradingResult | null>(null)
+  const [isGrading, setIsGrading] = useState(false)
+
+  const activeTemplate = useMemo(() => {
+    return ESSAY_TEMPLATES.find((t) => t.id === selectedTemplateId) || ESSAY_TEMPLATES[0]
+  }, [selectedTemplateId])
+
+  const filteredTemplates = useMemo(() => {
+    return ESSAY_TEMPLATES.filter((t) => {
+      if (templateFilterExam !== 'all' && t.examType !== templateFilterExam && t.examType !== 'both') return false
+      if (templateFilterCategory !== 'all' && t.category !== templateFilterCategory) return false
+      return true
+    })
+  }, [templateFilterExam, templateFilterCategory])
+
+  const filteredGoldenSentences = useMemo(() => {
+    return ESSAY_GOLDEN_SENTENCES.filter((g) => {
+      if (goldenCategory !== 'all' && g.category !== goldenCategory) return false
+      if (
+        goldenSearch &&
+        !g.sentence.toLowerCase().includes(goldenSearch.toLowerCase()) &&
+        !g.translation.includes(goldenSearch)
+      ) {
+        return false
+      }
+      return true
+    })
+  }, [goldenCategory, goldenSearch])
+
+  const activePaper = useMemo(() => {
+    return ENGLISH_PAST_PAPERS.find((p) => p.id === selectedPaperId) || ENGLISH_PAST_PAPERS[0]
+  }, [selectedPaperId])
+
+  // 执行批改
+  const handleStartGrading = () => {
+    if (!essayInput.trim()) return
+    setIsGrading(true)
+    setTimeout(() => {
+      const res = gradeEssayLocally(essayInput, gradingEssayType)
+      setGradingResult(res)
+      setIsGrading(false)
+    }, 400)
+  }
+
+  // 拷贝段落
+  const handleCopySection = (text: string, idx: number) => {
+    navigator.clipboard?.writeText?.(text)
+    setCopiedSectionIdx(idx)
+    setTimeout(() => setCopiedSectionIdx(null), 2000)
+  }
+
+  // 拷贝全篇模板
+  const handleCopyFullTemplate = (t: EssayTemplate) => {
+    const full = t.structure.map((s) => s.templateText).join('\n\n')
+    navigator.clipboard?.writeText?.(full)
+    setCopiedFullTemplate(true)
+    setTimeout(() => setCopiedFullTemplate(false), 2000)
+  }
+
+  // 拷贝金句
+  const handleCopySentence = (text: string, id: string) => {
+    navigator.clipboard?.writeText?.(text)
+    setCopiedSentenceId(id)
+    setTimeout(() => setCopiedSentenceId(null), 2000)
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto space-y-6 pb-16 animate-fade-in font-sans">
+      {/* ── 顶部头图看板 ── */}
+      <section className="relative overflow-hidden rounded-3xl border border-slate-200/90 bg-gradient-to-br from-white via-indigo-50/20 to-slate-50 p-6 sm:p-8 shadow-xs">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200/80 text-[11px] font-semibold text-indigo-700 shadow-2xs">
+              <Sparkles className="w-3.5 h-3.5 text-indigo-600 animate-spin" style={{ animationDuration: '6s' }} />
+              <span>2026/2027 考研英语总攻作战舱 · 英语一 & 英语二双轨适配</span>
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 flex items-center gap-2.5">
+              <span>考研英语 · 全题型研学中枢</span>
+              <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-lg bg-slate-900 text-white">
+                ENGLISH MASTER
+              </span>
+            </h1>
+
+            <p className="text-xs sm:text-sm text-slate-500 max-w-2xl leading-relaxed">
+              汇聚真题大纲词汇艾宾浩斯复盘、英语一图画与英语二图表作文高分模板、历年真题长难句树状语法透析、以及 AI 智能多维度作文即时批改。
+            </p>
+          </div>
+
+          {/* 快捷数据统计徽章 */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 shrink-0 text-center">
+            <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 shadow-2xs">
+              <div className="text-[10px] font-semibold text-slate-400">大纲真题词</div>
+              <div className="text-base font-black font-mono text-indigo-600 mt-0.5">2,000+</div>
+            </div>
+            <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 shadow-2xs">
+              <div className="text-[10px] font-semibold text-slate-400">万能作文模板</div>
+              <div className="text-base font-black font-mono text-emerald-600 mt-0.5">18 套</div>
+            </div>
+            <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 shadow-2xs">
+              <div className="text-[10px] font-semibold text-slate-400">闪光金句库</div>
+              <div className="text-base font-black font-mono text-amber-600 mt-0.5">60+ 条</div>
+            </div>
+            <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 shadow-2xs">
+              <div className="text-[10px] font-semibold text-slate-400">AI 智能批改</div>
+              <div className="text-base font-black font-mono text-rose-600 mt-0.5">0ms 秒判</div>
+            </div>
+          </div>
+        </div>
+
+        {/* 主功能导航切换药丸 */}
+        <div className="mt-6 flex items-center gap-2 overflow-x-auto no-scrollbar border-t border-slate-200/60 pt-4">
+          <button
+            type="button"
+            onClick={() => setActiveTab('templates')}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'templates'
+                ? 'bg-slate-900 text-white shadow-md'
+                : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80'
+            }`}
+          >
+            <ScrollText className="w-3.5 h-3.5" />
+            <span>作文高分模板库</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-white/20">大小作文</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('grading')}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'grading'
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
+                : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            <span>AI 作文智能批改</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950 font-black">
+              实测推荐
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('papers')}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'papers'
+                ? 'bg-slate-900 text-white shadow-md'
+                : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80'
+            }`}
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>历年真题精析</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-white/20">中英对照+长难句</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('vocab')}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'vocab'
+                ? 'bg-slate-900 text-white shadow-md'
+                : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            <span>大纲背单词中心</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-white/20">艾宾浩斯复盘</span>
+          </button>
+        </div>
+      </section>
+
+      {/* ─────────────────────────────────────────────────────────────
+          板块 1: 作文高分模板库 & 万能金句
+          ───────────────────────────────────────────────────────────── */}
+      {activeTab === 'templates' && (
+        <div className="space-y-6">
+          {/* 筛选控制器 */}
+          <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="font-bold text-slate-400 mr-1 flex items-center gap-1">
+                <Filter className="w-3.5 h-3.5" />
+                <span>科目筛选:</span>
+              </span>
+              {(['all', 'english_1', 'english_2'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setTemplateFilterExam(mode)}
+                  className={`px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
+                    templateFilterExam === mode
+                      ? 'bg-indigo-600 text-white font-bold shadow-2xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {mode === 'all' ? '全部卷别' : mode === 'english_1' ? '英语一专属' : '英语二专属'}
+                </button>
+              ))}
+
+              <div className="h-4 w-[1px] bg-slate-200 mx-1 hidden sm:block" />
+
+              <span className="font-bold text-slate-400 mr-1 hidden sm:inline">题型类型:</span>
+              {(['all', 'small_letter', 'small_notice', 'big_picture', 'big_chart'] as const).map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setTemplateFilterCategory(cat)}
+                  className={`px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
+                    templateFilterCategory === cat
+                      ? 'bg-slate-900 text-white font-bold shadow-2xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {cat === 'all'
+                    ? '全部题型'
+                    : cat === 'small_letter'
+                    ? '应用文 · 书信'
+                    : cat === 'small_notice'
+                    ? '应用文 · 告示通知'
+                    : cat === 'big_picture'
+                    ? '图画议论文 (英一)'
+                    : '图表分析文 (英二)'}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => handleCopyFullTemplate(activeTemplate)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer ml-auto"
+            >
+              {copiedFullTemplate ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copiedFullTemplate ? '已复制全篇模板！' : '一键复制全篇模板'}</span>
+            </button>
+          </div>
+
+          {/* 模板主工作台 */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {/* 左侧：模板目录列表 (4列) */}
+            <div className="lg:col-span-4 space-y-3">
+              <div className="text-xs font-bold text-slate-400 px-1">可选范式模板 ({filteredTemplates.length})</div>
+              <div className="space-y-2.5 max-h-[700px] overflow-y-auto no-scrollbar pr-1">
+                {filteredTemplates.map((item) => {
+                  const isSelected = item.id === selectedTemplateId
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => setSelectedTemplateId(item.id)}
+                      className={`p-4 rounded-2xl border transition-all cursor-pointer relative overflow-hidden ${
+                        isSelected
+                          ? 'border-indigo-600 bg-white shadow-md ring-2 ring-indigo-500/20'
+                          : 'border-slate-200/90 bg-white/70 hover:bg-white hover:border-slate-300 shadow-2xs'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200/60">
+                          {item.typeLabel}
+                        </span>
+                        <span className="text-[10px] font-mono text-slate-400">
+                          {item.examType === 'both' ? '英一/英二通用' : item.examType === 'english_1' ? '英语(一)' : '英语(二)'}
+                        </span>
+                      </div>
+
+                      <h3 className="text-xs font-bold text-slate-900 line-clamp-1">{item.title}</h3>
+                      <p className="text-[11px] text-slate-500 line-clamp-2 mt-1 leading-relaxed">
+                        {item.description}
+                      </p>
+
+                      <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
+                        <span>含 {item.structure.length} 个结构段落</span>
+                        <span className="text-indigo-600 font-semibold flex items-center gap-0.5">
+                          <span>查看详情</span>
+                          <ChevronRight className="w-3 h-3" />
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* 右侧：当前模板深度拆解与填空指引 (8列) */}
+            <div className="lg:col-span-8 space-y-4">
+              <div className="rounded-3xl border border-slate-200/90 bg-white p-6 shadow-xs space-y-6">
+                <div>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">
+                      {activeTemplate.typeLabel} · 核心高分模板
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      适用话题：<strong className="text-slate-700">{activeTemplate.topic}</strong>
+                    </span>
+                  </div>
+                  <h2 className="text-lg font-black text-slate-900 mt-2">{activeTemplate.title}</h2>
+                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">{activeTemplate.description}</p>
+                </div>
+
+                {/* 逐段拆解 */}
+                <div className="space-y-4">
+                  {activeTemplate.structure.map((sec, idx) => (
+                    <div
+                      key={sec.sectionName}
+                      className="rounded-2xl border border-slate-200/80 bg-slate-50/50 p-4 sm:p-5 space-y-3 hover:border-indigo-200 transition-colors"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="w-5 h-5 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-mono font-bold">
+                            {idx + 1}
+                          </span>
+                          <h4 className="text-xs font-bold text-slate-900">{sec.sectionName}</h4>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleCopySection(sec.templateText, idx)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-[11px] font-semibold text-slate-600 hover:text-slate-900 hover:border-slate-300 transition-all cursor-pointer shadow-2xs active:scale-95"
+                        >
+                          {copiedSectionIdx === idx ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                          <span>{copiedSectionIdx === idx ? '已复制' : '复制本段'}</span>
+                        </button>
+                      </div>
+
+                      <div className="p-3.5 rounded-xl bg-white border border-slate-200/70 font-mono text-xs text-slate-800 leading-relaxed whitespace-pre-wrap select-all">
+                        {sec.templateText}
+                      </div>
+
+                      <div className="text-[11px] text-slate-500 leading-relaxed bg-amber-50/60 border border-amber-200/50 rounded-xl p-3">
+                        <div className="font-semibold text-amber-900 mb-0.5">💡 译文与逻辑解析:</div>
+                        <p>{sec.translation}</p>
+                        {sec.placeholderHints.length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-amber-200/40 text-[10.5px] text-amber-800">
+                            <strong>填空与替换建议:</strong>
+                            <ul className="list-disc list-inside mt-0.5 space-y-0.5">
+                              {sec.placeholderHints.map((hint, hIdx) => (
+                                <li key={hIdx}>{hint}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* 亮点高分短语词汇 */}
+                <div className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4">
+                  <div className="text-xs font-bold text-indigo-900 mb-2 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>本篇核心闪光表达与连词:</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {activeTemplate.highlightPhrases.map((phrase, pIdx) => (
+                      <span
+                        key={pIdx}
+                        className="px-2.5 py-1 rounded-lg bg-white border border-indigo-200 text-xs font-mono font-medium text-indigo-700 shadow-2xs"
+                      >
+                        {phrase}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* 下方：万能高分金句速查库 */}
+              <div className="rounded-3xl border border-slate-200/90 bg-white p-6 shadow-xs space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                      <Flame className="w-4 h-4 text-amber-500" />
+                      <span>万能高分句型库 (即查即背即拷)</span>
+                    </h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5">覆盖首段名言引出、图表极值分析、深度归因与结尾倒装升华句</p>
+                  </div>
+
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="检索金句/语法结构..."
+                      value={goldenSearch}
+                      onChange={(e) => setGoldenSearch(e.target.value)}
+                      className="h-8 pl-8 pr-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none w-44 sm:w-56"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5 text-xs pb-1">
+                  {(['all', 'opening', 'data_analysis', 'cause_effect', 'solution', 'conclusion'] as const).map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setGoldenCategory(c)}
+                      className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                        goldenCategory === c
+                          ? 'bg-slate-900 text-white font-bold'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {c === 'all'
+                        ? '全部金句'
+                        : c === 'opening'
+                        ? '首段引出'
+                        : c === 'data_analysis'
+                        ? '数据描摹'
+                        : c === 'cause_effect'
+                        ? '多维归因'
+                        : c === 'solution'
+                        ? '对策建议'
+                        : '升华尾句'}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[380px] overflow-y-auto no-scrollbar">
+                  {filteredGoldenSentences.map((g) => (
+                    <div
+                      key={g.id}
+                      className="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:border-slate-300 transition-all flex flex-col justify-between space-y-2 group shadow-2xs"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between text-[10px] font-bold mb-1">
+                          <span className="text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">
+                            {g.categoryLabel}
+                          </span>
+                          <span className="text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+                            {g.difficulty}
+                          </span>
+                        </div>
+                        <p className="text-xs font-mono font-medium text-slate-900 leading-snug">{g.sentence}</p>
+                        <p className="text-[11px] text-slate-500 mt-1">{g.translation}</p>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
+                        <span className="truncate max-w-[200px]">亮点：{g.grammarHighlight}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleCopySentence(g.sentence, g.id)}
+                          className="text-slate-600 hover:text-slate-900 font-semibold inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          {copiedSentenceId === g.id ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                          <span>{copiedSentenceId === g.id ? '已复制' : '复制'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          板块 2: AI 作文智能批改工作室
+          ───────────────────────────────────────────────────────────── */}
+      {activeTab === 'grading' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {/* 左侧：输入工作台 (6列) */}
+            <div className="lg:col-span-6 space-y-4">
+              <div className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xs space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                      ✍️
+                    </div>
+                    <div>
+                      <h2 className="text-sm font-bold text-slate-900">考研英语作文 撰写与诊断台</h2>
+                      <p className="text-[11px] text-slate-400">支持直接粘贴或键入您的作文草稿</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 border border-slate-200/80 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setGradingEssayType('big_essay')}
+                      className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                        gradingEssayType === 'big_essay' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500'
+                      }`}
+                    >
+                      大作文 (20分)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGradingEssayType('small_essay')}
+                      className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                        gradingEssayType === 'small_essay' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500'
+                      }`}
+                    >
+                      小作文 (10分)
+                    </button>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <textarea
+                    rows={12}
+                    value={essayInput}
+                    onChange={(e) => setEssayInput(e.target.value)}
+                    placeholder="请在此输入或粘贴您的考研英语作文（英文文本）..."
+                    className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all text-xs sm:text-sm font-mono leading-relaxed outline-none resize-none text-slate-800"
+                  />
+                  <div className="absolute right-3 bottom-3 text-[11px] font-mono text-slate-400 bg-white/80 px-2 py-0.5 rounded-md border border-slate-200">
+                    当前: {(essayInput.match(/[a-zA-Z]+/g) || []).length} 词 · {essayInput.split(/\n+/).filter(Boolean).length} 段
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <div className="text-[11px] text-slate-400">
+                    标准字数要求：{gradingEssayType === 'big_essay' ? '160–200 词' : '100 词左右'}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEssayInput(
+                          'The bar chart clearly shows the changes in mobile payment from 2018 to 2024. In 2018, the number was small, but it grew fast to reach a high level in 2024. Many things cause this. Modern smartphones are very good and people like easy life. I think this trend will continue in future.'
+                        )
+                      }
+                      className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs text-slate-600 hover:bg-slate-50 cursor-pointer font-medium"
+                    >
+                      填入测试样篇
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isGrading || !essayInput.trim()}
+                      onClick={handleStartGrading}
+                      className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-bold transition-all shadow-md shadow-indigo-600/20 disabled:opacity-50 cursor-pointer"
+                    >
+                      {isGrading ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>正在多维度深度诊断...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>一键智能批改与润色</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* 批改报告：词汇升级与语法排雷 */}
+              {gradingResult && (
+                <div className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <TrendingUp className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>词汇升级与平庸词替换指南 ({gradingResult.vocabularyUpgrades.length})</span>
+                    </h3>
+                    <span className="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded">
+                      一档词汇提分策略
+                    </span>
+                  </div>
+
+                  {gradingResult.vocabularyUpgrades.length > 0 ? (
+                    <div className="space-y-2.5">
+                      {gradingResult.vocabularyUpgrades.map((item, idx) => (
+                        <div
+                          key={idx}
+                          className="p-3 rounded-xl border border-indigo-100 bg-indigo-50/30 text-xs space-y-1.5"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="line-through text-slate-400 font-mono font-medium">{item.original}</span>
+                            <ArrowRight className="w-3 h-3 text-indigo-400" />
+                            <div className="flex flex-wrap gap-1">
+                              {item.suggested.map((sug, sIdx) => (
+                                <span
+                                  key={sIdx}
+                                  className="px-2 py-0.5 rounded-md bg-white border border-indigo-200 text-indigo-700 font-bold font-mono text-[11px]"
+                                >
+                                  {sug}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          <p className="text-[11px] text-slate-600">{item.reason}</p>
+                          <div className="text-[10.5px] font-mono text-indigo-800 bg-white/70 p-2 rounded-lg border border-indigo-100">
+                            示例：{item.exampleSentence}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-400 text-center py-4">
+                      🎉 暂未检测到常见初级平庸词，词汇选用表现优异！
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* 右侧：诊断报告与评分面板 (6列) */}
+            <div className="lg:col-span-6 space-y-4">
+              {gradingResult ? (
+                <>
+                  {/* 核心总分卡 */}
+                  <div className="rounded-3xl border border-slate-200/90 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-6 shadow-md space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-indigo-200 uppercase tracking-wider">
+                        EXAM EVALUATION REPORT
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 font-mono text-xs font-bold">
+                        {gradingResult.tierLevel}
+                      </span>
+                    </div>
+
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-4xl sm:text-5xl font-black font-mono text-amber-300">
+                        {gradingResult.overallScore}
+                      </span>
+                      <span className="text-lg text-slate-400 font-mono">/ {gradingResult.maxScore} 分</span>
+                    </div>
+
+                    <p className="text-xs text-slate-300 leading-relaxed bg-white/5 p-3.5 rounded-2xl border border-white/10">
+                      {gradingResult.tierFeedback}
+                    </p>
+
+                    {/* 统计微指标 */}
+                    <div className="grid grid-cols-4 gap-2 pt-2 border-t border-white/10 text-center">
+                      <div>
+                        <div className="text-[10px] text-slate-400">总字数</div>
+                        <div className="text-sm font-bold font-mono text-white mt-0.5">
+                          {gradingResult.statistics.wordCount}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-slate-400">复合句比</div>
+                        <div className="text-sm font-bold font-mono text-white mt-0.5">
+                          {gradingResult.statistics.complexSentenceRatio}%
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-slate-400">词汇丰富度</div>
+                        <div className="text-sm font-bold font-mono text-white mt-0.5">
+                          {gradingResult.statistics.typeTokenRatio}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-slate-400">平均句长</div>
+                        <div className="text-sm font-bold font-mono text-white mt-0.5">
+                          {gradingResult.statistics.avgWordsPerSentence} 词
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 四维雷达得分拆解 */}
+                  <div className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xs space-y-3">
+                    <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <BarChart2 className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>考研四维阅卷维度细分</span>
+                    </h3>
+
+                    <div className="space-y-3">
+                      {gradingResult.dimensionScores.map((dim) => (
+                        <div key={dim.dimension} className="space-y-1">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-slate-700">{dim.dimension}</span>
+                            <span className="font-mono font-bold text-indigo-600">{dim.score} / 100</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-indigo-600 rounded-full transition-all duration-500"
+                              style={{ width: `${dim.score}%` }}
+                            />
+                          </div>
+                          <p className="text-[11px] text-slate-500 leading-snug">{dim.comment}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* AI 润色重构示范版 */}
+                  <div className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xs space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                        <span>AI 智能升级示范全文 (一档范文)</span>
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard?.writeText?.(gradingResult.polishedVersion)
+                          alert('已复制 AI 润色范文！')
+                        }}
+                        className="text-[11px] font-semibold text-indigo-600 hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <Copy className="w-3 h-3" />
+                        <span>复制范文</span>
+                      </button>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-indigo-50/40 border border-indigo-100 font-mono text-xs text-slate-800 leading-relaxed whitespace-pre-wrap">
+                      {gradingResult.polishedVersion}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="h-full min-h-[420px] rounded-3xl border border-dashed border-slate-300 bg-slate-50/50 flex flex-col items-center justify-center p-8 text-center space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 text-xl shadow-2xs">
+                    📝
+                  </div>
+                  <h3 className="text-sm font-bold text-slate-700">等待提交作文进行批改</h3>
+                  <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
+                    在左侧输入您的作文草稿，点击“一键智能批改”，系统将秒级生成满分折算、词汇升级与 AI 润色建议。
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          板块 3: 历年真题精读与长难句树状解析
+          ───────────────────────────────────────────────────────────── */}
+      {activeTab === 'papers' && (
+        <div className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-400">选择真题篇目:</span>
+              <select
+                value={selectedPaperId}
+                onChange={(e) => setSelectedPaperId(e.target.value)}
+                className="h-8 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none"
+              >
+                {ENGLISH_PAST_PAPERS.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.source} · {p.title.slice(0, 30)}...
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowHardGrammarOnly(!showHardGrammarOnly)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                showHardGrammarOnly
+                  ? 'bg-amber-500 text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {showHardGrammarOnly ? '⚡ 仅看重点长难句 (已过滤)' : '显示全部语句'}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {/* 左侧：文章逐句对照 (8列) */}
+            <div className="lg:col-span-8 space-y-4">
+              <div className="rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-8 shadow-xs space-y-6">
+                <div>
+                  <div className="flex items-center gap-2 text-xs font-bold text-indigo-600">
+                    <span className="px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-200/60">
+                      {activePaper.examType}
+                    </span>
+                    <span>{activePaper.source}</span>
+                  </div>
+                  <h2 className="text-xl font-black text-slate-900 mt-2">{activePaper.title}</h2>
+                  <p className="text-xs text-slate-500 mt-1 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-200/60">
+                    📖 <strong>篇章梗概:</strong> {activePaper.summary}
+                  </p>
+                </div>
+
+                {/* 逐段逐句 */}
+                <div className="space-y-6">
+                  {activePaper.paragraphs.map((para) => (
+                    <div key={para.paraIndex} className="space-y-3">
+                      <div className="text-[11px] font-bold text-slate-400 font-mono">
+                        PARAGRAPH {para.paraIndex}
+                      </div>
+
+                      <div className="space-y-3">
+                        {para.sentences
+                          .filter((s) => !showHardGrammarOnly || s.isHardSentence)
+                          .map((sen, sIdx) => {
+                            const isSelected =
+                              activeSentenceIdx?.p === para.paraIndex && activeSentenceIdx?.s === sIdx
+
+                            return (
+                              <div
+                                key={sIdx}
+                                onClick={() => setActiveSentenceIdx({ p: para.paraIndex, s: sIdx })}
+                                className={`p-4 rounded-2xl border transition-all cursor-pointer space-y-2 ${
+                                  isSelected
+                                    ? 'border-indigo-600 bg-indigo-50/20 shadow-xs ring-2 ring-indigo-500/10'
+                                    : 'border-slate-200/80 hover:border-slate-300 bg-white'
+                                }`}
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <p className="text-xs sm:text-[13px] font-mono text-slate-900 leading-relaxed">
+                                    {sen.en}
+                                  </p>
+                                  {sen.isHardSentence && (
+                                    <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-700">
+                                      长难句
+                                    </span>
+                                  )}
+                                </div>
+
+                                <p className="text-xs text-slate-500 leading-relaxed border-t border-slate-100 pt-2">
+                                  {sen.zh}
+                                </p>
+
+                                {/* 展开长难句语法剖析 */}
+                                {sen.isHardSentence && sen.hardAnalysis && (
+                                  <div className="mt-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-700 leading-relaxed space-y-1">
+                                    <div className="font-bold text-indigo-700 flex items-center gap-1">
+                                      <span>🔍 语法主干与从句剖析:</span>
+                                    </div>
+                                    <p>{sen.hardAnalysis}</p>
+                                    {sen.keyWords && sen.keyWords.length > 0 && (
+                                      <div className="pt-2 border-t border-slate-200 flex flex-wrap gap-1.5">
+                                        {sen.keyWords.map((kw, kwIdx) => (
+                                          <span
+                                            key={kwIdx}
+                                            className="px-2 py-0.5 rounded bg-white border border-slate-200 text-[10.5px] font-mono text-slate-800"
+                                          >
+                                            <strong>{kw.word}</strong>: {kw.meaning}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* 右侧：真题四选题解与命题归因 (4列) */}
+            <div className="lg:col-span-4 space-y-4">
+              <div className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xs space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                    <Award className="w-3.5 h-3.5 text-amber-500" />
+                    <span>真题对应单选精炼 ({activePaper.questions.length})</span>
+                  </h3>
+                  <span className="text-[10px] text-slate-400">考点溯源</span>
+                </div>
+
+                <div className="space-y-4">
+                  {activePaper.questions.map((q, qIdx) => {
+                    const chosen = userAnswers[q.id]
+                    const isSubmitted = chosen !== undefined
+                    const isCorrect = chosen === q.answer
+
+                    return (
+                      <div key={q.id} className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-3">
+                        <div className="flex items-center justify-between text-[11px] font-bold">
+                          <span className="text-slate-400">第 {qIdx + 1} 题</span>
+                          <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 text-[10px]">
+                            {q.questionType}
+                          </span>
+                        </div>
+
+                        <p className="text-xs font-semibold text-slate-900 leading-snug">{q.stem}</p>
+
+                        <div className="space-y-1.5">
+                          {(['A', 'B', 'C', 'D'] as const).map((optKey) => (
+                            <button
+                              key={optKey}
+                              type="button"
+                              onClick={() => setUserAnswers((prev) => ({ ...prev, [q.id]: optKey }))}
+                              className={`w-full text-left p-2.5 rounded-xl border text-xs font-mono transition-all flex items-start gap-2 cursor-pointer ${
+                                chosen === optKey
+                                  ? optKey === q.answer
+                                    ? 'border-emerald-500 bg-emerald-50 text-emerald-900 font-bold'
+                                    : 'border-rose-500 bg-rose-50 text-rose-900 font-bold'
+                                  : isSubmitted && optKey === q.answer
+                                  ? 'border-emerald-500 bg-emerald-50/50 text-emerald-900 font-bold'
+                                  : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                              }`}
+                            >
+                              <span className="w-4 h-4 rounded-full bg-slate-100 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+                                {optKey}
+                              </span>
+                              <span className="leading-snug">{q.options[optKey]}</span>
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* 答案解析 */}
+                        {isSubmitted && (
+                          <div
+                            className={`p-3 rounded-xl text-[11px] leading-relaxed border ${
+                              isCorrect
+                                ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                                : 'bg-rose-50 border-rose-200 text-rose-900'
+                            }`}
+                          >
+                            <div className="font-bold mb-1">
+                              {isCorrect ? '✅ 回答正确！' : `❌ 遗憾答错，正确答案为: [${q.answer}]`}
+                            </div>
+                            <p>{q.analysis}</p>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
+          板块 4: 大纲核心背单词中心 (聚合现有 2000+ 词汇与掌握度色谱)
+          ───────────────────────────────────────────────────────────── */}
+      {activeTab === 'vocab' && (
+        <div className="space-y-5">
+          {/* 子导航 */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+            {[
+              { key: 'review', label: '艾宾浩斯真题刷词' },
+              { key: 'browse', label: '2000+大纲词库' },
+              { key: 'stats', label: '记忆掌握度统计' },
+              { key: 'relations', label: '词根词缀图谱' },
+            ].map((st) => (
+              <button
+                key={st.key}
+                type="button"
+                onClick={() => setVocabSubTab(st.key as any)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  vocabSubTab === st.key
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                {st.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="rounded-3xl border border-slate-200/90 bg-white p-6 shadow-xs">
+            {vocabSubTab === 'review' && <VocabTab />}
+            {vocabSubTab === 'browse' && <WordBrowser />}
+            {vocabSubTab === 'stats' && <VocabStats />}
+            {vocabSubTab === 'relations' && <WordRelations />}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

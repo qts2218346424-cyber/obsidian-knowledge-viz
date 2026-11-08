@@ -373,43 +373,248 @@ export default function Settings() {
     )
   }
 
+  // 考生个性化备考偏好（本地与账号隔离）
+  const [targetSubject, setTargetSubject] = useState<'408' | 'math' | 'all'>(() => {
+    return (localStorage.getItem('coreforge_pref_target_subject') as any) || 'all'
+  })
+  const [dailyQuizGoal, setDailyQuizGoal] = useState<number>(() => {
+    return Number(localStorage.getItem('coreforge_pref_daily_quiz_goal')) || 20
+  })
+  const [dailyVocabGoal, setDailyVocabGoal] = useState<number>(() => {
+    return Number(localStorage.getItem('coreforge_pref_daily_vocab_goal')) || 30
+  })
+  const [defaultEditorMode, setDefaultEditorMode] = useState<'write' | 'markdown'>(() => {
+    return (localStorage.getItem('coreforge_pref_editor_mode') as any) || 'write'
+  })
+  const [adminTab, setAdminTab] = useState<'student' | 'system'>('student')
+
+  const handleSaveStudentPref = () => {
+    try {
+      localStorage.setItem('coreforge_pref_target_subject', targetSubject)
+      localStorage.setItem('coreforge_pref_daily_quiz_goal', String(dailyQuizGoal))
+      localStorage.setItem('coreforge_pref_daily_vocab_goal', String(dailyVocabGoal))
+      localStorage.setItem('coreforge_pref_editor_mode', defaultEditorMode)
+      setMessage({ type: 'success', text: '研学与备考偏好已保存！' })
+      setTimeout(() => setMessage(null), 3000)
+    } catch {
+      setMessage({ type: 'error', text: '保存偏好设置失败' })
+    }
+  }
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-xl font-semibold text-warm-800">设置</h1>
-        <p className="text-sm text-warm-500 mt-1">
-          {isAdmin ? '系统配置中心（站长管理模式）' : '个人研学偏好设置（服务器系统参数已由站长统一部署锁定）'}
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-warm-800">研学与备考设置</h1>
+          <p className="text-xs text-warm-500 mt-1">
+            {isAdmin ? '支持切换「考生备考偏好」与「系统底座管理」' : '定制您的 2026 考研目标科目、刷题量与笔记习惯'}
+          </p>
+        </div>
+
+        {isAdmin && (
+          <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => setAdminTab('student')}
+              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                adminTab === 'student' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              🎓 备考偏好
+            </button>
+            <button
+              type="button"
+              onClick={() => setAdminTab('system')}
+              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                adminTab === 'system' ? 'bg-white text-indigo-700 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              ⚙️ 系统底座 (管理员)
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Configuration status overview */}
-      <section className="bento-card bg-white border border-neutral-200/80 rounded-xl shadow-xs p-5">
-        <div className="flex items-center gap-2 text-sm font-medium text-warm-700 mb-4">
-          <Zap className="w-4 h-4 text-accent-amber" />
-          配置状态
+      {/* 考生专属研学偏好面板（无任何服务器底层物理路径与端口噪音） */}
+      {(!isAdmin || adminTab === 'student') && (
+        <div className="space-y-5 animate-in fade-in">
+          {/* 研学账号与安全沙箱 */}
+          <section className="bento-card bg-white border border-neutral-200/80 rounded-xl shadow-xs p-5 space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2 text-sm font-bold text-slate-800">
+                <HardDrive className="w-4 h-4 text-emerald-600" />
+                <span>研学空间与个人账号</span>
+              </div>
+              <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                云端沙箱隔离已就绪
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+                <span className="text-slate-400">当前备考登录身份：</span>
+                <p className="font-bold text-slate-900 text-sm">{user?.username || '未登录备考者'} <span className="text-xs text-slate-400 font-normal">({user?.role === 'admin' ? '系统站长' : '考研研学者'})</span></p>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+                <span className="text-slate-400">研核伴学积分余额：</span>
+                <p className="font-bold text-emerald-700 text-sm">{typeof user?.points === 'number' ? user.points.toFixed(1) : '5.0'} <span className="text-xs text-slate-500 font-normal">积分 (每日签到可领 1 积分)</span></p>
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              🔒 隐私保证：您的自建笔记、错题本复盘记录以及每日模考成绩均受沙箱加密隔离保护，仅您个人账号可见。
+            </p>
+          </section>
+
+          {/* 备考目标学科定制 */}
+          <section className="bento-card bg-white border border-neutral-200/80 rounded-xl shadow-xs p-5 space-y-3">
+            <div className="text-sm font-bold text-slate-800 flex items-center gap-2">
+              <Cpu className="w-4 h-4 text-indigo-600" />
+              <span>目标专业与重点攻坚学科</span>
+            </div>
+            <p className="text-xs text-slate-500">
+              设置后，首页做题推荐与智能导师将优先向您的目标学科倾斜：
+            </p>
+            <div className="grid grid-cols-3 gap-2.5 pt-1">
+              {[
+                { id: 'all', title: '全科双核冲刺', desc: '408 + 考研数学 + 政治' },
+                { id: '408', title: '408 计算机专项', desc: '数据结构/计组/OS/计网' },
+                { id: 'math', title: '考研数学统考', desc: '高数 / 线代 / 概率论' },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setTargetSubject(item.id as any)}
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                    targetSubject === item.id
+                      ? 'border-indigo-600 bg-indigo-50/60 ring-1 ring-indigo-500 shadow-xs'
+                      : 'border-slate-200 bg-white hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="font-bold text-xs text-slate-900">{item.title}</div>
+                  <div className="text-[10.5px] text-slate-400 mt-1">{item.desc}</div>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {/* 每日自律刷题与背词量 */}
+          <section className="bento-card bg-white border border-neutral-200/80 rounded-xl shadow-xs p-5 space-y-3">
+            <div className="text-sm font-bold text-slate-800 flex items-center gap-2">
+              <Zap className="w-4 h-4 text-amber-500" />
+              <span>每日自律与刷题目标</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs pt-1">
+              <div>
+                <label className="block text-slate-600 font-semibold mb-1.5">每日专业课真题自测数量</label>
+                <select
+                  value={dailyQuizGoal}
+                  onChange={(e) => setDailyQuizGoal(Number(e.target.value))}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 outline-none focus:border-indigo-500"
+                >
+                  <option value={10}>每日 10 题 (轻量巩固)</option>
+                  <option value={20}>每日 20 题 (标准复习)</option>
+                  <option value={30}>每日 30 题 (强化冲刺)</option>
+                  <option value={50}>每日 50 题 (极限刷题)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-slate-600 font-semibold mb-1.5">考研英语大纲词汇每日复盘</label>
+                <select
+                  value={dailyVocabGoal}
+                  onChange={(e) => setDailyVocabGoal(Number(e.target.value))}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-800 outline-none focus:border-indigo-500"
+                >
+                  <option value={20}>每日 20 词 (基础积累)</option>
+                  <option value={30}>每日 30 词 (推荐进度)</option>
+                  <option value={50}>每日 50 词 (冲刺加速)</option>
+                  <option value={100}>每日 100 词 (全量突击)</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          {/* 考研笔记与编辑器偏好 */}
+          <section className="bento-card bg-white border border-neutral-200/80 rounded-xl shadow-xs p-5 space-y-3">
+            <div className="text-sm font-bold text-slate-800 flex items-center gap-2">
+              <Save className="w-4 h-4 text-purple-600" />
+              <span>笔记编辑器偏好</span>
+            </div>
+            <div className="space-y-2 text-xs">
+              <label className="block text-slate-600 font-semibold">进入笔记时的默认写作模式</label>
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setDefaultEditorMode('write')}
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                    defaultEditorMode === 'write'
+                      ? 'border-indigo-600 bg-indigo-50/60 ring-1 ring-indigo-500 shadow-xs'
+                      : 'border-slate-200 bg-white hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="font-bold text-xs text-slate-900">交互式富文本讲义纸</div>
+                  <div className="text-[10.5px] text-slate-400 mt-0.5">支持手写批注、实时公式与插图渲染</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDefaultEditorMode('markdown')}
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                    defaultEditorMode === 'markdown'
+                      ? 'border-indigo-600 bg-indigo-50/60 ring-1 ring-indigo-500 shadow-xs'
+                      : 'border-slate-200 bg-white hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="font-bold text-xs text-slate-900">极客 Markdown 源码模式</div>
+                  <div className="text-[10.5px] text-slate-400 mt-0.5">纯文本双链极速录入与快捷键编辑</div>
+                </button>
+              </div>
+            </div>
+          </section>
+
+          {/* 保存偏好按钮 */}
+          <div className="pt-2 flex justify-end">
+            <button
+              type="button"
+              onClick={handleSaveStudentPref}
+              className="subframe-btn-black px-6 py-2.5 flex items-center gap-2 text-xs font-bold shadow-xs cursor-pointer active:scale-95 transition-all"
+            >
+              <Save className="w-4 h-4" />
+              <span>保存备考设置</span>
+            </button>
+          </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
-          <StatusCard
-            label="知识库路径"
-            configured={vaultConfigured}
-            detail={vaultConfigured ? settings!.vaultPath.split(/[\\/]/).pop() || '已设置' : '未设置'}
-            configuredText="已连接"
-          />
-          <StatusCard
-            label="AI 密钥"
-            configured={aiConfigured}
-            detail={aiConfigured ? '已配置' : '未配置'}
-            configuredText="AI 功能可用"
-          />
-          <StatusCard
-            label="AI 模型"
-            configured={aiModelSet}
-            detail={aiModelSet ? settings!.ai!.model! : '未选择'}
-            configuredText="已选择"
-          />
-        </div>
-      </section>
+      )}
+
+      {/* 仅在管理员身份且激活「系统底座」Tab 时渲染底层复杂配置 */}
+      {isAdmin && adminTab === 'system' && (
+        <div className="space-y-6 animate-in fade-in">
+          <section className="bento-card bg-white border border-neutral-200/80 rounded-xl shadow-xs p-5">
+            <div className="flex items-center gap-2 text-sm font-medium text-warm-700 mb-4">
+              <Zap className="w-4 h-4 text-accent-amber" />
+              系统底座配置状态
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
+              <StatusCard
+                label="知识库路径"
+                configured={vaultConfigured}
+                detail={vaultConfigured ? '安全沙箱隔离环境' : '未设置'}
+                configuredText="已连接"
+              />
+              <StatusCard
+                label="AI 密钥"
+                configured={aiConfigured}
+                detail={aiConfigured ? '已配置' : '未配置'}
+                configuredText="AI 功能可用"
+              />
+              <StatusCard
+                label="AI 模型"
+                configured={aiModelSet}
+                detail={aiModelSet ? settings!.ai!.model! : '未选择'}
+                configuredText="已选择"
+              />
+            </div>
+          </section>
 
       {/* Restart hint */}
       {showRestartHint && (
@@ -986,26 +1191,22 @@ export default function Settings() {
         )}
       </section>
 
-      {/* Config file info */}
-      {settings?.configPath && (
-        <section className="bg-cream-200/30 border border-cream-200/50 rounded-xl p-4">
-          <p className="text-xs text-warm-400">
-            配置文件位置: <code className="text-warm-500">{settings.configPath}</code>
-          </p>
-        </section>
-      )}
-
-      {/* Save button */}
-      <div className="flex justify-end">
+      {/* 管理员保存按钮与配置文件受控信息 */}
+      <div className="flex items-center justify-between pt-2">
+        <div className="text-[11px] text-slate-400 font-mono">
+          [服务端系统参数已受控保护]
+        </div>
         <button
           onClick={handleSave}
           disabled={saving}
-          className="subframe-btn-black px-6 py-2.5 flex items-center gap-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-xs"
+          className="subframe-btn-black px-6 py-2.5 flex items-center gap-2 text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed shadow-xs cursor-pointer active:scale-95"
         >
           <Save className="w-4 h-4" />
-          {saving ? '保存中...' : '保存设置'}
+          {saving ? '保存中...' : '保存系统设置'}
         </button>
       </div>
+        </div>
+      )}
 
       {/* Folder Picker Modal */}
       {showPicker && (

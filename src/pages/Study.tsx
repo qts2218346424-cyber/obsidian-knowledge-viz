@@ -568,7 +568,7 @@ export default function Study() {
             <span>讲义 · 教材 · 交互课件工作台</span>
           </h1>
           <p className="text-xs text-warm-500 mt-1 max-w-2xl hidden sm:block">
-            已屏蔽 Obsidian 底层碎片流水文件。直接精读核心讲义、PDF 电子参考书与直观的 HTML 交互仿真课件，即学即练。
+            精选官方核心讲义、PDF 电子参考书与直观的 HTML 交互仿真课件，即学即练。
           </p>
         </div>
 

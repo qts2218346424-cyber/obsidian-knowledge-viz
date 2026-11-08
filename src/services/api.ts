@@ -35,6 +35,17 @@ async function postJSON<T>(url: string, body: unknown): Promise<T> {
   return res.json()
 }
 
+async function deleteJSON<T>(url: string): Promise<T> {
+  const res = await fetch(`${BASE}${url}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  })
+  if (!res.ok) {
+    throw new Error(await extractErrorMessage(res))
+  }
+  return res.json()
+}
+
 async function putJSON<T>(url: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${url}`, {
     method: 'PUT',
@@ -794,6 +805,7 @@ export const api = {
   getCustomQuestions: () => fetchJSON<{ questions: any[] }>('/quiz/custom'),
 
   saveCustomQuestions: (questions: any[]) => postJSON<{ success: boolean; count: number; total: number }>('/quiz/custom', { questions }),
+  deleteCustomQuestion: (id: string) => deleteJSON<{ success: boolean; remaining: number }>(`/quiz/custom/${id}`),
 
   generateQuizVariants: (question: any) => postJSON<{ variants: any[] }>('/quiz/variant', { question }),
 

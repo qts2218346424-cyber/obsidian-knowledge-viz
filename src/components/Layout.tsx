@@ -91,7 +91,7 @@ export default function Layout({ children }: LayoutProps) {
   const currentPage = allNavItems.find(item => location.pathname === item.to)
   const isFullHeightPage = ['/chat', '/editor', '/graph'].includes(location.pathname)
   const apiHealthy = useApiHealth()
-  const { stats } = useVaultStats()
+  const { stats, reload: reloadStats } = useVaultStats()
   const [searchOpen, setSearchOpen] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
@@ -117,6 +117,7 @@ export default function Layout({ children }: LayoutProps) {
     const action = event.type === 'file-changed' ? '文件已更新' : event.type === 'file-added' ? '新笔记加入' : '文件已删除'
     setSyncNotice(`${action}：${event.path.split('/').pop()}`)
     setTimeout(() => setSyncNotice(null), 3000)
+    reloadStats()
   })
 
   useEffect(() => {
@@ -136,6 +137,11 @@ export default function Layout({ children }: LayoutProps) {
       openModal('checkin')
     }
     window.addEventListener('open-checkin-modal', onOpenCheckin)
+    const onNotesUpdated = () => {
+      reloadStats()
+    }
+    window.addEventListener('vault-notes-updated', onNotesUpdated)
+    window.addEventListener('vault-stats-updated', onNotesUpdated)
 
     // 新用户首次登录智能唤起指引
     try {
@@ -170,6 +176,8 @@ export default function Layout({ children }: LayoutProps) {
       window.removeEventListener('open-user-guide', onOpenGuide)
       window.removeEventListener('start-interactive-tour', onStartTour)
       window.removeEventListener('open-checkin-modal', onOpenCheckin)
+      window.removeEventListener('vault-notes-updated', onNotesUpdated)
+      window.removeEventListener('vault-stats-updated', onNotesUpdated)
     }
   }, [openModal, closeModal, activeModals])
 

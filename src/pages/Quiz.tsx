@@ -21,6 +21,7 @@ import {
 import WarmButton from '../components/ui/WarmButton'
 import MarkdownRenderer from '../components/MarkdownRenderer'
 import MathScratchpadCanvas from '../features/quiz/components/MathScratchpadCanvas'
+import { api } from '../services/api'
 import { QUESTION_BANK, type QuizQuestion } from '../data/questions'
 import { MATH_QUESTION_BANK } from '../data/questions/math'
 import type { MathCategory, MathSubject, CsSubject, UnifiedQuestion } from '../types/subject'
@@ -196,6 +197,8 @@ export default function Quiz() {
   const [errorReasons, setErrorReasons] = useState<Record<string, string>>({})
   const [scratchpads, setScratchpads] = useState<Record<string, string>>({})
   const [activeSideTab, setActiveSideTab] = useState<'palette' | 'scratchpad' | 'hints'>('palette')
+  const [isExitModalOpen, setIsExitModalOpen] = useState(false)
+  const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false)
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const scratchpadRef = useRef<HTMLTextAreaElement>(null)
@@ -242,6 +245,13 @@ export default function Quiz() {
 
   useEffect(() => {
     fetchCustomQuestions()
+    const onCustomUpdated = () => {
+      fetchCustomQuestions()
+    }
+    window.addEventListener('custom-questions-updated', onCustomUpdated)
+    return () => {
+      window.removeEventListener('custom-questions-updated', onCustomUpdated)
+    }
   }, [fetchCustomQuestions])
 
   useEffect(() => {
@@ -907,6 +917,94 @@ export default function Quiz() {
           </button>
         </div>
 
+        {/* 自定义安全退出做题确认弹窗（彻底消除浏览器原生 confirm 拦截与静默无响应） */}
+        {isExitModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
+            <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl border border-slate-200 space-y-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+                  ⚠️
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">确定退出当前做题？</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">做题进度已实时自动缓存，随时可返回继续</p>
+                </div>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1">
+                <p>• 当前进度：已完成 {Object.keys(answers).length} / {questions.length} 题</p>
+                <p>• 累计用时：{formatTime(timeElapsed)}</p>
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsExitModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  继续做题
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsExitModalOpen(false)
+                    setView('start')
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-xs transition-colors cursor-pointer"
+                >
+                  确认退出
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 自定义交卷结算确认弹窗 */}
+        {isSubmitModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
+            <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl border border-slate-200 space-y-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                  📝
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">立即交卷结算成绩报告？</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">交卷后将生成错题剖析与考点雷达图</p>
+                </div>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span>已作答题目：</span>
+                  <strong className="text-emerald-700 font-bold">{Object.keys(answers).length} 题</strong>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>未作答题目：</span>
+                  <strong className={questions.length - Object.keys(answers).length > 0 ? "text-amber-600 font-bold" : "text-slate-500"}>
+                    {questions.length - Object.keys(answers).length} 题
+                  </strong>
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsSubmitModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  再检查一下
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSubmitModalOpen(false)
+                    finishQuiz()
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition-colors cursor-pointer"
+                >
+                  立即交卷结算
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <Suspense fallback={null}>
           <ImportResourceModal
             isOpen={importModalOpen}
@@ -938,11 +1036,7 @@ export default function Quiz() {
         <div className="bento-card rounded-xl border border-neutral-200/80 bg-white shadow-xs px-3.5 sm:px-5 py-2.5 flex items-center justify-between gap-2 shadow-sm border border-slate-200/90 relative overflow-hidden">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
-              onClick={() => {
-                if (window.confirm('确定要退出当前做题吗？已作答记录将自动保存，随时可重新开始。')) {
-                  setView('start')
-                }
-              }}
+              onClick={() => setIsExitModalOpen(true)}
               className="text-xs text-slate-600 hover:text-slate-900 flex items-center gap-1 font-semibold transition-colors cursor-pointer active:scale-95 shrink-0"
               title="退出当前做题并返回题库"
             >
@@ -1020,17 +1114,8 @@ export default function Quiz() {
             <div className="h-4 w-px bg-slate-200" />
             <button
               type="button"
-              onClick={() => {
-                const answered = Object.keys(answers).length
-                const unanswered = questions.length - answered
-                const promptMsg = unanswered > 0
-                  ? `您还有 ${unanswered} 道题未作答（已作答 ${answered}/${questions.length}），确定立即交卷结算吗？`
-                  : `您已作答全部 ${questions.length} 道题，确定立即交卷结算并查看解析吗？`
-                if (window.confirm(promptMsg)) {
-                  finishQuiz()
-                }
-              }}
-              className="text-xs px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold flex items-center gap-1 cursor-pointer shadow-xs active:scale-95 transition-all"
+              onClick={() => setIsSubmitModalOpen(true)}
+              className="text-xs px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center gap-1 cursor-pointer shadow-xs active:scale-95 transition-all"
               title="交卷并进入成绩与错因分析报告"
             >
               <CheckCircle2 size={13} />
@@ -1659,6 +1744,94 @@ export default function Quiz() {
           </div>
         )}
 
+        {/* 自定义安全退出做题确认弹窗（彻底消除浏览器原生 confirm 拦截与静默无响应） */}
+        {isExitModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
+            <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl border border-slate-200 space-y-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+                  ⚠️
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">确定退出当前做题？</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">做题进度已实时自动缓存，随时可返回继续</p>
+                </div>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1">
+                <p>• 当前进度：已完成 {Object.keys(answers).length} / {questions.length} 题</p>
+                <p>• 累计用时：{formatTime(timeElapsed)}</p>
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsExitModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  继续做题
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsExitModalOpen(false)
+                    setView('start')
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-xs transition-colors cursor-pointer"
+                >
+                  确认退出
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 自定义交卷结算确认弹窗 */}
+        {isSubmitModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
+            <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl border border-slate-200 space-y-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                  📝
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">立即交卷结算成绩报告？</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">交卷后将生成错题剖析与考点雷达图</p>
+                </div>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span>已作答题目：</span>
+                  <strong className="text-emerald-700 font-bold">{Object.keys(answers).length} 题</strong>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>未作答题目：</span>
+                  <strong className={questions.length - Object.keys(answers).length > 0 ? "text-amber-600 font-bold" : "text-slate-500"}>
+                    {questions.length - Object.keys(answers).length} 题
+                  </strong>
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsSubmitModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  再检查一下
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSubmitModalOpen(false)
+                    finishQuiz()
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition-colors cursor-pointer"
+                >
+                  立即交卷结算
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <Suspense fallback={null}>
           <ImportResourceModal
             isOpen={importModalOpen}
@@ -1873,6 +2046,94 @@ export default function Quiz() {
             返回首页工作台
           </WarmButton>
         </div>
+
+        {/* 自定义安全退出做题确认弹窗（彻底消除浏览器原生 confirm 拦截与静默无响应） */}
+        {isExitModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
+            <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl border border-slate-200 space-y-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+                  ⚠️
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">确定退出当前做题？</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">做题进度已实时自动缓存，随时可返回继续</p>
+                </div>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1">
+                <p>• 当前进度：已完成 {Object.keys(answers).length} / {questions.length} 题</p>
+                <p>• 累计用时：{formatTime(timeElapsed)}</p>
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsExitModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  继续做题
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsExitModalOpen(false)
+                    setView('start')
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-xs transition-colors cursor-pointer"
+                >
+                  确认退出
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 自定义交卷结算确认弹窗 */}
+        {isSubmitModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
+            <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl border border-slate-200 space-y-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                  📝
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">立即交卷结算成绩报告？</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">交卷后将生成错题剖析与考点雷达图</p>
+                </div>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span>已作答题目：</span>
+                  <strong className="text-emerald-700 font-bold">{Object.keys(answers).length} 题</strong>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>未作答题目：</span>
+                  <strong className={questions.length - Object.keys(answers).length > 0 ? "text-amber-600 font-bold" : "text-slate-500"}>
+                    {questions.length - Object.keys(answers).length} 题
+                  </strong>
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsSubmitModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  再检查一下
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSubmitModalOpen(false)
+                    finishQuiz()
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition-colors cursor-pointer"
+                >
+                  立即交卷结算
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <Suspense fallback={null}>
           <ImportResourceModal

@@ -125,6 +125,8 @@ export default function QuickNoteDrawer({ isOpen, onClose, onNoteCreated }: Quic
       await api.createFile(filePath, noteText, frontmatter)
 
       setSuccessPath(filePath)
+      // 派发全局笔记更新事件，让顶栏和仪表盘立即同步最新笔记数
+      window.dispatchEvent(new CustomEvent('vault-notes-updated'))
       if (onNoteCreated) {
         onNoteCreated(filePath, finalTitle)
       }
@@ -132,10 +134,6 @@ export default function QuickNoteDrawer({ isOpen, onClose, onNoteCreated }: Quic
       if (openFullEditor) {
         onClose()
         navigate(`/editor?path=${encodeURIComponent(filePath)}`)
-      } else {
-        setTimeout(() => {
-          onClose()
-        }, 1000)
       }
     } catch (err: any) {
       setErrorMsg(err.message || '保存失败，请检查网络或知识库连接')
@@ -328,9 +326,42 @@ export default function QuickNoteDrawer({ isOpen, onClose, onNoteCreated }: Quic
           )}
 
           {successPath && (
-            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2 animate-in fade-in">
-              <Check className="w-4 h-4 shrink-0 text-emerald-600" />
-              <span>🎉 极速保存成功！已安全落盘至本地 Obsidian 知识库。</span>
+            <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-2.5 animate-in fade-in shadow-2xs">
+              <div className="flex items-center gap-2 font-bold text-emerald-800">
+                <Check className="w-4 h-4 shrink-0 text-emerald-600" />
+                <span>🎉 极速保存成功！已安全落盘至 Obsidian 知识库。</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose()
+                    navigate(`/editor?path=${encodeURIComponent(successPath)}`)
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs transition-all shadow-xs flex items-center gap-1 cursor-pointer active:scale-95"
+                >
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                  <span>立即在编辑器查看该笔记</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTitle('')
+                    setContent('')
+                    setSuccessPath(null)
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-white border border-emerald-300 text-emerald-800 font-medium text-xs hover:bg-emerald-100 transition-all cursor-pointer"
+                >
+                  继续记录
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-2.5 py-1.5 rounded-lg text-slate-500 hover:text-slate-800 text-xs"
+                >
+                  关闭
+                </button>
+              </div>
             </div>
           )}
         </div>

@@ -15,6 +15,9 @@ import {
   CloudCheck,
   Loader2,
   GripVertical,
+  Minimize2,
+  ChevronDown,
+  X,
 } from 'lucide-react'
 import { api, type HandwritingStroke, type HandwritingPoint } from '../services/api'
 
@@ -66,40 +69,64 @@ export default function InteractiveAnnotationOverlay({
   const [, setTick] = useState(0)
   const forceUpdate = () => setTick(t => t + 1)
 
-  // 浮动与拖拽控制胶囊栏状态（彻底脱离笔记文档流，解决遮挡视野问题）
+  // 移动端/窄屏设备识别
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    return typeof window !== 'undefined' ? window.innerWidth < 640 : false
+  })
+
+  // 极简折叠模式（折叠为边角微型药丸，彻底解决遮挡视野问题）
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(false)
+
+  // 移动端调色盘弹出选择面板
+  const [showColorPalette, setShowColorPalette] = useState<boolean>(false)
+
+  // 书写状态（落笔书写时工具栏自动半透明避让视野，抬笔恢复）
+  const [isWriting, setIsWriting] = useState<boolean>(false)
+
+  // 浮动与拖拽控制胶囊栏状态
   const toolbarRef = useRef<HTMLDivElement | null>(null)
   const [position, setPosition] = useState<{ x: number; y: number }>(() => {
     if (typeof window === 'undefined') return { x: 100, y: 84 }
+    const mobile = window.innerWidth < 640
     try {
       const saved = localStorage.getItem('interactive_annotation_toolbar_position')
       if (saved) {
         const parsed = JSON.parse(saved)
         if (typeof parsed?.x === 'number' && typeof parsed?.y === 'number') {
-          const safeX = Math.max(12, Math.min(window.innerWidth - 120, parsed.x))
-          const safeY = Math.max(12, Math.min(window.innerHeight - 50, parsed.y))
+          const safeX = Math.max(8, Math.min(window.innerWidth - (mobile ? 100 : 160), parsed.x))
+          const safeY = Math.max(8, Math.min(window.innerHeight - 50, parsed.y))
           return { x: safeX, y: safeY }
         }
       }
     } catch {
       // 容错处理
     }
-    // 默认停靠于视窗右上区域（远离中央笔记正文，彻底消除遮挡）
+    // 默认位置：停靠于右下角安全区，彻底消除对编辑器右上角「预览」「写作」按钮与顶栏操作的遮挡
+    if (mobile) {
+      return {
+        x: Math.max(8, window.innerWidth - 130),
+        y: Math.max(60, window.innerHeight - 80),
+      }
+    }
     return {
       x: Math.max(16, window.innerWidth - 220),
-      y: 84,
+      y: Math.max(60, window.innerHeight - 90),
     }
   })
   const [isDragging, setIsDragging] = useState(false)
   const dragStartRef = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null)
 
-  // 视窗大小变化时自适应安全边界，防止工具栏被移出视野
+  // 视窗大小变化时自适应安全边界与移动端状态
   useEffect(() => {
     const handleResize = () => {
+      const mobile = window.innerWidth < 640
+      setIsMobile(mobile)
+
       setPosition(prev => {
-        const barWidth = toolbarRef.current?.offsetWidth || 180
+        const barWidth = toolbarRef.current?.offsetWidth || (mobile ? 280 : 380)
         const barHeight = toolbarRef.current?.offsetHeight || 44
-        const safeX = Math.max(12, Math.min(window.innerWidth - barWidth - 12, prev.x))
-        const safeY = Math.max(12, Math.min(window.innerHeight - barHeight - 12, prev.y))
+        const safeX = Math.max(8, Math.min(window.innerWidth - barWidth - 8, prev.x))
+        const safeY = Math.max(8, Math.min(window.innerHeight - barHeight - 8, prev.y))
         if (safeX !== prev.x || safeY !== prev.y) {
           return { x: safeX, y: safeY }
         }
@@ -115,15 +142,15 @@ export default function InteractiveAnnotationOverlay({
     const timer = setTimeout(() => {
       if (!toolbarRef.current) return
       const rect = toolbarRef.current.getBoundingClientRect()
-      if (rect.right > window.innerWidth - 12) {
+      if (rect.right > window.innerWidth - 8) {
         setPosition(prev => ({
-          x: Math.max(12, window.innerWidth - rect.width - 16),
+          x: Math.max(8, window.innerWidth - rect.width - 12),
           y: prev.y,
         }))
       }
-    }, 30)
+    }, 40)
     return () => clearTimeout(timer)
-  }, [isAnnotationActive])
+  }, [isAnnotationActive, isCollapsed, showColorPalette])
 
   // 拖拽控制器
   const startDrag = (clientX: number, clientY: number) => {
@@ -140,11 +167,11 @@ export default function InteractiveAnnotationOverlay({
       const dx = e.clientX - dragStartRef.current.startX
       const dy = e.clientY - dragStartRef.current.startY
 
-      const barWidth = toolbarRef.current?.offsetWidth || 180
+      const barWidth = toolbarRef.current?.offsetWidth || 160
       const barHeight = toolbarRef.current?.offsetHeight || 44
 
-      const newX = Math.max(8, Math.min(window.innerWidth - barWidth - 8, dragStartRef.current.originX + dx))
-      const newY = Math.max(8, Math.min(window.innerHeight - barHeight - 8, dragStartRef.current.originY + dy))
+      const newX = Math.max(6, Math.min(window.innerWidth - barWidth - 6, dragStartRef.current.originX + dx))
+      const newY = Math.max(6, Math.min(window.innerHeight - barHeight - 6, dragStartRef.current.originY + dy))
 
       setPosition({ x: newX, y: newY })
     }
@@ -171,18 +198,24 @@ export default function InteractiveAnnotationOverlay({
     window.addEventListener('pointercancel', onPointerUp)
   }
 
-  // 双击手柄一键恢复默认右上角位置
+  // 双击手柄一键恢复默认位置
   const handleResetPosition = () => {
-    const defaultPos = {
-      x: Math.max(16, window.innerWidth - (isAnnotationActive ? 460 : 220)),
-      y: 84,
-    }
+    const defaultPos = isMobile
+      ? { x: Math.max(8, window.innerWidth - (toolbarRef.current?.offsetWidth || 180) - 12), y: Math.max(60, window.innerHeight - 80) }
+      : { x: Math.max(16, window.innerWidth - (isAnnotationActive ? 440 : 180) - 16), y: Math.max(60, window.innerHeight - 90) }
     setPosition(defaultPos)
     try {
       localStorage.removeItem('interactive_annotation_toolbar_position')
     } catch {
       // 容错处理
     }
+  }
+
+  // 明确关闭批注模式（手机与桌面一键安全退出）
+  const handleCloseAnnotation = () => {
+    onToggleAnnotation(false)
+    setShowColorPalette(false)
+    setIsWriting(false)
   }
 
   const handleToolbarPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -381,6 +414,7 @@ export default function InteractiveAnnotationOverlay({
 
     canvas.setPointerCapture(e.pointerId)
     isDrawingRef.current = true
+    setIsWriting(true) // 书写时自动半透明，彻底避让视野
 
     const pos = getCanvasPos(e)
     const newStroke: HandwritingStroke = {
@@ -403,6 +437,7 @@ export default function InteractiveAnnotationOverlay({
   }
 
   const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    setIsWriting(false) // 抬笔恢复透明度
     if (!isDrawingRef.current) return
     isDrawingRef.current = false
 
@@ -470,7 +505,7 @@ export default function InteractiveAnnotationOverlay({
         className={`w-full h-full block ${isAnnotationActive ? 'cursor-crosshair' : 'cursor-auto'}`}
       />
 
-      {/* 随心拖拽批注控制胶囊栏（已移出笔记页面，支持自由拖动与记忆） */}
+      {/* 随心拖拽批注控制胶囊栏（彻底脱离笔记文档流，解决遮挡视野与移动端关闭困难问题） */}
       {typeof document !== 'undefined' &&
         createPortal(
           <div
@@ -483,9 +518,9 @@ export default function InteractiveAnnotationOverlay({
               zIndex: 9999,
               touchAction: 'none',
             }}
-            className={`w-fit max-w-[96vw] flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/90 dark:border-slate-800 shadow-xl text-xs select-none transition-[box-shadow,opacity] duration-150 ${
-              isDragging ? 'shadow-2xl ring-2 ring-accent-orange/50 cursor-grabbing opacity-95' : 'hover:shadow-2xl'
-            }`}
+            className={`w-fit max-w-[98vw] flex items-center gap-1.5 px-2 py-1.5 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/90 dark:border-slate-800 shadow-xl text-xs select-none transition-[opacity,box-shadow] duration-200 ${
+              isWriting ? 'opacity-20 pointer-events-none' : 'opacity-100'
+            } ${isDragging ? 'shadow-2xl ring-2 ring-accent-orange/50 cursor-grabbing' : 'hover:shadow-2xl'}`}
           >
             {/* 拖动手柄 */}
             <div
@@ -494,168 +529,319 @@ export default function InteractiveAnnotationOverlay({
                 startDrag(e.clientX, e.clientY)
               }}
               onDoubleClick={handleResetPosition}
-              className="flex items-center justify-center p-1 -ml-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-grab active:cursor-grabbing rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              title="按住拖动位置 (双击恢复默认右上角)"
+              className="flex items-center justify-center p-1 -ml-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-grab active:cursor-grabbing rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors touch-manipulation"
+              title="按住拖动位置 (双击恢复默认位置)"
             >
               <GripVertical className="w-3.5 h-3.5" />
             </div>
 
-            {/* 模式总开关：光标编辑/滑动 ⇄ 就地手写批注 */}
-            <button
-              onClick={() => onToggleAnnotation(!isAnnotationActive)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold transition-all shadow-xs ${
-                isAnnotationActive
-                  ? 'bg-gradient-to-r from-accent-orange to-amber-500 text-white'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-              }`}
-              title={isAnnotationActive ? '切换为打字与滚动模式' : '提笔在当前页面任意处就地批注'}
-            >
-              {isAnnotationActive ? (
-                <>
-                  <PenTool className="w-4 h-4 animate-bounce" />
-                  <span>就地手写中</span>
-                </>
-              ) : (
-                <>
-                  <MousePointer className="w-4 h-4 text-slate-500" />
-                  <span>提笔批注</span>
-                </>
-              )}
-            </button>
-
-            {isAnnotationActive && (
+            {/* 状态 A：极简收缩模式（折叠为边角微型胶囊，彻底不挡视野） */}
+            {isCollapsed ? (
+              <div className="flex items-center gap-1.5">
+                {isAnnotationActive ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setIsCollapsed(false)}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold hover:bg-amber-500/20 active:scale-95 transition-all touch-manipulation"
+                      title="展开手写工具栏"
+                    >
+                      <PenTool className="w-3.5 h-3.5 animate-pulse" />
+                      <span>展开工具</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCloseAnnotation}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold shadow-xs transition-all touch-manipulation"
+                      title="完成并退出批注模式"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>完成</span>
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCollapsed(false)
+                      onToggleAnnotation(true)
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-accent-orange hover:text-white text-slate-700 dark:text-slate-200 font-semibold transition-all touch-manipulation"
+                    title="展开提笔批注"
+                  >
+                    <MousePointer className="w-3.5 h-3.5 text-accent-orange" />
+                    <span>提笔批注</span>
+                  </button>
+                )}
+              </div>
+            ) : (
+              /* 状态 B：完整操作栏 */
               <>
-                <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5" />
-
-                {/* 工具选择：钢笔 / 荧光高亮笔 / 橡皮擦 */}
-                <div className="flex items-center p-0.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                {/* 模式总开关：未激活时显示提笔批注，激活时显示醒目的【✓ 完成】退出按钮 */}
+                {!isAnnotationActive ? (
                   <button
-                    onClick={() => setCurrentTool('pen')}
-                    className={`p-1.5 rounded-lg transition-all ${
-                      currentTool === 'pen'
-                        ? 'bg-white dark:bg-slate-900 text-accent-orange shadow-xs font-bold'
-                        : 'text-slate-500 hover:text-slate-800'
-                    }`}
-                    title="钢笔 (就地手写推导与字迹批注)"
+                    type="button"
+                    onClick={() => onToggleAnnotation(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-accent-orange hover:text-white transition-all shadow-xs touch-manipulation"
+                    title="提笔在当前页面任意处就地批注"
                   >
-                    <PenTool className="w-3.5 h-3.5" />
+                    <MousePointer className="w-4 h-4 text-accent-orange" />
+                    <span>提笔批注</span>
                   </button>
+                ) : (
+                  /* 激活批注时：最左侧为高亮显眼的【✓ 完成批注】大按钮，手机端一眼即可看见并轻触退出！ */
                   <button
-                    onClick={() => setCurrentTool('highlighter')}
-                    className={`p-1.5 rounded-lg transition-all ${
-                      currentTool === 'highlighter'
-                        ? 'bg-white dark:bg-slate-900 text-amber-500 shadow-xs font-bold'
-                        : 'text-slate-500 hover:text-slate-800'
-                    }`}
-                    title="荧光高亮笔 (就地划讲义重点，透出文字)"
+                    type="button"
+                    onClick={handleCloseAnnotation}
+                    className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-xl font-bold bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white shadow-sm transition-all touch-manipulation shrink-0"
+                    title="完成手写批注，立即退出并恢复打字与页面滚动"
                   >
-                    <Highlighter className="w-3.5 h-3.5" />
+                    <Check className="w-4 h-4" />
+                    <span>完成退出</span>
                   </button>
-                  <button
-                    onClick={() => setCurrentTool('eraser')}
-                    className={`p-1.5 rounded-lg transition-all ${
-                      currentTool === 'eraser'
-                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-bold'
-                        : 'text-slate-500 hover:text-slate-800'
-                    }`}
-                    title="橡皮擦"
-                  >
-                    <Eraser className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                {/* 笔刷颜色 */}
-                {currentTool !== 'eraser' && (
-                  <div className="flex items-center gap-1 px-1.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
-                    {COLORS.map(c => (
-                      <button
-                        key={c.value}
-                        onClick={() => setCurrentColor(c.value)}
-                        style={{ backgroundColor: c.value }}
-                        title={c.label}
-                        className={`w-4 h-4 rounded-full transition-transform ${
-                          currentColor === c.value
-                            ? 'scale-125 ring-2 ring-accent-orange border-2 border-white'
-                            : 'hover:scale-110 opacity-80 hover:opacity-100'
-                        }`}
-                      />
-                    ))}
-                  </div>
                 )}
 
-                {/* 笔画粗细 */}
-                <div className="flex items-center gap-0.5 px-1 py-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
-                  {SIZES.map(s => (
-                    <button
-                      key={s.value}
-                      onClick={() => setCurrentSize(s.value)}
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors ${
-                        currentSize === s.value
-                          ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-bold shadow-2xs'
-                          : 'text-slate-500 hover:text-slate-700'
-                      }`}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
+                {/* 激活批注后的工具集 */}
+                {isAnnotationActive && (
+                  <>
+                    <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5" />
+
+                    {/* 工具选择：钢笔 / 荧光高亮笔 / 橡皮擦 */}
+                    <div className="flex items-center p-0.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                      <button
+                        type="button"
+                        onClick={() => setCurrentTool('pen')}
+                        className={`p-1.5 rounded-lg transition-all touch-manipulation ${
+                          currentTool === 'pen'
+                            ? 'bg-white dark:bg-slate-900 text-accent-orange shadow-xs font-bold'
+                            : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                        }`}
+                        title="钢笔 (就地手写推导与字迹批注)"
+                      >
+                        <PenTool className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCurrentTool('highlighter')}
+                        className={`p-1.5 rounded-lg transition-all touch-manipulation ${
+                          currentTool === 'highlighter'
+                            ? 'bg-white dark:bg-slate-900 text-amber-500 shadow-xs font-bold'
+                            : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                        }`}
+                        title="荧光高亮笔 (就地划讲义重点，透出文字)"
+                      >
+                        <Highlighter className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCurrentTool('eraser')}
+                        className={`p-1.5 rounded-lg transition-all touch-manipulation ${
+                          currentTool === 'eraser'
+                            ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-bold'
+                            : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                        }`}
+                        title="橡皮擦"
+                      >
+                        <Eraser className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* 颜色与粗细：移动端采用紧凑下拉弹层，桌面端平铺 */}
+                    {isMobile ? (
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setShowColorPalette(!showColorPalette)}
+                          className="flex items-center gap-1 px-1.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 touch-manipulation"
+                          title="选择颜色与粗细"
+                        >
+                          <span
+                            className="w-3.5 h-3.5 rounded-full border border-white shadow-xs"
+                            style={{ backgroundColor: currentColor }}
+                          />
+                          <ChevronDown className="w-3 h-3 text-slate-400" />
+                        </button>
+
+                        {/* 移动端调色浮层 */}
+                        {showColorPalette && (
+                          <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 p-2.5 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col gap-2 z-50 animate-fade-in-down w-44">
+                            <div className="text-[10px] font-semibold text-slate-400">批注颜色</div>
+                            <div className="grid grid-cols-6 gap-1">
+                              {COLORS.map(c => (
+                                <button
+                                  key={c.value}
+                                  type="button"
+                                  onClick={() => {
+                                    setCurrentColor(c.value)
+                                    setShowColorPalette(false)
+                                  }}
+                                  style={{ backgroundColor: c.value }}
+                                  className={`w-6 h-6 rounded-full transition-transform touch-manipulation ${
+                                    currentColor === c.value
+                                      ? 'scale-110 ring-2 ring-accent-orange border-2 border-white'
+                                      : 'opacity-85 hover:opacity-100'
+                                  }`}
+                                  title={c.label}
+                                />
+                              ))}
+                            </div>
+                            <div className="text-[10px] font-semibold text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-800">
+                              笔画粗细
+                            </div>
+                            <div className="flex gap-1">
+                              {SIZES.map(s => (
+                                <button
+                                  key={s.value}
+                                  type="button"
+                                  onClick={() => {
+                                    setCurrentSize(s.value)
+                                    setShowColorPalette(false)
+                                  }}
+                                  className={`flex-1 py-1 rounded text-[11px] font-medium touch-manipulation ${
+                                    currentSize === s.value
+                                      ? 'bg-accent-orange text-white font-bold'
+                                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                                  }`}
+                                >
+                                  {s.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        {/* 桌面端：平铺笔刷颜色 */}
+                        {currentTool !== 'eraser' && (
+                          <div className="flex items-center gap-1 px-1.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                            {COLORS.map(c => (
+                              <button
+                                key={c.value}
+                                type="button"
+                                onClick={() => setCurrentColor(c.value)}
+                                style={{ backgroundColor: c.value }}
+                                title={c.label}
+                                className={`w-4 h-4 rounded-full transition-transform touch-manipulation ${
+                                  currentColor === c.value
+                                    ? 'scale-125 ring-2 ring-accent-orange border-2 border-white'
+                                    : 'hover:scale-110 opacity-80 hover:opacity-100'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        )}
+
+                        {/* 桌面端：平铺笔画粗细 */}
+                        <div className="flex items-center gap-0.5 px-1 py-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                          {SIZES.map(s => (
+                            <button
+                              key={s.value}
+                              type="button"
+                              onClick={() => setCurrentSize(s.value)}
+                              className={`px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors touch-manipulation ${
+                                currentSize === s.value
+                                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-bold shadow-2xs'
+                                  : 'text-slate-500 hover:text-slate-700'
+                              }`}
+                            >
+                              {s.label}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+
+                    {/* 撤销 / 重做 / 清屏 */}
+                    <div className="flex items-center gap-0.5">
+                      <button
+                        type="button"
+                        onClick={handleUndo}
+                        disabled={strokesRef.current.length === 0}
+                        className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:pointer-events-none touch-manipulation"
+                        title="撤销笔画"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                      </button>
+                      {!isMobile && (
+                        <button
+                          type="button"
+                          onClick={handleRedo}
+                          disabled={redoStackRef.current.length === 0}
+                          className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:pointer-events-none touch-manipulation"
+                          title="重做笔画"
+                        >
+                          <RotateCw className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleClear}
+                        disabled={strokesRef.current.length === 0}
+                        className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 disabled:opacity-30 disabled:pointer-events-none touch-manipulation"
+                        title="清除本页所有手写笔迹"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {/* 笔迹显隐与保存状态 */}
+                <div className="flex items-center gap-1 ml-0.5 pl-1 border-l border-slate-200 dark:border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStrokesVisible(!strokesVisible)
+                      setTimeout(redrawStrokes, 10)
+                    }}
+                    className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors touch-manipulation"
+                    title={strokesVisible ? '临时隐藏手写笔迹' : '显示手写笔迹'}
+                  >
+                    {strokesVisible ? (
+                      <Eye className="w-3.5 h-3.5 text-accent-orange" />
+                    ) : (
+                      <EyeOff className="w-3.5 h-3.5 text-slate-400" />
+                    )}
+                  </button>
+
+                  {saveStatus === 'saving' && (
+                    <span className="flex items-center gap-1 text-[10px] text-amber-500 animate-pulse">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      <span className="hidden sm:inline">同步中</span>
+                    </span>
+                  )}
+                  {saveStatus === 'saved' && (
+                    <span className="flex items-center gap-1 text-[10px] text-emerald-500">
+                      <Check className="w-3 h-3" />
+                      <span className="hidden sm:inline">已存</span>
+                    </span>
+                  )}
                 </div>
 
-                {/* 撤销 / 重做 */}
-                <div className="flex items-center gap-1">
+                {/* 折叠最小化按钮（一键收缩为微型浮标，彻底不挡视野） */}
+                <button
+                  type="button"
+                  onClick={() => setIsCollapsed(true)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors touch-manipulation ml-0.5"
+                  title="最小化收起工具栏 (彻底消除遮挡)"
+                >
+                  <Minimize2 className="w-3.5 h-3.5" />
+                </button>
+
+                {/* 移动端常驻关闭小叉叉（额外退出快捷方式） */}
+                {isAnnotationActive && (
                   <button
-                    onClick={handleUndo}
-                    disabled={strokesRef.current.length === 0}
-                    className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:pointer-events-none"
-                    title="撤销笔画"
+                    type="button"
+                    onClick={handleCloseAnnotation}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors touch-manipulation"
+                    title="退出批注模式"
                   >
-                    <RotateCcw className="w-3.5 h-3.5" />
+                    <X className="w-3.5 h-3.5" />
                   </button>
-                  <button
-                    onClick={handleRedo}
-                    disabled={redoStackRef.current.length === 0}
-                    className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:pointer-events-none"
-                    title="重做笔画"
-                  >
-                    <RotateCw className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={handleClear}
-                    disabled={strokesRef.current.length === 0}
-                    className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 disabled:opacity-30 disabled:pointer-events-none"
-                    title="清除本页所有手写笔迹"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                )}
               </>
             )}
-
-            {/* 笔迹显隐与保存状态 */}
-            <div className="flex items-center gap-1.5 ml-0.5 pl-1.5 border-l border-slate-200 dark:border-slate-700">
-              <button
-                onClick={() => {
-                  setStrokesVisible(!strokesVisible)
-                  setTimeout(redrawStrokes, 10)
-                }}
-                className={`p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors`}
-                title={strokesVisible ? '临时隐藏手写笔迹' : '显示手写笔迹'}
-              >
-                {strokesVisible ? <Eye className="w-3.5 h-3.5 text-accent-orange" /> : <EyeOff className="w-3.5 h-3.5 text-slate-400" />}
-              </button>
-
-              {saveStatus === 'saving' && (
-                <span className="flex items-center gap-1 text-[10px] text-amber-500 animate-pulse">
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                  <span className="hidden sm:inline">同步中</span>
-                </span>
-              )}
-              {saveStatus === 'saved' && (
-                <span className="flex items-center gap-1 text-[10px] text-emerald-500">
-                  <Check className="w-3 h-3" />
-                  <span className="hidden sm:inline">已存</span>
-                </span>
-              )}
-            </div>
           </div>,
           document.body
         )}

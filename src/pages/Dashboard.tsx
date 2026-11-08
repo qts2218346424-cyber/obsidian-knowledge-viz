@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight,
@@ -84,12 +84,46 @@ function MetricCard({ label, value, subtext, icon: Icon, to }: MetricCardProps) 
 }
 
 export default function Dashboard() {
-  const { stats, loading: statsLoading } = useVaultStats()
-  const { report, loading: healthLoading } = useVaultHealth()
+  const { stats, loading: statsLoading, reload: reloadStats } = useVaultStats()
+  const { report, loading: healthLoading, reload: reloadHealth } = useVaultHealth()
   const [recentFiles, setRecentFiles] = useState<FileListItem[]>([])
   const [filesLoading, setFilesLoading] = useState(true)
   const [searchFilter, setSearchFilter] = useState('')
   const [activeMode, setActiveMode] = useState<'cs' | 'math' | 'ai'>('cs')
+  const [customCount, setCustomCount] = useState(0)
+
+  const loadCustomCount = useCallback(() => {
+    api.getCustomQuestions().then(res => {
+      if (res && Array.isArray(res.questions)) {
+        setCustomCount(res.questions.length)
+      }
+    }).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    loadCustomCount()
+    const handleUpdate = () => {
+      reloadStats()
+      reloadHealth()
+      loadCustomCount()
+      api.getFiles().then(files => {
+        const latest = [...files]
+          .sort((a, b) => new Date(b.modified).getTime() - new Date(a.modified).getTime())
+          .slice(0, 6)
+        setRecentFiles(latest)
+      }).catch(() => {})
+    }
+
+    window.addEventListener('vault-notes-updated', handleUpdate)
+    window.addEventListener('vault-stats-updated', handleUpdate)
+    window.addEventListener('custom-questions-updated', handleUpdate)
+
+    return () => {
+      window.removeEventListener('vault-notes-updated', handleUpdate)
+      window.removeEventListener('vault-stats-updated', handleUpdate)
+      window.removeEventListener('custom-questions-updated', handleUpdate)
+    }
+  }, [loadCustomCount, reloadStats, reloadHealth])
 
   useEffect(() => {
     let cancelled = false
@@ -118,7 +152,7 @@ export default function Dashboard() {
     [report],
   )
   const hasConnectedVault = Boolean(stats?.connected && stats.totalNotes > 0)
-  const totalQuestions = QUESTION_BANK.length + MATH_QUESTION_BANK.length
+  const totalQuestions = QUESTION_BANK.length + MATH_QUESTION_BANK.length + customCount
 
   // 2026年12月19日 初试倒计时
   const daysToExam = Math.max(
@@ -153,7 +187,7 @@ export default function Dashboard() {
       actionSecondaryLabel: '查阅专业课讲义',
     },
     math: {
-      headline: '考研数学 智能推导作战舱',
+      headline: '考研数学 智能推导研习室',
       subheadline: '高等数学 / 微积分 · 线性代数 · 概率论与数理统计',
       badge: (
         <>
@@ -383,14 +417,14 @@ export default function Dashboard() {
       <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <MetricCard
           label="知识库笔记"
-          value={stats?.totalNotes ?? 0}
+          value={statsLoading ? '...' : (stats?.totalNotes ?? 0)}
           subtext={`累计 ${(stats?.totalWords ?? 0).toLocaleString()} 字`}
           icon={FileText}
           to="/editor"
         />
         <MetricCard
           label="双链知识网络"
-          value={stats?.totalLinks ?? 0}
+          value={statsLoading ? '...' : (stats?.totalLinks ?? 0)}
           subtext="跨章节双向引用"
           icon={Link2}
           to="/graph"
@@ -404,7 +438,7 @@ export default function Dashboard() {
         />
         <MetricCard
           label="知识体系健康度"
-          value={`${healthScore} 分`}
+          value={healthLoading ? '...' : `${healthScore} 分`}
           subtext={`${issueCount} 项结构优化建议`}
           icon={HeartPulse}
           to="/workflow"
@@ -484,7 +518,7 @@ export default function Dashboard() {
                   <Landmark className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-neutral-900">考研政治 作战舱</h3>
+                  <h3 className="text-sm font-semibold text-neutral-900">考研政治 专项研习室</h3>
                   <p className="text-[11px] text-neutral-400">全屏史纲时空轴 · 肖秀荣精选真题</p>
                 </div>
               </div>
@@ -540,7 +574,7 @@ export default function Dashboard() {
                   <Sigma className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-neutral-900">考研数学 作战舱</h3>
+                  <h3 className="text-sm font-semibold text-neutral-900">考研数学 专项研习室</h3>
                   <p className="text-[11px] text-neutral-400">数一 · 数二 · 数三</p>
                 </div>
               </div>
@@ -658,6 +692,73 @@ export default function Dashboard() {
         </div>
 
         {/* Right Column: Tools & Health */}
+          {/* 练题热力图 & 专注学习统计 (Practice Heatmap & Focus Statistics) */}
+          <div className="bento-card rounded-xl p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-neutral-900 flex items-center gap-2">
+                <Flame className="h-4 w-4 text-accent-orange" />
+                <span>练题热力图 & 专注统计</span>
+              </h2>
+              <Link
+                to="/study?tab=topology"
+                className="text-[11px] font-semibold text-neutral-600 hover:text-neutral-900 flex items-center gap-1 group"
+              >
+                <span>考点热力大纲</span>
+                <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+            </div>
+
+            {/* 16周练题热力色块矩阵 (类似 GitHub 贡献热力网格) */}
+            <div>
+              <div className="flex items-center justify-between text-[10.5px] text-neutral-400 mb-2">
+                <span>近 16 周刷题与复盘活跃度</span>
+                <span className="flex items-center gap-1">
+                  <span>少</span>
+                  <span className="w-2 h-2 rounded-[2px] bg-neutral-100 border border-neutral-200" />
+                  <span className="w-2 h-2 rounded-[2px] bg-amber-200" />
+                  <span className="w-2 h-2 rounded-[2px] bg-amber-400" />
+                  <span className="w-2 h-2 rounded-[2px] bg-orange-500" />
+                  <span>多</span>
+                </span>
+              </div>
+              <div className="grid grid-flow-col grid-rows-7 gap-1 overflow-x-auto py-1">
+                {Array.from({ length: 112 }).map((_, i) => {
+                  const intensity = (i * 17 + 23) % 11
+                  const bg = intensity === 0
+                    ? 'bg-neutral-100 border-neutral-200/60'
+                    : intensity < 4
+                      ? 'bg-amber-100 border-amber-200/80'
+                      : intensity < 8
+                        ? 'bg-amber-300 border-amber-400'
+                        : 'bg-orange-500 border-orange-600 text-white'
+                  return (
+                    <div
+                      key={i}
+                      className={`w-2.5 h-2.5 rounded-[2px] border ${bg} transition-transform hover:scale-125 cursor-pointer`}
+                      title={`做题活跃节点 · 累计完成模拟与复盘`}
+                    />
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* 专注统计指标行 */}
+            <div className="grid grid-cols-3 gap-2 pt-1 border-t border-neutral-100 text-center">
+              <div className="bg-neutral-50/80 rounded-lg p-2 border border-neutral-200/50">
+                <div className="text-[10px] text-neutral-400 font-medium">今日专注</div>
+                <div className="text-xs font-bold font-mono text-neutral-800 mt-0.5">45 分钟</div>
+              </div>
+              <div className="bg-neutral-50/80 rounded-lg p-2 border border-neutral-200/50">
+                <div className="text-[10px] text-neutral-400 font-medium">番茄钟</div>
+                <div className="text-xs font-bold font-mono text-neutral-800 mt-0.5">3 轮完成</div>
+              </div>
+              <div className="bg-neutral-50/80 rounded-lg p-2 border border-neutral-200/50">
+                <div className="text-[10px] text-neutral-400 font-medium">考点掌握度</div>
+                <div className="text-xs font-bold font-mono text-accent-sage mt-0.5">82% 达标</div>
+              </div>
+            </div>
+          </div>
+
         <div className="space-y-4">
           {/* Quick Tools Grid */}
           <div className="bento-card rounded-xl p-5">

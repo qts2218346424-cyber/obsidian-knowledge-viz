@@ -324,8 +324,13 @@ export default function Chat() {
       setActiveConvId('')
     }
 
-    // 2. 从云端 SQLite 强持久化中心精准同步该用户历史
-    api.getAiConversations().then(cloudConvs => {
+    // 2. 从云端 SQLite 强持久化中心精准同步该用户历史（3 秒超时竞速保护，杜绝左侧无限转圈）
+    const fetchCloudWithTimeout = Promise.race([
+      api.getAiConversations(),
+      new Promise<null>((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 3000))
+    ])
+
+    fetchCloudWithTimeout.then(cloudConvs => {
       if (isCancelled) return
       if (Array.isArray(cloudConvs) && cloudConvs.length > 0) {
         const mapped = cloudConvs.map((c: any) => ({
@@ -350,7 +355,8 @@ export default function Chat() {
       setIsHistoryLoaded(true)
     }).catch(err => {
       if (isCancelled) return
-      console.warn('[Chat] 拉取云端对话历史失败，使用本地缓存:', err)
+      // 云端超时或未连接，优雅释放加载状态，直接允许本地会话无阻塞使用
+      console.warn('[Chat] 云端对话历史同步超时或离线，已降级载入本地会话:', err)
       setIsHistoryLoaded(true)
     })
 

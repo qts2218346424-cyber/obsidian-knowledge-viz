@@ -1048,52 +1048,67 @@ export default function Editor() {
               <ChevronDown className={`w-3 h-3 transition-transform ${showAiMenu ? 'rotate-180' : ''}`} />
             </button>
 
-            <div className="w-px h-4 bg-slate-200 mx-0.5 shrink-0" />
-            <ToolBtn icon={Bold} label="粗体 (Ctrl+B)" onClick={fmt.bold} />
-            <ToolBtn icon={Italic} label="斜体 (Ctrl+I)" onClick={fmt.italic} />
-            <ToolBtn icon={Strikethrough} label="删除线" onClick={fmt.strike} />
-            <ToolBtn icon={Heading} label="一级标题" onClick={fmt.h1} />
-            <ToolBtn icon={Heading} label="二级标题" onClick={fmt.h2} className="!text-[10px]" suffix="2" />
-            <ToolBtn icon={Heading} label="三级标题" onClick={fmt.h3} className="!text-[9px]" suffix="3" />
-            <div className="w-px h-4 bg-slate-200 mx-0.5 shrink-0" />
-            <ToolBtn icon={List} label="无序列表" onClick={fmt.list} />
-            <ToolBtn icon={ListOrdered} label="有序列表" onClick={fmt.olist} />
-            <ToolBtn icon={Quote} label="引用" onClick={fmt.quote} />
-            <ToolBtn icon={Code} label="代码块" onClick={fmt.code} />
-            <ToolBtn
-              icon={Sigma}
-              label="插入数学公式 (LaTeX)"
-              onClick={() => { setShowMathMenu(!showMathMenu); setShowAiMenu(false) }}
-              className={showMathMenu ? 'bg-neutral-100 text-neutral-900 font-semibold' : ''}
-            />
-            <ToolBtn icon={Table} label="表格" onClick={fmt.table} />
-            <ToolBtn icon={Link} label="链接" onClick={fmt.link} />
-            <ToolBtn icon={Hash} label="双链笔记" onClick={fmt.wiki} />
-            <ToolBtn icon={Minus} label="分隔线" onClick={fmt.hr} />
+            {/* 格式基础组 */}
+            <div className="flex items-center bg-slate-100/90 border border-slate-200/80 rounded-lg p-0.5 shrink-0 gap-0.5">
+              <ToolBtn icon={Bold} label="粗体 (Ctrl+B)" onClick={fmt.bold} />
+              <ToolBtn icon={Italic} label="斜体 (Ctrl+I)" onClick={fmt.italic} />
+              <ToolBtn icon={Strikethrough} label="删除线" onClick={fmt.strike} />
+            </div>
 
-            <div className="w-px h-4 bg-slate-200 mx-0.5 shrink-0" />
-            <button
-              onClick={() => imageInputRef.current?.click()}
-              title="插入图片 (拍照或相册)"
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 transition-all shrink-0 border border-slate-200/80 cursor-pointer"
-            >
-              <ImageIcon className="w-3.5 h-3.5 text-slate-600" />
-              <span>插图</span>
-            </button>
-            <input
-              ref={imageInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleImageFileSelect}
-            />
-            <button
-              onClick={() => setShowHandwritingModal(true)}
-              title="全屏演算草稿纸"
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 transition-all shrink-0 border border-slate-200/80 cursor-pointer"
-            >
-              <span>演草纸</span>
-            </button>
+            {/* 标题层级组 */}
+            <div className="flex items-center bg-slate-100/90 border border-slate-200/80 rounded-lg p-0.5 shrink-0 gap-0.5">
+              <ToolBtn icon={Heading} label="一级大标题" onClick={fmt.h1} suffix="1" />
+              <ToolBtn icon={Heading} label="二级章节" onClick={fmt.h2} suffix="2" />
+              <ToolBtn icon={Heading} label="三级考点" onClick={fmt.h3} suffix="3" />
+            </div>
+
+            {/* 结构排版组 */}
+            <div className="flex items-center bg-slate-100/90 border border-slate-200/80 rounded-lg p-0.5 shrink-0 gap-0.5">
+              <ToolBtn icon={List} label="无序要点列表" onClick={fmt.list} />
+              <ToolBtn icon={ListOrdered} label="步骤有序列表" onClick={fmt.olist} />
+              <ToolBtn icon={Quote} label="定理与名言引用" onClick={fmt.quote} />
+              <ToolBtn icon={Code} label="408 核心算法代码块" onClick={fmt.code} />
+            </div>
+
+            {/* 考研学术与双链插入组 */}
+            <div className="flex items-center bg-slate-100/90 border border-slate-200/80 rounded-lg p-0.5 shrink-0 gap-0.5">
+              <ToolBtn
+                icon={Sigma}
+                label="插入 LaTeX 数学公式"
+                onClick={() => { setShowMathMenu(!showMathMenu); setShowAiMenu(false) }}
+                className={showMathMenu ? 'bg-white text-indigo-700 font-bold shadow-2xs' : ''}
+              />
+              <ToolBtn icon={Table} label="对比表格" onClick={fmt.table} />
+              <ToolBtn icon={Hash} label="考点双链 [[...]]" onClick={fmt.wiki} />
+              <ToolBtn icon={Link} label="超链接" onClick={fmt.link} />
+              <ToolBtn icon={Minus} label="分隔线" onClick={fmt.hr} />
+            </div>
+
+            {/* 媒体与草稿纸组 */}
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={() => imageInputRef.current?.click()}
+                title="插入真题插图或板书照片"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 transition-all border border-slate-200/80 cursor-pointer shadow-2xs"
+              >
+                <ImageIcon className="w-3.5 h-3.5 text-indigo-600" />
+                <span>插图</span>
+              </button>
+              <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageFileSelect}
+              />
+              <button
+                onClick={() => setShowHandwritingModal(true)}
+                title="全屏手写演草纸与公式演算"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 transition-all border border-slate-200/80 cursor-pointer shadow-2xs"
+              >
+                <span>演草纸</span>
+              </button>
+            </div>
           </div>
 
           {/* 独立挂载的数学公式菜单（不被横向滚动条裁剪） */}

@@ -48,6 +48,7 @@ export default function QuickPracticeModal({
   notePath,
 }: QuickPracticeModalProps) {
   const [loading, setLoading] = useState(false)
+  const [elapsedSec, setElapsedSec] = useState(0)
   const [questions, setQuestions] = useState<PracticeQuestion[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({})
@@ -61,6 +62,7 @@ export default function QuickPracticeModal({
   const generateQuestions = async () => {
     if (!noteTitle && !noteContent) return
     setLoading(true)
+    setElapsedSec(0)
     setQuestions([])
     setCurrentIndex(0)
     setUserAnswers({})
@@ -97,6 +99,21 @@ export default function QuickPracticeModal({
       generateQuestions()
     }
   }, [isOpen])
+
+  // 生成等待计时器与阶段推进指示
+  useEffect(() => {
+    let timer: number | null = null
+    if (loading) {
+      timer = window.setInterval(() => {
+        setElapsedSec(s => s + 1)
+      }, 1000)
+    } else {
+      setElapsedSec(0)
+    }
+    return () => {
+      if (timer) clearInterval(timer)
+    }
+  }, [loading])
 
   if (!isOpen) return null
 
@@ -225,19 +242,39 @@ export default function QuickPracticeModal({
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto px-4 py-4 md:p-6 overscroll-contain">
           {loading ? (
-            <div className="py-20 flex flex-col items-center justify-center text-center space-y-4">
+            <div className="py-16 px-4 flex flex-col items-center justify-center text-center space-y-5 animate-in fade-in">
               <div className="relative">
-                <Loader2 className="w-12 h-12 text-orange-500 animate-spin" />
-                <Sparkles className="w-5 h-5 text-amber-500 absolute top-0 right-0 animate-bounce" />
+                <div className="w-16 h-16 rounded-3xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 flex items-center justify-center shadow-lg shadow-amber-500/10">
+                  <Loader2 className="w-8 h-8 text-amber-600 dark:text-amber-400 animate-spin" />
+                </div>
+                <Sparkles className="w-5 h-5 text-amber-500 absolute -top-1.5 -right-1.5 animate-bounce" />
               </div>
-              <div>
-                <p className="text-sm font-semibold text-warm-800 dark:text-slate-200">
-                  AI 正在深度研析本篇笔记考点与定理...
-                </p>
-                <p className="text-xs text-warm-400 dark:text-slate-500 mt-1">
-                  依据 408 / 考研数学命题规律，为您量身命制 3 道高质量随堂真题与解析
+
+              <div className="space-y-2 max-w-sm">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] font-mono text-slate-600 dark:text-slate-300">
+                  <span>⏱ 已研析生成 {elapsedSec} 秒</span>
+                </div>
+
+                <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  {elapsedSec < 5
+                    ? '🔍 步骤 1/3：正在研析本篇笔记考点与定理依据...'
+                    : elapsedSec < 11
+                    ? '🧠 步骤 2/3：结合 408 / 考研数学命题模型构思题目与干扰项...'
+                    : '📐 步骤 3/3：正在格式化公式与名师分步推导解析...'}
+                </h4>
+
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  大模型正在为您量身命制 3 道高质量真题并注入标准推导，通常耗时约 8~15 秒，请稍候。
                 </p>
               </div>
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 underline cursor-pointer pt-2"
+              >
+                取消并返回笔记
+              </button>
             </div>
           ) : showSummary ? (
             /* Summary Report Card */
