@@ -49,7 +49,7 @@ export default function HandoutReaderModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/70 backdrop-blur-xs modal-backdrop-contain">
-      <div className="dark bg-[#121622] border-0 sm:border border-white/10 rounded-none sm:rounded-2xl w-full max-w-5xl h-dvh sm:h-[90dvh] flex flex-col shadow-2xl overflow-hidden text-slate-100">
+      <div className="dark bg-[#0e121d] border-0 sm:border border-white/10 rounded-none sm:rounded-2xl w-full max-w-6xl h-dvh sm:h-[92dvh] flex flex-col shadow-[0_24px_70px_rgba(0,0,0,0.85)] overflow-hidden text-slate-100 ring-1 ring-white/10">
         {/* Header */}
         <div className="px-3.5 py-2.5 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6 sm:py-4 border-b border-white/10 flex items-center justify-between gap-2 bg-white/[0.02] shrink-0">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
@@ -185,7 +185,7 @@ export default function HandoutReaderModal({
             </div>
 
             {/* Markdown rendered content */}
-            <div className="prose prose-invert max-w-none text-slate-100 prose-p:leading-relaxed prose-pre:bg-[#0c0f17] prose-pre:border prose-pre:border-white/10 prose-headings:text-white prose-a:text-orange-400">
+            <div className="prose prose-invert max-w-none text-slate-100 prose-p:leading-[1.75] prose-pre:bg-[#080b12] prose-pre:border prose-pre:border-white/10 prose-headings:text-white prose-a:text-indigo-400 academic-body leading-[1.75]">
               <MarkdownRenderer content={handout.content} className="text-slate-100" />
             </div>
           </div>

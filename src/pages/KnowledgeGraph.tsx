@@ -4,7 +4,14 @@ import * as d3 from 'd3'
 import { useVaultGraph, useVaultHealth, useVaultStats } from '../hooks/useVaultData'
 import { graphNodes as mockNodes, graphLinks as mockLinks, groupColors, groupLabels } from '../data/mockData'
 import { api, type FileDetail } from '../services/api'
-import { RefreshCw, Loader2, Search, X, FileText, Maximize2, RotateCcw, ZoomIn, ZoomOut, Eye } from 'lucide-react'
+import {
+  RefreshCw, Loader2, Search, X, FileText, Maximize2, RotateCcw,
+  ZoomIn, ZoomOut, Eye, Flame, Play, ShieldAlert, Sparkles, CheckCircle2, Activity
+} from 'lucide-react'
+import CoursewareViewerModal from '../components/CoursewareViewerModal'
+import MasteryRescueModal from '../components/MasteryRescueModal'
+import { INTERACTIVE_COURSEWARES, type InteractiveCoursewareItem } from '../data/interactiveCourseware'
+import { getNodeMastery, type MasteryPoint } from '../data/masteryData'
 
 const allGroupColors: Record<string, string> = {
   ...groupColors,
@@ -63,6 +70,19 @@ export default function KnowledgeGraph() {
   const [previewNode, setPreviewNode] = useState<FileDetail | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [dimensions, setDimensions] = useState({ width: 900, height: 600 })
+
+  // 🚀 核心视图模式：'topology'（双链拓扑）与 'mastery'（考点掌握度热力图）
+  const [viewMode, setViewMode] = useState<'topology' | 'mastery'>('mastery')
+  const viewModeRef = useRef<'topology' | 'mastery'>('mastery')
+  viewModeRef.current = viewMode
+
+  // 🏥 考点诊断与提分急救舱状态
+  const [activeMasteryPoint, setActiveMasteryPoint] = useState<MasteryPoint | null>(null)
+  const [isRescueModalOpen, setIsRescueModalOpen] = useState(false)
+
+  // 🔬 仿真课件查看器弹窗状态
+  const [activeCourseware, setActiveCourseware] = useState<InteractiveCoursewareItem | null>(null)
+  const [isCoursewareOpen, setIsCoursewareOpen] = useState(false)
 
   // Data hooks
   const { data, loading, error, reload } = useVaultGraph()
@@ -138,6 +158,20 @@ export default function KnowledgeGraph() {
   const scoreColor = overallScore >= 80 ? 'text-accent-sage' : overallScore >= 60 ? 'text-accent-amber' : 'text-accent-rose'
   const orphanNotes = stats?.orphanNotes ?? 0
 
+  // 掌握度统计概况 (基于节点掌握度计算)
+  const masterySummary = useMemo(() => {
+    let criticalCount = 0
+    let moderateCount = 0
+    let masteredCount = 0
+    simNodes.forEach(node => {
+      const mp = getNodeMastery(node.id, node.label)
+      if (mp.rate < 50) criticalCount++
+      else if (mp.rate < 80) moderateCount++
+      else masteredCount++
+    })
+    return { criticalCount, moderateCount, masteredCount, total: simNodes.length }
+  }, [simNodes])
+
   // Resize observer
   useEffect(() => {
     const el = containerRef.current
@@ -151,6 +185,17 @@ export default function KnowledgeGraph() {
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
+
+  // 获取节点填充主色 (支持拓扑色彩与掌握度热力三色动态映射)
+  const getNodeColor = (d: SimNode, currentViewMode: 'topology' | 'mastery') => {
+    if (currentViewMode === 'mastery') {
+      const mp = getNodeMastery(d.id, d.label)
+      if (mp.rate >= 80) return '#10b981' // 翡翠绿 (稳固攻克)
+      if (mp.rate >= 50) return '#f59e0b' // 暖橙黄 (进阶巩固)
+      return '#ef4444' // 正气红 (薄弱高危)
+    }
+    return allGroupColors[d.group] || '#8B7355'
+  }
 
   // D3 force simulation
   useEffect(() => {
@@ -239,9 +284,17 @@ export default function KnowledgeGraph() {
           })
       )
 
-    // 单击节点：呼出右侧知识卡片与考点预览抽屉 (兼顾拖拽防误触)
+    // 单击节点：若处于【考点掌握度热力图】模式，呼出【考点诊断与提分急救舱】；若在拓扑模式，呼出右侧笔记检查器
     node.on('click', (event, d) => {
       event.stopPropagation()
+      if (viewModeRef.current === 'mastery') {
+        const mp = getNodeMastery(d.id, d.label)
+        setActiveMasteryPoint(mp)
+        setIsRescueModalOpen(true)
+        return
+      }
+
+      // 拓扑模式：展示笔记详情
       if (d.path) {
         setPreviewLoading(true)
         api.getFile(d.path)
@@ -259,20 +312,47 @@ export default function KnowledgeGraph() {
       }
     })
 
+    // 🔥 高危薄弱考点呼吸脉冲光晕 (仅在掌握度热力图模式下生效)
+    node.each(function (d: SimNode) {
+      const el = d3.select(this)
+      const mp = getNodeMastery(d.id, d.label)
+      const isCritical = mp.rate < 50
+
+      if (isCritical) {
+        el.append('circle')
+          .attr('r', d.r + 10)
+          .attr('fill', '#ef4444')
+          .attr('opacity', 0.25)
+          .attr('class', 'critical-pulse')
+          .append('animate')
+          .attr('attributeName', 'r')
+          .attr('values', `${d.r + 6};${d.r + 15};${d.r + 6}`)
+          .attr('dur', '2s')
+          .attr('repeatCount', 'indefinite')
+
+        el.select('.critical-pulse')
+          .append('animate')
+          .attr('attributeName', 'opacity')
+          .attr('values', '0.35;0.08;0.35')
+          .attr('dur', '2s')
+          .attr('repeatCount', 'indefinite')
+      }
+    })
+
     // Node outer glow
     node.append('circle')
       .attr('r', (d: SimNode) => d.r + 4)
-      .attr('fill', (d: SimNode) => allGroupColors[d.group] || '#8B7355')
-      .attr('opacity', 0.15)
+      .attr('fill', (d: SimNode) => getNodeColor(d, viewModeRef.current))
+      .attr('opacity', 0.18)
       .attr('class', 'node-glow')
 
     // Node core circle
     node.append('circle')
       .attr('r', (d: SimNode) => d.r)
-      .attr('fill', (d: SimNode) => allGroupColors[d.group] || '#8B7355')
+      .attr('fill', (d: SimNode) => getNodeColor(d, viewModeRef.current))
       .attr('stroke', '#FFFBF5')
       .attr('stroke-width', 2.2)
-      .attr('opacity', 0.92)
+      .attr('opacity', 0.94)
       .attr('class', 'node-circle')
 
     // Node label with crisp halo (考研学科高清晰度文字，强化白底描边与层次)
@@ -349,7 +429,7 @@ export default function KnowledgeGraph() {
         .attr('stroke', (l: any) => {
           const sId = l.source.id || l.source
           const tId = l.target.id || l.target
-          return sId === d.id || tId === d.id ? (allGroupColors[d.group] || '#8B7355') : '#D4B896'
+          return sId === d.id || tId === d.id ? getNodeColor(d, viewModeRef.current) : '#D4B896'
         })
 
       updateLabels()
@@ -360,11 +440,11 @@ export default function KnowledgeGraph() {
       d3.select(this).select('.node-circle')
         .transition().duration(120)
         .attr('r', d.r)
-        .attr('opacity', 0.92)
+        .attr('opacity', 0.94)
       d3.select(this).select('.node-glow')
         .transition().duration(120)
         .attr('r', d.r + 4)
-        .attr('opacity', 0.15)
+        .attr('opacity', 0.18)
 
       // Restore opacity based on search/group filter
       node.transition().duration(120)
@@ -386,7 +466,7 @@ export default function KnowledgeGraph() {
       updateLabels()
     })
 
-    // Free 2D coordinate tick: NO BOUNDARY CLAMPING!
+    // Free 2D coordinate tick
     simulation.on('tick', () => {
       link
         .attr('x1', (d: any) => d.source.x)
@@ -456,7 +536,7 @@ export default function KnowledgeGraph() {
       fitViewRef.current = null
       updateLabelsRef.current = null
     }
-  }, [dimensions, simNodes, rawLinks, navigate])
+  }, [dimensions, simNodes, rawLinks, navigate, viewMode])
 
   // Update node/link opacity and refresh labels when search, filter or label visibility changes
   useEffect(() => {
@@ -503,16 +583,46 @@ export default function KnowledgeGraph() {
     fitViewRef.current?.(true)
   }
 
+  // 启动仿真课件处理函数
+  const handleOpenCourseware = (coursewareId: string) => {
+    const item = INTERACTIVE_COURSEWARES.find(cw => cw.id === coursewareId) ||
+                 INTERACTIVE_COURSEWARES.find(cw => cw.id === 'cw-avl-tree') ||
+                 INTERACTIVE_COURSEWARES[0]
+    if (item) {
+      setActiveCourseware(item)
+      setIsCoursewareOpen(true)
+    }
+  }
+
+  // 靶向刷 3 道题处理函数
+  const handlePracticePoint = (point: MasteryPoint) => {
+    setIsRescueModalOpen(false)
+    navigate(`/quiz?subject=${encodeURIComponent(point.practiceSubject)}&keyword=${encodeURIComponent(point.practiceKeyword)}&quick3=true`)
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-col gap-0 md:gap-3">
-      {/* 📱 移动端极简状态条（释放 92% 满屏画布空间） */}
+      {/* 📱 移动端极简状态条 */}
       <div className="flex md:hidden items-center justify-between px-3 py-2 bg-white border-b border-slate-200/80 text-xs shrink-0">
-        <div className="flex items-center gap-2 font-medium text-slate-600">
-          <span className="font-bold text-slate-900">{totalNodes} 节点</span>
+        <div className="flex items-center gap-1.5 font-medium text-slate-600">
+          <button
+            onClick={() => setViewMode(prev => prev === 'mastery' ? 'topology' : 'mastery')}
+            className={`px-2 py-0.5 rounded-full text-[11px] font-bold flex items-center gap-1 ${
+              viewMode === 'mastery'
+                ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                : 'bg-slate-100 text-slate-700'
+            }`}
+          >
+            {viewMode === 'mastery' ? '🔥 热力图' : '🕸️ 拓扑图'}
+          </button>
           <span className="text-slate-300">·</span>
-          <span className="text-emerald-600 font-semibold">{rawLinks.length} 双链</span>
-          <span className="text-slate-300">·</span>
-          <span className="text-rose-500">{orphanNotes} 孤立</span>
+          <span className="font-bold text-slate-900">{totalNodes} 考点</span>
+          {viewMode === 'mastery' && (
+            <>
+              <span className="text-slate-300">·</span>
+              <span className="text-rose-500 font-bold">{masterySummary.criticalCount} 薄弱</span>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-1.5">
           {hasFilter && (
@@ -526,35 +636,78 @@ export default function KnowledgeGraph() {
         </div>
       </div>
 
-      {/* 🖥️ 桌面端顶部双轨角落胶囊 (Subframe Screen 3 Corner Pills) */}
+      {/* 🖥️ 桌面端顶部双轨胶囊与视图模式切换器 */}
       <div className="hidden md:flex items-center justify-between gap-3 pt-1">
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-neutral-200/80 shadow-xs">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-xs font-semibold text-neutral-800">全景双链知识网络</span>
-            <span className="text-neutral-300">|</span>
-            <span className="text-[11px] text-neutral-500 font-mono">D3.js 动力拓扑</span>
+          {/* 模式切换双联胶囊 */}
+          <div className="flex items-center p-1 bg-white border border-neutral-200/80 rounded-full shadow-xs">
+            <button
+              onClick={() => setViewMode('mastery')}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                viewMode === 'mastery'
+                  ? 'bg-gradient-to-r from-rose-500 via-amber-500 to-orange-500 text-white shadow-xs'
+                  : 'text-neutral-600 hover:text-neutral-900'
+              }`}
+            >
+              <Flame className="w-3.5 h-3.5 fill-current" />
+              <span>考点掌握度热力图 (Mastery Graph)</span>
+              <span className="text-[10px] bg-white/20 px-1.5 py-0.2 rounded-full">提分导航仪</span>
+            </button>
+
+            <button
+              onClick={() => setViewMode('topology')}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                viewMode === 'topology'
+                  ? 'bg-neutral-900 text-white shadow-xs'
+                  : 'text-neutral-600 hover:text-neutral-900'
+              }`}
+            >
+              <span>知识双链拓扑图</span>
+            </button>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-100 border border-neutral-200/80 text-xs text-neutral-600 font-medium">
-            <span>双击节点：右侧属性检查器</span>
-          </div>
+          {viewMode === 'mastery' ? (
+            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-xs text-rose-800 font-medium">
+              <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+              <span>单击红色薄弱考点，立即进入【提分急救舱】</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-100 border border-neutral-200/80 text-xs text-neutral-600 font-medium">
+              <span>双击节点：右侧属性检查器</span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* 🖥️ 桌面端 Header (Subframe Team Header Bar) */}
+      {/* 🖥️ 桌面端 Header */}
       <div className="hidden md:flex flex-col justify-between gap-3 shrink-0 lg:flex-row lg:items-center bg-white rounded-[16px] border border-black/[0.08] p-4 sm:p-5 shadow-xs">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold tracking-tight text-neutral-900">考研全库拓扑知识图谱</h1>
-            {isRealData && (
+            <h1 className="text-xl font-bold tracking-tight text-neutral-900 flex items-center gap-2">
+              {viewMode === 'mastery' ? (
+                <>
+                  <span className="text-rose-500">🔥</span>
+                  <span>考研考点掌握度热力图</span>
+                </>
+              ) : (
+                <span>考研全库拓扑知识图谱</span>
+              )}
+            </h1>
+            {viewMode === 'mastery' ? (
+              <span className="rounded-full bg-rose-100 border border-rose-200 px-2.5 py-0.5 text-[11px] font-bold text-rose-800 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
+                提分急救导航模式已激活
+              </span>
+            ) : isRealData && (
               <span className="rounded-full bg-neutral-100 border border-neutral-200 px-2 py-0.5 text-[10px] font-mono font-medium text-neutral-700">实时网络</span>
             )}
           </div>
           <p className="mt-0.5 text-xs text-neutral-500">
-            从笔记双向链接构建拓扑知识网络。支持平移缩放、智能标签分级、单击跳至编辑、双击检查器透视。
+            {viewMode === 'mastery'
+              ? '实时映射做题中心作答战况：绿色稳固攻克(>80%)、黄色中度掌握(50%~80%)、红色高危薄弱(<50%呼吸闪烁)。点击薄弱考点直通常规仿真课件与真题急救。'
+              : '从笔记双向链接构建拓扑知识网络。支持平移缩放、智能标签分级、单击跳至编辑、双击检查器透视。'}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -594,12 +747,23 @@ export default function KnowledgeGraph() {
         </div>
       </div>
 
-      {/* 🖥️ 桌面端 Metrics Row */}
+      {/* 🖥️ 桌面端 Metrics Row (自适应拓扑与掌握度) */}
       <div className="hidden md:grid grid-cols-4 gap-2.5 shrink-0">
-        <GraphMetric label="节点总数" value={totalNodes} color="text-neutral-900" />
-        <GraphMetric label="双向连接" value={rawLinks.length} color="text-emerald-600" />
-        <GraphMetric label="孤立笔记" value={orphanNotes} color="text-rose-500" />
-        <GraphMetric label="健康度" value={overallScore || '—'} color={scoreColor} suffix={overallScore ? '/100' : undefined} />
+        {viewMode === 'mastery' ? (
+          <>
+            <GraphMetric label="收录核心考点" value={totalNodes} color="text-neutral-900" />
+            <GraphMetric label="稳固攻克 (≥80%)" value={masterySummary.masteredCount} color="text-emerald-600" />
+            <GraphMetric label="进阶巩固 (50~80%)" value={masterySummary.moderateCount} color="text-amber-500" />
+            <GraphMetric label="薄弱高危 (<50%)" value={masterySummary.criticalCount} color="text-rose-500" />
+          </>
+        ) : (
+          <>
+            <GraphMetric label="节点总数" value={totalNodes} color="text-neutral-900" />
+            <GraphMetric label="双向连接" value={rawLinks.length} color="text-emerald-600" />
+            <GraphMetric label="孤立笔记" value={orphanNotes} color="text-rose-500" />
+            <GraphMetric label="健康度" value={overallScore || '—'} color={scoreColor} suffix={overallScore ? '/100' : undefined} />
+          </>
+        )}
       </div>
 
       {/* Main Workspace Row */}
@@ -612,7 +776,38 @@ export default function KnowledgeGraph() {
               加载图谱数据...
             </div>
           )}
-          {isUsingCuratedSyllabus && (
+
+          {viewMode === 'mastery' && (
+            <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-rose-50/90 via-amber-50/80 to-emerald-50/80 border border-rose-200/90 text-xs mb-2">
+              <div className="flex items-center gap-2 text-slate-800">
+                <span className="font-extrabold text-rose-900 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-rose-600 animate-ping" />
+                  提分急救舱就绪
+                </span>
+                <span className="text-slate-300 hidden sm:inline">|</span>
+                <span className="text-slate-600 hidden sm:inline">
+                  红点呼吸闪烁代表做题失分率高（近 3 次做错 2 次以上）。点击红色节点直接唤起：<strong>[看仿真课件]</strong> 与 <strong>[刷 3 道同类题]</strong>！
+                </span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => handleOpenCourseware('cw-avl-tree')}
+                  className="text-[11px] font-bold text-indigo-700 hover:text-indigo-900 bg-white px-2.5 py-1 rounded-lg border border-indigo-200 shadow-2xs transition-colors flex items-center gap-1"
+                >
+                  <Play className="w-3 h-3 fill-current" />
+                  <span>AVL树仿真课件</span>
+                </button>
+                <Link
+                  to="/quiz"
+                  className="text-[11px] font-bold text-white bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 px-2.5 py-1 rounded-lg shadow-2xs transition-colors"
+                >
+                  前往做题中心 →
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {isUsingCuratedSyllabus && viewMode === 'topology' && (
             <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-50/90 to-amber-50/80 border border-indigo-200/90 text-xs mb-2">
               <div className="flex items-center gap-2 text-slate-800">
                 <span className="font-extrabold text-indigo-900 flex items-center gap-1.5">
@@ -621,7 +816,7 @@ export default function KnowledgeGraph() {
                 </span>
                 <span className="text-slate-300 hidden sm:inline">|</span>
                 <span className="text-slate-600 hidden sm:inline">
-                  涵盖 408 计算机与考研数学 42 个高频考点。在笔记中使用 <code className="bg-white px-1.5 py-0.5 rounded border border-indigo-200 text-indigo-600 font-mono text-[11px]">[[双链]]</code> 即可点亮个人知识网络。
+                  涵盖 408 计算机与考研数学高频考点。在笔记中使用 <code className="bg-white px-1.5 py-0.5 rounded border border-indigo-200 text-indigo-600 font-mono text-[11px]">[[双链]]</code> 即可点亮个人知识网络。
                 </span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -646,37 +841,6 @@ export default function KnowledgeGraph() {
             className="relative flex-1 min-h-0 overflow-hidden sm:rounded-xl sm:border sm:border-neutral-200/80 bg-neutral-50/50 shadow-xs select-none"
           >
             <svg ref={svgRef} width={dimensions.width} height={dimensions.height} className="block h-full w-full" />
-
-            {/* 新账号或单节点空状态引导 */}
-            {totalNodes <= 1 && rawLinks.length === 0 && !loading && (
-              <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
-                <div className="pointer-events-auto max-w-sm rounded-2xl bg-white/95 backdrop-blur-md p-6 border border-zinc-200/90 shadow-xl text-center space-y-3 animate-fade-in-up">
-                  <div className="w-11 h-11 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center mx-auto text-indigo-600 font-bold">
-                    🌐
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-zinc-900">图谱网络待点亮</h3>
-                    <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
-                      当前账号仅有基础根节点。在【笔记中心】使用 <code>[[知识点]]</code> 创建双向链接，或查阅【讲义中心】，系统将实时交织出考研考点双链拓扑网。
-                    </p>
-                  </div>
-                  <div className="pt-2 flex items-center justify-center gap-2">
-                    <Link
-                      to="/editor"
-                      className="px-3.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold shadow-xs transition-colors"
-                    >
-                      新建双链笔记
-                    </Link>
-                    <Link
-                      to="/study"
-                      className="px-3.5 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-semibold transition-colors"
-                    >
-                      查阅核心讲义
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Floating on-canvas controls (top-left) */}
             <div className="absolute top-3 left-3 z-10 flex flex-col gap-1 rounded-lg border border-neutral-200/80 bg-white/95 p-1 shadow-xs backdrop-blur-md">
@@ -727,7 +891,7 @@ export default function KnowledgeGraph() {
                   type="text"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="搜索节点或标签..."
+                  placeholder="搜索考点或标签..."
                   className="w-48 pl-8 pr-7 py-1.5 bg-surface/90 backdrop-blur-md border border-cream-200 rounded-xl text-xs text-warm-700 placeholder-warm-400 outline-none focus:border-accent-orange transition-colors shadow-sm"
                 />
                 {searchQuery && (
@@ -744,90 +908,96 @@ export default function KnowledgeGraph() {
             {/* Filter Match Badge (top-center) */}
             {hasFilter && (
               <div className="absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-surface/90 backdrop-blur-md border border-cream-200 text-[11px] text-warm-600 shadow-sm">
-                匹配 <span className="font-semibold text-accent-orange">{activeNodeIds.size}</span> / {totalNodes} 节点
-              </div>
-            )}
-
-            {/* Empty vault guide */}
-            {data && data.nodes.length === 0 && !loading && (
-              <div className="absolute inset-0 flex items-center justify-center p-6">
-                <div className="max-w-sm rounded-2xl border border-cream-200 bg-surface/95 p-6 text-center shadow-xl backdrop-blur-sm">
-                  <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-accent-orange/12 text-accent-orange">
-                    <FileText className="h-5 w-5" />
-                  </div>
-                  <h2 className="mt-4 text-base font-semibold text-warm-800">知识库还没有可连接的笔记</h2>
-                  <p className="mt-2 text-xs leading-5 text-warm-500">先创建一篇笔记，或回到设置连接正确的 Obsidian Vault，图谱会在这里自动生成。</p>
-                  <div className="mt-4 flex justify-center gap-2">
-                    <Link to="/editor" className="rounded-xl bg-accent-orange px-3 py-2 text-xs font-medium text-white">创建笔记</Link>
-                    <Link to="/settings" className="rounded-xl border border-cream-300 px-3 py-2 text-xs font-medium text-warm-600">检查连接</Link>
-                  </div>
-                </div>
+                匹配 <span className="font-semibold text-accent-orange">{activeNodeIds.size}</span> / {totalNodes} 考点
               </div>
             )}
 
             {/* Hover tooltip (floating bottom-right) */}
             {hoveredNode && (
-              <div className="absolute bottom-16 right-3 z-10 bg-surface/95 border border-cream-300 rounded-xl px-4 py-3 backdrop-blur-sm shadow-xl max-w-xs animate-fade-in">
-                <div className="text-sm font-semibold text-warm-800 mb-1">{hoveredNode.label}</div>
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ background: allGroupColors[hoveredNode.group] || '#8B7355' }} />
-                  <span className="text-xs text-warm-600">{allGroupLabels[hoveredNode.group] || hoveredNode.group}</span>
-                </div>
-                {hoveredNode.path && (
-                  <div className="text-[10px] text-warm-400 mt-1 font-mono truncate">{hoveredNode.path}</div>
+              <div className="absolute bottom-16 right-3 z-10 bg-white/95 border border-slate-200 rounded-xl px-4 py-3 backdrop-blur-md shadow-xl max-w-xs animate-fade-in">
+                <div className="text-sm font-bold text-slate-900 mb-1">{hoveredNode.label}</div>
+                {viewMode === 'mastery' ? (
+                  (() => {
+                    const mp = getNodeMastery(hoveredNode.id, hoveredNode.label)
+                    const isCritical = mp.rate < 50
+                    return (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs font-semibold">
+                          <span className="text-slate-500">掌握度：</span>
+                          <span className={isCritical ? 'text-rose-600 font-bold' : mp.rate < 80 ? 'text-amber-600' : 'text-emerald-600'}>
+                            {mp.rate}% ({isCritical ? '薄弱高危' : mp.rate < 80 ? '进阶巩固' : '稳固攻克'})
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-500">{mp.recentStatus}</div>
+                        <div className="text-[10px] text-rose-600 font-medium pt-1 border-t border-slate-100 flex items-center gap-1">
+                          <Flame className="w-3 h-3" />
+                          <span>点击呼出【提分急救舱】</span>
+                        </div>
+                      </div>
+                    )
+                  })()
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ background: allGroupColors[hoveredNode.group] || '#8B7355' }} />
+                      <span className="text-xs text-slate-600">{allGroupLabels[hoveredNode.group] || hoveredNode.group}</span>
+                    </div>
+                    {hoveredNode.path && (
+                      <div className="text-[10px] text-slate-400 mt-1 font-mono truncate">{hoveredNode.path}</div>
+                    )}
+                    <div className="text-[10px] text-slate-400 mt-1.5">双链拓扑度: {hoveredNode.linkCount}</div>
+                    <div className="text-[10px] text-indigo-600 mt-1 font-medium">单击右侧检查 · 双击沉浸编辑</div>
+                  </>
                 )}
-                {hoveredNode.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1.5">
-                    {hoveredNode.tags.slice(0, 4).map(tag => (
-                      <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded bg-cream-200 text-warm-600">#{tag}</span>
-                    ))}
-                  </div>
-                )}
-                <div className="text-[10px] text-warm-400 mt-1.5">连接数: {hoveredNode.linkCount}</div>
-                <div className="text-[10px] text-accent-orange mt-1">单击跳转编辑 · 双击右侧预览</div>
               </div>
             )}
 
-            {/* Category Filter Chips (bottom-left, 手机端单行横滑) */}
+            {/* Bottom Floating Legend / Filters */}
             <div className="absolute bottom-3 left-3 right-3 sm:right-auto z-10 flex items-center sm:flex-wrap gap-1.5 sm:max-w-[70%] overflow-x-auto no-scrollbar">
-              {groups.map(key => {
-                const isActive = selectedGroups.size === 0 || selectedGroups.has(key)
-                return (
-                  <button
-                    key={key}
-                    onClick={() => toggleGroup(key)}
-                    className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[11px] transition-all backdrop-blur-sm shadow-sm ${
-                      isActive
-                        ? 'bg-cream-200/90 text-warm-800 font-medium'
-                        : 'bg-cream-100/80 text-warm-400 hover:text-warm-600 opacity-50'
-                    }`}
-                  >
-                    <div className="w-2 h-2 rounded-full" style={{ background: allGroupColors[key] || '#8B7355' }} />
-                    {allGroupLabels[key] || key}
-                  </button>
-                )
-              })}
-              {selectedGroups.size > 0 && (
-                <button
-                  onClick={() => setSelectedGroups(new Set())}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] text-warm-500 hover:text-warm-700 transition-colors bg-cream-200/90 backdrop-blur-sm shadow-sm"
-                >
-                  <X className="w-3 h-3" /> 重置分组
-                </button>
+              {viewMode === 'mastery' ? (
+                // 热力图三色图例
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/95 border border-slate-200/80 shadow-xs backdrop-blur-md text-xs font-medium text-slate-700">
+                  <div className="flex items-center gap-1">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                    <span>稳固攻克 (≥80%)</span>
+                  </div>
+                  <span className="text-slate-300">·</span>
+                  <div className="flex items-center gap-1">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                    <span>进阶巩固 (50%~80%)</span>
+                  </div>
+                  <span className="text-slate-300">·</span>
+                  <div className="flex items-center gap-1 text-rose-600 font-bold">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
+                    <span>薄弱高危 (&lt;50% 呼吸闪烁)</span>
+                  </div>
+                </div>
+              ) : (
+                // 传统学科分组
+                groups.map(key => {
+                  const isActive = selectedGroups.size === 0 || selectedGroups.has(key)
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => toggleGroup(key)}
+                      className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[11px] transition-all backdrop-blur-sm shadow-sm ${
+                        isActive
+                          ? 'bg-cream-200/90 text-warm-800 font-medium'
+                          : 'bg-cream-100/80 text-warm-400 hover:text-warm-600 opacity-50'
+                      }`}
+                    >
+                      <div className="w-2 h-2 rounded-full" style={{ background: allGroupColors[key] || '#8B7355' }} />
+                      {allGroupLabels[key] || key}
+                    </button>
+                  )
+                })
               )}
             </div>
-
-            {/* Helper tips (bottom-center, 桌面端显示以免与手机底部分类条重叠) */}
-            {!hasFilter && !hoveredNode && (
-              <div className="hidden lg:block absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-white/85 backdrop-blur-sm border border-slate-200/80 text-[10px] text-slate-500 shadow-2xs pointer-events-none">
-                滚轮缩放 · 拖拽画布/节点 · 单击跳至编辑 · 双击右侧预览
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Right Node Inspector (Subframe Screen 2 Node Inspector) */}
-        {(previewNode || previewLoading) && (
+        {/* Right Node Inspector (拓扑模式下的右侧抽屉) */}
+        {viewMode === 'topology' && (previewNode || previewLoading) && (
           <div className="fixed inset-x-3 bottom-16 top-24 z-40 md:static md:w-80 md:inset-auto md:z-auto shrink-0 h-auto md:h-full flex flex-col rounded-[16px] border border-black/[0.08] bg-white p-4 shadow-xl md:shadow-xs overflow-hidden animate-fade-in">
             <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-neutral-100">
               <div className="flex items-center gap-1.5 min-w-0">
@@ -855,7 +1025,6 @@ export default function KnowledgeGraph() {
                   <div className="text-[10px] text-neutral-400 font-mono mt-0.5 truncate">{previewNode.path}</div>
                 </div>
 
-                {/* 字段属性网格 (Inspector Grid) */}
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="p-2 rounded-xl bg-neutral-50/80 border border-neutral-200/80">
                     <div className="text-[10px] text-neutral-400 font-medium">双链拓扑度</div>
@@ -898,22 +1067,43 @@ export default function KnowledgeGraph() {
           </div>
         )}
       </div>
+
+      {/* 🏥 考点诊断与提分急救舱 Modal */}
+      <MasteryRescueModal
+        isOpen={isRescueModalOpen}
+        onClose={() => setIsRescueModalOpen(false)}
+        point={activeMasteryPoint}
+        onOpenCourseware={handleOpenCourseware}
+        onPractice={handlePracticePoint}
+      />
+
+      {/* 🔬 交互仿真课件查看器 Modal */}
+      <CoursewareViewerModal
+        isOpen={isCoursewareOpen}
+        onClose={() => setIsCoursewareOpen(false)}
+        item={activeCourseware}
+      />
     </div>
   )
 }
 
-function GraphMetric({ label, value, color, suffix }: {
+function GraphMetric({
+  label,
+  value,
+  color,
+  suffix,
+}: {
   label: string
   value: number | string
   color: string
   suffix?: string
 }) {
   return (
-    <div className="rounded-[14px] border border-black/[0.08] bg-white px-3.5 py-2.5 shadow-xs">
-      <div className="text-[11px] font-medium text-neutral-400">{label}</div>
-      <div className={`mt-0.5 text-lg font-bold font-mono ${color}`}>
+    <div className="rounded-[16px] border border-black/[0.08] bg-white p-3.5 sm:p-4 shadow-xs">
+      <div className="text-[11px] font-medium text-neutral-500">{label}</div>
+      <div className={`mt-1 font-mono text-xl sm:text-2xl font-bold tracking-tight ${color}`}>
         {value}
-        {suffix && <span className="ml-1 text-[10px] font-normal text-neutral-400 font-sans">{suffix}</span>}
+        {suffix && <span className="text-xs font-normal text-neutral-400">{suffix}</span>}
       </div>
     </div>
   )

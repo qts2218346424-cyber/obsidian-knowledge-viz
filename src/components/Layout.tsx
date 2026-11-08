@@ -277,8 +277,16 @@ export default function Layout({ children }: LayoutProps) {
             </div>
           </Link>
 
-          {/* 右侧：积分打卡小胶囊 + 搜索 + 更多工具箱抽屉 */}
+          {/* 右侧：风格切换 + 积分打卡小胶囊 + 搜索 + 更多工具箱抽屉 */}
           <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={toggleThemeStyle}
+              className="p-1.5 rounded-xl bg-slate-100 text-slate-700 active:scale-95 transition-transform"
+              title={isVibrant ? '当前鲜艳风（点击切回极简）' : '当前极简风（点击切鲜艳）'}
+            >
+              <Palette className={`w-3.5 h-3.5 ${isVibrant ? 'text-indigo-600' : 'text-slate-500'}`} />
+            </button>
             <button
               type="button"
               onClick={() => {
@@ -480,6 +488,21 @@ export default function Layout({ children }: LayoutProps) {
 
           {/* ── 右侧极简 3 核心组件：搜索 ⌘K、算力胶囊与用户矩阵头像 ── */}
           <div className="ml-auto flex items-center gap-2 shrink-0">
+            {/* 0. 视觉风格一键切换胶囊 (鲜艳风 / 极简风) */}
+            <button
+              type="button"
+              onClick={toggleThemeStyle}
+              className={`inline-flex items-center gap-1.5 h-8 px-2.5 rounded-xl border text-xs font-bold shadow-2xs transition-all cursor-pointer active:scale-95 shrink-0 ${
+                isVibrant
+                  ? 'border-indigo-200 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 text-indigo-700 hover:border-indigo-300 shadow-indigo-500/10'
+                  : 'border-slate-200 bg-slate-50 hover:bg-white text-slate-600 hover:text-slate-900'
+              }`}
+              title={isVibrant ? '当前风格：鲜艳活力风（点击切换为黑白极简风）' : '当前风格：经典极简风（点击切换为鲜艳活力风）'}
+            >
+              <Palette className={`h-3.5 w-3.5 ${isVibrant ? 'text-indigo-600 animate-pulse' : 'text-slate-400'}`} />
+              <span className="hidden lg:inline">{isVibrant ? '🎨 鲜艳风' : '极简风'}</span>
+            </button>
+
             {/* 1. 全局快捷搜索框 ⌘K */}
             <button
               type="button"

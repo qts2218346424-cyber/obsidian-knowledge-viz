@@ -238,7 +238,7 @@ export const ChatComposerDock = memo(function ChatComposerDock({
               onAddGeneralFiles(e.dataTransfer.files)
             }
           }}
-          className="rounded-xl border border-neutral-200/90 bg-white focus-within:border-neutral-900 focus-within:ring-1 focus-within:ring-neutral-900/10 transition-all shadow-xs overflow-hidden"
+          className="rounded-2xl border border-slate-200/70 bg-white focus-within:border-indigo-500/80 focus-within:ring-2 focus-within:ring-indigo-500/15 transition-all shadow-[0_4px_24px_rgba(0,0,0,0.04)] overflow-hidden"
         >
           {/* 3.1 顶部已挂载上下文胶囊条（笔记伴读、激活技能、待发图片/文件） */}
           {hasContextPills && (

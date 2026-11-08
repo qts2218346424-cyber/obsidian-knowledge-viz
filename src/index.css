@@ -1229,12 +1229,72 @@ input[type="range"].history-range-slider:focus-visible {
   --color-brand-primary: #4f46e5;
 }
 
+/* 鲜艳极光网格背景 */
+.theme-vibrant .aurora-mesh {
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.09) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(244, 63, 94, 0.07) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(245, 158, 11, 0.08) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(16, 185, 129, 0.07) 0px, transparent 50%);
+}
+
 .theme-vibrant .bento-card {
-  box-shadow: 0 2px 12px -2px rgba(99, 102, 241, 0.05), 0 1px 3px 0 rgba(0, 0, 0, 0.03);
+  box-shadow: 0 4px 18px -2px rgba(99, 102, 241, 0.08), 0 1px 3px 0 rgba(0, 0, 0, 0.02);
 }
 
 .theme-vibrant .bento-card-hover:hover {
-  box-shadow: 0 10px 24px -4px rgba(99, 102, 241, 0.12), 0 2px 4px 0 rgba(0, 0, 0, 0.03);
+  box-shadow: 0 12px 28px -4px rgba(99, 102, 241, 0.16), 0 2px 4px 0 rgba(0, 0, 0, 0.03);
+}
+
+/* 核心行动按钮：由黑白沉闷转化为绚丽高饱和蓝紫极光渐变 */
+.theme-vibrant .subframe-btn-black {
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 50%, #7c3aed 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px 0 rgba(99, 102, 241, 0.35) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+.theme-vibrant .subframe-btn-black:hover {
+  background: linear-gradient(135deg, #4338ca 0%, #4f46e5 50%, #6d28d9 100%) !important;
+  box-shadow: 0 6px 20px 0 rgba(99, 102, 241, 0.45) !important;
+  transform: translateY(-1px);
+}
+
+/* 次级按钮：清爽微蓝光泽 */
+.theme-vibrant .subframe-btn-secondary {
+  background: #ffffff !important;
+  border-color: #e0e7ff !important;
+  color: #4338ca !important;
+  box-shadow: 0 1px 3px rgba(99, 102, 241, 0.06) !important;
+}
+
+.theme-vibrant .subframe-btn-secondary:hover {
+  background: #eef2ff !important;
+  border-color: #c7d2fe !important;
+  color: #3730a3 !important;
+}
+
+/* 顶部导航激活项：鲜艳渐变 */
+.theme-vibrant nav a.bg-neutral-900 {
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%) !important;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3) !important;
+}
+
+/* 考点掌握度热力图关键帧呼吸动效 */
+@keyframes masteryCriticalPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.35;
+  }
+  50% {
+    transform: scale(1.4);
+    opacity: 0.75;
+  }
+}
+
+.critical-pulse {
+  animation: masteryCriticalPulse 2.4s ease-in-out infinite;
+  transform-origin: center;
 }
 
 /* ==========================================================================

@@ -87,7 +87,7 @@ interface ChatStudioHeaderProps {
   webModels: string[]
   syncingModels: boolean
   modelSyncFeedback: string | null
-  onScanModels: () => void
+  onScanModels?: () => void
   onOpenModelManager: () => void
   studyTone: 'rigorous' | 'vivid' | 'exam'
   onStudyToneChange: (tone: 'rigorous' | 'vivid' | 'exam') => void
@@ -104,7 +104,7 @@ interface ChatStudioHeaderProps {
   selectedLocalSkill: LocalSkill | null
   onOpenSkillPicker: () => void
   onOpenMemoryModal: () => void
-  onOpenMemoryTierModal: () => void
+  onOpenMemoryTierModal?: () => void
   chatWidthMode: ChatWidthMode
   onWidthModeChange: (mode: ChatWidthMode) => void
   chatFontSize: ChatFontSize
@@ -817,28 +817,17 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                     <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                       认知记忆与扩展技能
                     </div>
-                    <div className="grid grid-cols-2 gap-1.5">
+                    <div className="space-y-1.5">
                       <button
                         type="button"
                         onClick={() => {
                           setHubPopoverOpen(false)
                           onOpenMemoryModal()
                         }}
-                        className="flex items-center gap-1.5 p-2 rounded-xl text-xs font-semibold bg-amber-50/90 hover:bg-amber-100/80 border border-amber-200/80 text-amber-900 cursor-pointer transition-colors"
+                        className="w-full flex items-center justify-center gap-1.5 p-2 rounded-xl text-xs font-semibold bg-amber-50/90 hover:bg-amber-100/80 border border-amber-200/80 text-amber-900 cursor-pointer transition-colors"
                       >
                         <Brain className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                        <span className="truncate">AI 记忆仓库</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setHubPopoverOpen(false)
-                          onOpenMemoryTierModal()
-                        }}
-                        className="flex items-center gap-1.5 p-2 rounded-xl text-xs font-semibold bg-indigo-50/90 hover:bg-indigo-100/80 border border-indigo-200/80 text-indigo-900 cursor-pointer transition-colors"
-                      >
-                        <Layers className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                        <span className="truncate">三层记忆架构</span>
+                        <span>AI 记忆仓库</span>
                       </button>
                     </div>
                     <button
@@ -862,33 +851,14 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                     <div className="flex items-center gap-1.5">
                       <button
                         type="button"
-                        onClick={onScanModels}
-                        disabled={syncingModels}
-                        className="flex-1 py-1.5 px-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-slate-700 flex items-center justify-center gap-1.5 cursor-pointer"
-                      >
-                        <RefreshCw
-                          className={`w-3.5 h-3.5 text-indigo-600 ${
-                            syncingModels ? 'animate-spin' : ''
-                          }`}
-                        />
-                        <span>
-                          {syncingModels
-                            ? '探测中...'
-                            : provider === 'web'
-                            ? '扫描云端模型'
-                            : '扫描本机模型'}
-                        </span>
-                      </button>
-                      <button
-                        type="button"
                         onClick={() => {
                           setHubPopoverOpen(false)
                           onOpenModelManager()
                         }}
-                        className="py-1.5 px-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-slate-700 flex items-center gap-1 cursor-pointer"
+                        className="flex-1 py-1.5 px-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-slate-700 flex items-center justify-center gap-1.5 cursor-pointer"
                       >
                         <Settings className="w-3.5 h-3.5 text-slate-600" />
-                        <span>管理</span>
+                        <span>管理已配置模型列表</span>
                       </button>
                       {selectedModel && !isCustomModel && (
                         <button

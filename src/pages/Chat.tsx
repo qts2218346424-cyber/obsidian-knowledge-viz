@@ -52,7 +52,6 @@ const AIMemoryModal = lazy(() => import('../components/AIMemoryModal'))
 const LocalSkillPickerModal = lazy(() => import('../components/LocalSkillPickerModal'))
 const ModelManagerModal = lazy(() => import('../components/ModelManagerModal'))
 const StepTutorModal = lazy(() => import('../components/study/StepTutorModal'))
-const MemoryTierModal = lazy(() => import('../components/MemoryTierModal'))
 
 interface ToolCallInfo {
   tool: string
@@ -137,7 +136,6 @@ export default function Chat() {
   const [newProjectName, setNewProjectName] = useState('')
   const [newProjectDesc, setNewProjectDesc] = useState('')
   const [newProjectCwd, setNewProjectCwd] = useState('')
-  const [showMemoryTierModal, setShowMemoryTierModal] = useState(false)
 
   // 版面宽度模式
   const [chatWidthMode, setChatWidthMode] = useState<ChatWidthMode>(() => {
@@ -2256,7 +2254,6 @@ export default function Chat() {
         selectedLocalSkill={selectedLocalSkill}
         onOpenSkillPicker={() => setShowSkillPicker(true)}
         onOpenMemoryModal={() => setShowMemoryModal(true)}
-        onOpenMemoryTierModal={() => setShowMemoryTierModal(true)}
         chatWidthMode={chatWidthMode}
         onWidthModeChange={handleSetWidthMode}
         chatFontSize={chatFontSize}
@@ -2297,14 +2294,7 @@ export default function Chat() {
                   <span>工作区</span>
                 </span>
                 <div className="flex items-center gap-0.5">
-                  <button
-                    type="button"
-                    onClick={() => setShowMemoryTierModal(true)}
-                    className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-indigo-600 transition-colors cursor-pointer"
-                    title="三层认知记忆与项目隔离"
-                  >
-                    <Layers className="w-3.5 h-3.5" />
-                  </button>
+
                   <button
                     type="button"
                     onClick={() => setShowProjectModal(true)}
@@ -2792,15 +2782,7 @@ export default function Chat() {
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                   选择模型
                 </span>
-                <button
-                  type="button"
-                  onClick={handleScanModels}
-                  disabled={syncingModels}
-                  className="text-[11px] text-indigo-600 font-semibold flex items-center gap-1"
-                >
-                  <RefreshCw className={`w-3 h-3 ${syncingModels ? 'animate-spin' : ''}`} />
-                  <span>{syncingModels ? '扫描中...' : '扫描模型'}</span>
-                </button>
+
               </div>
               <div className="flex items-center gap-2">
                 <select
@@ -3029,16 +3011,7 @@ export default function Chat() {
           />
         )}
 
-        {showMemoryTierModal && (
-          <MemoryTierModal
-            isOpen={showMemoryTierModal}
-            onClose={() => setShowMemoryTierModal(false)}
-            activeProject={activeProject}
-            activeConvTitle={activeConv?.title}
-            totalConversationsCount={projectConversations.length}
-            onUpdateProjectDesc={handleUpdateProjectDesc}
-          />
-        )}
+
       </Suspense>
 
       {/* 新建项目工作区模态框 */}

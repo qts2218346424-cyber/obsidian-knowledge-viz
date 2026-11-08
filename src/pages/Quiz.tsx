@@ -28,6 +28,7 @@ import DoodleScratchpadCanvas from '../features/quiz/components/DoodleScratchpad
 import { api } from '../services/api'
 import { QUESTION_BANK, type QuizQuestion } from '../data/questions'
 import { MATH_QUESTION_BANK } from '../data/questions/math'
+import { updateMasteryFromQuizResult } from '../data/masteryData'
 import type { MathCategory, MathSubject, CsSubject, UnifiedQuestion } from '../types/subject'
 
 const ImportResourceModal = lazy(() => import('../components/ImportResourceModal'))
@@ -648,12 +649,15 @@ export default function Quiz() {
         subjectBreakdown[q.subject] = { total: 0, correct: 0 }
       }
       subjectBreakdown[q.subject].total++
-
       const userAns = finalAnswers[q.id]
       const isCorrect = userAns && (
         userAns.trim().toUpperCase() === q.answer.trim().toUpperCase() ||
         userAns.trim() === q.answer.replace(/[\$\\s]/g, '')
       )
+
+      // 联动考点掌握度热力图
+      const masteryKey = (q.tags && q.tags.length > 0) ? q.tags[q.tags.length - 1] : q.subject
+      updateMasteryFromQuizResult(masteryKey, Boolean(isCorrect))
 
       if (isCorrect) {
         correctCount++
@@ -1444,7 +1448,7 @@ export default function Quiz() {
         <div className="grid grid-cols-1 lg:grid-cols-[1.22fr_0.78fr] gap-5 items-start">
           {/* ───────────────── LEFT PANEL: Question & Solution ───────────────── */}
           <div className="space-y-3.5 sm:space-y-4 min-w-0">
-            <div className="bento-card rounded-xl border border-neutral-200/80 bg-white shadow-xs p-4 sm:p-7 space-y-4 sm:space-y-5 relative">
+            <div className="rounded-3xl border border-slate-200/60 bg-white shadow-[0_2px_16px_rgba(0,0,0,0.03)] p-5 sm:p-8 space-y-5 relative">
               {/* Floating Canvas Action Pill (Subframe Screen 5 Replica) */}
               <div className="absolute right-4 top-4 z-10 hidden sm:inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-neutral-50/90 border border-neutral-200/80 text-neutral-600 text-[11px] shadow-2xs">
                 <button
@@ -1515,7 +1519,7 @@ export default function Quiz() {
               </div>
 
               {/* Question Text (KaTeX Rendered) */}
-              <div className="text-[15px] font-medium text-slate-900 leading-relaxed min-h-[4rem]">
+              <div className="text-[15px] sm:text-base font-medium text-slate-900 leading-[1.75] min-h-[4rem] academic-body">
                 <MarkdownRenderer content={currentQ.question} />
               </div>
 
@@ -1547,7 +1551,7 @@ export default function Quiz() {
                         onClick={() => handleOptionSelect(key)}
                         disabled={mode === 'practice' && showFeedback}
                         aria-label={`选项 ${key}: ${optionText}`}
-                        className={`w-full text-left rounded-2xl border-2 px-4 py-3.5 transition-all duration-200 group flex items-start gap-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-orange focus-visible:ring-offset-2 ${btnStyle} ${
+                        className={`w-full text-left rounded-2xl border px-4 py-3.5 transition-all duration-150 group flex items-start gap-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${btnStyle} ${
                           mode === 'practice' && showFeedback
                             ? 'cursor-default'
                             : 'cursor-pointer hover:scale-[1.006] active:scale-[0.99] hover:shadow-sm'
@@ -1670,7 +1674,7 @@ export default function Quiz() {
 
             {/* Explanation & Step-by-Step Derivation (Notion / Brilliant Style) */}
             {mode === 'practice' && showFeedback && (
-              <div className="bento-card rounded-xl border border-neutral-200/80 bg-white shadow-xs p-6 border-l-4 border-l-emerald-500 space-y-4 animate-fade-in-up">
+              <div className="rounded-3xl border border-slate-200/60 bg-white shadow-[0_2px_16px_rgba(0,0,0,0.03)] p-5 sm:p-7 space-y-4 animate-fade-in-up leading-[1.75]">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
                     <span className="text-base">💡</span>
@@ -1682,7 +1686,7 @@ export default function Quiz() {
                 </div>
 
                 {/* Main Explanation */}
-                <div className="text-sm text-slate-700 leading-relaxed pl-1">
+                <div className="text-sm sm:text-[14.5px] text-slate-800 leading-[1.75] pl-1 academic-body ai-explanation">
                   <MarkdownRenderer content={currentQ.explanation} />
                 </div>
 
