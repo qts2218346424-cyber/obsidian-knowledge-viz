@@ -326,12 +326,15 @@ export async function* runAgentLoop(
       // Process response blocks
       let hasToolUse = false
       const textParts: string[] = []
+      const thinkingParts: string[] = []
       const toolCalls: { id: string; name: string; input: Record<string, any> }[] = []
-
 
       for (const block of response.content) {
         if (block.type === 'text') {
           textParts.push(block.text)
+        } else if ((block as any).type === 'thinking') {
+          const t = (block as any).thinking || (block as any).text || ''
+          if (t) thinkingParts.push(t)
         } else if (block.type === 'tool_use') {
           hasToolUse = true
           toolCalls.push({
@@ -345,6 +348,12 @@ export async function* runAgentLoop(
       // Emit text
       if (textParts.length > 0) {
         yield { type: 'text', content: textParts.join('\n') }
+      } else if (!hasToolUse) {
+        if (thinkingParts.length > 0) {
+          yield { type: 'text', content: thinkingParts.join('\n\n') }
+        } else {
+          yield { type: 'text', content: '💡 智能体推演完成。' }
+        }
       }
 
       // If no tool use, we're done
@@ -416,9 +425,17 @@ export async function* runAgentLoop(
             messages: messages as Anthropic.MessageParam[],
           })
 
-          if (fallbackResponse.content[0].type === 'text') {
-            yield { type: 'text', content: fallbackResponse.content[0].text }
-          }
+          const textPart = fallbackResponse.content
+            .filter((b: any) => b.type === 'text')
+            .map((b: any) => b.text)
+            .join('\n')
+          const thinkingPart = fallbackResponse.content
+            .filter((b: any) => b.type === 'thinking')
+            .map((b: any) => b.thinking || (b as any).text || '')
+            .join('\n')
+
+          const outContent = textPart || thinkingPart || '💡 智能体推演完成。'
+          yield { type: 'text', content: outContent }
           yield { type: 'done' }
           return
         } catch (fallbackErr: any) {

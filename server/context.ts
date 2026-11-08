@@ -177,24 +177,45 @@ export const uploadDir = path.join(runtimeDataDir, 'uploads')
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true })
 export const upload = multer({ dest: uploadDir, limits: { fileSize: 1024 * 1024 * 1024 } })
 
-// Vault notes cache
-let cachedNotes: VaultNote[] | null = null
-let cacheTime = 0
-const CACHE_TTL = 10_000
-
-export function getNotes(): VaultNote[] {
-  const now = Date.now()
-  if (cachedNotes && now - cacheTime < CACHE_TTL) {
-    return cachedNotes
-  }
-  cachedNotes = scanVault(config.vaultPath)
-  cacheTime = now
-  return cachedNotes
+// ===== Multi-Tenant Vault Notes Cache =====
+interface CacheEntry {
+  notes: VaultNote[]
+  time: number
 }
 
-export function invalidateCache() {
-  cachedNotes = null
-  cacheTime = 0
+const userNotesCache = new Map<string, CacheEntry>()
+const CACHE_TTL = 10_000
+
+export function getUserNotes(userId?: string, vaultDir?: string): VaultNote[] {
+  const targetDir = vaultDir || config.vaultPath
+  const key = userId ? `usr_${userId}` : (targetDir || '__default__')
+  const now = Date.now()
+
+  const entry = userNotesCache.get(key)
+  if (entry && now - entry.time < CACHE_TTL) {
+    return entry.notes
+  }
+
+  if (!targetDir || !fs.existsSync(targetDir)) {
+    return []
+  }
+
+  const notes = scanVault(targetDir)
+  userNotesCache.set(key, { notes, time: now })
+  return notes
+}
+
+export function getNotes(vaultPath?: string): VaultNote[] {
+  return getUserNotes(undefined, vaultPath || config.vaultPath)
+}
+
+export function invalidateCache(key?: string) {
+  if (key) {
+    userNotesCache.delete(key.startsWith('usr_') ? key : `usr_${key}`)
+    userNotesCache.delete(key)
+  } else {
+    userNotesCache.clear()
+  }
 }
 
 // Track files written by our app to avoid echo loops

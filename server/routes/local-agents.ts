@@ -152,11 +152,16 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
       pageContext?: string
       skillPrompt?: string
       agentPrompt?: string
+      history?: Array<{ role: 'user' | 'assistant'; content: string }>
+      images?: string[]
     }
-    if (!body.prompt?.trim()) {
-      res.status(400).json({ error: 'Missing prompt' })
+    const hasText = Boolean(body.prompt?.trim())
+    const hasImages = Boolean(Array.isArray(body.images) && body.images.length > 0)
+    if (!hasText && !hasImages) {
+      res.status(400).json({ error: 'Missing prompt or image' })
       return
     }
+    const userPromptText = body.prompt?.trim() || (hasImages ? '请深度解析此图片中的内容并解答' : '')
     if (body.provider !== 'antigravity' && body.provider !== 'claude-code' && body.provider !== 'codex' && body.provider !== 'web' && body.provider !== 'ollama' && body.provider !== 'lm-studio') {
       res.status(400).json({ error: 'Unsupported local agent provider' })
       return
@@ -172,7 +177,7 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
     if (Array.isArray(body.history) && body.history.length > 0) {
       const recentTurns = body.history.slice(-8)
       historySummary = recentTurns
-        .map(h => `${h.role === 'user' ? '用户' : '研学导师'}：${h.content.slice(0, 800)}`)
+        .map(h => `${h.role === 'user' ? '用户' : '研学导师'}：${typeof h.content === 'string' ? h.content.slice(0, 800) : ''}`)
         .join('\n\n')
     }
 
@@ -186,7 +191,7 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
       body.skillPrompt ? `已启用 Skill：\n${body.skillPrompt}` : '',
       historySummary ? `【此前会话历史脉络（请基于此上下文连续作答）】：\n${historySummary}` : '',
       '',
-      `用户最新请求：${body.prompt.trim()}`,
+      `用户最新请求：${userPromptText}`,
     ].filter(Boolean).join('\n')
 
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8')
@@ -204,7 +209,7 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
   res.on('close', abortRun)
 
   // 构造标准多轮对话消息列表（用于云端模型与本地推理服务）
-  const conversationMessages: Array<{ role: 'user' | 'assistant'; content: string }> = []
+  const conversationMessages: Array<{ role: 'user' | 'assistant'; content: any }> = []
   if (Array.isArray(body.history) && body.history.length > 0) {
     for (const h of body.history.slice(-12)) {
       if (h.content && (h.role === 'user' || h.role === 'assistant')) {
@@ -215,10 +220,44 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
       }
     }
   }
+
+  // 构造包含多模态图片块的内容
+  let latestUserContent: any = context
+  if (hasImages && Array.isArray(body.images)) {
+    const blocks: any[] = []
+    for (const img of body.images) {
+      if (typeof img === 'string') {
+        const match = img.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,(.+)$/)
+        if (match) {
+          blocks.push({
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: match[1],
+              data: match[2],
+            },
+          })
+        } else if (img.startsWith('http://') || img.startsWith('https://')) {
+          blocks.push({
+            type: 'image',
+            source: {
+              type: 'url',
+              url: img,
+            },
+          })
+        }
+      }
+    }
+    if (blocks.length > 0) {
+      blocks.push({ type: 'text', text: context })
+      latestUserContent = blocks
+    }
+  }
+
   // 当前最新消息加入末尾
   conversationMessages.push({
     role: 'user',
-    content: context,
+    content: latestUserContent,
   })
 
   if (body.provider === 'ollama' || body.provider === 'lm-studio') {
@@ -304,6 +343,76 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
     return
   }
 
+  if (body.provider === 'codex') {
+    let hasLocalCli = false
+    try {
+      const st = detectLocalAgents(config.localAgents)
+      const codexObj = st.find(s => s.provider === 'codex')
+      hasLocalCli = Boolean(codexObj?.version)
+    } catch {}
+
+    let cliSucceeded = false
+    if (hasLocalCli) {
+      try {
+        for await (const event of runLocalAgent({
+          provider: 'codex',
+          prompt: context,
+          cwd,
+          sessionId: body.sessionId,
+          model: body.model,
+          config: config.localAgents,
+          signal: abortController.signal,
+        })) {
+          cliSucceeded = true
+          sendEvent(event)
+          if (event.type === 'error') break
+        }
+        if (cliSucceeded) {
+          res.end()
+          return
+        }
+      } catch (err: any) {
+        console.warn('[Codex CLI fallback to AgentLoop]:', err?.message)
+      }
+    }
+
+    // 若本地 CLI 不可用或异常，优雅启动 Codex 架构师云端双核 Loop
+    const aiTarget = getAiClientForModel(body.model) || getAiClientForModel()
+    if (!aiTarget) {
+      sendEvent({ type: 'error', content: 'Codex 智能体所需 AI 接口尚未配置，请在设置中配置 API Key' })
+      res.end()
+      return
+    }
+    let { client, model } = aiTarget
+    if (aiTarget.endpoint && !aiTarget.endpoint.models?.includes(model) && !aiTarget.endpoint.baseURL?.includes('openai')) {
+      model = aiTarget.endpoint.defaultModel || aiTarget.endpoint.models?.[0] || model
+    }
+    const codexPrompt = [
+      '【智能体核心身份】：你是 OpenAI Codex 软件系统架构师与工程代码专家，现已深度结合至 CoreForge 研核系统中。',
+      `【知识库工作区】：当前绑定的本地 Obsidian Vault 路径为：${config.vaultPath}。`,
+      '【核心交互准则】：使用规范严谨的纯中文，专注于计算机底层原理、408 计算机学科核心、算法与数据结构、系统设计与工程代码实战。',
+      body.agentPrompt || '',
+    ].filter(Boolean).join('\n')
+
+    try {
+      for await (const event of runAgentLoop(
+        client,
+        model,
+        conversationMessages,
+        config.vaultPath,
+        codexPrompt
+      )) {
+        sendEvent(event)
+        if (event.type === 'error') break
+      }
+    } catch (error: any) {
+      sendEvent({ type: 'error', content: `Codex 智能体运行异常: ${error?.message || '未知错误'}` })
+    } finally {
+      res.end()
+    }
+    return
+  }
+
   if (body.provider === 'web') {
     const aiTarget = getAiClientForModel(body.model)
     if (!aiTarget) {
@@ -367,7 +476,7 @@ localAgentsRouter.post('/local-agents/generate-followups', async (req, res) => {
     }
 
     const { client, model } = aiTarget
-    const systemInstruction = '你是一个顶级考研辅导名师。你的任务是根据考生与导师刚完成的问答内容或关联笔记，针对性提炼出 4 个深度关联、极具启发性的后续发散提问。每条提问 15~35 个汉字，直接给出 4 行文本，每行一个问题，严禁带序号（如1. 2.）或符号前缀，严禁多余客套。'
+    const systemInstruction = '你是一个顶级考研辅导名师。你的任务是根据考生与导师刚完成的问答内容或关联笔记，针对性提炼出 4 个深度关联、极具启发性的后续发散提问。每条提问 15~35 个汉字，直接给出 4 行文本，每行一个问题，严禁带序号（如1. 2.）或符号前缀，严禁多余客套，严禁输出任何思考过程。'
     const contextContent = [
       noteTitle ? `【关联知识库笔记】：《${noteTitle}》` : '',
       prompt ? `【学生探讨主题/提问】：${prompt.slice(0, 300)}` : '',
@@ -376,17 +485,18 @@ localAgentsRouter.post('/local-agents/generate-followups', async (req, res) => {
 
     const response = await client.messages.create({
       model,
-      max_tokens: 240,
+      max_tokens: 1024,
       system: systemInstruction,
-      messages: [{ role: 'user', content: `请基于以下探讨内容提炼出 4 个考点发散追问：\n\n${contextContent}` }],
+      messages: [{ role: 'user', content: `请直接列出 4 行考点发散追问（每行一个，无序号）：\n\n${contextContent}` }],
     })
 
     const textBlock = response.content.find((b: any) => b.type === 'text')
-    const rawText = textBlock ? (textBlock as any).text : ''
+    const thinkingBlock = response.content.find((b: any) => b.type === 'thinking')
+    const rawText = (textBlock ? (textBlock as any).text : '') || (thinkingBlock ? (thinkingBlock as any).thinking : '')
     const followups = rawText
       .split('\n')
       .map((line: string) => line.replace(/^[\d\.\-\*•、\s]+/, '').trim())
-      .filter((line: string) => line.length >= 6 && line.length <= 50)
+      .filter((line: string) => line.length >= 6 && line.length <= 50 && !line.includes('思考') && !line.includes('用户'))
       .slice(0, 4)
 
     res.json({ success: true, followups })

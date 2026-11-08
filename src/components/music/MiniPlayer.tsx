@@ -59,11 +59,10 @@ export default function MiniPlayer() {
     : <Repeat className="h-3.5 w-3.5" />
 
   return (
-    <div className={`fixed bottom-0 left-0 right-0 z-50 transition-all duration-300 ${
-      expanded ? 'h-64' : 'h-16'
-    }`}>
+    <div className="fixed bottom-[calc(3.95rem+env(safe-area-inset-bottom,0px))] xl:bottom-0 left-2 right-2 xl:left-0 xl:right-0 z-35 rounded-2xl xl:rounded-none overflow-hidden shadow-xl xl:shadow-none border border-slate-200/90 xl:border-x-0 xl:border-b-0 bg-white/95 backdrop-blur-xl transition-all duration-300">
+      {/* Progress Track */}
       <div
-        className={`group h-1 bg-cream-200 ${isLive ? '' : 'cursor-pointer'}`}
+        className={`group h-1 bg-slate-200/80 ${isLive ? '' : 'cursor-pointer'}`}
         onClick={(event) => {
           if (isLive || duration <= 0) return
           const rect = event.currentTarget.getBoundingClientRect()
@@ -72,45 +71,46 @@ export default function MiniPlayer() {
         }}
       >
         <div
-          className="relative h-full bg-accent-orange transition-all duration-150"
+          className="relative h-full bg-indigo-600 transition-all duration-150"
           style={{ width: `${progressPercent}%` }}
         >
           {!isLive && (
-            <div className="absolute right-0 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-accent-orange opacity-0 transition-opacity group-hover:opacity-100" />
+            <div className="absolute right-0 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-indigo-600 opacity-0 transition-opacity group-hover:opacity-100" />
           )}
         </div>
       </div>
 
-      <div className="flex h-15 items-center gap-4 border-t border-cream-200 bg-surface px-4">
+      {/* Control Row */}
+      <div className="flex h-13 sm:h-15 items-center justify-between gap-2 sm:gap-4 px-3 sm:px-4">
         <button
           onClick={() => setExpanded(!expanded)}
-          className="flex w-48 min-w-0 shrink-0 items-center gap-3 transition-opacity hover:opacity-80"
+          className="flex flex-1 sm:w-56 sm:flex-initial min-w-0 items-center gap-2.5 transition-opacity hover:opacity-80 cursor-pointer"
         >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-accent-orange/30 to-accent-peach/30">
-            <span className="text-lg">{isLive ? '📻' : '🎵'}</span>
+          <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 border border-indigo-100">
+            <span className="text-base sm:text-lg">{isLive ? '📻' : '🎵'}</span>
           </div>
-          <div className="min-w-0 text-left">
-            <div className="truncate text-xs font-medium text-warm-700">{currentTrack.title}</div>
-            <div className={`truncate text-[10px] ${status === 'error' ? 'text-accent-rose' : 'text-warm-400'}`}>
+          <div className="min-w-0 text-left flex-1">
+            <div className="truncate text-xs font-bold text-slate-800">{currentTrack.title}</div>
+            <div className={`truncate text-[10px] ${status === 'error' ? 'text-rose-500' : 'text-slate-400'}`}>
               {status === 'loading'
-                ? '正在连接…'
+                ? '正在连接音频流…'
                 : status === 'error'
-                  ? '播放失败'
-                  : currentTrack.artist || '未知'}
+                  ? '播放失败，点击重试'
+                  : currentTrack.artist || '专注声景'}
             </div>
           </div>
           {expanded
-            ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-warm-400" />
-            : <ChevronUp className="h-3.5 w-3.5 shrink-0 text-warm-400" />}
+            ? <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+            : <ChevronUp className="h-3.5 w-3.5 shrink-0 text-slate-400" />}
         </button>
 
-        <div className="flex flex-1 items-center justify-center gap-3">
+        <div className="flex items-center justify-center gap-1.5 sm:gap-3 shrink-0">
           <button
             onClick={toggleShuffle}
-            className={`rounded-lg p-1.5 transition-colors ${
+            className={`hidden sm:inline-flex rounded-lg p-1.5 transition-colors cursor-pointer ${
               shuffle
-                ? 'bg-accent-orange/10 text-accent-orange'
-                : 'text-warm-400 hover:text-warm-600'
+                ? 'bg-indigo-50 text-indigo-600'
+                : 'text-slate-400 hover:text-slate-600'
             }`}
             title="随机播放"
           >
@@ -118,14 +118,14 @@ export default function MiniPlayer() {
           </button>
           <button
             onClick={prev}
-            className="rounded-lg p-1.5 text-warm-500 transition-colors hover:text-warm-700"
-            title="上一个"
+            className="rounded-lg p-1.5 text-slate-500 transition-colors hover:text-slate-800 active:scale-95 cursor-pointer"
+            title="上一首"
           >
             <SkipBack className="h-4 w-4" />
           </button>
           <button
             onClick={togglePlay}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-orange text-white shadow-sm transition-colors hover:bg-accent-peach"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm transition-all hover:bg-indigo-600 active:scale-95 cursor-pointer"
             title={isPlaying ? '暂停' : status === 'error' ? '重新连接' : '播放'}
           >
             {status === 'loading'
@@ -136,17 +136,17 @@ export default function MiniPlayer() {
           </button>
           <button
             onClick={next}
-            className="rounded-lg p-1.5 text-warm-500 transition-colors hover:text-warm-700"
-            title="下一个"
+            className="rounded-lg p-1.5 text-slate-500 transition-colors hover:text-slate-800 active:scale-95 cursor-pointer"
+            title="下一首"
           >
             <SkipForward className="h-4 w-4" />
           </button>
           <button
             onClick={cycleRepeat}
-            className={`rounded-lg p-1.5 transition-colors ${
+            className={`hidden sm:inline-flex rounded-lg p-1.5 transition-colors cursor-pointer ${
               repeat !== 'none'
-                ? 'bg-accent-orange/10 text-accent-orange'
-                : 'text-warm-400 hover:text-warm-600'
+                ? 'bg-indigo-50 text-indigo-600'
+                : 'text-slate-400 hover:text-slate-600'
             }`}
             title="循环模式"
           >
@@ -154,23 +154,23 @@ export default function MiniPlayer() {
           </button>
         </div>
 
-        <div className="flex w-48 shrink-0 items-center justify-end gap-3">
+        <div className="hidden md:flex w-48 shrink-0 items-center justify-end gap-3">
           {status === 'error' ? (
             <span
               title={error || undefined}
-              className="flex min-w-0 items-center gap-1 truncate text-[10px] text-accent-rose"
+              className="flex min-w-0 items-center gap-1 truncate text-[10px] text-rose-500"
             >
               <AlertCircle className="h-3 w-3 shrink-0" />
               <span className="truncate">{error || '播放失败'}</span>
             </span>
           ) : (
-            <span className="font-mono text-[10px] text-warm-400">
-              {isLive ? '直播' : `${formatTime(progress)} / ${formatTime(duration)}`}
+            <span className="font-mono text-[10px] text-slate-400">
+              {isLive ? '实时电台' : `${formatTime(progress)} / ${formatTime(duration)}`}
             </span>
           )}
           <button
             onClick={() => setVolume(volume > 0 ? 0 : 0.7)}
-            className="p-1 text-warm-400 transition-colors hover:text-warm-600"
+            className="p-1 text-slate-400 transition-colors hover:text-slate-600 cursor-pointer"
             title={volume === 0 ? '恢复音量' : '静音'}
           >
             {volume === 0
@@ -184,29 +184,33 @@ export default function MiniPlayer() {
             step={0.01}
             value={volume}
             onChange={event => setVolume(Number(event.target.value))}
-            className="h-1 w-20 cursor-pointer accent-accent-orange"
+            className="h-1 w-20 cursor-pointer accent-indigo-600"
             aria-label="音量"
           />
         </div>
       </div>
 
+      {/* Expanded Queue */}
       {expanded && queue.length > 0 && (
-        <div className="max-h-44 overflow-auto border-t border-cream-200 bg-surface px-4 py-2">
-          <div className="mb-2 text-[10px] font-medium text-warm-400">播放列表</div>
+        <div className="max-h-44 overflow-auto modal-scroll-contain border-t border-slate-100 bg-white px-3 sm:px-4 py-2">
+          <div className="mb-1.5 flex items-center justify-between text-[10px] font-bold text-slate-400">
+            <span>当前播放队列（{queue.length}）</span>
+            <span className="md:hidden font-mono">{isLive ? '实时电台' : `${formatTime(progress)} / ${formatTime(duration)}`}</span>
+          </div>
           {queue.map((track, index) => (
             <button
               type="button"
               key={track.id}
               onClick={() => setQueue(queue, index)}
-              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-xs transition-colors ${
+              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-xs transition-colors cursor-pointer ${
                 index === queueIndex
-                  ? 'bg-accent-orange/10 font-medium text-accent-orange'
-                  : 'text-warm-600 hover:bg-cream-100'
+                  ? 'bg-indigo-50 font-semibold text-indigo-700'
+                  : 'text-slate-600 hover:bg-slate-50'
               }`}
             >
-              <span className="w-5 text-right text-warm-400">{index + 1}</span>
+              <span className="w-5 text-right text-slate-400 font-mono text-[11px]">{index + 1}</span>
               <span className="flex-1 truncate">{track.title}</span>
-              <span className="text-[10px] text-warm-400">{track.type === 'radio' ? '📻' : '🎵'}</span>
+              <span className="text-[11px]">{track.type === 'radio' ? '📻' : '🎵'}</span>
             </button>
           ))}
         </div>

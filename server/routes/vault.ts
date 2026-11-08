@@ -12,6 +12,7 @@ import {
   startWatcher,
   upload,
   __dirname,
+  runtimeDataDir,
 } from '../context.js'
 import {
   createFile,
@@ -210,6 +211,183 @@ vaultRouter.patch('/vault/file/rename', (req, res) => {
     res.json(result)
   } catch (err: any) {
     res.status(400).json({ error: err.message })
+  }
+})
+
+// ===== Vault Attachments (Images, Handwriting & Media) =====
+
+const MIME_TYPES: Record<string, string> = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.svg': 'image/svg+xml',
+  '.bmp': 'image/bmp',
+  '.pdf': 'application/pdf',
+}
+
+vaultRouter.get('/vault/attachment', (req, res) => {
+  try {
+    const rawPath = String(req.query.path || req.query.name || '')
+    if (!rawPath) {
+      res.status(400).json({ error: 'Missing path or name' })
+      return
+    }
+
+    const basePath = config.vaultPath && fs.existsSync(config.vaultPath)
+      ? config.vaultPath
+      : path.join(runtimeDataDir, 'attachments')
+
+    let fullPath = path.resolve(basePath, rawPath)
+    if (!fs.existsSync(fullPath)) {
+      const altPath = path.resolve(basePath, 'attachments', rawPath)
+      if (fs.existsSync(altPath)) {
+        fullPath = altPath
+      }
+    }
+
+    if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) {
+      res.status(404).json({ error: 'Attachment not found' })
+      return
+    }
+
+    const ext = path.extname(fullPath).toLowerCase()
+    const contentType = MIME_TYPES[ext] || 'application/octet-stream'
+    res.setHeader('Content-Type', contentType)
+    res.setHeader('Cache-Control', 'public, max-age=86400')
+    const stream = fs.createReadStream(fullPath)
+    stream.pipe(res)
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+vaultRouter.post('/vault/attachment', upload.single('file'), (req, res) => {
+  try {
+    const vaultDir = config.vaultPath && fs.existsSync(config.vaultPath)
+      ? config.vaultPath
+      : path.join(runtimeDataDir)
+    const attachmentsDir = path.join(vaultDir, 'attachments')
+    if (!fs.existsSync(attachmentsDir)) {
+      fs.mkdirSync(attachmentsDir, { recursive: true })
+    }
+
+    const now = new Date()
+    const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`
+    const randomSuffix = Math.random().toString(36).substring(2, 6)
+
+    // A: JSON base64
+    if (req.body && req.body.base64) {
+      const { base64, prefix = 'drawing', filename: customName } = req.body
+      const matches = base64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/)
+      let ext = '.png'
+      let buffer: Buffer
+
+      if (matches && matches.length === 3) {
+        const mime = matches[1]
+        if (mime === 'image/jpeg') ext = '.jpg'
+        else if (mime === 'image/webp') ext = '.webp'
+        else if (mime === 'image/svg+xml') ext = '.svg'
+        buffer = Buffer.from(matches[2], 'base64')
+      } else {
+        buffer = Buffer.from(base64, 'base64')
+      }
+
+      const filename = customName || `${prefix}-${timestamp}-${randomSuffix}${ext}`
+      const targetPath = path.join(attachmentsDir, filename)
+      fs.writeFileSync(targetPath, buffer)
+
+      const relativePath = `attachments/${filename}`
+      const url = `/api/vault/attachment?path=${encodeURIComponent(relativePath)}`
+      res.json({
+        success: true,
+        filename,
+        relativePath,
+        url,
+        markdown: `![[${filename}]]`,
+        standardMarkdown: `![${prefix}](/api/vault/attachment?path=${encodeURIComponent(relativePath)})`,
+      })
+      return
+    }
+
+    // B: File upload
+    if (req.file) {
+      const originalExt = path.extname(req.file.originalname).toLowerCase() || '.png'
+      const prefix = req.body?.prefix || 'paste'
+      const customName = req.body?.filename
+      const filename = customName || `${prefix}-${timestamp}-${randomSuffix}${originalExt}`
+      const targetPath = path.join(attachmentsDir, filename)
+
+      fs.copyFileSync(req.file.path, targetPath)
+      try { fs.unlinkSync(req.file.path) } catch { /* ignore */ }
+
+      const relativePath = `attachments/${filename}`
+      const url = `/api/vault/attachment?path=${encodeURIComponent(relativePath)}`
+      res.json({
+        success: true,
+        filename,
+        relativePath,
+        url,
+        markdown: `![[${filename}]]`,
+        standardMarkdown: `![${prefix}](/api/vault/attachment?path=${encodeURIComponent(relativePath)})`,
+      })
+      return
+    }
+
+    res.status(400).json({ error: 'No file or base64 data provided' })
+  } catch (err: any) {
+    console.error('Attachment upload error:', err)
+    res.status(500).json({ error: err.message || '上传附件失败' })
+  }
+})
+
+// ===== Handwriting Strokes Persistence (随页手写矢量图层) =====
+
+function getStrokesFilePath(notePath: string): string {
+  const vaultDir = config.vaultPath && fs.existsSync(config.vaultPath)
+    ? config.vaultPath
+    : runtimeDataDir
+  const strokesDir = path.join(vaultDir, '.strokes')
+  if (!fs.existsSync(strokesDir)) {
+    fs.mkdirSync(strokesDir, { recursive: true })
+  }
+  const safeName = Buffer.from(notePath).toString('base64url') + '.json'
+  return path.join(strokesDir, safeName)
+}
+
+vaultRouter.get('/vault/strokes', (req, res) => {
+  try {
+    const notePath = String(req.query.path || '')
+    if (!notePath) {
+      res.json({ strokes: [] })
+      return
+    }
+    const fp = getStrokesFilePath(notePath)
+    if (fs.existsSync(fp)) {
+      const data = fs.readFileSync(fp, 'utf-8')
+      const parsed = JSON.parse(data)
+      res.json({ strokes: Array.isArray(parsed) ? parsed : (parsed.strokes || []) })
+      return
+    }
+    res.json({ strokes: [] })
+  } catch (err: any) {
+    res.json({ strokes: [], error: err.message })
+  }
+})
+
+vaultRouter.post('/vault/strokes', (req, res) => {
+  try {
+    const { path: notePath, strokes } = req.body as { path: string; strokes: any[] }
+    if (!notePath) {
+      res.status(400).json({ error: 'Missing note path' })
+      return
+    }
+    const fp = getStrokesFilePath(notePath)
+    fs.writeFileSync(fp, JSON.stringify({ path: notePath, updatedAt: new Date().toISOString(), strokes: strokes || [] }, null, 2), 'utf-8')
+    res.json({ success: true, count: (strokes || []).length })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
   }
 })
 

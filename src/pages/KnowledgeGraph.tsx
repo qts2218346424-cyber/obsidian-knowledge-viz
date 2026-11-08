@@ -498,34 +498,55 @@ export default function KnowledgeGraph() {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3">
-      {/* Header */}
-      <div className="flex flex-col justify-between gap-3 shrink-0 lg:flex-row lg:items-center">
+    <div className="flex h-full min-h-0 flex-col gap-0 md:gap-3">
+      {/* 📱 移动端极简状态条（释放 92% 满屏画布空间） */}
+      <div className="flex md:hidden items-center justify-between px-3 py-2 bg-white border-b border-slate-200/80 text-xs shrink-0">
+        <div className="flex items-center gap-2 font-medium text-slate-600">
+          <span className="font-bold text-slate-900">{totalNodes} 节点</span>
+          <span className="text-slate-300">·</span>
+          <span className="text-emerald-600 font-semibold">{rawLinks.length} 双链</span>
+          <span className="text-slate-300">·</span>
+          <span className="text-rose-500">{orphanNotes} 孤立</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {hasFilter && (
+            <button onClick={clearFilters} className="px-2 py-1 rounded-lg bg-slate-100 text-slate-600 text-[11px] font-semibold">
+              重置
+            </button>
+          )}
+          <button onClick={reload} className="p-1.5 rounded-lg bg-slate-100 text-slate-600 active:scale-95" aria-label="刷新图谱">
+            <RefreshCw className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* 🖥️ 桌面端 Header */}
+      <div className="hidden md:flex flex-col justify-between gap-3 shrink-0 lg:flex-row lg:items-center">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-semibold tracking-tight text-warm-800">知识图谱</h1>
+            <h1 className="text-xl font-bold tracking-tight text-slate-900">知识图谱</h1>
             {isRealData && (
-              <span className="rounded-full bg-accent-sage/12 px-2 py-0.5 text-[10px] font-medium text-accent-sage">来自 Vault</span>
+              <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">实时同步</span>
             )}
           </div>
-          <p className="mt-0.5 text-xs text-warm-500">
-            从笔记双向链接构建拓扑知识图谱。支持自由平移缩放、智能标签分级、单击跳至编辑、双击侧栏预览。
+          <p className="mt-0.5 text-xs text-slate-500">
+            从笔记双向链接构建拓扑知识网络。支持自由平移缩放、智能标签分级、单击跳至编辑、双击侧栏预览。
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
             onClick={resetView}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-cream-300 bg-surface px-3 py-1.5 text-xs font-medium text-warm-600 transition-colors hover:bg-cream-100 shadow-sm"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 shadow-2xs cursor-pointer"
           >
             <Maximize2 className="h-3.5 w-3.5" />
             适配视图
           </button>
           <button
             onClick={() => setShowAllLabels(prev => !prev)}
-            className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition-colors shadow-sm ${
+            className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition-colors shadow-2xs cursor-pointer ${
               showAllLabels
-                ? 'border-accent-orange/40 bg-accent-orange/10 text-accent-orange font-semibold'
-                : 'border-cream-300 bg-surface text-warm-600 hover:bg-cream-100'
+                ? 'border-indigo-300 bg-indigo-50 text-indigo-700 font-semibold'
+                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
             }`}
           >
             <Eye className="h-3.5 w-3.5" />
@@ -534,14 +555,14 @@ export default function KnowledgeGraph() {
           <button
             onClick={clearFilters}
             disabled={!hasFilter}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-cream-300 bg-surface px-3 py-1.5 text-xs font-medium text-warm-600 transition-colors hover:bg-cream-100 disabled:cursor-not-allowed disabled:opacity-40 shadow-sm"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 shadow-2xs cursor-pointer"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             清除筛选
           </button>
           <button
             onClick={reload}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-cream-300 bg-surface px-3 py-1.5 text-xs font-medium text-warm-600 transition-colors hover:bg-cream-100 shadow-sm"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 shadow-2xs cursor-pointer"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             刷新
@@ -549,11 +570,11 @@ export default function KnowledgeGraph() {
         </div>
       </div>
 
-      {/* Metrics Row */}
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 shrink-0">
-        <GraphMetric label="节点总数" value={totalNodes} color="text-accent-orange" />
-        <GraphMetric label="双向连接" value={rawLinks.length} color="text-accent-sage" />
-        <GraphMetric label="孤立笔记" value={orphanNotes} color="text-accent-rose" />
+      {/* 🖥️ 桌面端 Metrics Row */}
+      <div className="hidden md:grid grid-cols-4 gap-2.5 shrink-0">
+        <GraphMetric label="节点总数" value={totalNodes} color="text-indigo-600" />
+        <GraphMetric label="双向连接" value={rawLinks.length} color="text-emerald-600" />
+        <GraphMetric label="孤立笔记" value={orphanNotes} color="text-rose-500" />
         <GraphMetric label="健康度" value={overallScore || '—'} color={scoreColor} suffix={overallScore ? '/100' : undefined} />
       </div>
 
@@ -575,7 +596,7 @@ export default function KnowledgeGraph() {
 
           <div
             ref={containerRef}
-            className="relative flex-1 min-h-0 overflow-hidden rounded-2xl border border-cream-200 bg-[#FDFBF7] shadow-inner select-none"
+            className="relative flex-1 min-h-0 overflow-hidden sm:rounded-2xl sm:border sm:border-slate-200/90 bg-[#FDFBF7] shadow-inner select-none"
           >
             <svg ref={svgRef} width={dimensions.width} height={dimensions.height} className="block h-full w-full" />
 
@@ -689,8 +710,8 @@ export default function KnowledgeGraph() {
               </div>
             )}
 
-            {/* Category Filter Chips (bottom-left) */}
-            <div className="absolute bottom-3 left-3 z-10 flex flex-wrap gap-1.5 max-w-[70%]">
+            {/* Category Filter Chips (bottom-left, 手机端单行横滑) */}
+            <div className="absolute bottom-3 left-3 right-3 sm:right-auto z-10 flex items-center sm:flex-wrap gap-1.5 sm:max-w-[70%] overflow-x-auto no-scrollbar">
               {groups.map(key => {
                 const isActive = selectedGroups.size === 0 || selectedGroups.has(key)
                 return (
@@ -718,9 +739,9 @@ export default function KnowledgeGraph() {
               )}
             </div>
 
-            {/* Helper tips (bottom-center) */}
+            {/* Helper tips (bottom-center, 桌面端显示以免与手机底部分类条重叠) */}
             {!hasFilter && !hoveredNode && (
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-cream-200/85 backdrop-blur-sm text-[10px] text-warm-500 shadow-sm pointer-events-none">
+              <div className="hidden lg:block absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-white/85 backdrop-blur-sm border border-slate-200/80 text-[10px] text-slate-500 shadow-2xs pointer-events-none">
                 滚轮缩放 · 拖拽画布/节点 · 单击跳至编辑 · 双击右侧预览
               </div>
             )}

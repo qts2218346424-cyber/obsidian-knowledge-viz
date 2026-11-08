@@ -27,8 +27,8 @@ systemRouter.get('/health', (_req, res) => {
   })
 })
 
-// System Network Interfaces for Mobile connection
-const getNetworkHandler = (_req: any, res: any) => {
+// System Network Interfaces for Mobile & Cloud connection
+const getNetworkHandler = (req: any, res: any) => {
   try {
     const interfaces = os.networkInterfaces()
     const addresses: Array<{ iface: string; address: string; family: string; mac: string }> = []
@@ -48,8 +48,9 @@ const getNetworkHandler = (_req: any, res: any) => {
     }
 
     const port = config.port || 3001
-    // Prioritize Wi-Fi, WLAN or common physical Ethernet over virtual NICs (WSL/Hyper-V/VMware/vEthernet)
-    const isVirtual = (name: string) => /vEthernet|VirtualBox|VMware|WSL|Loopback/i.test(name)
+    // Prioritize Wi-Fi, WLAN or common physical Ethernet over virtual NICs (WSL/Hyper-V/VMware/vEthernet/docker)
+    const isVirtual = (name: string) =>
+      /vEthernet|VirtualBox|VMware|WSL|Loopback|docker|br-|veth/i.test(name)
     const sorted = [...addresses].sort((a, b) => {
       const aVirt = isVirtual(a.iface) ? 1 : 0
       const bVirt = isVirtual(b.iface) ? 1 : 0
@@ -59,11 +60,35 @@ const getNetworkHandler = (_req: any, res: any) => {
       return aWifi - bWifi
     })
 
+    // Detect if accessed via public cloud domain / public IP / reverse proxy
+    const rawHost = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0].trim()
+    const rawProto = String(
+      req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http')
+    )
+      .split(',')[0]
+      .trim()
+    const hostOnly = rawHost.replace(/:\d+$/, '')
+    const isPrivateOrLocal =
+      !hostOnly ||
+      hostOnly === 'localhost' ||
+      hostOnly === '127.0.0.1' ||
+      /^192\.168\./.test(hostOnly) ||
+      /^10\./.test(hostOnly) ||
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostOnly)
+
+    const deploymentMode: 'cloud' | 'local' = isPrivateOrLocal ? 'local' : 'cloud'
+    const publicOrigin = !isPrivateOrLocal && rawHost ? `${rawProto}://${rawHost}` : null
+
     const preferred = sorted[0]
-    const preferredUrl = preferred ? `http://${preferred.address}:${port}` : `http://localhost:${port}`
+    const lanPreferredUrl = preferred
+      ? `http://${preferred.address}:${port}`
+      : `http://localhost:${port}`
+    const preferredUrl = publicOrigin || lanPreferredUrl
 
     res.json({
       port,
+      deploymentMode,
+      publicOrigin,
       addresses: sorted,
       preferredUrl,
       lanUrls: sorted.map(a => ({

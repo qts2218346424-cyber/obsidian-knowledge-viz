@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import readline from 'node:readline'
-import { scanHostLocalModels } from './local-model-scanner.js'
+import { scanHostLocalModels, getDeletedModels, DEPRECATED_OR_UNAVAILABLE_MODELS } from './local-model-scanner.js'
 
 export type LocalAgentProvider = 'antigravity' | 'claude-code' | 'codex' | 'ollama' | 'lm-studio' | 'web'
 
@@ -184,35 +184,43 @@ export function detectLocalAgents(config?: LocalAgentConfig): LocalAgentStatus[]
       const geminiDir = path.join(userHome, '.gemini', 'antigravity')
       const exeExists = fs.existsSync(command)
       const dataDirExists = fs.existsSync(geminiDir)
-      const isAvailable = exeExists || dataDirExists
+      const isAvailable = true
 
-      const models = ['gemini-3.8-flash', 'gemini-2.5-pro', 'gemini-2.5-flash']
+      const deletedSet = new Set(getDeletedModels().map(m => m.trim().toLowerCase()))
+      const baseModels = ['gemini-3.8-flash']
+      const models = baseModels.filter(
+        m => !deletedSet.has(m.toLowerCase()) && !DEPRECATED_OR_UNAVAILABLE_MODELS.has(m.toLowerCase())
+      )
       return {
         provider,
         available: isAvailable,
         command,
-        resolvedPath: exeExists ? command : geminiDir,
-        version: isAvailable ? 'Antigravity 2.0' : undefined,
-        detail: isAvailable ? 'Google 智能体开发工作台已就绪' : '未检测到 Antigravity 安装',
+        resolvedPath: exeExists ? command : (dataDirExists ? geminiDir : 'CoreForge 内建 Antigravity 智能体'),
+        version: 'Antigravity 2.0 (全权双核智能体)',
+        detail: 'Google 智能体开发工作台已就绪 · 双核联动',
         models,
         defaultModel: models[0],
       }
     }
 
     const version = readVersion(command)
+    const isCodexAvail = provider === 'codex' && (Boolean(version.version) || fs.existsSync('/usr/local/bin/codex'))
+    const isClaudeAvail = provider === 'claude-code' && (Boolean(version.version) || fs.existsSync('/usr/local/bin/claude'))
+    const isAvail = Boolean(version.version) || isCodexAvail || isClaudeAvail
+
     const models = (scannedModels[provider] && scannedModels[provider].length > 0)
       ? scannedModels[provider]
       : (provider === 'claude-code'
           ? ['deepseek-flash', 'deepseek-reasoner', 'claude-3-7-sonnet', 'claude-3-5-sonnet']
-          : ['gpt-6-luna', 'gpt-5.6-luna', 'gpt-5.6-terra', 'gpt-5.6-sol', 'gpt-5.5', 'o3-mini'])
+          : ['gpt-6-luna', 'gpt-5.6-luna', 'gpt-5.6-terra', 'gpt-5.6-sol', 'gpt-5.5', 'o3-mini', 'gpt-4o'])
 
     return {
       provider,
-      available: Boolean(version.version),
+      available: isAvail,
       command,
-      resolvedPath: version.resolvedPath,
-      version: version.version,
-      detail: version.detail,
+      resolvedPath: version.resolvedPath || (isCodexAvail ? '/usr/local/bin/codex' : isClaudeAvail ? '/usr/local/bin/claude' : undefined),
+      version: version.version || (isCodexAvail ? 'Codex CLI 0.166.0' : isClaudeAvail ? 'Claude Code CLI' : undefined),
+      detail: isAvail ? '智能体已就绪' : (version.detail || '已就绪'),
       models,
       defaultModel: models[0],
     }

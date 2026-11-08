@@ -1,9 +1,13 @@
 // API service layer for communicating with Express backend
+import { getAuthHeaders } from './auth'
 
 const BASE = '/api'
 
 // Extract error message from response body, fall back to status text
 async function extractErrorMessage(res: Response): Promise<string> {
+  if (res.status === 401) {
+    window.dispatchEvent(new CustomEvent('auth-unauthorized'))
+  }
   try {
     const body = await res.json()
     if (body.error) return body.error
@@ -12,7 +16,7 @@ async function extractErrorMessage(res: Response): Promise<string> {
 }
 
 async function fetchJSON<T>(url: string): Promise<T> {
-  const res = await fetch(`${BASE}${url}`)
+  const res = await fetch(`${BASE}${url}`, { headers: getAuthHeaders() })
   if (!res.ok) {
     throw new Error(await extractErrorMessage(res))
   }
@@ -22,7 +26,7 @@ async function fetchJSON<T>(url: string): Promise<T> {
 async function postJSON<T>(url: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${url}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify(body),
   })
   if (!res.ok) {
@@ -34,7 +38,7 @@ async function postJSON<T>(url: string, body: unknown): Promise<T> {
 async function putJSON<T>(url: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${url}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify(body),
   })
   if (!res.ok) {
@@ -46,7 +50,7 @@ async function putJSON<T>(url: string, body: unknown): Promise<T> {
 async function delJSON<T>(url: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${url}`, {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify(body),
   })
   if (!res.ok) {
@@ -58,7 +62,7 @@ async function delJSON<T>(url: string, body: unknown): Promise<T> {
 async function patchJSON<T>(url: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${url}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify(body),
   })
   if (!res.ok) {
@@ -219,6 +223,51 @@ export interface BookItem {
   isPdf?: boolean
   isHtml?: boolean
   fileType?: 'pdf' | 'html' | 'handout' | 'paper' | 'text'
+  extractedInfo?: {
+    isExtracted: boolean
+    noteTitle?: string
+    notePath?: string
+    questionCount?: number
+    lastExtracted?: string
+    mode?: 'concept' | 'question' | 'dual'
+    chapterCount?: number
+  }
+}
+
+export interface ChapterOutlineItem {
+  id: string
+  title: string
+  rawContent: string
+  subSections: string[]
+  startPage?: number
+  endPage?: number
+  pageCount?: number
+  exercisePagesCount?: number
+}
+
+export interface BookOutlineResult {
+  success: boolean
+  bookName: string
+  inferredTitle: string
+  domain: 'cs_408' | 'math'
+  subject: string
+  totalPages?: number
+  totalChapters: number
+  chapters: ChapterOutlineItem[]
+  fullOutline: string
+}
+
+export interface DeepExtractResult {
+  success: boolean
+  bookName: string
+  chaptersCount: number
+  totalQuestionsCount: number
+  indexNoteTitle: string
+  indexNotePath: string
+  notes: Array<{ title: string; path: string; chapterTitle: string }>
+  questions: any[]
+  domain: string
+  subject: string
 }
 
 export interface FlashcardResult {
@@ -858,6 +907,32 @@ export const api = {
   // Books & Materials
   getBooks: () => fetchJSON<{ books: BookItem[] }>('/books/list'),
   readBook: (relativePath: string) => postJSON<{ content: string; name: string }>('/books/read', { relativePath }),
+  autoExtractBook: (data: {
+    relativePath: string
+    domain?: 'cs_408' | 'math'
+    subject?: string
+    mode?: 'concept' | 'question' | 'dual'
+    customText?: string
+  }) => postJSON<{
+    success: boolean
+    note?: { title: string; suggestedPath: string; content: string }
+    questions: any[]
+    savedNotePath: string
+    questionsCount: number
+    domain: string
+    subject: string
+  }>('/books/auto-extract', data),
+  batchAutoExtractBooks: (items: Array<{ relativePath: string; mode?: 'concept' | 'question' | 'dual' }>) =>
+    postJSON<{ success: boolean; count: number; results: any[] }>('/books/batch-auto-extract', { items }),
+  getBookOutline: (relativePath: string) =>
+    postJSON<BookOutlineResult>('/books/outline', { relativePath }),
+  deepExtractBook: (data: {
+    relativePath: string
+    domain?: 'cs_408' | 'math'
+    subject?: string
+    selectedChapterIds?: string[]
+    mode?: 'concept' | 'question' | 'dual'
+  }) => postJSON<DeepExtractResult>('/books/deep-extract', data),
 
   // ===== SM-2 艾宾浩斯记忆与考点热力 =====
   gradeSM2Card: (params: { cardId: string; grade: number; subject?: string; title?: string; syllabusId?: string }) =>
@@ -886,6 +961,56 @@ export const api = {
     model?: string
   }) =>
     postJSON<{ mode: 'hint' | 'audit' | 'formula'; syllabusMatch?: { id: string; subject: string; level1: string; level2: string; level3: string }; content: string; engineUsed?: string }>('/ai/tutor/step', params),
+
+  // ===== 笔记附件与图片上传接口 =====
+  uploadAttachment: async (file: File | Blob, prefix = 'image', customFilename?: string): Promise<AttachmentResult> => {
+    const formData = new FormData()
+    formData.append('file', file, customFilename || (file instanceof File ? file.name : `${prefix}.png`))
+    formData.append('prefix', prefix)
+    if (customFilename) {
+      formData.append('filename', customFilename)
+    }
+    const res = await fetch(`${BASE}/vault/attachment`, { method: 'POST', body: formData })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }))
+      throw new Error(err.error || `上传附件失败: ${res.status}`)
+    }
+    return res.json()
+  },
+
+  uploadBase64Attachment: async (base64: string, prefix = 'drawing', filename?: string): Promise<AttachmentResult> => {
+    return postJSON<AttachmentResult>('/vault/attachment', { base64, prefix, filename })
+  },
+
+  // ===== 随页手写笔迹图层 (Strokes) =====
+  getStrokes: (notePath: string) =>
+    fetchJSON<{ strokes: HandwritingStroke[] }>(`/vault/strokes?path=${encodeURIComponent(notePath)}`),
+
+  saveStrokes: (notePath: string, strokes: HandwritingStroke[]) =>
+    postJSON<{ success: boolean; count: number }>('/vault/strokes', { path: notePath, strokes }),
+}
+
+export interface HandwritingPoint {
+  x: number
+  y: number
+  pressure?: number
+}
+
+export interface HandwritingStroke {
+  id?: string
+  points: HandwritingPoint[]
+  color: string
+  size: number
+  tool: 'pen' | 'highlighter' | 'eraser'
+}
+
+export interface AttachmentResult {
+  success: boolean
+  filename: string
+  relativePath: string
+  url: string
+  markdown: string
+  standardMarkdown: string
 }
 
 

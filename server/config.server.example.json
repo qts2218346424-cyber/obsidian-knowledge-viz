@@ -1,0 +1,35 @@
+{
+  "vaultPath": "/opt/coreforge/vault",
+  "port": 3001,
+  "host": "0.0.0.0",
+  "allowedOrigins": [
+    "http://113.45.136.45",
+    "http://113.45.136.45:3001",
+    "http://claudexxb.online",
+    "https://claudexxb.online",
+    "http://www.claudexxb.online",
+    "https://www.claudexxb.online"
+  ],
+  "ai": {
+    "apiKey": "your-deepseek-api-key-here",
+    "baseURL": "https://api.deepseek.com/anthropic",
+    "model": "deepseek-flash",
+    "provider": "anthropic",
+    "apiFormat": "anthropic",
+    "activeEndpointId": "ep_deepseek",
+    "endpoints": [
+      {
+        "id": "ep_deepseek",
+        "name": "DeepSeek 官方",
+        "apiFormat": "anthropic",
+        "baseURL": "https://api.deepseek.com/anthropic",
+        "apiKey": "your-deepseek-api-key-here",
+        "defaultModel": "deepseek-flash",
+        "models": [
+          "deepseek-flash",
+          "deepseek-v4-pro"
+        ]
+      }
+    ]
+  }
+}

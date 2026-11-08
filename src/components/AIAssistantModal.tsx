@@ -7,6 +7,8 @@ import {
   FolderPlus,
   Loader2,
   MessageSquare,
+  Maximize2,
+  Minimize2,
   Plus,
   RefreshCw,
   Send,
@@ -94,6 +96,85 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath }: AIAssist
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
+
+  // 窗口自由尺寸与最大化状态
+  const [isMaximized, setIsMaximized] = useState(() => {
+    return localStorage.getItem('coreforge_ai_modal_maximized') === 'true'
+  })
+  const [modalSize, setModalSize] = useState<{ width: number; height: number }>(() => {
+    try {
+      const saved = localStorage.getItem('coreforge_ai_modal_size')
+      if (saved) return JSON.parse(saved)
+    } catch {}
+    return {
+      width: Math.min(1060, typeof window !== 'undefined' ? window.innerWidth - 40 : 980),
+      height: Math.min(840, typeof window !== 'undefined' ? window.innerHeight - 50 : 780),
+    }
+  })
+  const resizingRef = useRef<{
+    direction: 'left' | 'top' | 'top-left' | null
+    startX: number
+    startY: number
+    startW: number
+    startH: number
+  } | null>(null)
+
+  const handleResizeStart = (direction: 'left' | 'top' | 'top-left', e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (isMaximized) return
+    resizingRef.current = {
+      direction,
+      startX: e.clientX,
+      startY: e.clientY,
+      startW: modalSize.width,
+      startH: modalSize.height,
+    }
+  }
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!resizingRef.current) return
+      const { direction, startX, startY, startW, startH } = resizingRef.current
+      let nextW = startW
+      let nextH = startH
+
+      if (direction === 'left' || direction === 'top-left') {
+        const dx = startX - e.clientX
+        nextW = Math.max(460, Math.min(window.innerWidth - 24, startW + dx))
+      }
+      if (direction === 'top' || direction === 'top-left') {
+        const dy = startY - e.clientY
+        nextH = Math.max(380, Math.min(window.innerHeight - 24, startH + dy))
+      }
+
+      setModalSize({ width: nextW, height: nextH })
+    }
+
+    const handleMouseUp = () => {
+      if (resizingRef.current) {
+        resizingRef.current = null
+        try {
+          localStorage.setItem('coreforge_ai_modal_size', JSON.stringify(modalSize))
+        } catch {}
+      }
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [modalSize])
+
+  const toggleMaximize = () => {
+    setIsMaximized(prev => {
+      const next = !prev
+      localStorage.setItem('coreforge_ai_modal_maximized', String(next))
+      return next
+    })
+  }
 
   const activeProject = useMemo(
     () => workspace.projects.find(project => project.id === workspace.activeProjectId) || workspace.projects[0],
@@ -341,14 +422,45 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath }: AIAssist
   }
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-end justify-end bg-warm-900/20 p-2 backdrop-blur-[2px] sm:p-5" onMouseDown={onClose}>
+    <div className="fixed inset-0 z-[80] flex items-end justify-end bg-warm-900/20 p-2 backdrop-blur-[2px] sm:p-4" onMouseDown={onClose}>
       <section
         role="dialog"
         aria-modal="true"
         aria-label="AI 工作区"
-        className="flex h-[min(820px,calc(100vh-1rem))] w-full max-w-[980px] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.22)] sm:h-[min(820px,calc(100vh-2.5rem))]"
+        style={
+          isMaximized
+            ? { width: 'calc(100vw - 1rem)', height: 'calc(100vh - 1rem)', maxWidth: 'none', maxHeight: 'none' }
+            : { width: `${modalSize.width}px`, height: `${modalSize.height}px`, maxWidth: 'calc(100vw - 1rem)', maxHeight: 'calc(100vh - 1rem)' }
+        }
+        className={`relative flex flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.22)] transition-all ${
+          resizingRef.current ? 'select-none transition-none' : ''
+        }`}
         onMouseDown={event => event.stopPropagation()}
       >
+        {/* 自由调节尺寸手柄（非全屏时可用） */}
+        {!isMaximized && (
+          <>
+            {/* 左边缘拖拽调整宽度 */}
+            <div
+              onMouseDown={e => handleResizeStart('left', e)}
+              className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize hover:bg-accent-orange/40 active:bg-accent-orange transition-colors z-30"
+              title="按住向左/向右拖拽调整窗口宽度"
+            />
+            {/* 上边缘拖拽调整高度 */}
+            <div
+              onMouseDown={e => handleResizeStart('top', e)}
+              className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-accent-orange/40 active:bg-accent-orange transition-colors z-30"
+              title="按住向上/向下拖拽调整窗口高度"
+            />
+            {/* 左上角斜向自由拉伸 */}
+            <div
+              onMouseDown={e => handleResizeStart('top-left', e)}
+              className="absolute top-0 left-0 w-4 h-4 cursor-nwse-resize hover:bg-accent-orange/60 rounded-tl-3xl transition-colors z-40"
+              title="按住自由拉伸窗口宽高"
+            />
+          </>
+        )}
+
         <header className="flex items-center gap-3 border-b border-slate-200 px-4 py-3 sm:px-5">
           <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-warm-900 text-white">
             <Bot className="h-4 w-4" />
@@ -365,6 +477,15 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath }: AIAssist
           </button>
           <button onClick={() => setMobilePanel(mobilePanel === 'skills' ? null : 'skills')} className="rounded-full p-2 text-warm-400 hover:bg-slate-100 md:hidden" aria-label="打开 Skill">
             <Sparkles className="h-4 w-4" />
+          </button>
+          {/* 最大化 / 还原按钮 */}
+          <button
+            onClick={toggleMaximize}
+            aria-label={isMaximized ? '还原窗口' : '最大化窗口'}
+            title={isMaximized ? '还原窗口大小' : '最大化铺满窗口'}
+            className="rounded-full p-2 text-warm-400 hover:bg-slate-100 hover:text-warm-900 transition-colors"
+          >
+            {isMaximized ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </button>
           <button onClick={onClose} aria-label="关闭 AI 工作区" className="rounded-full p-2 text-warm-400 hover:bg-slate-100 hover:text-warm-900">
             <X className="h-4 w-4" />

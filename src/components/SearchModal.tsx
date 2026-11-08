@@ -17,23 +17,21 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const navigate = useNavigate()
 
-  // Focus input on open
   useEffect(() => {
     if (isOpen) {
       setQuery('')
       setResults([])
       setSelected(0)
-      setTimeout(() => inputRef.current?.focus(), 50)
+      setTimeout(() => inputRef.current?.focus(), 60)
     }
   }, [isOpen])
 
-  // Debounced search
   const doSearch = useCallback(async (q: string) => {
     if (!q.trim()) { setResults([]); return }
     setLoading(true)
     try {
       const files = await api.getFiles(q.trim())
-      setResults(files.slice(0, 15))
+      setResults(files.slice(0, 20))
       setSelected(0)
     } catch {
       setResults([])
@@ -45,7 +43,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const handleInput = (value: string) => {
     setQuery(value)
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => doSearch(value), 250)
+    debounceRef.current = setTimeout(() => doSearch(value), 220)
   }
 
   const handleOpen = (path: string) => {
@@ -68,7 +66,6 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
     }
   }
 
-  // Scroll selected into view
   useEffect(() => {
     const el = document.getElementById(`search-result-${selected}`)
     el?.scrollIntoView({ block: 'nearest' })
@@ -77,43 +74,62 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center pt-[max(0.75rem,env(safe-area-inset-top))] sm:pt-[12dvh] px-3 sm:px-4 modal-backdrop-contain"
+      onClick={onClose}
+    >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-warm-900/40 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-slate-950/45 backdrop-blur-xs" />
 
       {/* Modal */}
       <div
-        className="relative w-full max-w-lg bg-surface border border-cream-300 rounded-xl shadow-2xl overflow-hidden"
+        className="relative w-full max-w-lg bg-white border border-slate-200/90 rounded-2xl shadow-2xl overflow-hidden animate-fade-in-up"
         onClick={e => e.stopPropagation()}
       >
         {/* Search input */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-cream-200">
-          <Search className="w-4 h-4 text-warm-400 shrink-0" />
+        <div className="flex items-center gap-2.5 px-4 py-3 border-b border-slate-100">
+          <Search className="w-4 h-4 text-indigo-500 shrink-0" />
           <input
             ref={inputRef}
             type="text"
             value={query}
             onChange={e => handleInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="搜索笔记... (标题、标签、内容)"
-            className="flex-1 bg-transparent text-sm text-warm-700 placeholder-warm-400 outline-none"
+            placeholder="搜索知识库笔记（标题、考点、标签）..."
+            className="flex-1 bg-transparent text-base sm:text-sm text-slate-800 placeholder-slate-400 outline-none"
           />
-          {loading && <Loader2 className="w-3.5 h-3.5 text-warm-400 animate-spin" />}
-          <button onClick={onClose} className="p-1 rounded hover:bg-cream-100 text-warm-400">
+          {loading && <Loader2 className="w-4 h-4 text-indigo-500 animate-spin shrink-0" />}
+          <button
+            onClick={onClose}
+            className="h-7 w-7 inline-flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 shrink-0 cursor-pointer"
+            aria-label="关闭搜索"
+          >
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
 
         {/* Results */}
-        <div className="max-h-80 overflow-auto">
+        <div className="max-h-[62dvh] sm:max-h-88 overflow-y-auto modal-scroll-contain">
           {results.length === 0 && query.trim() && !loading && (
-            <div className="px-4 py-8 text-center text-xs text-warm-400">
-              未找到匹配 "{query}" 的笔记
+            <div className="px-4 py-10 text-center text-xs text-slate-400">
+              未找到匹配「{query}」的笔记
             </div>
           )}
           {results.length === 0 && !query.trim() && (
-            <div className="px-4 py-8 text-center text-xs text-warm-400">
-              输入关键词搜索你的知识库
+            <div className="px-4 py-10 text-center space-y-2">
+              <div className="text-xs font-medium text-slate-500">输入关键词快速直达任意笔记</div>
+              <div className="flex flex-wrap justify-center gap-1.5 pt-1">
+                {['数据结构', '操作系统', '计算机网络', '泰勒公式', '特征值'].map(kw => (
+                  <button
+                    key={kw}
+                    type="button"
+                    onClick={() => handleInput(kw)}
+                    className="text-[11px] px-2.5 py-1 rounded-full bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 transition-colors cursor-pointer"
+                  >
+                    {kw}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
           {results.map((file, i) => (
@@ -122,28 +138,28 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
               id={`search-result-${i}`}
               onClick={() => handleOpen(file.path)}
               onMouseEnter={() => setSelected(i)}
-              className={`w-full flex items-start gap-3 px-4 py-2.5 text-left transition-colors ${
-                selected === i ? 'bg-accent-orange/15 border-l-2 border-accent-orange' : 'border-l-2 border-transparent hover:bg-cream-200/50'
+              className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-colors border-b border-slate-50 last:border-b-0 cursor-pointer ${
+                selected === i ? 'bg-indigo-50/70 border-l-3 border-l-indigo-600' : 'border-l-3 border-l-transparent hover:bg-slate-50'
               }`}
             >
-              <FileText className={`w-4 h-4 mt-0.5 shrink-0 ${selected === i ? 'text-accent-orange' : 'text-warm-400'}`} />
+              <FileText className={`w-4 h-4 mt-0.5 shrink-0 ${selected === i ? 'text-indigo-600' : 'text-slate-400'}`} />
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className={`text-sm font-medium truncate ${selected === i ? 'text-warm-800' : 'text-warm-600'}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className={`text-sm font-semibold truncate ${selected === i ? 'text-slate-900' : 'text-slate-700'}`}>
                     {highlightMatch(file.title, query)}
                   </span>
-                  <span className="text-[10px] text-warm-400 shrink-0">{file.wordCount}w</span>
+                  <span className="text-[10px] text-slate-400 shrink-0">{file.wordCount} 字</span>
                 </div>
-                <div className="text-[11px] text-warm-400 truncate">{file.path}</div>
+                <div className="text-[11px] text-slate-400 truncate mt-0.5">{file.path}</div>
                 {file.tags.length > 0 && (
-                  <div className="flex gap-1 mt-1">
+                  <div className="flex flex-wrap gap-1 mt-1.5">
                     {file.tags.slice(0, 3).map(tag => (
-                      <span key={tag} className="text-[9px] px-1 py-0.5 rounded bg-cream-100 text-warm-400">#{tag}</span>
+                      <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500">#{tag}</span>
                     ))}
                   </div>
                 )}
                 {file.snippet && (
-                  <div className="text-[10px] text-warm-400 mt-1 line-clamp-2 leading-relaxed">
+                  <div className="text-[11px] text-slate-500 mt-1 line-clamp-2 leading-relaxed">
                     {highlightMatch(file.snippet, query)}
                   </div>
                 )}
@@ -154,11 +170,11 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
 
         {/* Footer */}
         {results.length > 0 && (
-          <div className="px-4 py-2 border-t border-cream-200 flex items-center gap-4 text-[10px] text-warm-400">
-            <span>↑↓ 导航</span>
-            <span>Enter 打开</span>
-            <span>Esc 关闭</span>
-            <span className="ml-auto">{results.length} results</span>
+          <div className="px-4 py-2 border-t border-slate-100 bg-slate-50/70 flex items-center gap-4 text-[11px] text-slate-400">
+            <span className="hidden sm:inline">↑↓ 选择</span>
+            <span className="hidden sm:inline">回车打开</span>
+            <span>点击条目直达笔记</span>
+            <span className="ml-auto font-medium text-slate-500">共 {results.length} 条结果</span>
           </div>
         )}
       </div>
@@ -178,7 +194,7 @@ function highlightMatch(text: string, query: string): React.ReactNode {
       result = (
         <>
           {text.substring(0, idx)}
-          <span className="text-accent-orange font-semibold">{text.substring(idx, idx + term.length)}</span>
+          <span className="text-indigo-600 font-bold bg-indigo-50 px-0.5 rounded">{text.substring(idx, idx + term.length)}</span>
           {text.substring(idx + term.length)}
         </>
       )

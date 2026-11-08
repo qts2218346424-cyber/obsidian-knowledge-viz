@@ -102,7 +102,7 @@ function TreeNodeItem({
           onFileClick(node.path)
         }}
         title={isPdf ? `${node.name} (PDF 参考资料 - 点击在新标签页预览)` : isHtml ? `${node.name} (交互仿真课件 - 点击在新标签页打开)` : node.name}
-        className={`w-full flex items-center gap-1.5 rounded px-2 py-1 text-left text-xs transition-colors cursor-pointer ${
+        className={`w-full flex items-center gap-1.5 rounded px-2 py-2.5 sm:py-1 text-left text-xs transition-colors cursor-pointer ${
           selectedPath === node.path
             ? 'bg-accent-orange/12 font-medium text-accent-orange'
             : 'text-warm-500 hover:bg-cream-200/50 hover:text-warm-700'
@@ -131,7 +131,7 @@ function TreeNodeItem({
     <div>
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-1.5 px-2 py-1 rounded text-xs text-warm-600 hover:bg-cream-200/50 transition-colors text-left"
+        className="w-full flex items-center gap-1.5 px-2 py-2.5 sm:py-1 rounded text-xs text-warm-600 hover:bg-cream-200/50 transition-colors text-left"
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
       >
         {expanded ? (

@@ -20,6 +20,8 @@ export const DEFAULT_BLACKLIST = new Set([
 
 // 明确过滤已下架、不可用、不存在或废弃的模型
 export const DEPRECATED_OR_UNAVAILABLE_MODELS = new Set([
+  'gemini-2.5-pro',
+  'gemini-2.5-flash',
   'deepseek-v4-flash', // 未上线/虚构模型
   'deepseek-v4-pro',   // 未上线/虚构模型
   'gpt-5.4',           // 官方已下架

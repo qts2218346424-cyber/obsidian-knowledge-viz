@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   Upload,
   ChevronDown,
@@ -6,6 +7,7 @@ import {
   Sparkles,
   Star,
   ArrowLeft,
+  ArrowRight,
   Lightbulb,
   CheckCircle2,
   XCircle,
@@ -164,6 +166,7 @@ function formatTime(seconds: number): string {
 // ── Main Component ──────────────────────────────────────────────────────────
 
 export default function Quiz() {
+  const [searchParams] = useSearchParams()
   const [view, setView] = useState<ViewMode>('start')
 
   // Subject and category filters
@@ -233,6 +236,14 @@ export default function Quiz() {
   useEffect(() => {
     fetchCustomQuestions()
   }, [fetchCustomQuestions])
+
+  useEffect(() => {
+    const domainParam = searchParams.get('domain')
+    if (domainParam === 'cs_408' || domainParam === 'math') {
+      setDomainFilter(domainParam)
+      setSelectedSubjects(new Set(ALL_SUBJECTS.filter(s => s.domain === domainParam).map(s => s.key)))
+    }
+  }, [searchParams])
 
   const handleSaveToErrorBook = async (currentQ: ActiveQuizQuestion) => {
     setSavingError(true)
@@ -630,29 +641,29 @@ export default function Quiz() {
     const effectiveCount = Math.min(questionCount, Math.max(1, maxQuestions))
 
     return (
-      <div className="mx-auto max-w-[1520px] space-y-7 animate-fade-in-up">
+      <div className="mx-auto max-w-[1520px] space-y-4 sm:space-y-6 pb-16 md:pb-0 animate-fade-in-up">
         {/* Header Hero */}
-        <div className="relative overflow-hidden rounded-3xl border border-white/80 bg-gradient-to-br from-white/90 via-white/80 to-accent-peach/20 p-7 sm:p-9 shadow-[0_20px_50px_rgba(15,23,42,0.05)] backdrop-blur-xl">
+        <div className="relative overflow-hidden rounded-3xl border border-slate-200/85 bg-gradient-to-br from-white via-white to-indigo-50/45 p-4 sm:p-8 shadow-[0_12px_36px_-8px_rgba(15,23,42,0.05)]">
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-accent-orange/20 bg-accent-orange/10 px-3 py-1 text-xs font-semibold text-accent-orange">
-                <Flame className="h-3.5 w-3.5" />
-                <span>全真题库 · 分步推导 · 错因闭环</span>
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-indigo-200/80 bg-indigo-50 px-2.5 py-0.5 sm:px-3 sm:py-1 text-[11px] sm:text-xs font-bold text-indigo-700">
+                <Flame className="h-3.5 w-3.5 text-amber-500" />
+                <span>全真题库 · 分步推导 · 错题闭环</span>
               </div>
-              <h1 className="mt-3 text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-3">
-                <span>研考做题中心 (408 专业课 + 考研数学)</span>
+              <h1 className="mt-2.5 sm:mt-3 fluid-hero-title font-extrabold text-slate-900">
+                研考做题中心（408 专业课 + 考研数学）
               </h1>
-              <p className="mt-2 text-sm text-slate-500 max-w-2xl">
-                支持数一、数二、数三卷种针对性专项练习，LaTeX 严谨推导与分步解析，做题记录与错题自动归档至本地 Obsidian 知识库。
+              <p className="mt-1.5 text-xs sm:text-sm text-slate-500 max-w-2xl leading-relaxed">
+                支持 408 四门统考科目与数一/二/三针对性专项演练，全量 KaTeX 公式推导与错题一键沉淀。
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="hidden md:flex items-center gap-3 shrink-0">
               <WarmButton
                 size="lg"
                 onClick={startQuiz}
                 disabled={availableCount === 0}
-                className="bg-gradient-to-r from-accent-orange via-blue-600 to-indigo-600 text-white shadow-lg shadow-accent-orange/25 px-8 py-3.5 text-sm font-semibold hover:scale-105 transition-transform"
+                className="bg-slate-900 hover:bg-indigo-600 text-white shadow-lg shadow-slate-900/15 px-8 py-3.5 text-sm font-bold transition-all"
               >
                 {availableCount > 0 ? `开始做题 (${effectiveCount} 题) →` : '暂无匹配试题'}
               </WarmButton>
@@ -867,6 +878,28 @@ export default function Quiz() {
           </div>
         </div>
 
+        {/* 📱 移动端悬浮吸底开刷栏（选完科目随时一键开始，无需滚回页面顶部） */}
+        <div className="md:hidden fixed bottom-[calc(3.85rem+env(safe-area-inset-bottom,0px))] left-2.5 right-2.5 z-30 rounded-2xl bg-slate-900/95 text-white px-4 py-2.5 shadow-xl backdrop-blur-xl flex items-center justify-between gap-3 border border-white/10">
+          <div className="min-w-0">
+            <div className="text-xs font-bold truncate">
+              {mode === 'practice' ? '📖 练习模式' : '📋 考试模式'} · 抽 {effectiveCount} 题
+            </div>
+            <div className="text-[10px] text-slate-400 truncate">
+              已选 {selectedSubjects.size} 门科目（题池共 {availableCount} 题）
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={startQuiz}
+            disabled={availableCount === 0}
+            className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-indigo-500 hover:bg-indigo-400 disabled:opacity-40 px-4 py-2 text-xs font-extrabold text-white shadow-sm active:scale-95 transition-all cursor-pointer"
+          >
+            <Flame className="h-3.5 w-3.5 text-amber-300" />
+            <span>立即开始</span>
+            <ArrowRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
         <ImportResourceModal
           isOpen={importModalOpen}
           onClose={() => setImportModalOpen(false)}
@@ -891,27 +924,27 @@ export default function Quiz() {
     const currentScratchpad = scratchpads[currentQ.id] || ''
 
     return (
-      <div className="mx-auto max-w-[1560px] space-y-4 animate-fade-in-up">
-        {/* Top Slim Progress Header with Linear-style Keyboard HUD */}
-        <div className="glass-panel rounded-2xl px-5 py-2.5 flex items-center justify-between shadow-sm border border-slate-200/90 relative overflow-hidden">
-          <div className="flex items-center gap-3">
+      <div className="mx-auto max-w-[1560px] space-y-3 sm:space-y-4 pb-16 lg:pb-0 animate-fade-in-up">
+        {/* Top Slim Progress Header */}
+        <div className="glass-panel rounded-2xl px-3.5 sm:px-5 py-2.5 flex items-center justify-between gap-2 shadow-sm border border-slate-200/90 relative overflow-hidden">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
               onClick={() => {
-                if (window.confirm('确定要退出当前做题吗？已做答案仍会被统计。')) {
+                if (window.confirm('确定要结算退出当前做题吗？已做答案会被统计。')) {
                   finishQuiz()
                 }
               }}
-              className="text-xs text-slate-500 hover:text-slate-900 flex items-center gap-1 font-medium transition-colors cursor-pointer active:scale-95"
+              className="text-xs text-slate-600 hover:text-slate-900 flex items-center gap-1 font-semibold transition-colors cursor-pointer active:scale-95 shrink-0"
             >
               <ArrowLeft size={14} />
-              <span>交卷退出</span>
+              <span>交卷</span>
             </button>
-            <div className="h-4 w-px bg-slate-200" />
-            <span className="text-xs font-bold text-slate-800">
+            <div className="h-3.5 w-px bg-slate-200 shrink-0" />
+            <span className="text-xs font-bold text-slate-800 truncate">
               {currentQ.subject}
             </span>
             {currentQ.chapter && (
-              <span className="text-[11px] text-slate-500 hidden sm:inline">
+              <span className="text-[11px] text-slate-500 hidden sm:inline truncate">
                 · {currentQ.chapter}
               </span>
             )}
@@ -964,8 +997,8 @@ export default function Quiz() {
         {/* Dual-Panel Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-[1.22fr_0.78fr] gap-5 items-start">
           {/* ───────────────── LEFT PANEL: Question & Solution ───────────────── */}
-          <div className="space-y-4">
-            <div className="glass-panel rounded-3xl p-6 sm:p-7 space-y-5 relative shadow-md">
+          <div className="space-y-3.5 sm:space-y-4 min-w-0">
+            <div className="glass-panel rounded-3xl p-4 sm:p-7 space-y-4 sm:space-y-5 relative shadow-md">
               {/* Question Meta Badges */}
               <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3.5">
                 <div className="flex flex-wrap items-center gap-2">
@@ -1418,11 +1451,61 @@ export default function Quiz() {
           </div>
         </div>
 
+        {/* 📱 移动端固定拇指答题操作栏 */}
+        <div className="lg:hidden fixed bottom-[calc(3.85rem+env(safe-area-inset-bottom,0px))] left-2.5 right-2.5 z-30 rounded-2xl bg-white/95 border border-slate-200/90 px-3 py-2 shadow-xl backdrop-blur-xl flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => goToQuestion(currentIndex - 1)}
+            disabled={currentIndex === 0}
+            className="px-3 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold disabled:opacity-35 active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+          >
+            <ArrowLeft size={14} />
+            <span>上一题</span>
+          </button>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => { setActiveSideTab('palette'); setMobileDrawerOpen(true) }}
+              className="px-2.5 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold active:scale-95 transition-all cursor-pointer"
+            >
+              🧮 {answeredCount}/{questions.length}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setActiveSideTab('scratchpad'); setMobileDrawerOpen(true) }}
+              className="px-2.5 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold active:scale-95 transition-all cursor-pointer"
+            >
+              📝 草稿
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleBookmark(currentQ.id)}
+              className={`p-2 rounded-xl border transition-all active:scale-95 cursor-pointer ${
+                isBookmarked ? 'bg-amber-50 border-amber-300 text-amber-500' : 'bg-slate-50 border-slate-200 text-slate-400'
+              }`}
+              aria-label="标星"
+            >
+              <Star size={15} className={isBookmarked ? 'fill-amber-500' : ''} />
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={advanceQuestion}
+            disabled={mode === 'practice' && !showFeedback}
+            className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold disabled:opacity-35 active:scale-95 transition-all flex items-center gap-1 cursor-pointer shadow-xs"
+          >
+            <span>{currentIndex < questions.length - 1 ? '下一题' : '交卷'}</span>
+            <ArrowRight size={14} />
+          </button>
+        </div>
+
         {/* ── 📱 Mobile Bottom Sheet Drawer (小屏抽屉式答题卡与工具) ── */}
         {mobileDrawerOpen && (
-          <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end">
-            <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-xs" onClick={() => setMobileDrawerOpen(false)} />
-            <div className="relative bg-white rounded-t-3xl p-5 shadow-2xl border-t border-slate-200 max-h-[82vh] overflow-y-auto space-y-4 animate-in slide-in-from-bottom duration-200">
+          <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end modal-backdrop-contain">
+            <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-xs" onClick={() => setMobileDrawerOpen(false)} />
+            <div className="relative bg-white rounded-t-3xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl border-t border-slate-200 max-h-[82dvh] overflow-y-auto modal-scroll-contain space-y-4 animate-sheet-up">
               <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                 <div className="text-sm font-bold text-slate-900">答题卡大纲 &amp; 辅助工具</div>
                 <button

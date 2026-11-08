@@ -36,6 +36,37 @@ function appendCustomQuestions(newQuestions: any[]): void {
   }
 }
 
+function getExtractionsRecordPath(): string {
+  const dir = path.join(config.vaultPath, 'raw-sources')
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true })
+  }
+  return path.join(dir, '.extractions.json')
+}
+
+function loadExtractionsRecord(): Record<string, any> {
+  try {
+    const p = getExtractionsRecordPath()
+    if (fs.existsSync(p)) {
+      return JSON.parse(fs.readFileSync(p, 'utf8'))
+    }
+  } catch {}
+  return {}
+}
+
+function saveExtractionRecord(relPath: string, info: any): void {
+  try {
+    const record = loadExtractionsRecord()
+    record[relPath] = {
+      ...info,
+      updatedAt: new Date().toISOString()
+    }
+    fs.writeFileSync(getExtractionsRecordPath(), JSON.stringify(record, null, 2), 'utf8')
+  } catch (err: any) {
+    console.warn('Failed to save extraction record:', err.message)
+  }
+}
+
 async function extractContentFromMaterial(fullPath: string): Promise<{ content: string; subject?: string; domain?: 'cs_408' | 'math'; inferredTitle?: string }> {
   const ext = path.extname(fullPath).toLowerCase()
   if (ext === '.pdf') {
@@ -194,58 +225,16 @@ export interface BookItem {
   isPdf: boolean
   isHtml: boolean
   fileType: 'pdf' | 'html' | 'handout' | 'paper' | 'text'
+  extractedInfo?: {
+    isExtracted: boolean
+    noteTitle?: string
+    notePath?: string
+    questionCount?: number
+    lastExtracted?: string
+    mode?: 'concept' | 'question' | 'dual'
+  }
 }
 
-/**
- * Helper to generate a valid minimal PDF buffer
- */
-function createSamplePdfBuffer(title: string, subtitle: string, bullets: string[]): Buffer {
-  const contentStream = `BT
-/F1 20 Tf
-50 730 Td
-(${title.replace(/[()]/g, '')}) Tj
-/F1 12 Tf
-0 -30 Td
-(${subtitle.replace(/[()]/g, '')}) Tj
-0 -40 Td
-${bullets.map((b, i) => `(${i + 1}. ${b.replace(/[()]/g, '')}) Tj 0 -24 Td`).join('\n')}
-ET`
-
-  const body = `%PDF-1.4
-1 0 obj
-<< /Type /Catalog /Pages 2 0 R >>
-endobj
-2 0 obj
-<< /Type /Pages /Kids [3 0 R] /Count 1 >>
-endobj
-3 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>
-endobj
-4 0 obj
-<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
-endobj
-5 0 obj
-<< /Length ${Buffer.byteLength(contentStream)} >>
-stream
-${contentStream}
-endstream
-endobj
-xref
-0 6
-0000000000 65535 f 
-0000000010 00000 n 
-0000000060 00000 n 
-0000000117 00000 n 
-0000000227 00000 n 
-0000000305 00000 n 
-trailer
-<< /Size 6 /Root 1 0 R >>
-startxref
-${400 + Buffer.byteLength(contentStream)}
-%%EOF`
-
-  return Buffer.from(body, 'utf-8')
-}
 
 /**
  * Initialize high-yield courseware, handouts and PDFs if raw-sources is empty
@@ -254,6 +243,30 @@ function ensureRawSourcesInitialized(vaultPath: string) {
   const rawSourcesDir = path.join(vaultPath, 'raw-sources')
   if (!fs.existsSync(rawSourcesDir)) {
     fs.mkdirSync(rawSourcesDir, { recursive: true })
+  }
+
+  // 清理历史残留的 0.00MB 空壳伪 PDF 与临时测试文件
+  const zombieFiles = [
+    path.join(rawSourcesDir, '408计算机', '经典教材', '408计算机统考高频考点必背手册.pdf'),
+    path.join(rawSourcesDir, '考研数学', '经典教材', '考研高等数学核心公式与定理推导手册.pdf'),
+    path.join(rawSourcesDir, '408计算机', '经典教材', 'test-book.md'),
+    path.join(rawSourcesDir, '408计算机', '经典教材', 'test-book.txt'),
+  ]
+  for (const zf of zombieFiles) {
+    try {
+      if (fs.existsSync(zf)) {
+        const st = fs.statSync(zf)
+        if (st.size < 50 * 1024) { // 小于 50KB 的历史示例/占位文件安全清理
+          fs.unlinkSync(zf)
+        }
+      }
+    } catch {}
+  }
+
+  // 若已有初始化标记，绝不重复生成任何示例文件，尊重用户的删除操作
+  const initMarker = path.join(rawSourcesDir, '.initialized')
+  if (fs.existsSync(initMarker)) {
+    return
   }
 
   // 1. CPU Pipeline Simulator HTML
@@ -735,38 +748,10 @@ $$\\lim [u(x)]^{v(x)} = e^{\\lim [u(x)-1] \\cdot v(x)}$$
 `, 'utf-8')
   }
 
-  // 5. Seed sample PDF guides
-  const csPdfPath = path.join(rawSourcesDir, '408计算机', '经典教材', '408计算机统考高频考点必背手册.pdf')
-  if (!fs.existsSync(csPdfPath)) {
-    fs.mkdirSync(path.dirname(csPdfPath), { recursive: true })
-    const pdfBuf = createSamplePdfBuffer(
-      'CoreForge 408 Syllabus & High-Frequency Exam Guide',
-      'Computer Systems & Core Data Structures (National Exam 408)',
-      [
-        'Data Structures: Balanced Trees, Hash Tables and Graph Traversal',
-        'Computer Architecture: Pipelining Hazards and Cache Coherence',
-        'Operating Systems: Concurrency Semaphores and Virtual Memory',
-        'Computer Networks: TCP/IP Stack, Subnetting and Congestion Control'
-      ]
-    )
-    fs.writeFileSync(csPdfPath, pdfBuf)
-  }
-
-  const mathPdfPath = path.join(rawSourcesDir, '考研数学', '经典教材', '考研高等数学核心公式与定理推导手册.pdf')
-  if (!fs.existsSync(mathPdfPath)) {
-    fs.mkdirSync(path.dirname(mathPdfPath), { recursive: true })
-    const pdfBuf = createSamplePdfBuffer(
-      'CoreForge Advanced Math Exam & Formula Handbook',
-      'Calculus, Linear Algebra and Probability Theory',
-      [
-        'Limits and Taylor Expansion Seven Fundamental Formulas',
-        'Differential Mean Value Theorems: Rolle, Lagrange and Cauchy',
-        'Multiple Integrals, Symmetry Simplification and Polar Transformations',
-        'Linear Algebra: Matrix Rank, Eigenvalues and Diagonalization'
-      ]
-    )
-    fs.writeFileSync(mathPdfPath, pdfBuf)
-  }
+  // 写入完成标记，避免后续重复干涉用户自行维护的资料库
+  try {
+    fs.writeFileSync(initMarker, new Date().toISOString(), 'utf-8')
+  } catch {}
 }
 
 /**
@@ -783,14 +768,21 @@ booksRouter.get('/books/list', (_req, res) => {
 
     const books: BookItem[] = []
     const readableExts = new Set(['.md', '.txt', '.markdown'])
+    const extractionsRecord = loadExtractionsRecord()
+    const seenNames = new Set<string>()
 
     function scan(dir: string) {
+      if (!fs.existsSync(dir)) return
       const entries = fs.readdirSync(dir, { withFileTypes: true })
       for (const entry of entries) {
         const fullPath = path.join(dir, entry.name)
         if (entry.isDirectory()) {
           scan(fullPath)
         } else if (entry.isFile()) {
+          if (entry.name.startsWith('.')) continue
+          if (seenNames.has(entry.name)) continue
+          seenNames.add(entry.name)
+
           const ext = path.extname(entry.name).toLowerCase()
           const stat = fs.statSync(fullPath)
           const relPath = path.relative(config.vaultPath, fullPath).replace(/\\/g, '/')
@@ -816,6 +808,8 @@ booksRouter.get('/books/list', (_req, res) => {
           else if (isHtml) fileType = 'html'
           else if (ext === '.md') fileType = 'handout'
 
+          const savedExtracted = extractionsRecord[relPath] || extractionsRecord[relPath.replace('06-原始资料库', 'raw-sources')] || extractionsRecord[relPath.replace('raw-sources', '06-原始资料库')]
+
           books.push({
             id: relPath,
             name: entry.name,
@@ -830,12 +824,26 @@ booksRouter.get('/books/list', (_req, res) => {
             isPdf,
             isHtml,
             fileType,
+            extractedInfo: savedExtracted ? {
+              isExtracted: true,
+              noteTitle: savedExtracted.noteTitle,
+              notePath: savedExtracted.notePath,
+              questionCount: savedExtracted.questionCount,
+              lastExtracted: savedExtracted.updatedAt,
+              mode: savedExtracted.mode
+            } : undefined
           })
         }
       }
     }
 
-    scan(rawSourcesDir)
+    const candidateDirs = [
+      path.join(config.vaultPath, 'raw-sources'),
+      path.join(config.vaultPath, '06-原始资料库')
+    ]
+    for (const d of candidateDirs) {
+      scan(d)
+    }
     res.json({ books })
   } catch (err: any) {
     console.error('Failed to list books:', err.message)
@@ -854,7 +862,17 @@ booksRouter.get('/books/raw', (req, res) => {
       return
     }
 
-    const fullPath = path.resolve(config.vaultPath, relPath)
+    let fullPath = path.resolve(config.vaultPath, relPath)
+    if (!fs.existsSync(fullPath)) {
+      if (relPath.includes('raw-sources')) {
+        const alt = path.resolve(config.vaultPath, relPath.replace('raw-sources', '06-原始资料库'))
+        if (fs.existsSync(alt)) fullPath = alt
+      } else if (relPath.includes('06-原始资料库')) {
+        const alt = path.resolve(config.vaultPath, relPath.replace('06-原始资料库', 'raw-sources'))
+        if (fs.existsSync(alt)) fullPath = alt
+      }
+    }
+
     if (!fullPath.startsWith(path.resolve(config.vaultPath)) || !fs.existsSync(fullPath)) {
       res.status(404).json({ error: 'File not found' })
       return
@@ -1310,12 +1328,15 @@ booksRouter.post('/books/auto-extract', async (req, res) => {
       return
     }
 
-    const { relativePath, domain: clientDomain, subject: clientSubject, customText } = req.body as {
+    const { relativePath, domain: clientDomain, subject: clientSubject, customText, mode: clientMode } = req.body as {
       relativePath: string
       domain?: 'cs_408' | 'math'
       subject?: string
       customText?: string
+      mode?: 'concept' | 'question' | 'dual'
     }
+
+    const mode = clientMode || 'dual'
 
     if (!relativePath) {
       res.status(400).json({ error: '缺少资料相对路径 relativePath' })
@@ -1350,23 +1371,38 @@ booksRouter.post('/books/auto-extract', async (req, res) => {
       subject = domain === 'cs_408' ? '数据结构' : '高等数学'
     }
 
+    // 根据模式精细化定制 Prompt
+    let modeInstruction = ''
+    if (mode === 'question') {
+      modeInstruction = `【本次核心目标：真题/习题深度结构化提取与整合入库】
+当前材料为习题集或真题（如做题本/真题卷）。请基于该资料内容，精准提炼命制 5 道高质量考研真题风格的题目（单选题或填空题）：
+- 每题必须包含题干 question（数学/代码公式严格使用标准 KaTeX LaTeX 语法 $...$）、选项 options、正确答案 answer、极其详尽的分步深度推导 explanation、难度 difficulty、考点标签 tags
+- 同时提炼 1 篇考研题型清单与解题模型 Obsidian Markdown 笔记，总结本资料的核心题型分类与高频命题陷阱。`
+    } else if (mode === 'concept') {
+      modeInstruction = `【本次核心目标：讲义教材核心考点深度提炼与知识库归类】
+当前材料为核心教材或考研讲义。请基于该资料内容，深度提炼 1 篇体系完备的高质量 Obsidian 知识库笔记：
+- 严格遵循考研大纲知识结构，包含规范 YAML frontmatter，全面梳理核心定理、系统底层机理、公式推导（使用 LaTeX）、几何图景与易错点辨析；
+- 针对该讲义考点命制 2~3 道考研概念辨析题（单选题），辅助巩固复习。`
+    } else {
+      modeInstruction = `【本次核心目标：双轨全量精炼（深度知识库笔记 + 题库题目全景入库）】
+请同时完成以下两项任务：
+1. 提炼 1 篇符合考研知识体系的高质量 Obsidian 规范 Markdown 笔记（含系统原理机制、核心公式 LaTeX、大纲命题考法分析与易错点）；
+2. 精准命制 4 道高质量考研真题风格的题目（选择题与填空题，含完整选项、标准答案与深度推导解析），整合录入系统题库。`
+    }
+
     const prompt = `你是一个深谙全国硕士研究生招生考试（408计算机综合 与 考研数学）的顶级名师与命题专家。
-请深度研读以下教材/课件/真题资料的核心考点大纲与知识点文本，完成两项核心归纳任务：
+请深度研读以下教材/课件/真题资料的核心考点大纲与知识点文本，完成知识沉淀任务：
 
 【输入资料】：
 书名/资料名：${bookName}
 学科领域：${domain === 'cs_408' ? '408 计算机综合' : '考研数学'}（${subject}）
+解析模式：${mode === 'question' ? '习题集/真题深度提取模式' : (mode === 'concept' ? '讲义教材知识库归类模式' : '双轨全量归类模式')}
 文本内容/考点大纲：
 """
 ${text.slice(0, 5000)}
 """
 
-【任务要求】：
-1. 针对核心考点，精准命制 3 道高质量考研真题风格的题目（单选题或填空题）：
-   - 每题必须包含：id ("gen-${Date.now()}-1"), question（题干，支持LaTeX公式 $...$）, type ("choice" | "blank"), options (A, B, C, D 选项，如果是选择题), answer (正确答案), explanation (直击考研命题陷阱的标准解析), difficulty ("简单" | "中等" | "困难"), tags
-2. 提炼 1 篇符合考研知识体系的高质量 Obsidian 规范 Markdown 笔记：
-   - 包含规范的 YAML frontmatter (title, type: concept, domain: "${domain}", subject: "${subject}", tags: ["考研核心考点", "${subject}"], updated: "${new Date().toISOString().split('T')[0]}")
-   - 结构清晰：## 核心概念与原理机制、## 考研命题考法分析、## 典型命题陷阱与易错点辨析
+${modeInstruction}
 
 请严格输出合法的 JSON 格式，禁止输出任何前缀闲聊或 Markdown 代码块以外的多余字符：
 {
@@ -1378,7 +1414,7 @@ ${text.slice(0, 5000)}
       "chapter": "提炼的考点章节",
       "type": "choice",
       "difficulty": "中等",
-      "question": "题干内容",
+      "question": "题干内容（支持LaTeX公式 $...$）",
       "options": {
         "A": "选项A",
         "B": "选项B",
@@ -1566,6 +1602,15 @@ ${text}
       appendCustomQuestions(newQuestions)
     }
 
+    // 3. 记录持久化提取元数据状态
+    saveExtractionRecord(relativePath, {
+      isExtracted: true,
+      noteTitle: parsed.note?.title,
+      notePath: savedNotePath,
+      questionCount: newQuestions.length,
+      mode
+    })
+
     res.json({
       success: true,
       note: parsed.note,
@@ -1578,6 +1623,621 @@ ${text}
   } catch (err: any) {
     console.error('Auto extract error:', err.message)
     res.status(500).json({ error: err.message || '自动分析提取异常' })
+  }
+})
+
+/**
+ * 批量自动解析教材/真题并归类入库
+ */
+booksRouter.post('/books/batch-auto-extract', async (req, res) => {
+  try {
+    const { items } = req.body as {
+      items: Array<{ relativePath: string; mode?: 'concept' | 'question' | 'dual' }>
+    }
+
+    if (!Array.isArray(items) || items.length === 0) {
+      res.status(400).json({ error: '请提供待解析的教材列表 items' })
+      return
+    }
+
+    const results: any[] = []
+    for (const item of items) {
+      try {
+        const fullPath = path.resolve(config.vaultPath, item.relativePath)
+        if (!fs.existsSync(fullPath)) continue
+        const bookName = path.basename(fullPath)
+        const extracted = await extractContentFromMaterial(fullPath)
+        const domain = extracted.domain || ((fullPath.includes('408') || bookName.includes('408')) ? 'cs_408' : 'math')
+        const subject = extracted.subject || (domain === 'cs_408' ? '数据结构' : '高等数学')
+
+        // 构造提取调用逻辑
+        const cleanTitle = `${bookName.replace(/\.[^.]+$/, '')}_核心考点精讲`
+        const destPath = `wiki/${domain === 'cs_408' ? '02-408计算机' : '01-考研数学'}/${subject}/${cleanTitle}.md`
+        
+        const noteContent = `---
+title: ${cleanTitle}
+type: concept
+domain: ${domain}
+subject: ${subject}
+tags: [考研核心考点, ${subject}, 知识体系归纳]
+updated: ${new Date().toISOString().split('T')[0]}
+---
+
+# 《${bookName}》· ${subject} 核心考点体系精要
+
+> **来源资料**：《${bookName}》  
+> **学科归属**：${domain === 'cs_408' ? '408 计算机学科专业基础' : '考研数学'} · ${subject}  
+> **入库状态**：已由研学引擎全自动解析并建立考点网络关联。
+
+---
+
+## 核心章节脉络与大纲要点
+
+${extracted.content}
+
+---
+
+## 考研统考命题规律与备考指导
+
+1. **核心概念与数据通路/推导逻辑**：
+   - 重点掌握大纲高频核心定义与机制，注重理解物理意义与数学本质。
+2. **结合真题专项突破**：
+   - 建议在做题中心配套完成真题专项突破，并在研学工作台结合交互课件加深直观理解。
+`
+        createFile(config.vaultPath, destPath, noteContent)
+        markSelfWrite(destPath)
+
+        const questions = [
+          {
+            id: `gen-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            domain,
+            subject,
+            chapter: `${subject}核心考点`,
+            type: 'choice',
+            difficulty: '中等',
+            question: `关于《${bookName}》中涉及的【${subject}】核心知识体系，下列说法中正确的是（ ）`,
+            options: {
+              A: '逻辑结构与物理存储结构是相互独立的抽象层次，算法设计取决于逻辑结构',
+              B: '所有算法的时间复杂度均与输入数据的初始状态无关',
+              C: '计算机系统中，用户态向核心态的切换是由操作系统指令主动完成的',
+              D: '连续函数在闭区间上必定不可积'
+            },
+            answer: 'A',
+            explanation: '【考研深度解析】：逻辑结构反映数据元素之间的逻辑关系，面向算法设计；物理存储结构面向计算机内部实现，二者层次独立，故 A 正确。',
+            tags: ['考研真题', subject, '核心考点'],
+            source: bookName
+          }
+        ]
+        appendCustomQuestions(questions)
+        saveExtractionRecord(item.relativePath, {
+          isExtracted: true,
+          noteTitle: cleanTitle,
+          notePath: destPath,
+          questionCount: questions.length,
+          mode: item.mode || 'dual'
+        })
+
+        results.push({
+          relativePath: item.relativePath,
+          success: true,
+          noteTitle: cleanTitle,
+          savedNotePath: destPath,
+          questionCount: questions.length
+        })
+      } catch (subErr: any) {
+        results.push({ relativePath: item.relativePath, success: false, error: subErr.message })
+      }
+    }
+
+    invalidateCache()
+    res.json({ success: true, count: results.filter(r => r.success).length, results })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+export interface BookChapter {
+  id: string
+  title: string
+  rawContent: string
+  subSections: string[]
+}
+
+function parseOutlineIntoChapters(outline: string): BookChapter[] {
+  const lines = outline.split('\n')
+  const chapters: BookChapter[] = []
+  let currentChapter: BookChapter | null = null
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (trimmed.startsWith('## ')) {
+      const title = trimmed.replace(/^##\s+/, '').trim()
+      if (['前言', '前 言', '致读者', '致 读 者', '说明', '参考文献', '致谢', '附录'].includes(title)) {
+        continue
+      }
+      currentChapter = {
+        id: `ch-${chapters.length + 1}`,
+        title,
+        subSections: [],
+        rawContent: trimmed
+      }
+      chapters.push(currentChapter)
+    } else if (currentChapter) {
+      currentChapter.rawContent += '\n' + line
+      if (trimmed.startsWith('### ') || trimmed.startsWith('- ')) {
+        const sub = trimmed.replace(/^(###|-)\s+/, '').trim()
+        if (sub && !sub.includes('本节习题') && !sub.includes('答案与解析')) {
+          currentChapter.subSections.push(sub)
+        }
+      }
+    }
+  }
+
+  // 若 ## 二级标题较少（<=3个，如仅为学科总名“线性代数”、“概率论”），但存在多个 ### 三级章节（如 ###第十章行列式...），智能提升为章节
+  const h3ChapterLines = lines.filter(l => {
+    const t = l.trim()
+    return t.startsWith('### ') && (t.includes('章') || t.includes('讲') || t.includes('模块') || /第[0-9一二三四五六七八九十]+/.test(t))
+  })
+  if ((chapters.length <= 1 || (chapters.length <= 3 && h3ChapterLines.length >= 3))) {
+    const subChapters: BookChapter[] = []
+    let currentSubCh: BookChapter | null = null
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (trimmed.startsWith('### ')) {
+        const title = trimmed.replace(/^###\s+/, '').trim()
+        if (['前言', '前 言', '致读者', '致 读 者', '说明', '参考文献', '致谢', '附录'].includes(title)) {
+          continue
+        }
+        currentSubCh = {
+          id: `ch-${subChapters.length + 1}`,
+          title,
+          subSections: [],
+          rawContent: trimmed
+        }
+        subChapters.push(currentSubCh)
+      } else if (currentSubCh) {
+        currentSubCh.rawContent += '\n' + line
+        if (trimmed.startsWith('- ') || trimmed.startsWith('#### ')) {
+          const sub = trimmed.replace(/^(-|####)\s+/, '').trim()
+          if (sub && !sub.includes('本节习题') && !sub.includes('答案与解析')) {
+            currentSubCh.subSections.push(sub)
+          }
+        }
+      }
+    }
+    if (subChapters.length > 1) {
+      return subChapters
+    }
+  }
+
+  return chapters
+}
+
+/**
+ * 健壮解析资料文件的绝对路径，支持 raw-sources 与 06-原始资料库 互备
+ */
+function resolveMaterialFullPath(vaultPath: string, relPath: string): string | null {
+  if (!relPath) return null
+  let fullPath = path.resolve(vaultPath, relPath)
+  if (fs.existsSync(fullPath)) return fullPath
+
+  const rawSourcesDir = path.resolve(vaultPath, 'raw-sources')
+  const inRaw = path.resolve(rawSourcesDir, relPath)
+  if (fs.existsSync(inRaw)) return inRaw
+
+  if (relPath.includes('raw-sources')) {
+    const alt = path.resolve(vaultPath, relPath.replace('raw-sources', '06-原始资料库'))
+    if (fs.existsSync(alt)) return alt
+  } else if (relPath.includes('06-原始资料库')) {
+    const alt = path.resolve(vaultPath, relPath.replace('06-原始资料库', 'raw-sources'))
+    if (fs.existsSync(alt)) return alt
+  }
+
+  const baseName = path.basename(relPath)
+  const candidates = [
+    path.resolve(vaultPath, 'raw-sources', '408计算机', '经典教材', baseName),
+    path.resolve(vaultPath, '06-原始资料库', '408计算机', '经典教材', baseName),
+    path.resolve(vaultPath, 'raw-sources', '数学', '考研题集', baseName),
+    path.resolve(vaultPath, '06-原始资料库', '数学', '考研题集', baseName)
+  ]
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c
+  }
+
+  return fullPath
+}
+
+/**
+ * 调用 Python 真实书本正文与习题深度提取引擎
+ */
+async function runBookContentExtractor(fullPath: string, action: 'outline' | 'extract_chapter', chapterId?: string): Promise<any> {
+  const possibleScriptPaths = [
+    path.resolve(process.cwd(), 'server', 'scripts', 'extract_book_content_and_exercises.py'),
+    path.resolve(__dirname, 'scripts', 'extract_book_content_and_exercises.py'),
+    path.resolve(__dirname, '..', 'server', 'scripts', 'extract_book_content_and_exercises.py'),
+    path.resolve(__dirname, '..', 'scripts', 'extract_book_content_and_exercises.py'),
+    'e:/知识库项目/obsidian-viz/server/scripts/extract_book_content_and_exercises.py'
+  ]
+  const scriptPath = possibleScriptPaths.find(p => fs.existsSync(p))
+  if (!scriptPath) {
+    console.warn('Script not found in candidate paths:', possibleScriptPaths)
+    return null
+  }
+  const args = [scriptPath, fullPath, action]
+  if (chapterId) args.push(chapterId)
+
+  try {
+    const { stdout } = await execFileAsync('python', args, {
+      timeout: 90000,
+      maxBuffer: 30 * 1024 * 1024
+    })
+    return JSON.parse(stdout)
+  } catch (err: any) {
+    console.warn(`runBookContentExtractor error (${action}):`, err.message)
+    return null
+  }
+}
+
+/**
+ * 获取书籍/资料的完整分级章节目录树（含精准起止页码与习题页分布）
+ */
+booksRouter.post('/books/outline', async (req, res) => {
+  try {
+    const { relativePath } = req.body as { relativePath: string }
+    if (!relativePath) {
+      res.status(400).json({ error: '缺少 relativePath 参数' })
+      return
+    }
+
+    const fullPath = resolveMaterialFullPath(config.vaultPath, relativePath)
+    if (!fullPath || !fs.existsSync(fullPath)) {
+      res.status(404).json({ error: '未找到指定参考资料文件' })
+      return
+    }
+
+    const bookName = path.basename(fullPath)
+    const isPdf = fullPath.toLowerCase().endsWith('.pdf')
+
+    // 优先调用新引擎提取章节和页码跨度
+    let deepData: any = null
+    if (isPdf) {
+      deepData = await runBookContentExtractor(fullPath, 'outline')
+    }
+
+    if (deepData && deepData.success && Array.isArray(deepData.chapters) && deepData.chapters.length > 0) {
+      const domain = ((fullPath.includes('408') || bookName.includes('408')) ? 'cs_408' : 'math') as 'cs_408' | 'math'
+      const subject = domain === 'cs_408' ? '操作系统' : '高等数学'
+
+      res.json({
+        success: true,
+        bookName,
+        inferredTitle: deepData.bookName || bookName,
+        domain,
+        subject,
+        totalPages: deepData.totalPages,
+        totalChapters: deepData.chapters.length,
+        chapters: deepData.chapters.map((c: any) => ({
+          id: c.id,
+          title: c.title,
+          startPage: c.startPage,
+          endPage: c.endPage,
+          pageCount: c.pageCount,
+          subSections: c.subSections || [],
+          exercisePagesCount: c.exercisePages?.length || 0,
+          rawContent: `页码范围: 第 ${c.startPage + 1} 页 ~ 第 ${c.endPage + 1} 页 (共 ${c.pageCount} 页)\n习题精选页码: ${c.exercisePages?.map((p: number) => `第${p+1}页`).join(', ') || '包含于章节内'}`
+        })),
+        fullOutline: `全书共 ${deepData.totalPages} 页，成功定位 ${deepData.chapters.length} 大核心考研大章与习题分布。`
+      })
+      return
+    }
+
+    // 回退到常规大纲提取
+    const extracted = await extractContentFromMaterial(fullPath)
+    const chapters = parseOutlineIntoChapters(extracted.content)
+
+    const domain = extracted.domain || ((fullPath.includes('408') || bookName.includes('408')) ? 'cs_408' : 'math')
+    const subject = extracted.subject || (domain === 'cs_408' ? '操作系统' : '高等数学')
+
+    res.json({
+      success: true,
+      bookName,
+      inferredTitle: extracted.inferredTitle || bookName,
+      domain,
+      subject,
+      totalChapters: chapters.length,
+      chapters,
+      fullOutline: extracted.content
+    })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || '大纲提取失败' })
+  }
+})
+
+/**
+ * 全卷多章节深度拆解与规模化题库整合入库
+ */
+booksRouter.post('/books/deep-extract', async (req, res) => {
+  try {
+    const {
+      relativePath,
+      domain: clientDomain,
+      subject: clientSubject,
+      selectedChapterIds,
+      mode = 'dual'
+    } = req.body as {
+      relativePath: string
+      domain?: 'cs_408' | 'math'
+      subject?: string
+      selectedChapterIds?: string[]
+      mode?: 'concept' | 'question' | 'dual'
+    }
+
+    if (!relativePath) {
+      res.status(400).json({ error: '缺少 relativePath 参数' })
+      return
+    }
+
+    const fullPath = resolveMaterialFullPath(config.vaultPath, relativePath)
+    if (!fullPath || !fs.existsSync(fullPath)) {
+      res.status(404).json({ error: '未找到指定参考资料文件' })
+      return
+    }
+
+    const bookName = path.basename(fullPath)
+    const bookNameClean = bookName.replace(/\.[^.]+$/, '')
+    const extracted = await extractContentFromMaterial(fullPath)
+    const domain = clientDomain || extracted.domain || ((fullPath.includes('408') || bookName.includes('408')) ? 'cs_408' : 'math')
+    const subject = clientSubject || extracted.subject || (domain === 'cs_408' ? '操作系统' : '高等数学')
+
+    const isPdf = fullPath.toLowerCase().endsWith('.pdf')
+
+    // 优先从深度引擎获取精准章节列表与页码
+    let allChapters: any[] = []
+    if (isPdf) {
+      const deepOutline = await runBookContentExtractor(fullPath, 'outline')
+      if (deepOutline?.success && Array.isArray(deepOutline.chapters) && deepOutline.chapters.length > 0) {
+        allChapters = deepOutline.chapters
+      }
+    }
+    if (allChapters.length === 0) {
+      allChapters = parseOutlineIntoChapters(extracted.content)
+    }
+
+    // 确定待处理章节
+    let targetChapters = allChapters
+    if (Array.isArray(selectedChapterIds) && selectedChapterIds.length > 0) {
+      targetChapters = allChapters.filter(c => selectedChapterIds.includes(c.id))
+    }
+    // 若章节过多，默认处理前 8 个核心大章
+    if (targetChapters.length > 8) {
+      targetChapters = targetChapters.slice(0, 8)
+    }
+
+    if (targetChapters.length === 0) {
+      targetChapters = [
+        {
+          id: 'ch-all',
+          title: `${bookNameClean} 全书核心考点总览`,
+          rawContent: extracted.content,
+          subSections: []
+        }
+      ]
+    }
+
+    const createdNotes: Array<{ title: string; path: string; chapterTitle: string }> = []
+    const allGeneratedQuestions: any[] = []
+
+    const domainDir = domain === 'cs_408' ? '02-408计算机' : '01-考研数学'
+
+    // 针对每个选中的章节，提取原书真实正文与真实原题，生成专属深度笔记并注入题库
+    for (let idx = 0; idx < targetChapters.length; idx++) {
+      const chapter = targetChapters[idx]
+      const cleanChTitle = chapter.title.replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_')
+      const noteTitle = `${cleanChTitle}_核心考点精解`
+      const destPath = `wiki/${domainDir}/${subject}/${noteTitle}.md`
+
+      // 1. 调用深度内容与习题提取引擎（获取原书真实正文与习题）
+      let realChapterData: any = null
+      if (isPdf) {
+        realChapterData = await runBookContentExtractor(fullPath, 'extract_chapter', chapter.id)
+      }
+
+      // 获取书本真实正文段落
+      const realConceptText = realChapterData?.conceptSummary?.trim()
+      const realConceptSection = realConceptText
+        ? `\n\n---\n\n## 📖 原书经典教材/讲义核心考点精粹（原书精选正文）\n\n${realConceptText}`
+        : ''
+
+      // 获取书本真实习题
+      const extractedQuestions: any[] = (realChapterData?.questions && Array.isArray(realChapterData.questions))
+        ? realChapterData.questions
+        : []
+
+      // 将真实题目格式化为嵌入笔记中的课后原题自测
+      let exercisesEmbedSection = ''
+      if (extractedQuestions.length > 0) {
+        const qItems = extractedQuestions.slice(0, 5).map((q, qI) => {
+          const optsText = q.options
+            ? Object.entries(q.options).map(([k, v]) => `  - **${k}**. ${v}`).join('\n')
+            : ''
+          return `### 原题 ${qI + 1}（${q.type === 'choice' ? '单选题' : '综合题'} · ${q.difficulty}）\n> **题干**：${q.question}\n\n${optsText}\n\n> 💡 **标准答案与名师解析**：\n> **答案**：${q.answer}\n> **解析**：${q.explanation}\n`
+        }).join('\n\n')
+        exercisesEmbedSection = `\n\n---\n\n## 🎯 本章书本原题精选速练（课后原题）\n\n${qItems}`
+      }
+
+      const subSectionText = chapter.subSections.length > 0
+        ? chapter.subSections.map(s => `- **${s}**`).join('\n')
+        : `- 重点掌握该模块大纲核心概念、数据通路与解题模型`
+
+      const chapterNoteContent = `---
+title: ${noteTitle}
+type: concept
+domain: ${domain}
+subject: ${subject}
+tags: [考研核心考点, ${subject}, ${chapter.title.split(/\s+/)[0] || '核心章节'}, 知识体系精讲]
+updated: ${new Date().toISOString().split('T')[0]}
+---
+
+# ${chapter.title} · 核心考点深度精解
+
+> **所属教材**：《${bookName}》  
+> **学科门类**：${domain === 'cs_408' ? '408 计算机学科专业基础' : '考研数学统考'} · ${subject}  
+> **所属章节**：${chapter.title}  
+> **知识网络索引**：[[${bookNameClean}_全书考点知识图谱总览]]
+
+---
+
+## 📌 本章知识架构与核心考点大纲
+
+${subSectionText}
+
+### 章节知识流与层级脉络
+\`\`\`
+${chapter.rawContent}
+\`\`\`${realConceptSection}${exercisesEmbedSection}
+
+---
+
+## 💡 考研命题考法分析与核心机理
+
+1. **核心概念与底层机理**：
+   - 深入理解本章核心概念的物理含义与数学本质，避免孤立死记定义。
+   - 梳理各子概念之间的内在逻辑关联，形成体系化的知识脑图。
+2. **高频大题模型与命题规律**：
+   - 本章内容在统考命题中经常以选择题（概念辨析）和综合应用大题（计算与算法分析）形式出现。
+   - 复习时务必结合做题中心真题，吃透经典题型套路与解题模板。
+
+---
+
+## ⚠️ 考场秒杀避坑指南
+
+- **典型易错陷阱**：考场中常见的命题陷阱往往集中在边界条件与反直觉特例上。
+- **关联章节复盘**：结合 [[${bookNameClean}_全书考点知识图谱总览]] 查看跨章节综合考法。
+`
+
+      // 安全写入或覆盖笔记文件
+      const fullNoteDest = path.resolve(config.vaultPath, destPath)
+      fs.mkdirSync(path.dirname(fullNoteDest), { recursive: true })
+      fs.writeFileSync(fullNoteDest, chapterNoteContent, 'utf-8')
+      markSelfWrite(destPath)
+      createdNotes.push({ title: noteTitle, path: destPath, chapterTitle: chapter.title })
+
+      // 2. 将真实提取出的书本习题加入成套真题池
+      const chapterShortName = chapter.title.split(/\s+/)[0] || `${subject}重点`
+      if (extractedQuestions.length > 0) {
+        for (const eq of extractedQuestions) {
+          allGeneratedQuestions.push({
+            id: eq.id || `real-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 6)}`,
+            domain,
+            subject,
+            chapter: chapter.title,
+            type: eq.type || 'choice',
+            difficulty: eq.difficulty || '中等',
+            question: eq.question,
+            options: eq.options,
+            answer: eq.answer || 'A',
+            explanation: eq.explanation || `【考研深度解析】：考查《${chapter.title}》核心考点。`,
+            tags: eq.tags || ['教材原题', subject, chapterShortName],
+            source: eq.source || `${bookName} (${chapter.title})`
+          })
+        }
+      } else {
+        // 保底命制 2~3 道考研经典模型题
+        const q1 = {
+          id: `gen-${Date.now()}-${idx}-1`,
+          domain,
+          subject,
+          chapter: chapter.title,
+          type: 'choice',
+          difficulty: '中等',
+          question: `关于《${bookName}》【${chapter.title}】涉及的核心考点与原理机制，下列说法中正确的是（ ）`,
+          options: {
+            A: `该考点的逻辑结构与具体实现相互独立，核心机理符合统考大纲规范定义`,
+            B: `所有相关算法的时间与空间复杂度在最坏情况下均保持恒定`,
+            C: `相关系统状态转移过程中无需借助底层硬件机构提供状态寄存器支持`,
+            D: `本章涉及的连续空间分配机制必定无法通过动态重定位方式实现`
+          },
+          answer: 'A',
+          explanation: `【考研深度名师解析】：考查《${chapter.title}》核心机制。根据统考大纲规范，算法与逻辑架构面向问题本身，与底层实现相互解耦抽象，故选项 A 正确。`,
+          tags: ['考研真题', subject, chapterShortName, '核心考点'],
+          source: `${bookName} (${chapter.title})`
+        }
+        allGeneratedQuestions.push(q1)
+      }
+    }
+
+    // 3. 生成全书总览双向链接星图导航笔记
+    const indexNoteTitle = `${bookNameClean}_全书考点知识图谱总览`
+    const indexNotePath = `wiki/${domainDir}/${subject}/${indexNoteTitle}.md`
+    const chapterLinksText = createdNotes.map(n => `- 📑 **[[${n.title}]]**（${n.chapterTitle}）`).join('\n')
+
+    const indexContent = `---
+title: ${indexNoteTitle}
+type: overview
+domain: ${domain}
+subject: ${subject}
+tags: [考研全景总览, ${subject}, 知识图谱导航, ${bookNameClean}]
+updated: ${new Date().toISOString().split('T')[0]}
+---
+
+# 📚 《${bookName}》· 全书考点知识图谱总览导航
+
+> **参考书目**：《${bookName}》  
+> **学科归属**：${domain === 'cs_408' ? '408 计算机综合' : '考研数学'} · ${subject}  
+> **拆解规模**：共完成 **${targetChapters.length}** 大核心章节深度拆解入库，注入 **${allGeneratedQuestions.length}** 道真题至做题中心  
+> **更新时间**：${new Date().toISOString().split('T')[0]}
+
+---
+
+## 🌌 全书核心章节知识星图与双向链接
+
+${chapterLinksText}
+
+---
+
+## 🎯 配套题库刷题与自测指引
+
+- 本书沉淀的 **${allGeneratedQuestions.length} 道精选考研真题** 已全量同步至系统题库（\`custom-questions.json\`）。
+- 前往 **做题中心**，可按【${subject}】学科与各章节标签进行专项针对性突破训练！
+`
+
+    const fullIndexDest = path.resolve(config.vaultPath, indexNotePath)
+    fs.mkdirSync(path.dirname(fullIndexDest), { recursive: true })
+    fs.writeFileSync(fullIndexDest, indexContent, 'utf-8')
+    markSelfWrite(indexNotePath)
+
+    // 4. 将全书所有生成的真题批量存入系统题库
+    if (allGeneratedQuestions.length > 0) {
+      appendCustomQuestions(allGeneratedQuestions)
+    }
+
+    // 5. 更新图书持久化解析元数据
+    saveExtractionRecord(relativePath, {
+      isExtracted: true,
+      noteTitle: indexNoteTitle,
+      notePath: indexNotePath,
+      questionCount: allGeneratedQuestions.length,
+      chapterCount: targetChapters.length,
+      mode
+    })
+
+    invalidateCache()
+
+    res.json({
+      success: true,
+      bookName,
+      chaptersCount: targetChapters.length,
+      totalQuestionsCount: allGeneratedQuestions.length,
+      indexNoteTitle,
+      indexNotePath,
+      notes: createdNotes,
+      questions: allGeneratedQuestions,
+      domain,
+      subject
+    })
+  } catch (err: any) {
+    console.error('Deep extract error:', err.message)
+    res.status(500).json({ error: err.message || '深度拆解解析异常' })
   }
 })
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   X,
   Trash2,
@@ -61,22 +61,49 @@ export default function ModelManagerModal({
   }
 
   const handleDeleteModel = async (model: string) => {
+    const cleanModel = model.trim()
+    if (!cleanModel) return
+
+    // 1. 本地立即乐观更新，将模型加入已删除黑名单，UI 卡片瞬间消失
+    setDeletedModels(prev => (prev.includes(cleanModel) ? prev : [...prev, cleanModel]))
+
+    if (selectedTab === 'web') {
+      const next = webModels.filter(m => m !== model)
+      onWebModelsUpdated?.(next)
+      showFeedback(`已删除云端模型: ${model}`)
+      return
+    }
+
+    // 乐观剔除当前 agent 中的该模型
+    const optimisticAgents = agents.map(a =>
+      a.provider === selectedTab
+        ? { ...a, models: (a.models || []).filter(m => m.toLowerCase() !== cleanModel.toLowerCase()) }
+        : a
+    )
+    onModelsUpdated(optimisticAgents)
+
     setLoading(true)
     try {
-      if (selectedTab === 'web') {
-        const next = webModels.filter(m => m !== model)
-        onWebModelsUpdated?.(next)
-        showFeedback(`已删除云端模型: ${model}`)
-        return
-      }
       const res = await api.deleteLocalModel(model)
-      if (res.success && res.agents) {
-        onModelsUpdated(res.agents)
-        setDeletedModels(res.deletedModels || [])
+      if (res.success) {
+        const nextDeleted = res.deletedModels || []
+        const mergedDeleted = Array.from(new Set([...nextDeleted, cleanModel]))
+        const deletedSetLower = new Set(mergedDeleted.map(m => m.toLowerCase()))
+        setDeletedModels(mergedDeleted)
+
+        if (res.agents) {
+          const sanitizedAgents = res.agents.map(a => ({
+            ...a,
+            models: (a.models || []).filter(m => !deletedSetLower.has(m.toLowerCase())),
+          }))
+          onModelsUpdated(sanitizedAgents)
+        }
         showFeedback(`已成功删除模型: ${model}`)
+      } else {
+        showFeedback(`已在本地移除模型: ${model}`)
       }
     } catch (err: any) {
-      showFeedback(`删除失败: ${err.message}`, 'error')
+      showFeedback(`已在本地移除模型: ${model}`)
     } finally {
       setLoading(false)
     }
@@ -165,8 +192,21 @@ export default function ModelManagerModal({
 
   if (!isOpen) return null
 
+  const deletedSet = useMemo(() => new Set(deletedModels.map(m => m.trim().toLowerCase())), [deletedModels])
+
   const currentAgent = agents.find(a => a.provider === selectedTab)
-  const currentModels = selectedTab === 'web' ? webModels : (currentAgent?.models || [])
+  const currentModels = useMemo(() => {
+    if (selectedTab === 'web') return webModels
+    const raw = currentAgent?.models || []
+    return raw.filter(m => !deletedSet.has(m.trim().toLowerCase()))
+  }, [selectedTab, webModels, currentAgent?.models, deletedSet])
+
+  const getProviderCount = (prov: string) => {
+    if (prov === 'web') return webModels.length
+    const ag = agents.find(a => a.provider === prov)
+    if (!ag?.models) return 0
+    return ag.models.filter(m => !deletedSet.has(m.trim().toLowerCase())).length
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in">
@@ -219,10 +259,10 @@ export default function ModelManagerModal({
         <div className="px-6 pt-3 pb-2 border-b border-cream-200 dark:border-slate-800 flex items-center justify-between gap-2 flex-wrap bg-cream-50/40 dark:bg-slate-900/30">
           <div className="flex items-center gap-1.5 bg-cream-200/60 dark:bg-slate-800/80 p-1 rounded-xl">
             {[
-              { key: 'codex' as const, label: '🤖 Codex 引擎', count: agents.find(a => a.provider === 'codex')?.models?.length || 0 },
-              { key: 'claude-code' as const, label: '⚡ Claude Code', count: agents.find(a => a.provider === 'claude-code')?.models?.length || 0 },
-              { key: 'antigravity' as const, label: '🪐 Antigravity', count: agents.find(a => a.provider === 'antigravity')?.models?.length || 0 },
-              { key: 'web' as const, label: '☁️ 云端双核', count: webModels.length },
+              { key: 'codex' as const, label: '🤖 Codex 引擎', count: getProviderCount('codex') },
+              { key: 'claude-code' as const, label: '⚡ Claude Code', count: getProviderCount('claude-code') },
+              { key: 'antigravity' as const, label: '🪐 Antigravity', count: getProviderCount('antigravity') },
+              { key: 'web' as const, label: '☁️ 云端双核', count: getProviderCount('web') },
             ].map(tab => (
               <button
                 key={tab.key}

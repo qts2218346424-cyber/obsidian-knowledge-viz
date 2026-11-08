@@ -1,6 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 
 .rich-note-editor:empty::before {
   content: attr(data-placeholder);
@@ -271,90 +273,180 @@ body {
   transform: rotateY(180deg);
 }
 
-/* Anime Mascot Lulu Animations */
-@keyframes lulu-float {
+/* Anime Mascot Lulu High-Vibrancy Living Animations */
+@keyframes lulu-breathe {
   0%, 100% {
-    transform: translateY(0px) rotate(0deg);
+    transform: translateY(0px) scale(1, 1);
+  }
+  30% {
+    transform: translateY(-4px) scale(0.98, 1.02);
+  }
+  70% {
+    transform: translateY(2px) scale(1.025, 0.975);
+  }
+}
+
+@keyframes lulu-jelly-elastic {
+  0% { transform: scale(1, 1); }
+  20% { transform: scale(1.3, 0.72) translateY(6px); }
+  45% { transform: scale(0.85, 1.2) translateY(-10px); }
+  65% { transform: scale(1.12, 0.92) translateY(2px); }
+  85% { transform: scale(0.96, 1.04) translateY(-2px); }
+  100% { transform: scale(1, 1) translateY(0); }
+}
+
+@keyframes lulu-drag-lift {
+  0% {
+    transform: scale(0.92, 1.14) translateY(0px) rotate(0deg);
   }
   50% {
-    transform: translateY(-5px) rotate(1deg);
+    transform: scale(0.94, 1.1) translateY(-3px) rotate(3deg);
+  }
+  100% {
+    transform: scale(0.92, 1.14) translateY(0px) rotate(-3deg);
   }
 }
 
-@keyframes lulu-jelly {
-  0% { transform: scale(1, 1); }
-  25% { transform: scale(1.15, 0.85); }
-  50% { transform: scale(0.9, 1.1); }
-  75% { transform: scale(1.05, 0.95); }
-  100% { transform: scale(1, 1); }
+@keyframes lulu-flapping-feet {
+  0%, 100% {
+    transform: translateY(0px) rotate(-8deg);
+  }
+  50% {
+    transform: translateY(-4px) rotate(12deg);
+  }
 }
 
-@keyframes lulu-ear-left {
-  0%, 100% { transform: rotate(-8deg); }
-  50% { transform: rotate(-18deg); }
+@keyframes lulu-flapping-paws {
+  0%, 100% {
+    transform: translateY(0px) rotate(10deg);
+  }
+  50% {
+    transform: translateY(-3px) rotate(-14deg);
+  }
 }
 
-@keyframes lulu-ear-right {
-  0%, 100% { transform: rotate(8deg); }
-  50% { transform: rotate(18deg); }
+@keyframes lulu-ear-left-live {
+  0%, 80%, 100% { transform: rotate(-7deg); }
+  40% { transform: rotate(-15deg); }
+  85% { transform: rotate(-22deg); }
+  90% { transform: rotate(-6deg); }
+  95% { transform: rotate(-20deg); }
 }
 
-@keyframes lulu-sprout {
-  0%, 100% { transform: rotate(-6deg); }
-  50% { transform: rotate(8deg); }
+@keyframes lulu-ear-right-live {
+  0%, 75%, 100% { transform: rotate(7deg); }
+  35% { transform: rotate(15deg); }
+  80% { transform: rotate(24deg); }
+  85% { transform: rotate(5deg); }
+  90% { transform: rotate(22deg); }
 }
 
-@keyframes lulu-blink {
-  0%, 90%, 100% { transform: scaleY(1); }
-  95% { transform: scaleY(0.1); }
+@keyframes lulu-sprout-lively {
+  0%, 100% { transform: rotate(-5deg) scale(1); }
+  25% { transform: rotate(10deg) scale(1.08); }
+  50% { transform: rotate(-8deg) scale(0.96); }
+  75% { transform: rotate(7deg) scale(1.05); }
+}
+
+@keyframes lulu-blink-natural {
+  0%, 88%, 94%, 100% { transform: scaleY(1); }
+  90% { transform: scaleY(0.08); }
+  92% { transform: scaleY(1); }
+}
+
+@keyframes lulu-happy-wiggle {
+  0%, 100% { transform: rotate(0deg) translateY(0); }
+  25% { transform: rotate(-6deg) translateY(-4px); }
+  75% { transform: rotate(6deg) translateY(-4px); }
 }
 
 @keyframes lulu-zzz {
-  0% { opacity: 0; transform: translate(0, 0) scale(0.7); }
-  40% { opacity: 0.9; }
-  100% { opacity: 0; transform: translate(14px, -20px) scale(1.2); }
+  0% { opacity: 0; transform: translate(0, 0) scale(0.6); }
+  40% { opacity: 0.95; }
+  100% { opacity: 0; transform: translate(16px, -24px) scale(1.25); }
 }
 
-@keyframes lulu-heart {
-  0% { opacity: 0; transform: translateY(0) scale(0.6); }
-  50% { opacity: 1; transform: translateY(-12px) scale(1.1); }
-  100% { opacity: 0; transform: translateY(-24px) scale(0.8); }
+@keyframes lulu-particle-burst {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.4) rotate(0deg);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(var(--tx, 0px), -10px) scale(1.2) rotate(10deg);
+  }
+  80% {
+    opacity: 0.9;
+    transform: translate(var(--tx, 0px), -26px) scale(1.0) rotate(-15deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--tx, 0px), -40px) scale(0.7) rotate(25deg);
+  }
 }
 
-.animate-lulu-float {
-  animation: lulu-float 3.2s ease-in-out infinite;
+@keyframes lulu-blush-glow {
+  0%, 100% { opacity: 0.65; transform: scale(1); }
+  50% { opacity: 0.95; transform: scale(1.15); }
+}
+
+.animate-lulu-breathe {
+  animation: lulu-breathe 2.8s ease-in-out infinite;
+}
+
+.animate-lulu-lifted {
+  animation: lulu-drag-lift 0.6s ease-in-out infinite alternate;
 }
 
 .animate-lulu-jelly {
-  animation: lulu-jelly 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: lulu-jelly-elastic 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .animate-lulu-ear-l {
-  animation: lulu-ear-left 2.2s ease-in-out infinite;
+  animation: lulu-ear-left-live 3.6s ease-in-out infinite;
   transform-origin: bottom right;
 }
 
 .animate-lulu-ear-r {
-  animation: lulu-ear-right 2.2s ease-in-out infinite;
+  animation: lulu-ear-right-live 3.4s ease-in-out infinite;
   transform-origin: bottom left;
 }
 
 .animate-lulu-sprout {
-  animation: lulu-sprout 1.8s ease-in-out infinite;
+  animation: lulu-sprout-lively 2.2s ease-in-out infinite;
   transform-origin: bottom center;
 }
 
 .animate-lulu-blink {
-  animation: lulu-blink 3.8s infinite;
+  animation: lulu-blink-natural 3.6s infinite;
+  transform-origin: center;
+}
+
+.animate-lulu-feet-flapping {
+  animation: lulu-flapping-feet 0.35s ease-in-out infinite alternate;
+  transform-origin: top center;
+}
+
+.animate-lulu-paws-flapping {
+  animation: lulu-flapping-paws 0.4s ease-in-out infinite alternate;
+  transform-origin: center;
+}
+
+.animate-lulu-happy-wiggle {
+  animation: lulu-happy-wiggle 0.5s ease-in-out infinite;
+}
+
+.animate-lulu-blush {
+  animation: lulu-blush-glow 2.4s ease-in-out infinite;
   transform-origin: center;
 }
 
 .animate-lulu-zzz {
-  animation: lulu-zzz 2.4s infinite ease-out;
+  animation: lulu-zzz 2.2s infinite ease-out;
 }
 
-.animate-lulu-heart {
-  animation: lulu-heart 1.5s ease-out forwards;
+.animate-lulu-particle {
+  animation: lulu-particle-burst 1.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* ==========================================================================
@@ -373,6 +465,18 @@ body {
   line-height: 1.75;
 }
 
+.dark .prose-math {
+  color: #f1f5f9;
+}
+
+.dark .prose-math p {
+  color: #f1f5f9;
+}
+
+.dark .prose-math li {
+  color: #f1f5f9;
+}
+
 .prose-math h1,
 .prose-math h2,
 .prose-math h3,
@@ -386,6 +490,10 @@ body {
 .dark .prose-math h2,
 .dark .prose-math h3,
 .dark .prose-math h4 {
+  color: #f8fafc;
+}
+
+.dark .prose-math .katex {
   color: #f8fafc;
 }
 
@@ -536,5 +644,294 @@ body {
 }
 
 
+
+
+
+/* ==========================================================================
+   Modern Responsive Primitives & Fluid Typography (现代自适应规范与流体排版)
+   ========================================================================== */
+
+.fluid-hero-title {
+  font-size: clamp(1.35rem, 1.05rem + 1.4vw, 2rem);
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+.fluid-section-title {
+  font-size: clamp(1.05rem, 0.95rem + 0.5vw, 1.35rem);
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+}
+
+/* 弹窗/抽屉防穿透滚动规范：严禁动态锁定 html/body overflow */
+.modal-backdrop-contain {
+  overscroll-behavior: contain;
+  overflow: hidden;
+}
+
+.modal-scroll-contain {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes slideUpSheet {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-sheet-up {
+  animation: slideUpSheet 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Bento Card 精致层次表面 */
+.bento-card {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(226, 232, 240, 0.88);
+  box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.22s ease;
+}
+
+@media (hover: hover) {
+  .bento-card-hover:hover {
+    transform: translateY(-2px);
+    border-color: rgba(99, 102, 241, 0.28);
+    box-shadow: 0 14px 32px -8px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(79, 70, 229, 0.05);
+  }
+}
+
+/* ==========================================================================
+   Mobile-First & Touch Experience (移动端与触控规范增强)
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  html, body {
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: contain;
+    touch-action: manipulation;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "HarmonyOS Sans", "MiSans", "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  }
+
+  /* 兜底：禁止页面出现横向拖动（装饰性光斑/长文本溢出时不再整页左右晃） */
+  body {
+    overflow-x: clip;
+  }
+
+  /* 隐藏移动端多余的生硬滚动条，启用原生惯性丝滑滑动 */
+  ::-webkit-scrollbar {
+    width: 0px;
+    height: 0px;
+    display: none;
+  }
+  * {
+    scrollbar-width: none;
+  }
+
+  /* 防止 iOS Safari / 微信内置浏览器在聚焦小于 16px 的输入框时强制放大视口 */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+
+  button, a {
+    touch-action: manipulation;
+  }
+
+  /* 关闭移动端卡片悬停位移，改用干脆的按压缩放反馈 */
+  .glass-panel-hover:hover {
+    transform: none;
+  }
+
+  .prose-math {
+    font-size: 0.925rem;
+    line-height: 1.72;
+    word-break: break-word;
+  }
+
+  .prose-math .katex-display {
+    margin: 0.6rem 0;
+    padding: 0.65rem 0.75rem;
+    font-size: 0.92em;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 0.75rem;
+  }
+
+  .prose-math pre {
+    padding: 0.75rem 0.85rem;
+    font-size: 0.8rem;
+    max-width: 100%;
+    border-radius: 0.75rem;
+  }
+
+  .rich-note-editor h1 { font-size: 1.35rem; margin-top: 1rem; }
+  .rich-note-editor h2 { font-size: 1.18rem; margin-top: 0.85rem; }
+  .rich-note-editor h3 { font-size: 1.05rem; margin-top: 0.7rem; }
+  .rich-note-editor p { margin: 0.45rem 0; line-height: 1.7; }
+  .rich-note-editor pre { padding: 0.75rem; font-size: 0.8em; }
+
+  .prose-math table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ==========================================================================
+   Modern Web Guidance: Rendering Containment & Deferred Heavy Content
+   ========================================================================== */
+
+/* 解决 fixed 背景导致的全屏滚动重绘开销 */
+.aurora-mesh {
+  background-attachment: scroll !important;
+}
+
+/* 仅应用于视口外的长列表/历史消息项，隔离重排并延迟离屏渲染 */
+.chat-message-deferred {
+  content-visibility: auto;
+  contain-intrinsic-size: auto none auto 160px;
+}
+
+@supports not (content-visibility: auto) {
+  .chat-message-deferred {
+    contain: layout style paint;
+  }
+}
+
+/* 复杂多栏布局隔离边界：防止单栏流式输出或拖拽引发全局 Reflow */
+.complex-panel-contain {
+  contain: layout style paint;
+}
+
+/* ==========================================================================
+   Modern Web Guidance (slider): Brand-Consistent Accessible Range Slider
+   ========================================================================== */
+input[type="range"].history-range-slider {
+  --slider-track-size: 0.55rem;
+  --slider-thumb-size: 1.45rem;
+  --slider-track-radius: 999px;
+  --slider-thumb-radius: 50%;
+  --slider-track-color: #e2e8f0;
+  --slider-fill-color: #dc2626;
+  --slider-thumb-color: var(--slider-fill-color);
+  --slider-direction: to right;
+
+  --attr-min: attr(min type(<number>), 0);
+  --attr-max: attr(max type(<number>), 100);
+  --control-value: attr(value type(<number>), 50);
+  --slider-progress: calc(
+    progress(var(--control-value), var(--attr-min), var(--attr-max)) * 100%
+  );
+
+  -webkit-appearance: none;
+  appearance: none;
+  inline-size: 100%;
+  block-size: 2.5rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type="range"].history-range-slider:dir(rtl) {
+  --slider-direction: to left;
+}
+
+@supports not (opacity: progress(1, 0, 100)) {
+  input[type="range"].history-range-slider {
+    --slider-progress: calc(
+      (var(--control-value) - var(--attr-min)) /
+      max(1, (var(--attr-max) - var(--attr-min))) * 100%
+    );
+  }
+}
+
+/* WebKit/Blink — kept strictly separate from Firefox pseudo-selectors */
+input[type="range"].history-range-slider::-webkit-slider-runnable-track {
+  block-size: var(--slider-track-size);
+  border: 0;
+  border-radius: var(--slider-track-radius);
+  background: linear-gradient(
+    var(--slider-direction),
+    var(--slider-fill-color) var(--slider-progress),
+    var(--slider-track-color) var(--slider-progress)
+  );
+  transition: background-color 0.2s ease;
+}
+
+input[type="range"].history-range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  inline-size: var(--slider-thumb-size);
+  block-size: var(--slider-thumb-size);
+  margin-block-start: calc(
+    (var(--slider-track-size) - var(--slider-thumb-size)) / 2
+  );
+  border: 3px solid #ffffff;
+  border-radius: var(--slider-thumb-radius);
+  background: var(--slider-thumb-color);
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.24), 0 0 0 1px rgba(15, 23, 42, 0.08);
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.15s ease;
+}
+
+input[type="range"].history-range-slider:hover::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+
+input[type="range"].history-range-slider:active::-webkit-slider-thumb {
+  transform: scale(1.2);
+}
+
+/* Firefox — kept strictly separate */
+input[type="range"].history-range-slider::-moz-range-track {
+  block-size: var(--slider-track-size);
+  border: 0;
+  border-radius: var(--slider-track-radius);
+  background: var(--slider-track-color);
+}
+
+input[type="range"].history-range-slider::-moz-range-progress {
+  block-size: var(--slider-track-size);
+  border-radius: var(--slider-track-radius);
+  background: var(--slider-fill-color);
+}
+
+input[type="range"].history-range-slider::-moz-range-thumb {
+  inline-size: var(--slider-thumb-size);
+  block-size: var(--slider-thumb-size);
+  border: 3px solid #ffffff;
+  border-radius: var(--slider-thumb-radius);
+  background: var(--slider-thumb-color);
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.24), 0 0 0 1px rgba(15, 23, 42, 0.08);
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+input[type="range"].history-range-slider:focus-visible {
+  outline: 2px solid var(--slider-fill-color);
+  outline-offset: 4px;
+  border-radius: 0.5rem;
+}
 
 

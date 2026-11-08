@@ -144,6 +144,33 @@ function convertOpenAIMessages(messages: AiMessageCreateParams['messages']): Arr
       continue
     }
 
+    const imageBlocks = blocks.filter(block => block?.type === 'image')
+    if (message.role === 'user' && imageBlocks.length > 0) {
+      const parts: Array<Record<string, any>> = []
+      if (text) {
+        parts.push({ type: 'text', text })
+      }
+      for (const img of imageBlocks) {
+        if (img.source?.type === 'base64' && img.source?.data) {
+          const mediaType = img.source.media_type || 'image/jpeg'
+          parts.push({
+            type: 'image_url',
+            image_url: { url: `data:${mediaType};base64,${img.source.data}` },
+          })
+        } else if (img.source?.url) {
+          parts.push({
+            type: 'image_url',
+            image_url: { url: img.source.url },
+          })
+        }
+      }
+      converted.push({
+        role: 'user',
+        content: parts,
+      })
+      continue
+    }
+
     converted.push({
       role: message.role,
       content: text || normalizeOpenAIContent(message.content),

@@ -25,7 +25,7 @@ import {
 import MarkdownRenderer from '../MarkdownRenderer'
 import { api, type LocalAgentStatus, type LocalSkill } from '../../services/api'
 import type { PetMood } from './DesktopPet'
-import LuluAvatar from './LuluAvatar'
+import LuluAvatar, { PET_PERSONAS, getSavedPetTheme } from './LuluAvatar'
 import { STUDY_SKILLS, type StudySkill } from '../../data/studySkills'
 import { STUDY_AGENTS, type StudyAgent } from '../../data/studyAgents'
 import AIMemoryModal from '../AIMemoryModal'
@@ -61,9 +61,10 @@ interface PetAssistantDrawerProps {
   onTriggerQuiz?: () => void
 }
 
-type ProviderType = 'codex' | 'claude-code' | 'web'
+type ProviderType = 'antigravity' | 'codex' | 'claude-code' | 'web'
 
 const PROVIDER_PRESET_MODELS: Record<ProviderType, string[]> = {
+  antigravity: ['gemini-3.8-flash'],
   codex: ['gpt-5.6-luna', 'gpt-4o', 'o3-mini', 'o1', 'gpt-4o-mini'],
   'claude-code': ['deepseek-v4-flash', 'deepseek-v4-pro', 'deepseek-flash', 'deepseek-reasoner'],
   web: ['deepseek-v4-pro', 'deepseek-flash', 'deepseek-reasoner', 'deepseek-chat'],
@@ -167,7 +168,7 @@ export default function PetAssistantDrawer({
       id: 'welcome',
       role: 'assistant',
       content:
-        '你好！我是你的考研伴学小精灵「噜噜」🐾。\n\n我具备类似 Claude Code / Codex 的自主 Agent 权限，不仅能为你深度解答 408 与考研数学考点，还能直接**查阅、新建、修改和整理你知识库中的真实笔记**。\n\n💡 **考研专属 Skills 已就绪（无需安装任何外部插件）**：\n- 点击上方 Skills 标签即可调用：`大纲重构`、`图谱双链`、`推导挖空`、`错题避坑`、`命题预测`、`全库治理`。\n- 支持在 `Codex`、`Claude Code` 与 `云端双核` 间自由切换模型！',
+        '你好！我是你的考研伴学小萌宠「' + (PET_PERSONAS[getSavedPetTheme()]?.name || '奶龙') + '」✨。\n\n我具备类似 Claude Code / Codex 的自主 Agent 权限，不仅能为你深度解答 408 与考研数学考点，还能直接**查阅、新建、修改和整理你知识库中的真实笔记**。\n\n💡 **考研专属 Skills 已就绪（无需安装任何外部插件）**：\n- 点击上方 Skills 标签即可调用：`大纲重构`、`图谱双链`、`推导挖空`、`错题避坑`、`命题预测`、`全库治理`。\n- 支持在 `Codex`、`Claude Code` 与 `云端双核` 间自由切换模型！',
     },
   ])
   const [loading, setLoading] = useState(false)
@@ -182,29 +183,20 @@ export default function PetAssistantDrawer({
       const data = await api.getLocalAgentStatus()
       setAgents(data.agents)
 
-      // Check current provider status, auto-select best available
-      const codexAgent = data.agents.find(a => a.provider === 'codex')
-      const claudeAgent = data.agents.find(a => a.provider === 'claude-code')
-
-      let currentProv = provider
-      if (currentProv === 'codex' && !codexAgent?.available && claudeAgent?.available) {
-        currentProv = 'claude-code'
-        setProvider('claude-code')
-      } else if (!codexAgent?.available && !claudeAgent?.available) {
-        currentProv = 'web'
-        setProvider('web')
-      }
+      // 保持用户主动选定的引擎与模型，不强制降级覆盖
+      const currentProv = provider
 
       // Restore saved model for this provider
       const savedModel = localStorage.getItem(`coreforge_model_${currentProv}`)
-      const presets = PROVIDER_PRESET_MODELS[currentProv]
-      if (savedModel) {
+      const presets = PROVIDER_PRESET_MODELS[currentProv] || ['gemini-3.8-flash']
+      if (savedModel && presets.includes(savedModel)) {
         setSelectedModel(savedModel)
-        setIsCustomModel(!presets.includes(savedModel))
-        if (!presets.includes(savedModel)) setCustomModelInput(savedModel)
-      } else {
-        setSelectedModel(presets[0])
         setIsCustomModel(false)
+      } else {
+        const fallback = presets[0] || 'gemini-3.8-flash'
+        setSelectedModel(fallback)
+        setIsCustomModel(false)
+        localStorage.setItem(`coreforge_model_${currentProv}`, fallback)
       }
     } catch {
       setSelectedModel(PROVIDER_PRESET_MODELS[provider][0])
@@ -495,11 +487,11 @@ export default function PetAssistantDrawer({
       <div className="px-5 py-3 border-b border-cream-200 dark:border-slate-800 bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-transparent flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 flex items-center justify-center">
-            <LuluAvatar size="sm" mood="idle" theme="yellow" />
+            <LuluAvatar size="sm" mood="idle" showAccessories={false} />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-bold text-warm-900 dark:text-slate-100 text-sm">噜噜 · 考研伴学与笔记管家</h3>
+              <h3 className="font-bold text-warm-900 dark:text-slate-100 text-sm">{(PET_PERSONAS[getSavedPetTheme()]?.name || '奶龙')} · 考研伴学与笔记管家</h3>
               <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${activeAgent.badgeClass}`}>
                 {activeAgent.icon} {activeAgent.title}
               </span>
@@ -575,9 +567,10 @@ export default function PetAssistantDrawer({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             {[
+              { key: 'antigravity' as const, label: '✨ Antigravity' },
               { key: 'codex' as const, label: '🤖 Codex' },
-              { key: 'claude-code' as const, label: '⚡ Claude Code' },
-              { key: 'web' as const, label: '☁️ 云端双核' },
+              { key: 'claude-code' as const, label: '⚡ Claude' },
+              { key: 'web' as const, label: '☁️ 云端' },
             ].map(tab => {
               const tabAgent = agents.find(a => a.provider === tab.key)
               const isAvail = tab.key === 'web' || tabAgent?.available
@@ -770,7 +763,7 @@ export default function PetAssistantDrawer({
           >
             {m.role === 'assistant' ? (
               <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700/60 flex items-center justify-center shrink-0">
-                <LuluAvatar size="xs" mood="idle" theme="yellow" showAccessories={false} />
+                <LuluAvatar size="xs" mood="idle" showAccessories={false} />
               </div>
             ) : (
               <div className="w-8 h-8 rounded-xl bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs font-semibold text-slate-700 dark:text-slate-200 shrink-0">

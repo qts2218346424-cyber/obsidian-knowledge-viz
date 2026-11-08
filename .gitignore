@@ -23,6 +23,11 @@ uploads/
 
 # Server config — contains API keys and local paths, NEVER commit
 server/config.json
+server/config.server.json
+server/config*.json
+!server/config.example.json
+!server/config.openai.example.json
+!server/config.server.example.json
 
 # Environment files
 .env

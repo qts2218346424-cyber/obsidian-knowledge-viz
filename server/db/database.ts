@@ -9,6 +9,7 @@ import { DatabaseSync } from 'node:sqlite'
 
 export interface DbQuizRecord {
   id: string
+  userId?: string
   mode: string
   totalQuestions: number
   correctCount: number
@@ -22,6 +23,7 @@ export interface DbQuizRecord {
 
 export interface DbErrorQuestion {
   id: string
+  userId?: string
   domain: string
   subject: string
   chapter: string
@@ -41,6 +43,7 @@ export interface DbErrorQuestion {
 
 export interface DbSM2Flashcard {
   cardId: string
+  userId?: string
   title: string
   subject: string
   syllabusId: string
@@ -67,6 +70,26 @@ export interface DbMasteryRecord {
   masteryScore: number
   status: 'red' | 'yellow' | 'green'
   updatedAt: string
+}
+
+export type UserRole = 'admin' | 'editor' | 'student'
+
+export interface DbUser {
+  id: string
+  username: string
+  displayName: string
+  passwordHash: string
+  salt: string
+  role: UserRole
+  createdAt: string
+  updatedAt: string
+}
+
+export interface DbSession {
+  token: string
+  userId: string
+  createdAt: string
+  expiresAt: string
 }
 
 class CoreForgeDatabase {
@@ -176,6 +199,31 @@ class CoreForgeDatabase {
       );
       CREATE INDEX IF NOT EXISTS idx_mastery_domain ON syllabus_mastery(domain);
       CREATE INDEX IF NOT EXISTS idx_mastery_status ON syllabus_mastery(status);
+    `)
+
+    // 5. 多用户体系与权限表
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        username TEXT UNIQUE NOT NULL,
+        display_name TEXT NOT NULL,
+        password_hash TEXT NOT NULL,
+        salt TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'student',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+      CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+
+      CREATE TABLE IF NOT EXISTS sessions (
+        token TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        expires_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+      CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
     `)
   }
 
@@ -445,6 +493,173 @@ class CoreForgeDatabase {
       status: r.status,
       updatedAt: r.updated_at,
     }))
+  }
+
+  // ===== Multi-User & Session Operations =====
+  getUserCount(): number {
+    if (!this.db) return 0
+    const row = this.db.prepare('SELECT COUNT(*) as cnt FROM users').get() as { cnt: number } | undefined
+    return row?.cnt || 0
+  }
+
+  findUserByUsername(username: string): DbUser | null {
+    if (!this.db) return null
+    const row = this.db.prepare('SELECT * FROM users WHERE username = ? COLLATE NOCASE').get(username) as any
+    if (!row) return null
+    return {
+      id: row.id,
+      username: row.username,
+      displayName: row.display_name,
+      passwordHash: row.password_hash,
+      salt: row.salt,
+      role: row.role as UserRole,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }
+  }
+
+  findUserById(id: string): DbUser | null {
+    if (!this.db) return null
+    const row = this.db.prepare('SELECT * FROM users WHERE id = ?').get(id) as any
+    if (!row) return null
+    return {
+      id: row.id,
+      username: row.username,
+      displayName: row.display_name,
+      passwordHash: row.password_hash,
+      salt: row.salt,
+      role: row.role as UserRole,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }
+  }
+
+  listUsers(): Omit<DbUser, 'passwordHash' | 'salt'>[] {
+    if (!this.db) return []
+    const rows = this.db.prepare('SELECT id, username, display_name, role, created_at, updated_at FROM users ORDER BY created_at ASC').all() as any[]
+    return rows.map(r => ({
+      id: r.id,
+      username: r.username,
+      displayName: r.display_name,
+      role: r.role as UserRole,
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+    }))
+  }
+
+  insertUser(user: DbUser): void {
+    if (!this.db) return
+    const stmt = this.db.prepare(`
+      INSERT INTO users (id, username, display_name, password_hash, salt, role, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `)
+    stmt.run(
+      user.id,
+      user.username,
+      user.displayName,
+      user.passwordHash,
+      user.salt,
+      user.role,
+      user.createdAt,
+      user.updatedAt
+    )
+  }
+
+  updateUser(id: string, updates: { displayName?: string; role?: UserRole; passwordHash?: string; salt?: string }): void {
+    if (!this.db) return
+    const fields: string[] = []
+    const values: any[] = []
+
+    if (updates.displayName !== undefined) {
+      fields.push('display_name = ?')
+      values.push(updates.displayName)
+    }
+    if (updates.role !== undefined) {
+      fields.push('role = ?')
+      values.push(updates.role)
+    }
+    if (updates.passwordHash !== undefined && updates.salt !== undefined) {
+      fields.push('password_hash = ?', 'salt = ?')
+      values.push(updates.passwordHash, updates.salt)
+    }
+
+    if (fields.length === 0) return
+
+    fields.push('updated_at = ?')
+    values.push(new Date().toISOString())
+    values.push(id)
+
+    const query = `UPDATE users SET ${fields.join(', ')} WHERE id = ?`
+    this.db.prepare(query).run(...values)
+  }
+
+  deleteUser(id: string): void {
+    if (!this.db) return
+    this.db.prepare('DELETE FROM sessions WHERE user_id = ?').run(id)
+    this.db.prepare('DELETE FROM users WHERE id = ?').run(id)
+  }
+
+  insertSession(session: DbSession): void {
+    if (!this.db) return
+    const stmt = this.db.prepare(`
+      INSERT INTO sessions (token, user_id, created_at, expires_at)
+      VALUES (?, ?, ?, ?)
+    `)
+    stmt.run(session.token, session.userId, session.createdAt, session.expiresAt)
+  }
+
+  findSessionByToken(token: string): { session: DbSession; user: DbUser } | null {
+    if (!this.db) return null
+    const query = `
+      SELECT 
+        s.token, s.user_id, s.created_at as session_created_at, s.expires_at,
+        u.id, u.username, u.display_name, u.password_hash, u.salt, u.role, u.created_at as user_created_at, u.updated_at
+      FROM sessions s
+      JOIN users u ON s.user_id = u.id
+      WHERE s.token = ?
+    `
+    const row = this.db.prepare(query).get(token) as any
+    if (!row) return null
+
+    // 检查是否过期
+    if (new Date(row.expires_at).getTime() < Date.now()) {
+      this.deleteSession(token)
+      return null
+    }
+
+    return {
+      session: {
+        token: row.token,
+        userId: row.user_id,
+        createdAt: row.session_created_at,
+        expiresAt: row.expires_at,
+      },
+      user: {
+        id: row.id,
+        username: row.username,
+        displayName: row.display_name,
+        passwordHash: row.password_hash,
+        salt: row.salt,
+        role: row.role as UserRole,
+        createdAt: row.user_created_at,
+        updatedAt: row.updated_at,
+      },
+    }
+  }
+
+  deleteSession(token: string): void {
+    if (!this.db) return
+    this.db.prepare('DELETE FROM sessions WHERE token = ?').run(token)
+  }
+
+  deleteUserSessions(userId: string): void {
+    if (!this.db) return
+    this.db.prepare('DELETE FROM sessions WHERE user_id = ?').run(userId)
+  }
+
+  cleanExpiredSessions(): void {
+    if (!this.db) return
+    this.db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(new Date().toISOString())
   }
 }
 

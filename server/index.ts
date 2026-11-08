@@ -20,6 +20,8 @@ import { aiRouter } from './routes/ai.js'
 import { booksRouter } from './routes/books.js'
 import { memoryRouter } from './routes/memory.js'
 import { flashcardsRouter } from './routes/flashcards.js'
+import { authRouter } from './routes/auth.js'
+import { authenticate, readOnlyGuard } from './middleware/auth.js'
 
 const app = express()
 app.disable('x-powered-by')
@@ -32,7 +34,7 @@ app.use(cors({
   origin(origin, callback) {
     const isLocalOrigin = Boolean(
       origin &&
-      /^https?:\/\/(?:localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(?:1[6-9]|2\d|3[01])\.\d+\.\d+|100\.\d+\.\d+\.\d+|[a-zA-Z0-9-]+\.ts\.net)(?::\d+)?$/.test(origin)
+      /^https?:\/\/(?:localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(?:1[6-9]|2\d|3[01])\.\d+\.\d+|100\.\d+\.\d+\.\d+|[a-zA-Z0-9-]+\.ts\.net|(?:[a-zA-Z0-9-]+\.)*trycloudflare\.com)(?::\d+)?$/.test(origin)
     )
     if (!origin || isLocalOrigin || allowedOrigins.has(origin)) {
       callback(null, true)
@@ -60,6 +62,13 @@ if (fs.existsSync(distPath)) {
 }
 
 // ===== Mount Modular Routers =====
+app.use('/api', authenticate)
+app.use('/api', authRouter)
+
+// 针对学生只读用户，拦截对 Vault 笔记写操作和 Workflow 批量治理
+app.use('/api/vault', readOnlyGuard)
+app.use('/api/workflow', readOnlyGuard)
+
 app.use('/api', systemRouter)
 app.use('/api', localAgentsRouter)
 app.use('/api', mediaRouter)
@@ -125,12 +134,16 @@ export function startServer(port?: number) {
 
 export { app }
 
-// Standalone mode entry
-const isMain = process.argv[1] && (
-  process.argv[1].endsWith('index.ts') ||
-  process.argv[1].endsWith('index.js') ||
-  process.argv[1].endsWith('server.mjs') ||
-  process.argv[1].endsWith('server.js')
+// Standalone mode entry (supports direct node and PM2)
+const isMain = Boolean(
+  (process.argv[1] && (
+    process.argv[1].endsWith('index.ts') ||
+    process.argv[1].endsWith('index.js') ||
+    process.argv[1].endsWith('server.mjs') ||
+    process.argv[1].endsWith('server.js')
+  )) ||
+  process.env.pm_id !== undefined ||
+  process.env.PM2_HOME
 )
 if (isMain) {
   startServer()

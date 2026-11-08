@@ -12,6 +12,8 @@ import {
   RefreshCw,
   Award,
   ChevronRight,
+  ArrowLeft,
+  Check,
 } from 'lucide-react'
 import MarkdownRenderer from './MarkdownRenderer'
 
@@ -81,10 +83,10 @@ export default function QuickPracticeModal({
       if (data.questions && Array.isArray(data.questions) && data.questions.length > 0) {
         setQuestions(data.questions)
       } else {
-        alert('AI 未能生成题目，请确认网络与 API 配置后重试')
+        alert(data.error ? `题目生成失败: ${data.error}` : 'AI 未能生成题目，请确认网络与 API 配置后重试')
       }
     } catch (err: any) {
-      alert(`生成失败: ${err.message}`)
+      alert(`请求失败: ${err.message}`)
     } finally {
       setLoading(false)
     }
@@ -166,36 +168,62 @@ export default function QuickPracticeModal({
 
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 border border-cream-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-cream-200 dark:border-slate-800 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-transparent">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white shadow-md shadow-orange-500/20">
-              <Sparkles className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-warm-900 dark:text-slate-100 text-base">即学即练 · 考点随堂真题测验</h3>
-                <span className="text-[11px] px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 font-medium">
-                  AI 智能出题
-                </span>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 md:p-4 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-slate-900 border-0 md:border md:border-cream-200 md:dark:border-slate-800 rounded-none md:rounded-3xl shadow-2xl w-full h-[100dvh] md:h-auto md:max-w-2xl md:max-h-[88vh] flex flex-col overflow-hidden">
+        {/* Android M3 Top App Bar */}
+        <div className="flex flex-col border-b border-cream-200/90 dark:border-slate-800/90 bg-white/95 dark:bg-slate-900/95 pt-[env(safe-area-inset-top,0px)] shrink-0">
+          <div className="flex items-center justify-between px-3 md:px-5 py-2.5 md:py-3.5 gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <button
+                onClick={onClose}
+                aria-label="返回并退出测验"
+                className="p-2 -ml-1 rounded-full text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-90 transition-all flex items-center justify-center shrink-0 cursor-pointer"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm md:text-base truncate">
+                    考点随堂真题测验
+                  </h3>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300 font-semibold shrink-0">
+                    AI 命制
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-[200px] sm:max-w-xs">
+                  靶向笔记：{noteTitle || '当前笔记'}
+                </p>
               </div>
-              <p className="text-xs text-warm-500 dark:text-slate-400 truncate max-w-md">
-                靶向笔记：{noteTitle || '当前笔记'}
-              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {questions.length > 0 && !showSummary && (
+                <span className="text-xs font-bold font-mono text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 px-2.5 py-1 rounded-full border border-orange-200 dark:border-orange-900/40">
+                  第 {currentIndex + 1} / {questions.length} 题
+                </span>
+              )}
+              <button
+                onClick={onClose}
+                className="hidden md:inline-flex p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-warm-400 hover:text-warm-700 dark:hover:text-slate-200 hover:bg-cream-100 dark:hover:bg-slate-800 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+
+          {/* Android M3 线性进度条 */}
+          {questions.length > 0 && !showSummary && (
+            <div className="w-full bg-slate-100 dark:bg-slate-800 h-1 overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-amber-500 to-orange-500 h-full transition-all duration-300 ease-out"
+                style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
+              />
+            </div>
+          )}
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto px-4 py-4 md:p-6 overscroll-contain">
           {loading ? (
             <div className="py-20 flex flex-col items-center justify-center text-center space-y-4">
               <div className="relative">
@@ -265,57 +293,68 @@ export default function QuickPracticeModal({
             </div>
           ) : currentQ ? (
             /* Active Question Card */
-            <div className="space-y-5">
-              {/* Progress & Tags */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+            <div className="space-y-4 md:space-y-5 pb-6">
+              {/* Question Header Tags */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="text-xs font-bold text-orange-600 dark:text-orange-400">
-                    第 {currentIndex + 1} / {questions.length} 题
+                    考点单选题
                   </span>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold border border-slate-200/60 dark:border-slate-700">
                     {currentQ.subject}
                   </span>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
-                    {currentQ.difficulty}
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 font-medium border border-amber-200/60 dark:border-amber-900/40">
+                    难度：{currentQ.difficulty}
                   </span>
                 </div>
-                <div className="flex items-center gap-1">
+
+                {/* 题号快速切换指示胶囊 */}
+                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 px-2 py-1 rounded-full">
                   {questions.map((_, idx) => (
                     <button
                       key={idx}
                       onClick={() => setCurrentIndex(idx)}
-                      className={`w-2.5 h-2.5 rounded-full transition-all ${
+                      className={`h-2 rounded-full transition-all cursor-pointer ${
                         idx === currentIndex
-                          ? 'bg-orange-500 scale-125'
+                          ? 'w-5 bg-orange-500'
                           : submitted[idx]
                           ? userAnswers[idx] === questions[idx].answer
-                            ? 'bg-emerald-500'
-                            : 'bg-rose-500'
-                          : 'bg-slate-200 dark:bg-slate-700'
+                            ? 'w-2 bg-emerald-500'
+                            : 'w-2 bg-rose-500'
+                          : 'w-2 bg-slate-300 dark:bg-slate-600'
                       }`}
+                      aria-label={`跳转至第 ${idx + 1} 题`}
                     />
                   ))}
                 </div>
               </div>
 
-              {/* Question Stem */}
-              <div className="p-4 rounded-xl bg-cream-50/60 dark:bg-slate-800/40 border border-cream-200 dark:border-slate-800 text-sm leading-relaxed text-warm-900 dark:text-slate-100">
+              {/* Question Stem - Android M3 Card */}
+              <div className="p-4 md:p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 text-sm md:text-base leading-relaxed text-slate-900 dark:text-slate-100 shadow-2xs">
+                <div className="font-semibold mb-1 text-slate-400 dark:text-slate-500 text-[11px] uppercase tracking-wider">
+                  题目背景与条件：
+                </div>
                 <MarkdownRenderer content={currentQ.question} />
               </div>
 
-              {/* Options */}
-              <div className="space-y-2">
+              {/* Options - Material 3 Large Touch Cards */}
+              <div className="space-y-2.5">
                 {currentQ.options &&
                   Object.entries(currentQ.options).map(([key, val]) => {
-                    let optStyle = 'border-cream-200 dark:border-slate-800 hover:border-orange-300 hover:bg-orange-50/30 dark:hover:bg-slate-800'
+                    let optStyle = 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-orange-300 hover:bg-orange-50/20 active:scale-[0.99]'
+                    let badgeStyle = 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700'
+
                     if (userAns === key) {
-                      optStyle = 'border-orange-500 bg-orange-50 dark:bg-orange-950/30 ring-1 ring-orange-500 text-orange-900 dark:text-orange-200'
+                      optStyle = 'border-orange-500 bg-orange-50/80 dark:bg-orange-950/40 ring-2 ring-orange-500/20 text-orange-950 dark:text-orange-200'
+                      badgeStyle = 'bg-orange-500 text-white border-orange-500 shadow-xs'
                     }
                     if (isAnswered) {
                       if (key === currentQ.answer) {
-                        optStyle = 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 ring-1 ring-emerald-500'
+                        optStyle = 'border-emerald-500 bg-emerald-50/80 dark:bg-emerald-950/40 ring-2 ring-emerald-500/20 text-emerald-950 dark:text-emerald-200'
+                        badgeStyle = 'bg-emerald-500 text-white border-emerald-500 shadow-xs'
                       } else if (userAns === key && key !== currentQ.answer) {
-                        optStyle = 'border-rose-500 bg-rose-50 dark:bg-rose-950/40 text-rose-900 dark:text-rose-200 ring-1 ring-rose-500'
+                        optStyle = 'border-rose-500 bg-rose-50/80 dark:bg-rose-950/40 ring-2 ring-rose-500/20 text-rose-950 dark:text-rose-200'
+                        badgeStyle = 'bg-rose-500 text-white border-rose-500 shadow-xs'
                       }
                     }
 
@@ -324,12 +363,12 @@ export default function QuickPracticeModal({
                         key={key}
                         disabled={isAnswered}
                         onClick={() => handleSelectOption(key)}
-                        className={`w-full flex items-start gap-3 p-3.5 rounded-xl border text-left text-xs transition-all ${optStyle}`}
+                        className={`w-full flex items-center gap-3.5 p-3.5 md:p-4 rounded-2xl border text-left text-xs md:text-sm transition-all shadow-2xs select-none cursor-pointer ${optStyle}`}
                       >
-                        <span className="w-5 h-5 rounded-full flex items-center justify-center font-bold text-[11px] shrink-0 border border-current">
+                        <span className={`w-7 h-7 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 border transition-all ${badgeStyle}`}>
                           {key}
                         </span>
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 font-medium leading-relaxed">
                           <MarkdownRenderer content={val} />
                         </div>
                       </button>
@@ -337,69 +376,71 @@ export default function QuickPracticeModal({
                   })}
               </div>
 
-              {/* Action Buttons */}
+              {/* Action Buttons - 手机端宽幅大按钮 */}
               {!isAnswered ? (
-                <div className="flex justify-end pt-2">
+                <div className="pt-2">
                   <button
                     onClick={handleSubmitAnswer}
                     disabled={!userAns}
-                    className="px-5 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white disabled:opacity-40 disabled:cursor-not-allowed shadow-md shadow-orange-500/20 transition-all"
+                    className="w-full py-3.5 px-6 rounded-2xl text-sm font-bold bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white disabled:opacity-40 disabled:cursor-not-allowed shadow-md shadow-orange-500/25 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2"
                   >
-                    提交作答
+                    <span>确认作答</span>
+                    <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
               ) : (
                 /* Feedback & Explanation */
                 <div className="space-y-4 pt-2 border-t border-cream-200 dark:border-slate-800 animate-in fade-in">
                   <div
-                    className={`flex items-center gap-3 p-3.5 rounded-xl border ${
+                    className={`flex items-center gap-3 p-3.5 md:p-4 rounded-2xl border ${
                       isCorrect
-                        ? 'bg-emerald-50/80 border-emerald-200 text-emerald-800 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-200'
-                        : 'bg-rose-50/80 border-rose-200 text-rose-800 dark:bg-rose-950/30 dark:border-rose-800 dark:text-rose-200'
+                        ? 'bg-emerald-50/90 border-emerald-200 text-emerald-900 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-200'
+                        : 'bg-rose-50/90 border-rose-200 text-rose-900 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-200'
                     }`}
                   >
                     {isCorrect ? (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                      <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     ) : (
-                      <XCircle className="w-5 h-5 text-rose-500 shrink-0" />
+                      <XCircle className="w-6 h-6 text-rose-600 dark:text-rose-400 shrink-0" />
                     )}
-                    <div className="text-xs">
+                    <div className="text-xs md:text-sm">
                       <span className="font-bold mr-2">
                         {isCorrect ? '🎉 恭喜回答正确！' : '❌ 遗憾回答错误！'}
                       </span>
-                      <span>标准答案：<b>{currentQ.answer}</b></span>
-                      {userAns && <span className="ml-3 text-slate-500">您的选择：{userAns}</span>}
+                      <span>标准答案：<b className="text-sm font-extrabold">{currentQ.answer}</b></span>
+                      {userAns && <span className="ml-3 opacity-75">您的选择：{userAns}</span>}
                     </div>
                   </div>
 
                   {/* Explanation text */}
-                  <div className="p-4 rounded-xl bg-cream-50/80 dark:bg-slate-800/60 border border-cream-200 dark:border-slate-700 text-xs space-y-2">
-                    <div className="font-bold text-warm-800 dark:text-slate-200 flex items-center gap-1.5">
-                      <BookOpen className="w-3.5 h-3.5 text-orange-500" /> 详尽解析与破题步骤：
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 text-xs md:text-sm space-y-2">
+                    <div className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                      <BookOpen className="w-4 h-4 text-orange-500" />
+                      <span>详尽分步解析与考点定理：</span>
                     </div>
-                    <div className="text-warm-700 dark:text-slate-300 leading-relaxed">
+                    <div className="text-slate-700 dark:text-slate-300 leading-relaxed">
                       <MarkdownRenderer content={currentQ.explanation} />
                     </div>
                   </div>
 
                   {/* If incorrect, provide save & variant actions */}
                   {!isCorrect && (
-                    <div className="p-3 rounded-xl bg-orange-50/50 dark:bg-slate-800/40 border border-orange-200/60 dark:border-slate-700 space-y-3">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-medium text-warm-700 dark:text-slate-300">
-                          标记错因类型（将沉淀至知识库错题本）：
+                    <div className="p-3.5 rounded-2xl bg-orange-50/60 dark:bg-slate-800/40 border border-orange-200/60 dark:border-slate-700 space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs gap-2">
+                        <span className="font-medium text-slate-700 dark:text-slate-300">
+                          错因诊断标签（归档至 Obsidian 知识库）：
                         </span>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           {['概念不清', '公式记错', '计算失误', '审题疏忽'].map(r => (
                             <button
                               key={r}
                               onClick={() =>
                                 setSelectedErrorReason(prev => ({ ...prev, [currentIndex]: r }))
                               }
-                              className={`px-2 py-0.5 rounded text-[10px] transition-colors ${
+                              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                                 (selectedErrorReason[currentIndex] || '概念不清') === r
-                                  ? 'bg-orange-500 text-white'
-                                  : 'bg-cream-200 dark:bg-slate-700 text-warm-600 dark:text-slate-400'
+                                  ? 'bg-orange-500 text-white shadow-xs'
+                                  : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-600'
                               }`}
                             >
                               {r}
@@ -408,14 +449,14 @@ export default function QuickPracticeModal({
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col sm:flex-row items-center gap-2">
                         <button
                           onClick={handleSaveToErrorNotes}
                           disabled={savingError[currentIndex] || savedError[currentIndex]}
-                          className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-medium transition-all ${
+                          className={`w-full sm:flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                             savedError[currentIndex]
-                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
-                              : 'bg-orange-100 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 hover:bg-orange-200'
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                              : 'bg-orange-100 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300 hover:bg-orange-200'
                           }`}
                         >
                           {savingError[currentIndex] ? (
@@ -429,26 +470,26 @@ export default function QuickPracticeModal({
                         <button
                           onClick={handleGenerateVariant}
                           disabled={generatingVariant}
-                          className="flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-medium bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 hover:bg-amber-200 transition-all"
-                          title="针对该题定理与陷阱，原地命制 2 道变式题追加到测验中"
+                          className="w-full sm:w-auto flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl text-xs font-semibold bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 hover:bg-amber-200 transition-all cursor-pointer shrink-0"
+                          title="针对该题定理与陷阱，原地命制变式题追加到测验中"
                         >
                           {generatingVariant ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           ) : (
                             <RefreshCw className="w-3.5 h-3.5" />
                           )}
-                          🔄 举一反三变式题
+                          <span>🔄 举一反三变式题</span>
                         </button>
                       </div>
                     </div>
                   )}
 
-                  {/* Navigation to next */}
-                  <div className="flex items-center justify-between pt-2">
+                  {/* Navigation to next - Android 底部按钮条 */}
+                  <div className="flex items-center justify-between gap-3 pt-3">
                     <button
                       onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
                       disabled={currentIndex === 0}
-                      className="px-3 py-1.5 rounded-lg text-xs text-warm-500 disabled:opacity-30 hover:bg-cream-100 dark:hover:bg-slate-800"
+                      className="flex-1 py-3 px-4 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 disabled:opacity-30 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-[0.98] transition-all cursor-pointer"
                     >
                       上一题
                     </button>
@@ -456,16 +497,18 @@ export default function QuickPracticeModal({
                     {currentIndex < questions.length - 1 ? (
                       <button
                         onClick={() => setCurrentIndex(prev => prev + 1)}
-                        className="px-4 py-1.5 rounded-xl text-xs font-semibold bg-orange-500 hover:bg-orange-600 text-white flex items-center gap-1.5 shadow-md shadow-orange-500/20"
+                        className="flex-1 py-3 px-4 rounded-xl text-xs font-bold bg-orange-500 hover:bg-orange-600 text-white flex items-center justify-center gap-1.5 shadow-md shadow-orange-500/20 active:scale-[0.98] transition-all cursor-pointer"
                       >
-                        下一题 <ChevronRight className="w-3.5 h-3.5" />
+                        <span>下一题</span>
+                        <ChevronRight className="w-4 h-4" />
                       </button>
                     ) : (
                       <button
                         onClick={() => setShowSummary(true)}
-                        className="px-5 py-1.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-emerald-500 to-teal-600 text-white flex items-center gap-1.5 shadow-md shadow-emerald-500/20"
+                        className="flex-1 py-3 px-4 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-600 text-white flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20 active:scale-[0.98] transition-all cursor-pointer"
                       >
-                        查看成绩报告 <ArrowRight className="w-3.5 h-3.5" />
+                        <span>查看成绩报告</span>
+                        <ArrowRight className="w-4 h-4" />
                       </button>
                     )}
                   </div>

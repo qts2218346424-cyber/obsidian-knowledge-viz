@@ -13,6 +13,62 @@ import { calculateSM2 } from '../algorithms/sm2.js'
 
 export const quizRouter = Router()
 
+function extractTextFromAiContent(content: any): string {
+  if (!content) return ''
+  if (typeof content === 'string') return content
+  if (Array.isArray(content)) {
+    const textBlock = content.find(b => b && b.type === 'text')
+    if (textBlock && typeof textBlock.text === 'string') {
+      return textBlock.text
+    }
+    for (const b of content) {
+      if (b && typeof b.text === 'string') return b.text
+    }
+    const thinkingBlock = content.find(b => b && b.type === 'thinking')
+    if (thinkingBlock && typeof thinkingBlock.thinking === 'string') {
+      return thinkingBlock.thinking
+    }
+  }
+  return ''
+}
+
+function safeParseJsonArray(raw: string): any[] {
+  if (!raw) return []
+  try {
+    const cleaned = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim()
+    const parsed = JSON.parse(cleaned)
+    if (Array.isArray(parsed)) return parsed
+    if (parsed && Array.isArray((parsed as any).questions)) return (parsed as any).questions
+    if (parsed && typeof parsed === 'object') return [parsed]
+  } catch {
+    const match = raw.match(/\[[\s\S]*\]/)
+    if (match) {
+      try {
+        const parsed = JSON.parse(match[0])
+        if (Array.isArray(parsed)) return parsed
+      } catch {}
+    }
+  }
+  return []
+}
+
+async function createAiQuizCompletion(params: {
+  model: string
+  max_tokens: number
+  system: string
+  messages: Array<{ role: 'user'; content: string }>
+}): Promise<any> {
+  if (!anthropic) throw new Error('AI 服务未初始化')
+  try {
+    return await anthropic.messages.create({
+      ...params,
+      thinking: { type: 'disabled' } as any,
+    })
+  } catch {
+    return await anthropic.messages.create(params)
+  }
+}
+
 function getCustomQuestionsPath(): string {
   const quizDir = path.resolve(config.vaultPath, '做题记录')
   if (!fs.existsSync(quizDir)) {
@@ -143,23 +199,16 @@ ${text.slice(0, 5000)}
   }
 ]`
 
-    const aiRes = await anthropic.messages.create({
+    const aiRes = await createAiQuizCompletion({
       model: config.ai?.model || 'deepseek-v4-pro',
       max_tokens: 4096,
       system: '你是一个严格输出纯 JSON 格式题库的考研命题与解析专家。只输出纯 JSON 数组，严禁任何前后缀闲聊。',
       messages: [{ role: 'user', content: prompt }]
     })
 
-    const raw = aiRes.content[0].type === 'text' ? aiRes.content[0].text : '[]'
-    let parsed = []
-    try {
-      const match = raw.match(/\[[\s\S]*\]/)
-      if (match) {
-        parsed = JSON.parse(match[0])
-      } else {
-        parsed = JSON.parse(raw)
-      }
-    } catch {
+    const raw = extractTextFromAiContent(aiRes.content)
+    const parsed = safeParseJsonArray(raw)
+    if (!parsed || parsed.length === 0) {
       res.status(500).json({ error: 'AI 输出未能成功解析为合法题目数组', raw })
       return
     }
@@ -354,19 +403,16 @@ quizRouter.post('/quiz/variant', async (req, res) => {
   }
 ]`
 
-    const aiRes = await anthropic.messages.create({
+    const aiRes = await createAiQuizCompletion({
       model: config.ai?.model || 'deepseek-v4-pro',
       max_tokens: 4096,
       system: '严格只输出纯 JSON 数组，严禁任何额外文本。',
       messages: [{ role: 'user', content: prompt }]
     })
 
-    const raw = aiRes.content[0].type === 'text' ? aiRes.content[0].text : '[]'
-    let variants = []
-    try {
-      const match = raw.match(/\[[\s\S]*\]/)
-      variants = match ? JSON.parse(match[0]) : JSON.parse(raw)
-    } catch {
+    const raw = extractTextFromAiContent(aiRes.content)
+    const variants = safeParseJsonArray(raw)
+    if (!variants || variants.length === 0) {
       res.status(500).json({ error: '变式题生成解析失败', raw })
       return
     }
@@ -614,23 +660,23 @@ ${(content || '').slice(0, 3500)}
   }
 ]`
 
-    const aiRes = await anthropic.messages.create({
+    const aiRes = await createAiQuizCompletion({
       model: config.ai?.model || 'deepseek-v4-pro',
       max_tokens: 4096,
       system: '严格只输出纯 JSON 数组，严禁任何额外解释。',
       messages: [{ role: 'user', content: prompt }]
     })
 
-    const raw = aiRes.content[0].type === 'text' ? aiRes.content[0].text : '[]'
-    let questions = []
-    try {
-      const cleaned = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim()
-      questions = JSON.parse(cleaned)
-    } catch {
-      const match = raw.match(/\[[\s\S]*\]/)
-      if (match) {
-        questions = JSON.parse(match[0])
-      }
+    const raw = extractTextFromAiContent(aiRes.content)
+    const questions = safeParseJsonArray(raw)
+
+    if (!questions || questions.length === 0) {
+      res.status(500).json({
+        success: false,
+        error: '未能提取到有效题目，请重试',
+        raw
+      })
+      return
     }
 
     res.json({
