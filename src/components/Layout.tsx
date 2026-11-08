@@ -60,10 +60,10 @@ interface NavItem {
 
 const primaryNavItems: NavItem[] = [
   { to: '/dashboard', label: '首页', shortLabel: '首页', icon: Home, emoji: '🏠', desc: '备考驾驶舱与每日概览' },
-  { to: '/quiz', label: '做题中心', shortLabel: '刷题', icon: ClipboardList, emoji: '📝', badge: '408+数学', desc: '真题精练、AI 组卷与错题本' },
+  { to: '/quiz', label: '做题中心', shortLabel: '做题', icon: ClipboardList, emoji: '📝', badge: '408+数学', desc: '真题精练、AI 组卷与错题本' },
   { to: '/politics', label: '考研政治', shortLabel: '政治', icon: Landmark, emoji: '🏛️', badge: '史纲+1000题', desc: '全屏时空轴、肖秀荣1000题与考点收藏' },
   { to: '/english', label: '考研英语', shortLabel: '英语', icon: BookOpen, emoji: '📖', badge: '作文批改+真题', desc: '写作模板、AI智能批改、历年真题精读与大纲词库' },
-  { to: '/study', label: '学习中心', shortLabel: '学习', icon: GraduationCap, emoji: '📚', desc: '讲义精读、闪卡记忆与掌握度' },
+  { to: '/study', label: '学习中心', shortLabel: '讲义', icon: GraduationCap, emoji: '📚', desc: '讲义精读、闪卡记忆与掌握度' },
   { to: '/graph', label: '知识图谱', shortLabel: '图谱', icon: Network, emoji: '🕸️', desc: '全库双链网络可视化探索' },
   { to: '/editor', label: '笔记编辑', shortLabel: '笔记', icon: FileEdit, emoji: '✏️', desc: 'Markdown 写作与手写批注' },
   { to: '/chat', label: 'AI 伴学', shortLabel: '伴学', icon: MessageCircle, emoji: '💬', desc: '多智能体导师答疑与推导' },
@@ -319,7 +319,7 @@ export default function Layout({ children }: LayoutProps) {
           </Link>
 
           {/* Subframe Pill Primary Navigation */}
-          <nav className="ml-1 2xl:ml-3 hidden flex-1 items-center justify-center gap-0.5 2xl:gap-1 xl:flex shrink-0 min-w-0" aria-label="主导航">
+          <nav className="ml-1 2xl:ml-3 mr-3 2xl:mr-6 hidden flex-1 items-center justify-center gap-1 2xl:gap-1.5 xl:flex shrink-0 min-w-0" aria-label="主导航">
             {primaryNavItems.map(item => (
               <NavLink
                 key={item.to}
@@ -332,7 +332,8 @@ export default function Layout({ children }: LayoutProps) {
                 {({ isActive }) => (
                   <>
                     <item.icon className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'text-white' : 'text-neutral-400'}`} />
-                    <span className="whitespace-nowrap shrink-0">{item.label}</span>
+                    <span className="whitespace-nowrap shrink-0 xl:hidden 2xl:inline">{item.label}</span>
+                    <span className="whitespace-nowrap shrink-0 hidden xl:inline 2xl:hidden">{item.shortLabel || item.label}</span>
                     {item.badge && (
                       <span className={`hidden 2xl:inline-block text-[9.5px] px-1.5 py-0.2 rounded-md font-medium tracking-tight whitespace-nowrap shrink-0 ${
                         isActive ? 'bg-neutral-800 text-neutral-200' : 'bg-neutral-100 text-neutral-600 border border-neutral-200/80'
@@ -346,7 +347,7 @@ export default function Layout({ children }: LayoutProps) {
             ))}
 
             {/* More Tools Dropdown */}
-            <div className="relative ml-0.5 shrink-0">
+            <div className="relative ml-0.5 shrink-0" data-testid="nav-more-tools">
               <button
                 onClick={() => setMoreOpen(previous => !previous)}
                 className={navClass(moreOpen || moreNavItems.some(item => item.to === location.pathname))}
@@ -358,7 +359,7 @@ export default function Layout({ children }: LayoutProps) {
               {moreOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
-                  <div className="absolute left-0 top-full z-50 mt-1.5 w-60 rounded-xl border border-neutral-200/90 bg-white/98 p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.08)] backdrop-blur-xl animate-fade-in-up">
+                  <div className="absolute right-0 top-full z-50 mt-1.5 w-56 rounded-xl border border-neutral-200/90 bg-white/98 p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.12)] backdrop-blur-xl animate-fade-in-up">
                     <p className="px-2.5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">研学辅助工具</p>
                     {moreNavItems.map(item => (
                       <NavLink
@@ -394,11 +395,11 @@ export default function Layout({ children }: LayoutProps) {
               }}
               aria-label="全局检索"
               title="搜索知识库（快捷键 Ctrl+K）"
-              className="subframe-search-pill cursor-pointer select-none h-8 px-2 sm:px-2.5 gap-1.5"
+              className="subframe-search-pill cursor-pointer select-none h-8 px-2 sm:px-2.5 gap-1.5 shrink-0"
             >
               <Search className="h-3.5 w-3.5 text-neutral-400 shrink-0" />
               <span className="hidden md:inline text-xs text-neutral-500 font-normal">搜索...</span>
-              <kbd className="hidden lg:inline-flex items-center text-[9px] font-mono text-neutral-400 bg-neutral-200/70 border border-neutral-300/60 rounded px-1 py-0.2 shrink-0">
+              <kbd className="hidden 2xl:inline-flex items-center text-[9px] font-mono text-neutral-400 bg-neutral-200/70 border border-neutral-300/60 rounded px-1 py-0.2 shrink-0">
                 Ctrl K
               </kbd>
             </button>
