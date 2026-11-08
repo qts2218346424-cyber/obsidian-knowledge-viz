@@ -1,4 +1,5 @@
 import { useEffect, useState, lazy, Suspense, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import {
   AlertCircle,
@@ -1083,7 +1084,7 @@ export default function Layout({ children }: LayoutProps) {
       </nav>
 
       {/* ── 📱 移动端专属学科专攻上浮抽屉 (4大专项选择，与网页端学科专攻同步) ── */}
-      {mobileSubjectOpen && (
+      {mobileSubjectOpen && typeof document !== 'undefined' && createPortal(
         <>
           <div
             className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs transition-opacity animate-fade-in"
@@ -1177,7 +1178,8 @@ export default function Layout({ children }: LayoutProps) {
               取消
             </button>
           </div>
-        </>
+        </>,
+        document.body
       )}
 
       {/* Floating Desktop Companion Pet */}
