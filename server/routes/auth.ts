@@ -343,6 +343,12 @@ authRouter.post('/auth/reset-password', async (req, res) => {
     return
   }
 
+  // 严格沙箱隔离：演示/访客账号一律禁止在线重置密码
+  if (user.username.toLowerCase() === 'demo' || user.role === 'guest' || user.username.toLowerCase() === 'test') {
+    res.status(403).json({ error: '公共演示与访客体验账号处于系统沙箱保护中，禁止重置密码。如需使用请注册属于您的独立考生账号！' })
+    return
+  }
+
   let verified = false
   let verifyType = ''
 
@@ -408,6 +414,20 @@ authRouter.post('/auth/reset-password', async (req, res) => {
  */
 authRouter.get('/auth/security-settings', requireAuth, (req, res) => {
   const user = req.user!
+  const isDemo = user.username.toLowerCase() === 'demo' || user.role === 'guest' || user.username.toLowerCase() === 'test'
+
+  // 演示账号启用安全沙箱，绝对不返回明文恢复码
+  if (isDemo) {
+    res.json({
+      username: user.username,
+      hasSecurityQuestion: false,
+      securityQuestion: null,
+      recoveryCode: null,
+      isDemo: true,
+    })
+    return
+  }
+
   // 若历史老用户尚未生成救援码，自动为其生成并存入
   let recoveryCode = user.recoveryCode
   if (!recoveryCode) {
@@ -420,6 +440,7 @@ authRouter.get('/auth/security-settings', requireAuth, (req, res) => {
     hasSecurityQuestion: Boolean(user.securityQuestion && user.securityAnswerHash),
     securityQuestion: user.securityQuestion || null,
     recoveryCode,
+    isDemo: false,
   })
 })
 
@@ -429,6 +450,12 @@ authRouter.get('/auth/security-settings', requireAuth, (req, res) => {
 authRouter.post('/auth/security-settings', requireAuth, async (req, res) => {
   const { question, answer, refreshRecoveryCode } = req.body || {}
   const user = req.user!
+  const isDemo = user.username.toLowerCase() === 'demo' || user.role === 'guest' || user.username.toLowerCase() === 'test'
+
+  if (isDemo) {
+    res.status(403).json({ error: '演示/访客体验账号处于沙箱模式，禁止在线修改安全凭据。' })
+    return
+  }
 
   const updates: any = {}
 

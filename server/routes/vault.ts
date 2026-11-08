@@ -456,16 +456,21 @@ vaultRouter.post('/vault/open-folder', (_req, res) => {
 
 vaultRouter.get('/vault/events', (_req, res) => {
   res.setHeader('Content-Type', 'text/event-stream')
-  res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('Cache-Control', 'no-cache, no-transform')
   res.setHeader('Connection', 'keep-alive')
+  res.setHeader('X-Accel-Buffering', 'no')
   res.flushHeaders()
 
   sseClients.add(res)
-  res.write(':keepalive\n\n')
+  res.write(': keepalive\n\n')
 
   const heartbeat = setInterval(() => {
-    res.write(':keepalive\n\n')
-  }, 30000)
+    try {
+      res.write(': keepalive\n\n')
+    } catch {
+      clearInterval(heartbeat)
+    }
+  }, 15000)
 
   _req.on('close', () => {
     sseClients.delete(res)

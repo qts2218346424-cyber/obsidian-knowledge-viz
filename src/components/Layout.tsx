@@ -37,12 +37,12 @@ import UserGuideModal from './UserGuideModal'
 import CheckinModal from './CheckinModal'
 import ChangePasswordModal from './ChangePasswordModal'
 import InteractiveTourGuide from './InteractiveTourGuide'
-import { HelpCircle, Compass, KeyRound } from 'lucide-react'
+import { HelpCircle, Compass, KeyRound, History as HistoryIcon } from 'lucide-react'
 import { LogOut, Users as UsersIcon, ShieldAlert as ShieldAlertIcon } from 'lucide-react'
 import { prefetchRoute } from '../App'
 import { useUIModalStore } from '../shared/store/useUIModalStore'
 
-const SearchModal = lazy(() => import('./SearchModal'))
+import SearchModal from './SearchModal'
 const AIAssistantModal = lazy(() => import('./AIAssistantModal'))
 const ImportResourceModal = lazy(() => import('./ImportResourceModal'))
 const MobileDeviceModal = lazy(() => import('./MobileDeviceModal'))
@@ -164,6 +164,7 @@ export default function Layout({ children }: LayoutProps) {
     const handler = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault()
+        setSearchOpen(prev => !prev)
         if (activeModals['search']) {
           closeModal('search')
         } else {
@@ -193,7 +194,24 @@ export default function Layout({ children }: LayoutProps) {
   }, [openModal, closeModal, activeModals])
 
   useEffect(() => {
-    document.title = '研核'
+    const ROUTE_PAGE_TITLES: Record<string, string> = {
+      '/dashboard': '备考驾驶舱 · 研核 CoreForge',
+      '/quiz': '做题中心 · 研核 CoreForge',
+      '/politics': '考研政治 · 研核 CoreForge',
+      '/history': '考研政治 · 研核 CoreForge',
+      '/english': '考研英语 · 研核 CoreForge',
+      '/vocabulary': '考研英语 · 研核 CoreForge',
+      '/study': '学习中心 · 研核 CoreForge',
+      '/learn': '学习中心 · 研核 CoreForge',
+      '/graph': '知识图谱 · 研核 CoreForge',
+      '/editor': '笔记编辑 · 研核 CoreForge',
+      '/chat': 'AI 伴学导师 · 研核 CoreForge',
+      '/pomodoro': '专注番茄钟 · 研核 CoreForge',
+      '/workflow': '知识库整理 · 研核 CoreForge',
+      '/music': '声学专注氛围 · 研核 CoreForge',
+      '/settings': '系统与账号设置 · 研核 CoreForge',
+    }
+    document.title = ROUTE_PAGE_TITLES[location.pathname] || (currentPage ? `${currentPage.label} · 研核 CoreForge` : '研核 CoreForge')
     setMobileNavOpen(false)
     setMoreOpen(false)
 
@@ -480,7 +498,7 @@ export default function Layout({ children }: LayoutProps) {
                   openModal('checkin')
                 }}
                 className="relative inline-flex h-8 items-center gap-1.5 rounded-xl border border-amber-200/90 bg-amber-50/80 px-2 2xl:px-2.5 text-amber-900 shadow-2xs hover:bg-amber-100/90 transition-all cursor-pointer active:scale-95 shrink-0"
-                title="AI 伴学积分中心 (点击每日签到领积分)"
+                title={`AI 伴学积分中心：当前可用 ${points.toFixed(1)} 积分 · 点击打卡签到或查阅每笔消费明细`}
               >
                 <Coins className="h-3.5 w-3.5 text-amber-600 shrink-0" />
                 <span className="text-xs font-bold font-mono text-amber-950">
@@ -561,6 +579,7 @@ export default function Layout({ children }: LayoutProps) {
                           setUserMenuOpen(false)
                           setCheckinTab('checkin')
                           setCheckinOpen(true)
+                          openModal('checkin')
                         }}
                         className="w-full flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-50 transition-colors cursor-pointer"
                       >
@@ -568,8 +587,26 @@ export default function Layout({ children }: LayoutProps) {
                           <Coins className="h-3.5 w-3.5 text-amber-600" />
                           <span>伴学积分中心</span>
                         </div>
-                        <span className="font-mono font-bold text-amber-900">{points.toFixed(1)} 分</span>
+                        <span className="text-[10px] text-amber-700 font-mono font-bold">{points.toFixed(1)}分</span>
                       </button>
+
+                      {/* 积分流水与扣费明细入口 */}
+                      <button
+                        onClick={() => {
+                          setUserMenuOpen(false)
+                          setCheckinTab('logs')
+                          setCheckinOpen(true)
+                          openModal('checkin')
+                        }}
+                        className="w-full flex items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2">
+                          <HistoryIcon className="h-3.5 w-3.5 text-indigo-600" />
+                          <span>积分收支与扣费明细</span>
+                        </div>
+                        <span className="text-[10px] text-slate-400">流水透明</span>
+                      </button>
+
 
                       <button
                         onClick={() => {

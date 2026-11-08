@@ -189,7 +189,7 @@ export default function English() {
             </div>
             <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 shadow-2xs">
               <div className="text-[10px] font-semibold text-slate-400">AI 智能批改</div>
-              <div className="text-base font-black font-mono text-rose-600 mt-0.5">0ms 秒判</div>
+              <div className="text-base font-black font-mono text-rose-600 mt-0.5">~1.2s 极速精批</div>
             </div>
           </div>
         </div>

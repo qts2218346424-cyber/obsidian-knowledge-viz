@@ -97,13 +97,21 @@ export default function Settings() {
   const [securityInfo, setSecurityInfo] = useState<{
     hasSecurityQuestion: boolean
     securityQuestion: string | null
-    recoveryCode: string
+    recoveryCode: string | null
+    isDemo?: boolean
   } | null>(null)
   const [secQuestionInput, setSecQuestionInput] = useState('')
   const [secAnswerInput, setSecAnswerInput] = useState('')
   const [savingSec, setSavingSec] = useState(false)
   const [secMessage, setSecMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [copiedCode, setCopiedCode] = useState(false)
+  const [showRecoveryCode, setShowRecoveryCode] = useState(false)
+  const isDemoAccount = Boolean(
+    (securityInfo as any)?.isDemo ||
+    user?.username?.toLowerCase() === 'demo' ||
+    (user as any)?.role === 'guest' ||
+    user?.username?.toLowerCase() === 'test'
+  )
 
   const loadSecuritySettings = useCallback(async () => {
     try {
@@ -154,11 +162,30 @@ export default function Settings() {
   }
 
   const handleCopyRecoveryCode = () => {
-    if (!securityInfo?.recoveryCode) return
+    if (isDemoAccount || !securityInfo?.recoveryCode) return
     navigator.clipboard.writeText(securityInfo.recoveryCode).then(() => {
       setCopiedCode(true)
       setTimeout(() => setCopiedCode(false), 2000)
     }).catch(() => {})
+  }
+
+  const handleRegenerateRecoveryCode = async () => {
+    if (isDemoAccount) return
+    if (!window.confirm('重新换发专属救援码后，旧救援码将立即失效。确认换发新的安全救援码吗？')) return
+    setSavingSec(true)
+    try {
+      const res = await updateSecuritySettings({ refreshRecoveryCode: true })
+      setSecurityInfo(prev => prev ? {
+        ...prev,
+        recoveryCode: res.recoveryCode,
+      } : null)
+      setShowRecoveryCode(true)
+      setSecMessage({ type: 'success', text: '已为您成功换发新的专属救援码，请妥善记录并抄写备份！' })
+    } catch (err: any) {
+      setSecMessage({ type: 'error', text: err.message || '换发救援码失败' })
+    } finally {
+      setSavingSec(false)
+    }
   }
 
 
@@ -591,33 +618,72 @@ export default function Settings() {
               </div>
             )}
 
-            {/* 专属 8 位安全救援码卡片 */}
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                  <KeyRound className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>专属安全救援码 (Recovery Code)</span>
-                </span>
-                <button
-                  type="button"
-                  onClick={handleCopyRecoveryCode}
-                  className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-semibold shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
-                  title="点击复制救援码"
-                >
-                  <Copy className="w-3 h-3 text-slate-500" />
-                  <span>{copiedCode ? '已复制！' : '复制救援码'}</span>
-                </button>
+            {isDemoAccount ? (
+              <div className="p-4 rounded-xl bg-amber-50/80 border border-amber-200/90 text-amber-900 space-y-2 animate-fade-in-up">
+                <div className="flex items-center gap-2 font-bold text-xs text-amber-900">
+                  <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>公开演示沙箱安全防护已生效</span>
+                </div>
+                <p className="text-[11.5px] text-amber-800 leading-relaxed">
+                  当前账号为公共演示体验环境，系统已开启凭证隔离保护。专属恢复码与密保凭证已安全锁定隐藏，禁止公开查看或重置。如需管理个人专属安全凭据，请退出后注册属于您的独立考生账号。
+                </p>
               </div>
-              <div className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200 font-mono text-sm font-bold text-slate-900 tracking-wider">
-                <span>{securityInfo?.recoveryCode || '正在生成...'}</span>
-                <span className="text-[10px] text-emerald-600 font-sans font-medium bg-emerald-50 px-1.5 py-0.5 rounded">
-                  一键应急重置
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-400 leading-relaxed">
-                📌 提示：在登录页面点击「忘记密码？」，可直接输入此救援码秒级重置新密码。请截图或抄写备份！
-              </p>
-            </div>
+            ) : (
+              <>
+                {/* 专属 8 位安全救援码卡片（默认密文脱敏，防偷窥与公开泄露） */}
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                      <KeyRound className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>专属安全救援码 (Recovery Code)</span>
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setShowRecoveryCode(prev => !prev)}
+                        className="px-2 py-1 rounded-lg bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-semibold shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
+                        title={showRecoveryCode ? '隐藏救援码' : '显示救援码'}
+                      >
+                        {showRecoveryCode ? <EyeOff className="w-3 h-3 text-slate-500" /> : <Eye className="w-3 h-3 text-slate-500" />}
+                        <span>{showRecoveryCode ? '隐藏' : '查看'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleRegenerateRecoveryCode}
+                        className="px-2 py-1 rounded-lg bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-semibold shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
+                        title="换发新的救援码"
+                      >
+                        <RefreshCw className="w-3 h-3 text-slate-500" />
+                        <span>换发</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCopyRecoveryCode}
+                        disabled={!securityInfo?.recoveryCode}
+                        className="px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold shadow-2xs transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                        title="点击复制救援码"
+                      >
+                        <Copy className="w-3 h-3 text-indigo-600" />
+                        <span>{copiedCode ? '已复制！' : '复制救援码'}</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200 font-mono text-sm font-bold text-slate-900 tracking-wider">
+                    <span>
+                      {showRecoveryCode
+                        ? (securityInfo?.recoveryCode || '未绑定救援码')
+                        : 'CF-••••-••••'}
+                    </span>
+                    <span className="text-[10px] text-emerald-600 font-sans font-medium bg-emerald-50 px-1.5 py-0.5 rounded">
+                      {showRecoveryCode ? '一键应急重置' : '密文防护中'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    📌 提示：救援码是忘记密码时的终极应急凭据。默认脱敏显示，请点击「查看」或「换发」并在安全环境下抄写备份，切勿截图公开发布！
+                  </p>
+                </div>
+              </>
+            )}
 
             {/* 安全密保问答设置 */}
             <form onSubmit={handleSaveSecuritySettings} className="space-y-3 pt-1">

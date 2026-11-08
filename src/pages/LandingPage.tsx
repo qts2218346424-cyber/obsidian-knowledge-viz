@@ -261,6 +261,124 @@ export default function LandingPage() {
   }
 
   // 3D 模式切换配置映射
+  // 工作台实景与四大学科深度联动配置字典
+  const workbenchPreviews: Record<ModeType, {
+    sidebarTitle: string
+    sidebarItems: Array<{ icon: string; title: string; badge: string; badgeColor: string }>
+    mainBadge: string
+    difficulty: string
+    mainQuestion: string
+    aiAnalysisTitle: string
+    aiAnalysisDesc: string
+    aiAnalysisCode: string
+    inspectorTitle: string
+    inspectorPercent: number
+    inspectorLabel: string
+    links: string[]
+    errorAnalysis: string
+  }> = {
+    '408': {
+      sidebarTitle: '408 核心真题题库',
+      sidebarItems: [
+        { icon: '🌲', title: '二叉平衡树 AVL 旋转', badge: '真题', badgeColor: 'text-emerald-600 bg-emerald-50' },
+        { icon: '⚙️', title: 'Cache 组相连映射机制', badge: '408', badgeColor: 'text-indigo-600 bg-indigo-50' },
+        { icon: '🔒', title: 'PV 原语与哲学家就餐', badge: '操作系统', badgeColor: 'text-amber-600 bg-amber-50' },
+        { icon: '🌐', title: 'TCP 拥塞控制慢开始', badge: '计网', badgeColor: 'text-sky-600 bg-sky-50' },
+      ],
+      mainBadge: '2023 年 408 真题 · 第 41 题',
+      difficulty: '⭐⭐⭐⭐',
+      mainQuestion: '已知二叉排序树中结点关键码各不相同，若对其进行中序遍历可得到升序序列。试分析 AVL 树插入结点失衡后的四种旋转调整策略。',
+      aiAnalysisTitle: 'AI 启发式答疑分析：',
+      aiAnalysisDesc: 'LL 旋转只需顺时针单旋一次，关键在于将被破坏平衡的根结点右子树挂接为调整后根结点的左孩子。',
+      aiAnalysisCode: '平衡因子 BF = 左子树高度 - 右子树高度 ∈ {-1, 0, 1}',
+      inspectorTitle: 'SM-2 艾宾浩斯记忆熟练度',
+      inspectorPercent: 82,
+      inspectorLabel: '熟练度: 82% · 下次复习: 3 天后',
+      links: ['[[平衡二叉树.md]]', '[[红黑树对比要点.md]]'],
+      errorAnalysis: '混淆了 LR 旋转的双旋次序（应先对左孩子左旋，再对根节点右旋）。',
+    },
+    math: {
+      sidebarTitle: '考研数学核心真题',
+      sidebarItems: [
+        { icon: '📐', title: '泰勒公式与高阶无穷小', badge: '高数', badgeColor: 'text-pink-600 bg-pink-50' },
+        { icon: '🔢', title: '实对称矩阵正交相似对角化', badge: '线代', badgeColor: 'text-indigo-600 bg-indigo-50' },
+        { icon: '🎲', title: '二维正态分布协方差与独立性', badge: '概率', badgeColor: 'text-teal-600 bg-teal-50' },
+        { icon: '📈', title: '柯西中值定理与辅助函数构造', badge: '微积分', badgeColor: 'text-orange-600 bg-orange-50' },
+      ],
+      mainBadge: '2022 年数学一真题 · 第 17 题',
+      difficulty: '⭐⭐⭐⭐⭐',
+      mainQuestion: '求极限 lim(x→0) [x - sin(x)] / x^3，并分析若使用洛必达法则可能出现的精度丢失与高阶展开陷阱。',
+      aiAnalysisTitle: 'AI 分步推导证明提示：',
+      aiAnalysisDesc: '由于分母为 x^3，对分子 sin x 必须展开至 x^3 阶：sin x = x - x^3/6 + o(x^3)。展开后直接抵消前导项，秒出结果 1/6。',
+      aiAnalysisCode: 'lim(x→0) [x - (x - x³/6 + o(x³))] / x³ = 1/6',
+      inspectorTitle: '定理掌握度与步骤熟练度',
+      inspectorPercent: 91,
+      inspectorLabel: '掌握度: 91% · 高频必考考点',
+      links: ['[[泰勒展开经典八大公式.md]]', '[[微分中值定理辅助函数.md]]'],
+      errorAnalysis: '误将 sin x 仅展开到一阶 x 导致分子被盲目消零，牢记展开原则“分母是几阶，分子就必须展到几阶”。',
+    },
+    politics: {
+      sidebarTitle: '考研政治考点集萃',
+      sidebarItems: [
+        { icon: '🏛️', title: '中国近代史四大主要矛盾', badge: '史纲', badgeColor: 'text-amber-600 bg-amber-50' },
+        { icon: '📜', title: '中共一大至七大路线演进', badge: '重大会议', badgeColor: 'text-rose-600 bg-rose-50' },
+        { icon: '🌾', title: '农村包围城市武装夺取政权', badge: '毛中特', badgeColor: 'text-emerald-600 bg-emerald-50' },
+        { icon: '⚖️', title: '矛盾普遍性与特殊性辩证法', badge: '马原', badgeColor: 'text-blue-600 bg-blue-50' },
+      ],
+      mainBadge: '肖秀荣 1000 题精粹 · 史纲多选',
+      difficulty: '⭐⭐⭐',
+      mainQuestion: '下列关于遵义会议的表述，正确阐述了其在中国共产党历史上生死攸关转折点意义的选项有哪些？',
+      aiAnalysisTitle: 'AI 时空考点穿透点拨：',
+      aiAnalysisDesc: '遵义会议集中解决了当时具有决定意义的军事问题和组织问题，结束了王明“左”倾冒险主义统治，确立了毛泽东同志在红军和党中央的领导地位。',
+      aiAnalysisCode: '核心采分点：军事与组织问题（思想问题在延安整风解决，政治路线在七大确立）',
+      inspectorTitle: '时空轴考点记忆留存率',
+      inspectorPercent: 95,
+      inspectorLabel: '留存率: 95% · 考前冲刺必备',
+      links: ['[[遵义会议历史转折.md]]', '[[中共重大会议全景轴.md]]'],
+      errorAnalysis: '误选了“全面解决了党的思想路线问题”。牢记遵义会议因处于长征战时环境，仅着重解决了军事与领导组织问题。',
+    },
+    english: {
+      sidebarTitle: '考研英语写作与长难句',
+      sidebarItems: [
+        { icon: '✍️', title: '英语一图画作文万能三段论', badge: '大作文', badgeColor: 'text-purple-600 bg-purple-50' },
+        { icon: '💌', title: '建议信与道歉信核心书信体', badge: '小作文', badgeColor: 'text-indigo-600 bg-indigo-50' },
+        { icon: '📖', title: '真题同位语与倒装长难句拆解', badge: '阅读精读', badgeColor: 'text-blue-600 bg-blue-50' },
+        { icon: '🎯', title: '大纲高频生词与熟词生义库', badge: '核心词汇', badgeColor: 'text-rose-600 bg-rose-50' },
+      ],
+      mainBadge: '历年真题实战演练 · 图画大作文',
+      difficulty: '⭐⭐⭐⭐',
+      mainQuestion: 'Write an essay based on the cartoon: Two youngsters looking at the mobile phone during dinner. 试对两代人网络生活习惯进行对比论述并给出规范主题句。',
+      aiAnalysisTitle: 'AI 智能多维批改得分（18.5 / 20.0）：',
+      aiAnalysisDesc: '首段描述生动贴切；二段运用了递进结构 "Not only does it alienate familial bond, but it also..."；建议将平庸词 "bad influence" 升级为 "detrimental repercussion"。',
+      aiAnalysisCode: '词汇升级：harmful impact → detrimental repercussion; important → pivotal / paramount',
+      inspectorTitle: '高分句型熟练度与语法评级',
+      inspectorPercent: 88,
+      inspectorLabel: '写作评级: A 等 · 智能批改耗时 ~1.2s',
+      links: ['[[考研英语作文三段论.md]]', '[[闪光词汇与高阶表达.md]]'],
+      errorAnalysis: '在定语从句中先行词为复数代词时，谓语动词遗漏了主谓一致关系，系统已高亮标出修正建议。',
+    },
+    ai: {
+      sidebarTitle: '本地智能体伴学中枢',
+      sidebarItems: [
+        { icon: '🤖', title: '本地 Claude / Codex CLI 桥接', badge: '本地优先', badgeColor: 'text-indigo-600 bg-indigo-50' },
+        { icon: '🧠', title: '多智能体辩论与答疑推导', badge: 'Agent', badgeColor: 'text-purple-600 bg-purple-50' },
+        { icon: '🔍', title: 'Obsidian 库本地向量检索', badge: 'Local-First', badgeColor: 'text-emerald-600 bg-emerald-50' },
+        { icon: '⚡', title: '极速离线 Markdown 知识网', badge: '离线就绪', badgeColor: 'text-amber-600 bg-amber-50' },
+      ],
+      mainBadge: 'CoreForge 多智能体伴学引擎',
+      difficulty: '⭐⭐⭐⭐⭐',
+      mainQuestion: '多 Agent 协同体系如何深度结合考生个人 Obsidian 笔记库，实现跨学科考点自动串联与错题归因？',
+      aiAnalysisTitle: '智能体协作流水线日志：',
+      aiAnalysisDesc: '知识检索智能体定位到 3 篇相关讲义，命题预测智能体生成 1 道变式题，批改导师实时审阅答题卡。',
+      aiAnalysisCode: 'Agent Pipeline: Retrieval → Deduction → Reasoning → Synthesis (100% 本地优先)',
+      inspectorTitle: '智能体健康度与同步状态',
+      inspectorPercent: 99,
+      inspectorLabel: '响应时间: 120ms · 本地守护进程在线',
+      links: ['[[本地优先设计规范.md]]', '[[AgentFederation协议.md]]'],
+      errorAnalysis: '未检测到任何逻辑缺陷，全流程推导通畅。',
+    },
+  }
+
   const modeConfigs = {
     '408': {
       title: '研你所学，核力致胜。',
@@ -288,7 +406,7 @@ export default function LandingPage() {
       subtitle: '考研英语 · 高分作文模板与 AI 智能多维批改。',
       badge: '当前模式：考研英语 —— 英语一图画/英语二图表万能三段论模板、20 分考研标准分换算、平庸词升级与真题长难句剖析。',
       heroSubject: '考研英语 · 全题型研学中枢与 AI 智能批改',
-      cardDetail: '建议信、道歉信、招募告示；四维阅卷 0ms 出分；2000+ 大纲核心词汇艾宾浩斯复盘。',
+      cardDetail: '建议信、道歉信、招募告示；四维极速智能精批 (~1.2s)；2000+ 大纲核心词汇艾宾浩斯复盘。',
     },
     ai: {
       title: '多 Agent 协同伴学。',
@@ -597,8 +715,8 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* 三栏式实景编辑器视窗 */}
-            <div className="grid grid-cols-12 min-h-[360px] bg-white text-[11px]">
+            {/* 三栏式实景编辑器视窗（与顶部选中科目 activeMode 实时联动） */}
+            <div className="grid grid-cols-12 min-h-[360px] bg-white text-[11px] transition-all duration-300">
               {/* 左栏：组件库 / 学科章节树 */}
               <div className="col-span-12 md:col-span-3 border-r border-zinc-200/80 p-3 bg-[#fbfbfc] flex flex-col gap-2.5">
                 <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-white border border-zinc-200 text-zinc-700">
@@ -609,27 +727,23 @@ export default function LandingPage() {
                   <span className="text-zinc-400 text-xs">⌘K</span>
                 </div>
 
-                <div className="text-[10px] text-zinc-400 font-semibold tracking-wider uppercase mt-1">
-                  核心真题题库
+                <div className="text-[10px] text-zinc-400 font-semibold tracking-wider uppercase mt-1 flex items-center justify-between">
+                  <span>{workbenchPreviews[activeMode].sidebarTitle}</span>
+                  <span className="text-[9px] text-indigo-600 bg-indigo-50 px-1 py-0.2 rounded font-mono">联动实景</span>
                 </div>
 
                 <div className="space-y-1">
-                  <div className="p-2 rounded-lg bg-zinc-100/80 border border-zinc-200/90 text-zinc-800 font-medium flex items-center justify-between">
-                    <span>🌲 二叉平衡树 AVL 旋转</span>
-                    <span className="text-[10px] text-emerald-600 bg-emerald-50 px-1 rounded">真题</span>
-                  </div>
-                  <div className="p-2 rounded-lg bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50 flex items-center justify-between">
-                    <span>⚙️ Cache 组相连映射机制</span>
-                    <span className="text-[10px] text-indigo-600 bg-indigo-50 px-1 rounded">408</span>
-                  </div>
-                  <div className="p-2 rounded-lg bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50 flex items-center justify-between">
-                    <span>📐 泰勒公式与高阶无穷小</span>
-                    <span className="text-[10px] text-sky-600 bg-sky-50 px-1 rounded">高数</span>
-                  </div>
-                  <div className="p-2 rounded-lg bg-white border border-zinc-200 text-zinc-600 hover:bg-zinc-50 flex items-center justify-between">
-                    <span>🎲 二维正态分布协方差</span>
-                    <span className="text-[10px] text-amber-600 bg-amber-50 px-1 rounded">概率</span>
-                  </div>
+                  {workbenchPreviews[activeMode].sidebarItems.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className={`p-2 rounded-lg border text-zinc-800 font-medium flex items-center justify-between transition-colors ${
+                        idx === 0 ? 'bg-zinc-100/90 border-zinc-300/80 shadow-2xs' : 'bg-white border-zinc-200 hover:bg-zinc-50'
+                      }`}
+                    >
+                      <span className="truncate pr-1">{item.icon} {item.title}</span>
+                      <span className={`text-[10px] px-1 rounded shrink-0 ${item.badgeColor}`}>{item.badge}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -638,32 +752,33 @@ export default function LandingPage() {
                 <div>
                   <div className="flex items-center gap-2 mb-3">
                     <span className="px-2 py-0.5 rounded-full bg-zinc-900 text-white font-mono text-[10px]">
-                      2023 年 408 真题 · 第 41 题
+                      {workbenchPreviews[activeMode].mainBadge}
                     </span>
-                    <span className="text-zinc-400 text-[10px]">难度：⭐⭐⭐⭐</span>
+                    <span className="text-zinc-400 text-[10px]">难度：{workbenchPreviews[activeMode].difficulty}</span>
+                    <span className="text-[9.5px] text-amber-700 bg-amber-50 border border-amber-200/80 px-1.5 py-0.2 rounded">交互实景示意</span>
                   </div>
 
                   <h3 className="text-[14px] font-semibold text-zinc-900 leading-snug mb-3">
-                    已知二叉排序树中结点关键码各不相同，若对其进行中序遍历可得到升序序列。试分析 AVL 树插入结点失衡后的四种旋转调整策略。
+                    {workbenchPreviews[activeMode].mainQuestion}
                   </h3>
 
                   {/* 步骤启发式点拨卡片 */}
                   <div className="p-3.5 rounded-xl bg-blue-50/40 border border-blue-200 space-y-2">
                     <div className="flex items-center gap-2 text-blue-900 font-semibold text-xs">
                       <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                      <span>AI 启发式答疑分析：</span>
+                      <span>{workbenchPreviews[activeMode].aiAnalysisTitle}</span>
                     </div>
                     <p className="text-zinc-700 leading-relaxed text-[11px]">
-                      LL 旋转只需顺时针单旋一次，关键在于将被破坏平衡的根结点右子树挂接为调整后根结点的左孩子。
+                      {workbenchPreviews[activeMode].aiAnalysisDesc}
                     </p>
                     <div className="p-2 rounded bg-zinc-900 text-emerald-300 font-mono text-[10px] sm:text-[10.5px] overflow-x-auto whitespace-nowrap">
-                      {'平衡因子 BF = 左子树高度 - 右子树高度 ∈ {-1, 0, 1}'}
+                      {workbenchPreviews[activeMode].aiAnalysisCode}
                     </div>
                   </div>
                 </div>
 
                 <div className="mt-4 pt-3 border-t border-zinc-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-zinc-400 text-[11px]">
-                  <span>按 ⌘+Enter 提交作答并执行 AI 批改</span>
+                  <span>已联动「{modeConfigs[activeMode].heroSubject}」· 按 ⌘+Enter 提交作答</span>
                   <button
                     onClick={() => setAuthModalOpen(true)}
                     className="text-zinc-900 font-semibold hover:underline cursor-pointer"
@@ -675,37 +790,39 @@ export default function LandingPage() {
 
               {/* 右栏：知识网络属性检查器 (Inspector) */}
               <div className="col-span-12 md:col-span-3 border-l border-zinc-200/80 p-3 bg-[#fbfbfc] flex flex-col gap-3">
-                <div className="font-semibold text-zinc-900 pb-1.5 border-b border-zinc-200">
-                  知识点属性检查器
+                <div className="font-semibold text-zinc-900 pb-1.5 border-b border-zinc-200 flex items-center justify-between">
+                  <span>知识点属性检查器</span>
+                  <span className="text-[9px] text-zinc-400 font-normal">示意图</span>
                 </div>
 
                 <div>
-                  <div className="text-zinc-400 text-[10px] mb-1">SM-2 艾宾浩斯记忆熟练度</div>
+                  <div className="text-zinc-400 text-[10px] mb-1">{workbenchPreviews[activeMode].inspectorTitle}</div>
                   <div className="w-full bg-zinc-200 h-2 rounded-full overflow-hidden">
-                    <div className="bg-emerald-500 h-full w-[82%]" />
+                    <div
+                      className="bg-emerald-500 h-full transition-all duration-500"
+                      style={{ width: `${workbenchPreviews[activeMode].inspectorPercent}%` }}
+                    />
                   </div>
                   <div className="flex justify-between text-[10px] text-zinc-500 mt-1">
-                    <span>熟练度: 82%</span>
-                    <span>下次复习: 3 天后</span>
+                    <span>{workbenchPreviews[activeMode].inspectorLabel}</span>
                   </div>
                 </div>
 
                 <div>
                   <div className="text-zinc-400 text-[10px] mb-1">Obsidian 双链网络关联</div>
                   <div className="space-y-1">
-                    <div className="px-2 py-1 rounded bg-white border border-zinc-200 text-zinc-700">
-                      🔗 [[平衡二叉树.md]]
-                    </div>
-                    <div className="px-2 py-1 rounded bg-white border border-zinc-200 text-zinc-700">
-                      🔗 [[红黑树对比要点.md]]
-                    </div>
+                    {workbenchPreviews[activeMode].links.map((link, idx) => (
+                      <div key={idx} className="px-2 py-1 rounded bg-white border border-zinc-200 text-zinc-700 truncate">
+                        🔗 {link}
+                      </div>
+                    ))}
                   </div>
                 </div>
 
                 <div>
                   <div className="text-zinc-400 text-[10px] mb-1">错因归因记录</div>
                   <div className="p-2 rounded bg-amber-50/60 border border-amber-200/80 text-amber-900 text-[10.5px]">
-                    混淆了 LR 旋转的双旋次序（应先对左孩子左旋，再对根节点右旋）。
+                    {workbenchPreviews[activeMode].errorAnalysis}
                   </div>
                 </div>
               </div>

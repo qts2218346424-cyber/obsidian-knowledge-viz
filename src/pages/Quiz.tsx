@@ -866,6 +866,26 @@ export default function Quiz() {
           </div>
         </div>
 
+        {/* 做题计费与免积分透明公示卡片 */}
+        <div className="rounded-xl border border-emerald-200/90 bg-emerald-50/70 p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-emerald-950 text-xs animate-fade-in-up">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+            <div className="leading-relaxed">
+              <span className="font-bold text-emerald-900">做题自测永久 100% 免费：</span>
+              <span className="text-emerald-800">所有统考科目刷题、组卷模考与参考解析均免费开放，不扣除任何积分！仅在主动调用 AI 导师深度答疑或 AI 变式题强化时按 0.1 积分/次扣除。</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('open-checkin-modal', { detail: { tab: 'logs' } }))
+            }}
+            className="text-[11px] font-bold text-emerald-700 underline hover:text-emerald-900 whitespace-nowrap shrink-0 cursor-pointer"
+          >
+            查阅我的积分消费明细 →
+          </button>
+        </div>
+
         {/* Resource Ingestion & Student Analytics Banner Card */}
         <div className="bento-card rounded-xl border border-neutral-200/80 bg-white shadow-xs p-5 border border-indigo-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 bg-gradient-to-r from-indigo-50/70 via-white to-blue-50/60">
           <div className="flex items-center gap-3.5">

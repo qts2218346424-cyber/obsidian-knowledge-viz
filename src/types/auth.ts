@@ -122,5 +122,6 @@ export interface SecuritySettingsResponse {
   username: string
   hasSecurityQuestion: boolean
   securityQuestion: string | null
-  recoveryCode: string
+  recoveryCode: string | null
+  isDemo?: boolean
 }

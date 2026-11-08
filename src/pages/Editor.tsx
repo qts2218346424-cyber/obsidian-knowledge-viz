@@ -437,7 +437,23 @@ export default function Editor() {
       setImportResult(null)
       setShowNewDialog(false)
     } catch {
-      setSaveMsg('加载笔记失败')
+      // 知识图谱节点指向尚未创建的考点笔记：提供高审美友好空状态与标准考纲模版引导
+      const cleanName = decodeURIComponent(filePath).split(/[\\/]/).pop()?.replace(/\.md$/i, '') || filePath
+      setCurrentFile(null)
+      setTitle(cleanName)
+      setNewFileName(cleanName)
+      setTags('考研考点, 核心精读')
+      
+      const draftTemplate = `# ${cleanName}\n\n> 🎯 **考研大纲考点精读与真题归纳**\n> - 关联科目：考研核心统考学科\n> - 来源导航：知识图谱考纲节点推荐（草稿待归档）\n\n---\n\n## 一、 核心概念与大纲要求\n- 基本定义与核心理论推导背景；\n- 统考大纲对本考点的重点考察形式（选择题 / 综合应用大题）。\n\n## 二、 核心性质与定理推导\n1. 重点算法 / 逻辑结构：\n2. 关键时空复杂度分析：\n\n## 三、 历年统考真题考法与避坑指南\n- 陷阱剖析：易混淆概念与做题误区；\n- 阅卷采分点踩分提示。\n\n## 四、 双链延伸网络\n- 关联前置考点：[[考研核心讲义]]\n- 关联真题测验：[[做题中心错题本]]\n`
+      
+      setContent(draftTemplate)
+      const nextHtml = markdownToRichHtml(draftTemplate)
+      setRichHtml(nextHtml)
+      if (richEditorRef.current) {
+        richEditorRef.current.innerHTML = nextHtml
+      }
+      setOriginalContent('')
+      setSaveMsg(`💡 考点笔记「${cleanName}」尚未收录，已自动加载考纲标准模版，点击「保存」即可一键入库！`)
     }
   }, [])
 
