@@ -25,7 +25,7 @@ import MarkdownRenderer from '../MarkdownRenderer'
 export interface FlashcardItem {
   id: string
   title: string
-  domain: 'cs_408' | 'math'
+  domain: 'cs_408' | 'math' | 'politics'
   subject: string
   chapter?: string
   front: string
@@ -55,6 +55,8 @@ const SUBJECT_OPTIONS = [
   '线性代数',
   '概率论与数理统计'
 ]
+
+const POLITICS_SUBJECT_OPTIONS = ['马克思主义基本原理', '马克思著作', '毛中特', '史纲', '时事政治']
 
 export default function FlashcardsTab() {
   const [cards, setCards] = useState<FlashcardItem[]>([])
@@ -491,6 +493,9 @@ export default function FlashcardsTab() {
             className="text-xs rounded-xl border border-cream-300 px-2.5 py-1.5 bg-white text-warm-700 focus:outline-none focus:ring-1 focus:ring-accent-orange"
           >
             <option value="all">全学科卡片</option>
+            {POLITICS_SUBJECT_OPTIONS.map(s => (
+              <option key={s} value={s}>政治 · {s}</option>
+            ))}
             {SUBJECT_OPTIONS.map(s => (
               <option key={s} value={s}>{s}</option>
             ))}
@@ -540,7 +545,7 @@ export default function FlashcardsTab() {
                 <div className="p-4 pb-2 border-b border-cream-100 flex items-center justify-between gap-2 bg-cream-50/40">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${
-                      isCs ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/60' : 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+                      isCs ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/60' : card.domain === 'politics' ? 'bg-red-50 text-red-700 border border-red-200/60' : 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
                     }`}>
                       {card.subject}
                     </span>

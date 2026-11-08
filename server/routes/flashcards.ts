@@ -4,11 +4,12 @@ import path from 'path'
 import { config, anthropic, markSelfWrite, invalidateCache } from '../context.js'
 import { createFile } from '../vault-parser.js'
 import { calculateSM2 } from '../algorithms/sm2.js'
+import { buildPoliticsFlashcards, POLITICS_FLASHCARD_SEED_VERSION } from '../data/politicsFlashcards.js'
 
 export interface FlashcardItem {
   id: string
   title: string
-  domain: 'cs_408' | 'math'
+  domain: 'cs_408' | 'math' | 'politics'
   subject: string
   chapter?: string
   front: string
@@ -229,7 +230,7 @@ const INITIAL_FLASHCARDS: FlashcardItem[] = [
   }
 ]
 
-function loadFlashcards(): FlashcardItem[] {
+function loadBaseFlashcards(): FlashcardItem[] {
   try {
     const p = getFlashcardsFilePath()
     if (!fs.existsSync(p)) {
@@ -245,6 +246,42 @@ function loadFlashcards(): FlashcardItem[] {
     return INITIAL_FLASHCARDS
   } catch {
     return INITIAL_FLASHCARDS
+  }
+}
+
+/**
+ * 增量播种考研政治预置闪卡：
+ * 仅注入从未播种过的卡片 id，并记录到 flashcards-seeded.json，
+ * 因此用户删除某张预置卡后不会在下次加载时复活，已有学习进度也不会被覆盖。
+ */
+function loadFlashcards(): FlashcardItem[] {
+  const cards = loadBaseFlashcards()
+  try {
+    const seedPath = path.join(path.dirname(getFlashcardsFilePath()), 'flashcards-seeded.json')
+    let seeded: string[] = []
+    if (fs.existsSync(seedPath)) {
+      const parsed = JSON.parse(fs.readFileSync(seedPath, 'utf8'))
+      if (Array.isArray(parsed?.ids)) seeded = parsed.ids
+    }
+    const seededSet = new Set(seeded)
+    const existing = new Set(cards.map(c => c.id))
+    const fresh = buildPoliticsFlashcards().filter(c => !seededSet.has(c.id))
+    if (fresh.length === 0) return cards
+
+    const merged = [...cards]
+    for (const c of fresh) {
+      if (!existing.has(c.id)) merged.push(c)
+      seededSet.add(c.id)
+    }
+    saveFlashcards(merged)
+    fs.writeFileSync(
+      seedPath,
+      JSON.stringify({ version: POLITICS_FLASHCARD_SEED_VERSION, ids: [...seededSet] }, null, 2),
+      'utf8'
+    )
+    return merged
+  } catch {
+    return cards
   }
 }
 
