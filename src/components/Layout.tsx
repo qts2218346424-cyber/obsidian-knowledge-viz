@@ -5,6 +5,8 @@ import {
   BookOpen,
   ClipboardList,
   ChevronDown,
+  ChevronUp,
+  ChevronRight,
   FileEdit,
   GraduationCap,
   Home,
@@ -60,8 +62,8 @@ interface NavItem {
 }
 
 const subjectSpecialties = [
-  { to: '/quiz?subject=408', label: '408 计算机专项', badge: '核心大题', emoji: '💻', desc: '数据结构 · 计组 · 操作系统 · 计网' },
-  { to: '/quiz?subject=math', label: '考研数学', badge: '数一/数二/数三', emoji: '📐', desc: '高等数学 · 线性代数 · 概率统计' },
+  { to: '/quiz?domain=cs_408', label: '408 计算机专项', badge: '核心大题', emoji: '💻', desc: '数据结构 · 计组 · 操作系统 · 计网' },
+  { to: '/quiz?domain=math', label: '考研数学', badge: '数一/数二/数三', emoji: '📐', desc: '高等数学 · 线性代数 · 概率统计' },
   { to: '/politics', label: '考研政治', badge: '肖秀荣1000题', emoji: '🏛️', desc: '史纲时空轴 · 肖秀荣1000题 · 考点收藏' },
   { to: '/english', label: '考研英语', badge: '作文批改', emoji: '📖', desc: '真题精读 · 写作批改 · 核心词库' },
 ]
@@ -109,6 +111,7 @@ export default function Layout({ children }: LayoutProps) {
   const { stats, reload: reloadStats } = useVaultStats()
   const [searchOpen, setSearchOpen] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [mobileSubjectOpen, setMobileSubjectOpen] = useState(false)
   const [subjectMenuOpen, setSubjectMenuOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const { activeModals, openModal, closeModal } = useUIModalStore()
@@ -222,6 +225,7 @@ export default function Layout({ children }: LayoutProps) {
     }
     document.title = ROUTE_PAGE_TITLES[location.pathname] || (currentPage ? `${currentPage.label} · 研核 CoreForge` : '研核 CoreForge')
     setMobileNavOpen(false)
+    setMobileSubjectOpen(false)
     setMoreOpen(false)
 
     // 核心研学空间后台闲时预取 (Idle Route Prefetching)
@@ -248,11 +252,16 @@ export default function Layout({ children }: LayoutProps) {
     }
   }, [currentPage?.label, vaultName, location.pathname])
 
+  const isSubjectActive =
+    ['/politics', '/english'].includes(location.pathname) ||
+    location.search.includes('domain=') ||
+    location.search.includes('subject=')
+
   const mobileBottomTabs = [
     { to: '/dashboard', label: '首页', icon: Home },
     { to: '/quiz', label: '做题', icon: ClipboardList },
     { to: '/chat', label: 'AI伴学', icon: Bot, isCenter: true },
-    { to: '/politics', label: '政治', icon: Landmark },
+    { to: '__subject__', label: '学科专攻', icon: GraduationCap, isSubject: true },
     { to: '__tools__', label: '全部功能', icon: LayoutGrid, isAction: true },
   ]
 
@@ -499,17 +508,8 @@ export default function Layout({ children }: LayoutProps) {
             </NavLink>
           </nav>
 
-          {/* ── 右侧极简 3 核心组件：AI 伴学直达、搜索 ⌘K、算力胶囊与用户矩阵头像 ── */}
+          {/* ── 右侧极简工具矩阵：视觉风格、搜索 ⌘K、算力积分胶囊与用户矩阵头像 ── */}
           <div className="ml-auto flex items-center gap-2 shrink-0">
-            {/* 0. 常驻 AI 伴学导师专属高亮胶囊 */}
-            <Link
-              to="/chat"
-              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold shadow-xs hover:shadow-indigo-500/25 active:scale-95 transition-all shrink-0 cursor-pointer"
-              title="考研 AI 伴学导师 · 随时答疑解惑、分步推导定理"
-            >
-              <Bot className="h-3.5 w-3.5 text-amber-300 animate-pulse" />
-              <span>AI 伴学导师</span>
-            </Link>
 
             {/* 0.1 视觉风格一键切换胶囊 (鲜艳风 / 极简风) */}
             <button
@@ -977,6 +977,40 @@ export default function Layout({ children }: LayoutProps) {
             )
           }
 
+          if ((tab as any).isSubject) {
+            const active = isSubjectActive || mobileSubjectOpen
+            return (
+              <button
+                key={tab.label}
+                type="button"
+                onClick={() => setMobileSubjectOpen(prev => !prev)}
+                className="flex flex-col items-center justify-center flex-1 py-1 select-none group cursor-pointer"
+                title="考研学科专攻：408、数学、政治、英语"
+                aria-expanded={mobileSubjectOpen}
+              >
+                <div
+                  className={`relative flex items-center justify-center w-11 h-7 rounded-xl transition-all duration-150 ${
+                    active
+                      ? isVibrant
+                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-xs scale-105'
+                        : 'bg-neutral-900 text-white shadow-xs scale-105'
+                      : 'text-neutral-500 group-active:scale-95 hover:text-neutral-700'
+                  }`}
+                >
+                  <tab.icon className="h-4 w-4" />
+                </div>
+                <span
+                  className={`text-[10px] tracking-tight mt-0.5 transition-colors flex items-center gap-0.5 ${
+                    active ? 'text-neutral-900 font-extrabold' : 'text-neutral-500 font-medium'
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  <ChevronUp className={`w-2.5 h-2.5 transition-transform duration-200 ${mobileSubjectOpen ? 'rotate-180' : ''}`} />
+                </span>
+              </button>
+            )
+          }
+
           if ((tab as any).isCenter) {
             return (
               <NavLink
@@ -1047,6 +1081,104 @@ export default function Layout({ children }: LayoutProps) {
           )
         })}
       </nav>
+
+      {/* ── 📱 移动端专属学科专攻上浮抽屉 (4大专项选择，与网页端学科专攻同步) ── */}
+      {mobileSubjectOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs transition-opacity animate-fade-in"
+            onClick={() => setMobileSubjectOpen(false)}
+          />
+          <div
+            className="fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl bg-white/95 border-t border-slate-200/90 p-4 pb-[max(1.2rem,env(safe-area-inset-bottom))] shadow-2xl backdrop-blur-2xl animate-slide-up space-y-3"
+            role="dialog"
+            aria-modal="true"
+            aria-label="选择考研学科专攻"
+          >
+            {/* 顶栏拖拽条与标题 */}
+            <div className="flex flex-col items-center gap-1.5 pb-1">
+              <div className="w-10 h-1 rounded-full bg-slate-300" />
+              <div className="w-full flex items-center justify-between px-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-base">🎓</span>
+                  <span className="text-sm font-extrabold text-slate-900">考研学科专攻</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-200/80 text-indigo-700 font-bold font-mono">
+                    4 大专项
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMobileSubjectOpen(false)}
+                  className="p-1 rounded-full text-slate-400 hover:text-slate-700 active:scale-95 cursor-pointer"
+                  aria-label="关闭学科专攻选择"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* 4 大学科卡片列表 */}
+            <div className="grid grid-cols-1 gap-2">
+              {subjectSpecialties.map(sub => {
+                const isSubActive =
+                  (sub.to === '/politics' && location.pathname === '/politics') ||
+                  (sub.to === '/english' && location.pathname === '/english') ||
+                  (location.pathname === '/quiz' && sub.to.includes('?') && location.search.includes(sub.to.split('?')[1]))
+
+                return (
+                  <Link
+                    key={sub.to}
+                    to={sub.to}
+                    onClick={() => setMobileSubjectOpen(false)}
+                    className={`flex items-center gap-3 p-3 rounded-2xl border transition-all active:scale-[0.98] cursor-pointer ${
+                      isSubActive
+                        ? isVibrant
+                          ? 'bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 border-indigo-300 shadow-sm shadow-indigo-500/10'
+                          : 'bg-indigo-50/80 border-indigo-200/90 text-indigo-950 font-bold'
+                        : isVibrant
+                          ? 'bg-white hover:bg-slate-50 border-slate-200/80 shadow-2xs'
+                          : 'bg-white hover:bg-slate-50 border-slate-200/80'
+                    }`}
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-xl shrink-0 shadow-2xs">
+                      {sub.emoji}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-1.5">
+                        <span className={`text-xs font-bold ${isSubActive ? 'text-indigo-900 font-extrabold' : 'text-slate-900'}`}>
+                          {sub.label}
+                        </span>
+                        {sub.badge && (
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-medium font-mono ${
+                            isSubActive
+                              ? 'bg-indigo-100 text-indigo-700 font-bold'
+                              : 'bg-slate-100 text-slate-600 border border-slate-200/60'
+                          }`}>
+                            {sub.badge}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                        {sub.desc}
+                      </p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                  </Link>
+                )
+              })}
+            </div>
+
+            {/* 快捷取消按钮 */}
+            <button
+              type="button"
+              onClick={() => setMobileSubjectOpen(false)}
+              className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold text-center active:scale-98 transition-all cursor-pointer"
+            >
+              取消
+            </button>
+          </div>
+        </>
+      )}
 
       {/* Floating Desktop Companion Pet */}
       {location.pathname !== '/chat' && <DesktopPet />}
