@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight,
+  BookOpen,
   CalendarClock,
   ChevronRight,
   ClipboardList,
@@ -28,6 +29,7 @@ import { useVaultHealth, useVaultStats } from '../hooks/useVaultData'
 import { QUESTION_BANK } from '../data/questions'
 import { MATH_QUESTION_BANK } from '../data/questions/math'
 import { XIAO_1000_POLITICS_QUESTIONS } from '../data/politicsQuestions'
+import { getExamCountdownDays, EXAM_TARGET_LABEL } from '../utils/examDate'
 
 function getVaultName(vaultPath?: string) {
   if (!vaultPath) return '研核知识库'
@@ -154,10 +156,10 @@ export default function Dashboard() {
   const hasConnectedVault = Boolean(stats?.connected && stats.totalNotes > 0)
   const totalQuestions = QUESTION_BANK.length + MATH_QUESTION_BANK.length + customCount
 
-  // 2026年12月19日 初试倒计时
+  // 考研初试统一倒计时
   const daysToExam = Math.max(
     0,
-    Math.ceil((new Date('2026-12-19T08:30:00').getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
+    getExamCountdownDays(),
   )
 
   const openQuickNote = () => {
@@ -295,7 +297,7 @@ export default function Dashboard() {
         {/* Top-Center Pill: 考研初试真实动态倒计时 */}
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-rose-200/80 text-xs">
           <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse shrink-0" />
-          <span className="text-zinc-600 font-medium">2026 考研初试 (12月19日) 倒计时</span>
+          <span className="text-zinc-600 font-medium">{EXAM_TARGET_LABEL} 倒计时</span>
           <span className="font-mono font-extrabold text-sm text-rose-600">{daysToExam} 天</span>
         </div>
 
@@ -446,7 +448,7 @@ export default function Dashboard() {
       </section>
 
       {/* ── Subframe Project Showcase: Dual-Core Stations ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         {/* 408 Computer Science Station Card */}
         <div className="bento-card bento-card-hover rounded-xl p-5 relative overflow-hidden group">
           {/* Top Canvas Cover */}
@@ -621,6 +623,62 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
+        {/* English Station Card */}
+        <div className="bento-card bento-card-hover rounded-xl p-5 relative overflow-hidden group">
+          <div className="rounded-lg bg-neutral-100/70 p-4 border border-neutral-200/60 mb-4 transition-colors group-hover:bg-neutral-100">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-white border border-neutral-200/80 flex items-center justify-center text-neutral-800 shadow-2xs">
+                  <BookOpen className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-neutral-900">考研英语 专项研习室</h3>
+                  <p className="text-[11px] text-neutral-400">大纲词库 · 高分作文 · AI批改</p>
+                </div>
+              </div>
+              <span className="subframe-pill text-[10.5px]">
+                全套写作模板
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="bg-white/90 rounded-md py-2 px-1 border border-neutral-200/50">
+                <div className="text-[10px] text-neutral-400 font-medium">高分模板</div>
+                <div className="text-xs font-semibold text-neutral-800 mt-0.5">图画·图表·书信</div>
+              </div>
+              <div className="bg-white/90 rounded-md py-2 px-1 border border-neutral-200/50">
+                <div className="text-[10px] text-neutral-400 font-medium">AI 智能批改</div>
+                <div className="text-xs font-semibold text-neutral-800 mt-0.5">10/20分·润色</div>
+              </div>
+              <div className="bg-white/90 rounded-md py-2 px-1 border border-neutral-200/50">
+                <div className="text-[10px] text-neutral-400 font-medium">真题与词汇</div>
+                <div className="text-xs font-semibold text-neutral-800 mt-0.5">长难句·艾宾浩斯</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-neutral-500">
+              作文四维评分与词汇升级替换
+            </div>
+            <div className="flex items-center gap-2">
+              <Link
+                to="/english"
+                className="subframe-btn-secondary h-7 px-2.5 text-[11px]"
+              >
+                看模板
+              </Link>
+              <Link
+                to="/english"
+                className="subframe-btn-black h-7 px-2.5 text-[11px]"
+              >
+                去研习 →
+              </Link>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       {/* ── Subframe Recent Notes & Tools Split ── */}

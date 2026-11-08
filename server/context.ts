@@ -213,15 +213,9 @@ export function getNotes(vaultPath?: string): VaultNote[] {
   return getUserNotes(undefined, vaultPath || config.vaultPath)
 }
 
-export function invalidateCache(key?: string) {
-  if (key) {
-    const normKey = normalizeUserCacheKey(key)
-    userNotesCache.delete(normKey)
-    userNotesCache.delete(key)
-    userNotesCache.delete(`usr_${normKey}`)
-  } else {
-    userNotesCache.clear()
-  }
+export function invalidateCache(_key?: string) {
+  // 全量清空内存级笔记缓存，确保新创建的错题、随手记、导入笔记立刻全局可见
+  userNotesCache.clear()
 }
 
 // Track files written by our app to avoid echo loops

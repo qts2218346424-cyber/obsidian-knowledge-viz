@@ -22,6 +22,7 @@ export const routeLoaders = {
   politics: () => import('./pages/Politics'),
   music: () => import('./pages/Music'),
   pomodoro: () => import('./pages/Pomodoro'),
+  english: () => import('./pages/English'),
 }
 
 // 供全局导航栏悬浮（Hover）与空闲时预热路由模块
@@ -44,6 +45,9 @@ export function prefetchRoute(routePath: string) {
       case '/history':
       case '/politics':
         routeLoaders.politics()
+        break
+      case '/english':
+        routeLoaders.english()
         break
       case '/vocabulary':
         routeLoaders.vocabulary()
@@ -77,6 +81,7 @@ const HistoryOutline = lazy(routeLoaders.historyOutline)
 const Politics = lazy(routeLoaders.politics)
 const Music = lazy(routeLoaders.music)
 const Pomodoro = lazy(routeLoaders.pomodoro)
+const English = lazy(routeLoaders.english)
 
 function PageFallback() {
   return (
@@ -113,7 +118,8 @@ function ProtectedRoutes() {
             <Route path="/study" element={<Study />} />
             <Route path="/learn" element={<Navigate to="/study" replace />} />
             <Route path="/quiz" element={<Quiz />} />
-            <Route path="/vocabulary" element={<Vocabulary />} />
+            <Route path="/vocabulary" element={<Navigate to="/english" replace />} />
+            <Route path="/english" element={<English />} />
             <Route path="/politics" element={<Politics />} />
             <Route path="/history" element={<Politics />} />
             <Route path="/music" element={<Music />} />

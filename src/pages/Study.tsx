@@ -607,7 +607,7 @@ export default function Study() {
         {/* Navigation tabs - Subframe Pill Design */}
         <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 scroll-smooth shrink-0">
           {[
-            { key: 'topology' as Tab, label: '🔥 考点拓扑', count: null },
+            { key: 'topology' as Tab, label: '🔥 考点掌握度热力图', count: null },
             { key: 'mastery' as Tab, label: '🎨 考点色谱', count: 22 },
             { key: 'flashcards' as Tab, label: '🎴 易忘闪卡', count: null },
             { key: 'handouts' as Tab, label: '📖 核心讲义', count: allHandouts.length },

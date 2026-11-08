@@ -58,6 +58,7 @@ const primaryNavItems: NavItem[] = [
   { to: '/dashboard', label: '首页', shortLabel: '首页', icon: Home, emoji: '🏠', desc: '备考驾驶舱与每日概览' },
   { to: '/quiz', label: '做题中心', shortLabel: '刷题', icon: ClipboardList, emoji: '📝', badge: '408+数学', desc: '真题精练、AI 组卷与错题本' },
   { to: '/politics', label: '考研政治', shortLabel: '政治', icon: Landmark, emoji: '🏛️', badge: '史纲+1000题', desc: '全屏时空轴、肖秀荣1000题与考点收藏' },
+  { to: '/english', label: '考研英语', shortLabel: '英语', icon: BookOpen, emoji: '📖', badge: '作文批改+真题', desc: '写作模板、AI智能批改、历年真题精读与大纲词库' },
   { to: '/study', label: '学习中心', shortLabel: '学习', icon: GraduationCap, emoji: '📚', desc: '讲义精读、闪卡记忆与掌握度' },
   { to: '/graph', label: '知识图谱', shortLabel: '图谱', icon: Network, emoji: '🕸️', desc: '全库双链网络可视化探索' },
   { to: '/editor', label: '笔记编辑', shortLabel: '笔记', icon: FileEdit, emoji: '✏️', desc: 'Markdown 写作与手写批注' },
@@ -66,7 +67,7 @@ const primaryNavItems: NavItem[] = [
 
 const moreNavItems: NavItem[] = [
   { to: '/workflow', label: '知识库整理', shortLabel: '整理', icon: Workflow, emoji: '🧭', desc: '质检、标签治理与结构优化' },
-  { to: '/vocabulary', label: '考研英语词汇', shortLabel: '词汇', icon: Languages, emoji: '📖', desc: '核心高频大纲词汇复盘' },
+  { to: '/english', label: '考研英语专区', shortLabel: '英语', icon: Languages, emoji: '📖', desc: '作文模板、AI批改、真题与大纲词汇' },
   { to: '/pomodoro', label: '专注番茄钟', shortLabel: '番茄钟', icon: Timer, emoji: '🍅', desc: '心流沉浸与时间切片' },
   { to: '/music', label: '声学专注氛围', shortLabel: '白噪音', icon: Music, emoji: '🎵', desc: '双耳节拍与白噪音音频' },
   { to: '/settings', label: '全局系统设置', shortLabel: '设置', icon: Settings, emoji: '⚙️', desc: '知识库路径与 AI 服务模型' },

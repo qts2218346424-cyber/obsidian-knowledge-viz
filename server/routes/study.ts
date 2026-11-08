@@ -522,7 +522,9 @@ studyRouter.get('/study/daily-review', (req, res) => {
 
     // 2. 深度融合 SQLite 数据库持久化错题，确保做题保存后 100% 毫秒级可见
     try {
-      const dbErrors = database.getErrorQuestions({ userId: req.user?.id })
+      const isUserAdmin = req.user?.role === 'admin'
+      const filter = isUserAdmin ? undefined : (req.user?.id ? { userId: req.user.id } : undefined)
+      const dbErrors = database.getErrorQuestions(filter)
       for (const errItem of dbErrors) {
         const dedupeKey = (errItem.question || '').slice(0, 40)
         if (dedupeKey && !seenQuestionKeys.has(dedupeKey)) {

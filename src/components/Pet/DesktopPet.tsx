@@ -1,6 +1,9 @@
-import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
 import {
+  EyeOff, useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
+import {
+  EyeOff, useLocation, useNavigate } from 'react-router-dom'
+import {
+  EyeOff,
   Clock,
   MessageSquare,
   Maximize2,
@@ -14,6 +17,9 @@ import {
 } from 'lucide-react'
 import LuluAvatar, { NAILONG_PERSONA } from './LuluAvatar'
 import {
+  EyeOff, getExamCountdownDays, EXAM_DATE_DISPLAY } from '../../utils/examDate'
+import {
+  EyeOff,
   playPetSynthSound,
   NAILONG_DIALOGUES,
   type PetMood,
@@ -55,7 +61,7 @@ const NAILONG_VOICE_PACK: PetVoiceItem[] = [
     audio: '/pets/voices/nailong_5.mp3?v=3',
   },
   {
-    text: '芜湖！你居然学了这么久，太酷啦！快看奶龙给你跳个扭屁股舞，12月19号咱们妥妥考上岸，耶！🌟',
+    text: '芜湖！你居然学了这么久，太酷啦！快看奶龙给你跳个扭屁股舞，12月26号咱们妥妥考上岸，耶！🌟',
     audio: '/pets/voices/nailong_6.mp3?v=3',
   },
 ]
@@ -277,10 +283,10 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
 
   const [isLocalModel, setIsLocalModel] = useState(true)
 
-  // 考研倒计时（12月19日初试）
+  // 考研初试统一倒计时（12月26日初试）
   const daysToExam = Math.max(
     0,
-    Math.ceil((new Date('2026-12-19T08:30:00').getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    getExamCountdownDays()
   )
 
   // 首次进入主动问候气泡
