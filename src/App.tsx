@@ -8,16 +8,70 @@ import Dashboard from './pages/Dashboard'
 import Chat from './pages/Chat'
 import Login from './pages/Login'
 
-const KnowledgeGraph = lazy(() => import('./pages/KnowledgeGraph'))
-const Workflow = lazy(() => import('./pages/Workflow'))
-const Editor = lazy(() => import('./pages/Editor'))
-const Study = lazy(() => import('./pages/Study'))
-const Settings = lazy(() => import('./pages/Settings'))
-const Quiz = lazy(() => import('./pages/Quiz'))
-const Vocabulary = lazy(() => import('./pages/Vocabulary'))
-const HistoryOutline = lazy(() => import('./pages/HistoryOutline'))
-const Music = lazy(() => import('./pages/Music'))
-const Pomodoro = lazy(() => import('./pages/Pomodoro'))
+// 路由加载器定义，支持按需加载与空闲/悬浮即时预取 (Route Prefetching)
+export const routeLoaders = {
+  knowledgeGraph: () => import('./pages/KnowledgeGraph'),
+  workflow: () => import('./pages/Workflow'),
+  editor: () => import('./pages/Editor'),
+  study: () => import('./pages/Study'),
+  settings: () => import('./pages/Settings'),
+  quiz: () => import('./pages/Quiz'),
+  vocabulary: () => import('./pages/Vocabulary'),
+  historyOutline: () => import('./pages/HistoryOutline'),
+  music: () => import('./pages/Music'),
+  pomodoro: () => import('./pages/Pomodoro'),
+}
+
+// 供全局导航栏悬浮（Hover）与空闲时预热路由模块
+export function prefetchRoute(routePath: string) {
+  try {
+    switch (routePath) {
+      case '/study':
+        routeLoaders.study()
+        break
+      case '/quiz':
+        routeLoaders.quiz()
+        break
+      case '/editor':
+        routeLoaders.editor()
+        break
+      case '/graph':
+        routeLoaders.knowledgeGraph()
+        break
+      case '/history':
+        routeLoaders.historyOutline()
+        break
+      case '/vocabulary':
+        routeLoaders.vocabulary()
+        break
+      case '/pomodoro':
+        routeLoaders.pomodoro()
+        break
+      case '/workflow':
+        routeLoaders.workflow()
+        break
+      case '/music':
+        routeLoaders.music()
+        break
+      case '/settings':
+        routeLoaders.settings()
+        break
+      default:
+        break
+    }
+  } catch {}
+}
+
+const KnowledgeGraph = lazy(routeLoaders.knowledgeGraph)
+const Workflow = lazy(routeLoaders.workflow)
+const Editor = lazy(routeLoaders.editor)
+const Study = lazy(routeLoaders.study)
+const Settings = lazy(routeLoaders.settings)
+const Quiz = lazy(routeLoaders.quiz)
+const Vocabulary = lazy(routeLoaders.vocabulary)
+const HistoryOutline = lazy(routeLoaders.historyOutline)
+const Music = lazy(routeLoaders.music)
+const Pomodoro = lazy(routeLoaders.pomodoro)
 
 function PageFallback() {
   return (

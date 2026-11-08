@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   Upload,
@@ -20,10 +20,14 @@ import {
 } from 'lucide-react'
 import WarmButton from '../components/ui/WarmButton'
 import MarkdownRenderer from '../components/MarkdownRenderer'
-import ImportResourceModal from '../components/ImportResourceModal'
 import { QUESTION_BANK, type QuizQuestion } from '../data/questions'
 import { MATH_QUESTION_BANK } from '../data/questions/math'
 import type { MathCategory, MathSubject, CsSubject, UnifiedQuestion } from '../types/subject'
+
+const ImportResourceModal = lazy(() => import('../components/ImportResourceModal'))
+
+// 内存级题库缓存，切页秒开不闪烁
+let cachedCustomQuestionsList: ActiveQuizQuestion[] | null = null
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -198,8 +202,8 @@ export default function Quiz() {
   // Results state
   const [result, setResult] = useState<QuizResult | null>(null)
 
-  // Custom import state & Modal
-  const [customQuestions, setCustomQuestions] = useState<ActiveQuizQuestion[]>([])
+  // Custom import state & Modal (优先从内存缓存中直出)
+  const [customQuestions, setCustomQuestions] = useState<ActiveQuizQuestion[]>(() => cachedCustomQuestionsList || [])
   const [importModalOpen, setImportModalOpen] = useState(false)
   const [defaultModalTab, setDefaultModalTab] = useState<'books' | 'import_quiz' | 'analytics'>('books')
   const [savingError, setSavingError] = useState(false)
@@ -214,7 +218,7 @@ export default function Quiz() {
       const res = await fetch('/api/quiz/custom')
       const data = await res.json()
       if (data.questions && Array.isArray(data.questions)) {
-        setCustomQuestions(data.questions.map((q: any) => ({
+        const mapped: ActiveQuizQuestion[] = data.questions.map((q: any) => ({
           id: q.id,
           domain: q.domain || 'math',
           subject: q.subject,
@@ -226,7 +230,9 @@ export default function Quiz() {
           answer: q.answer,
           explanation: q.explanation,
           tags: q.tags || ['用户导入'],
-        })))
+        }))
+        setCustomQuestions(mapped)
+        cachedCustomQuestionsList = mapped
       }
     } catch (err) {
       console.error('Failed to load custom questions:', err)
@@ -900,12 +906,14 @@ export default function Quiz() {
           </button>
         </div>
 
-        <ImportResourceModal
-          isOpen={importModalOpen}
-          onClose={() => setImportModalOpen(false)}
-          onQuestionsUpdated={fetchCustomQuestions}
-          defaultTab={defaultModalTab}
-        />
+        <Suspense fallback={null}>
+          <ImportResourceModal
+            isOpen={importModalOpen}
+            onClose={() => setImportModalOpen(false)}
+            onQuestionsUpdated={fetchCustomQuestions}
+            defaultTab={defaultModalTab}
+          />
+        </Suspense>
       </div>
     )
   }
@@ -1612,12 +1620,14 @@ export default function Quiz() {
           </div>
         )}
 
-        <ImportResourceModal
-          isOpen={importModalOpen}
-          onClose={() => setImportModalOpen(false)}
-          onQuestionsUpdated={fetchCustomQuestions}
-          defaultTab={defaultModalTab}
-        />
+        <Suspense fallback={null}>
+          <ImportResourceModal
+            isOpen={importModalOpen}
+            onClose={() => setImportModalOpen(false)}
+            onQuestionsUpdated={fetchCustomQuestions}
+            defaultTab={defaultModalTab}
+          />
+        </Suspense>
       </div>
     )
   }
@@ -1825,12 +1835,14 @@ export default function Quiz() {
           </WarmButton>
         </div>
 
-        <ImportResourceModal
-          isOpen={importModalOpen}
-          onClose={() => setImportModalOpen(false)}
-          onQuestionsUpdated={fetchCustomQuestions}
-          defaultTab={defaultModalTab}
-        />
+        <Suspense fallback={null}>
+          <ImportResourceModal
+            isOpen={importModalOpen}
+            onClose={() => setImportModalOpen(false)}
+            onQuestionsUpdated={fetchCustomQuestions}
+            defaultTab={defaultModalTab}
+          />
+        </Suspense>
       </div>
     )
   }

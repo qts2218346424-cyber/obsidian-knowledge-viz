@@ -32,6 +32,7 @@ import UserManagementModal from './UserManagementModal'
 import UserGuideModal from './UserGuideModal'
 import { HelpCircle } from 'lucide-react'
 import { LogOut, Users as UsersIcon, ShieldAlert as ShieldAlertIcon } from 'lucide-react'
+import { prefetchRoute } from '../App'
 
 const SearchModal = lazy(() => import('./SearchModal'))
 const AIAssistantModal = lazy(() => import('./AIAssistantModal'))
@@ -146,6 +147,29 @@ export default function Layout({ children }: LayoutProps) {
     document.title = `${currentPage?.label || '首页'} · ${vaultName} | CoreForge 研核 (408 + 考研数学)`
     setMobileNavOpen(false)
     setMoreOpen(false)
+
+    // 核心研学空间后台闲时预取 (Idle Route Prefetching)
+    // 利用空闲网络带宽提前将「做题中心」与「学习中心」缓存到浏览器，消除点击等待
+    const idleHandler =
+      (window as any).requestIdleCallback?.((deadline: any) => {
+        prefetchRoute('/quiz')
+        prefetchRoute('/study')
+        if (deadline.timeRemaining() > 10) {
+          prefetchRoute('/editor')
+        }
+      }) ??
+      setTimeout(() => {
+        prefetchRoute('/quiz')
+        prefetchRoute('/study')
+      }, 700)
+
+    return () => {
+      if ((window as any).cancelIdleCallback && typeof idleHandler === 'number') {
+        ;(window as any).cancelIdleCallback(idleHandler)
+      } else {
+        clearTimeout(idleHandler)
+      }
+    }
   }, [currentPage?.label, vaultName, location.pathname])
 
   const mobileBottomTabs = [
@@ -186,7 +210,13 @@ export default function Layout({ children }: LayoutProps) {
           {/* Desktop Primary Navigation */}
           <nav className="ml-2 2xl:ml-4 hidden flex-1 items-center justify-center gap-0.5 2xl:gap-1 xl:flex shrink-0 min-w-0" aria-label="主导航">
             {primaryNavItems.map(item => (
-              <NavLink key={item.to} to={item.to} className={({ isActive }) => navClass(isActive)}>
+              <NavLink
+                key={item.to}
+                to={item.to}
+                onPointerEnter={() => prefetchRoute(item.to)}
+                onTouchStart={() => prefetchRoute(item.to)}
+                className={({ isActive }) => navClass(isActive)}
+              >
                 {({ isActive }) => (
                   <>
                     <item.icon className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
@@ -222,6 +252,8 @@ export default function Layout({ children }: LayoutProps) {
                       <NavLink
                         key={item.to}
                         to={item.to}
+                        onPointerEnter={() => prefetchRoute(item.to)}
+                        onTouchStart={() => prefetchRoute(item.to)}
                         onClick={() => setMoreOpen(false)}
                         className={({ isActive }) => `flex items-center gap-3 rounded-xl px-3 py-2 text-xs transition-colors whitespace-nowrap ${
                           isActive ? 'bg-indigo-50 font-semibold text-indigo-700' : 'text-slate-600 hover:bg-slate-50'
@@ -373,10 +405,28 @@ export default function Layout({ children }: LayoutProps) {
                         </button>
                       )}
 
+                      {/* 空间与沙箱归属状态指示 */}
+                      <div className="px-3 py-2 my-1 rounded-xl bg-slate-50/90 border border-slate-200/80 text-[10px] space-y-1.5">
+                        <div className="flex items-center justify-between text-slate-600 font-medium">
+                          <span className="flex items-center gap-1.5 font-semibold text-slate-700">📁 笔记工作空间</span>
+                          {isAdmin ? (
+                            <span className="inline-flex items-center gap-1 text-[9px] font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded-full border border-indigo-200">● 系统核心主库 (本地同步)</span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-200">● 个人独立沙箱</span>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between text-slate-600 font-medium">
+                          <span className="flex items-center gap-1.5 font-semibold text-slate-700">🧠 专属 AI 记忆</span>
+                          <span className="inline-flex items-center gap-1 text-[9px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full border border-indigo-200">
+                            {isAdmin ? '● 全局导师 agent.md' : '● 私人独立 agent.md'}
+                          </span>
+                        </div>
+                      </div>
+
                       {isStudent && (
                         <div className="px-3 py-1.5 my-1 rounded-xl bg-amber-50/80 border border-amber-200/60 text-[10px] text-amber-800 flex items-center gap-1.5">
                           <ShieldAlertIcon className="h-3.5 w-3.5 shrink-0 text-amber-600" />
-                          <span>学生账号：可研读/刷题，已开启防误删改保护</span>
+                          <span>公共考研核心库开启防篡改只读守卫</span>
                         </div>
                       )}
 
@@ -488,6 +538,8 @@ export default function Layout({ children }: LayoutProps) {
                     <NavLink
                       key={item.to}
                       to={item.to}
+                      onPointerEnter={() => prefetchRoute(item.to)}
+                      onTouchStart={() => prefetchRoute(item.to)}
                       onClick={() => setMobileNavOpen(false)}
                       className={({ isActive }) => `flex items-center gap-2.5 rounded-2xl border p-3 transition-all active:scale-[0.98] ${
                         isActive
@@ -513,6 +565,8 @@ export default function Layout({ children }: LayoutProps) {
                     <NavLink
                       key={item.to}
                       to={item.to}
+                      onPointerEnter={() => prefetchRoute(item.to)}
+                      onTouchStart={() => prefetchRoute(item.to)}
                       onClick={() => setMobileNavOpen(false)}
                       className={({ isActive }) => `flex items-center gap-2.5 rounded-2xl border p-3 transition-all active:scale-[0.98] ${
                         isActive
@@ -573,6 +627,8 @@ export default function Layout({ children }: LayoutProps) {
           <NavLink
             key={tab.to}
             to={tab.to}
+            onPointerEnter={() => prefetchRoute(tab.to)}
+            onTouchStart={() => prefetchRoute(tab.to)}
             className="flex flex-col items-center justify-center flex-1 min-w-[56px] py-0.5 select-none group cursor-pointer"
           >
             {({ isActive }) => (

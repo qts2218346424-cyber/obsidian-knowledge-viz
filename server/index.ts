@@ -58,7 +58,21 @@ app.use((err: unknown, _req: express.Request, res: express.Response, next: expre
 // Static frontend for production (Electron or standalone)
 const distPath = path.join(__dirname, '..', 'dist')
 if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath))
+  app.use(
+    express.static(distPath, {
+      maxAge: '1y',
+      immutable: true,
+      setHeaders: (res, filePath) => {
+        // index.html 必须协商缓存，确保版本发布后用户第一时间拉取最新入口
+        if (filePath.endsWith('.html')) {
+          res.setHeader('Cache-Control', 'no-cache, must-revalidate')
+        } else {
+          // 带有 content-hash 的 JS/CSS/图片/字体设置 1 年强缓存，二次进入 0 延迟秒开
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+        }
+      },
+    })
+  )
 }
 
 // ===== Mount Modular Routers =====
