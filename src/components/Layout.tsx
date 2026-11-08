@@ -32,7 +32,7 @@ import {
 import { useVaultStats, useApiHealth } from '../hooks/useVaultData'
 import { useThemeStyle } from '../hooks/useThemeStyle'
 import { useIsMobile } from '../hooks/useIsMobile'
-import { getExamCountdownDays } from '../utils/examDate'
+import { useExamCountdown } from '../utils/examDate'
 import { useVaultEvents } from '../hooks/useVaultEvents'
 import DesktopPet from './Pet/DesktopPet'
 import { useAuth } from '../contexts/AuthContext'
@@ -104,7 +104,7 @@ function navClass(isActive: boolean) {
 export default function Layout({ children }: LayoutProps) {
   const { isVibrant, toggleThemeStyle } = useThemeStyle()
   const { isMobile } = useIsMobile()
-  const countdownDays = getExamCountdownDays()
+  const countdown = useExamCountdown()
   const location = useLocation()
   const currentPage = allNavItems.find(item => location.pathname === item.to)
   const isFullHeightPage = ['/chat', '/editor', '/graph'].includes(location.pathname)
@@ -271,24 +271,28 @@ export default function Layout({ children }: LayoutProps) {
       {/* Top Global Header */}
       <header className="sticky top-0 z-40 bg-white/90 glass-header border-b border-slate-200/80 pt-[env(safe-area-inset-top,0px)]">
         {/* ── 📱 移动端专属精炼 Header (防挤压、高审美、大单手热区) ── */}
-        <div className="flex md:hidden w-full h-12 items-center justify-between gap-1.5 px-3 max-w-full">
-          {/* 左侧：Logo + 考研倒计时金牌 */}
-          <Link to="/dashboard" className="flex items-center gap-1.5 select-none shrink min-w-0">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-neutral-950 p-1 shadow-2xs shrink-0">
-              <img src="/favicon.svg" alt="研核" className="h-full w-full object-contain" />
-            </div>
-            <div className="flex items-center gap-1 min-w-0">
-              <span className="text-[13.5px] font-extrabold tracking-tight text-neutral-900 truncate">
+        <div className="flex md:hidden w-full h-12 items-center justify-between gap-2 px-3 max-w-full">
+          {/* 左侧：Logo + 考研倒计时金牌 (绝对 shrink-0，独立保护不挤压) */}
+          <div className="flex items-center gap-2 select-none shrink-0 min-w-0">
+            <Link to="/dashboard" className="flex items-center gap-1.5 shrink-0 active:scale-95 transition-transform">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-neutral-950 p-1 shadow-2xs shrink-0">
+                <img src="/favicon.svg" alt="研核" className="h-full w-full object-contain" />
+              </div>
+              <span className="text-[14px] font-extrabold tracking-tight text-neutral-900">
                 研核
               </span>
-              <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-800 border border-amber-300/80 shadow-2xs shrink-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                {countdownDays}天
-              </span>
+            </Link>
+            <div 
+              className="inline-flex items-center gap-1 text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/10 text-amber-900 border border-amber-300/80 shadow-2xs shrink-0"
+              title={`${countdown.targetLabel}：剩余 ${countdown.days} 天`}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
+              <span className="text-amber-800 font-sans text-[10px] font-medium">考研</span>
+              <span>{countdown.days}天</span>
             </div>
-          </Link>
+          </div>
 
-          {/* 右侧：精炼工具胶囊阵列 (直达 AI 伴学 + 全站功能入口) */}
+          {/* 右侧：精炼高效工具组 (随手记 + 积分打卡 + 全局搜索) */}
           <div className="flex items-center gap-1.5 shrink-0">
             {/* 顶栏快速随手记笔记胶囊 */}
             <button
@@ -306,25 +310,11 @@ export default function Layout({ children }: LayoutProps) {
 
             <button
               type="button"
-              onClick={toggleThemeStyle}
-              className={`h-8 px-2 rounded-xl flex items-center gap-1 text-[11px] font-bold shadow-2xs active:scale-95 transition-all cursor-pointer shrink-0 ${
-                isVibrant
-                  ? 'bg-gradient-to-r from-pink-500/15 to-indigo-500/15 border border-indigo-300 text-indigo-700'
-                  : 'bg-slate-100 border border-slate-200 text-slate-600'
-              }`}
-              title={isVibrant ? '当前鲜艳风（点击切回极简）' : '当前极简风（点击切鲜艳）'}
-            >
-              <Palette className={`w-3.5 h-3.5 ${isVibrant ? 'text-indigo-600 animate-pulse' : 'text-slate-500'}`} />
-              <span>{isVibrant ? '鲜艳' : '极简'}</span>
-            </button>
-
-            <button
-              type="button"
               onClick={() => {
                 setCheckinTab('checkin')
                 setCheckinOpen(true)
               }}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded-xl bg-amber-50 border border-amber-200/90 text-amber-800 text-[11px] font-bold shadow-2xs active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-xl bg-amber-50 border border-amber-200/90 text-amber-800 text-[11px] font-bold shadow-2xs active:scale-95 cursor-pointer shrink-0"
               title="签到打卡领积分"
             >
               <Coins className="w-3.5 h-3.5 text-amber-600" />
@@ -338,20 +328,10 @@ export default function Layout({ children }: LayoutProps) {
                 openModal('search')
               }}
               aria-label="搜索"
-              className="w-8 h-8 inline-flex items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:text-slate-900 active:scale-95 cursor-pointer"
+              title="全站搜索"
+              className="w-8 h-8 inline-flex items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:text-slate-900 active:scale-95 cursor-pointer shrink-0"
             >
               <Search className="w-3.5 h-3.5" />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setMobileNavOpen(true)}
-              aria-label="全站功能与工具箱"
-              title="查看全站所有功能矩阵"
-              className="h-8 px-2 inline-flex items-center justify-center gap-1 rounded-xl bg-neutral-900 text-white shadow-xs active:scale-95 cursor-pointer"
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span className="text-[10px] font-bold">功能</span>
             </button>
           </div>
         </div>

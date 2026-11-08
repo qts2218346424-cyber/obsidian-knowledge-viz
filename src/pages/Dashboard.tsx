@@ -34,7 +34,7 @@ import MobileDashboardView from '../components/mobile/MobileDashboardView'
 import { QUESTION_BANK } from '../data/questions'
 import { MATH_QUESTION_BANK } from '../data/questions/math'
 import { XIAO_1000_POLITICS_QUESTIONS } from '../data/politicsQuestions'
-import { getExamCountdownDays, EXAM_TARGET_LABEL } from '../utils/examDate'
+import { useExamCountdown } from '../utils/examDate'
 
 function getVaultName(vaultPath?: string) {
   if (!vaultPath) return '研核知识库'
@@ -205,10 +205,8 @@ export default function Dashboard() {
   const totalQuestions = QUESTION_BANK.length + MATH_QUESTION_BANK.length + customCount
 
   // 考研初试统一倒计时
-  const daysToExam = Math.max(
-    0,
-    getExamCountdownDays(),
-  )
+  const countdown = useExamCountdown()
+  const daysToExam = countdown.days
 
   const openQuickNote = () => {
     window.dispatchEvent(new CustomEvent('open-quick-note'))
@@ -391,7 +389,7 @@ export default function Dashboard() {
         {/* Top-Center Pill: 考研初试真实动态倒计时 */}
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-rose-200/80 text-xs">
           <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse shrink-0" />
-          <span className="text-zinc-600 font-medium">{EXAM_TARGET_LABEL} 倒计时</span>
+          <span className="text-zinc-600 font-medium">{countdown.targetLabel} 倒计时</span>
           <span className="font-mono font-extrabold text-sm text-rose-600">{daysToExam} 天</span>
         </div>
 

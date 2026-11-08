@@ -16,7 +16,7 @@ import {
   EyeOff,
 } from 'lucide-react'
 import LuluAvatar, { NAILONG_PERSONA } from './LuluAvatar'
-import { getExamCountdownDays, EXAM_DATE_DISPLAY } from '../../utils/examDate'
+import { useExamCountdown, EXAM_DATE_DISPLAY } from '../../utils/examDate'
 import {
   playPetSynthSound,
   NAILONG_DIALOGUES,
@@ -439,10 +439,8 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
   const [isLocalModel, setIsLocalModel] = useState(true)
 
   // 考研初试统一倒计时（12月19日初试）
-  const daysToExam = Math.max(
-    0,
-    getExamCountdownDays()
-  )
+  const countdown = useExamCountdown()
+  const daysToExam = countdown.days
 
   // 首次进入主动问候气泡
   useEffect(() => {

@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   Flame,
@@ -24,7 +24,7 @@ import {
   Activity,
   ShieldAlert,
 } from 'lucide-react'
-import { getExamCountdownDays, EXAM_TARGET_LABEL } from '../../utils/examDate'
+import { useExamCountdown } from '../../utils/examDate'
 import { Palette } from 'lucide-react'
 import { useThemeStyle } from '../../hooks/useThemeStyle'
 
@@ -56,7 +56,8 @@ export default function MobileDashboardView({
   onOpenQuickNote,
 }: MobileDashboardViewProps) {
   const navigate = useNavigate()
-  const countdownDays = getExamCountdownDays()
+  const countdown = useExamCountdown()
+  const countdownDays = countdown.days
   const { isVibrant, toggleThemeStyle } = useThemeStyle()
 
   // 问候语
@@ -129,9 +130,9 @@ export default function MobileDashboardView({
             <div>
               <div className="text-[10px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1">
                 <Calendar className="w-3 h-3 text-amber-400" />
-                <span>{EXAM_TARGET_LABEL}</span>
+                <span>{countdown.targetLabel}</span>
               </div>
-              <p className="text-[11px] text-slate-400 mt-0.5 font-medium">12月19日 政治统考开考</p>
+              <p className="text-[11px] text-slate-400 mt-0.5 font-medium">{countdown.displayDate} 政治统考开考</p>
             </div>
             <div className="flex items-baseline gap-1 text-right">
               <span className="text-[11px] text-amber-300 font-bold">倒计时</span>
