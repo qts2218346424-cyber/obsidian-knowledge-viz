@@ -1,5 +1,6 @@
 import { avlTreeCourseware } from '../data/coursewares/avlTree'
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
 import {
@@ -29,6 +30,8 @@ import {
   KeyRound,
   HelpCircle,
   ShieldAlert,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { getSecurityQuestion, resetPassword } from '../services/auth'
@@ -69,6 +72,27 @@ export default function LandingPage() {
   const [previewTab, setPreviewTab] = useState<'interactive' | 'workbench'>('interactive')
   // 政治时空大屏试玩当前选中的节点索引 (0: 1851 金田起义, 1: 1935 遵义会议, 2: 1945 中共七大)
   const [politicsDemoIdx, setPoliticsDemoIdx] = useState(0)
+
+  // 🎮 手机/全平台试玩全屏沉浸视窗显隐
+  const [fullScreenSandbox, setFullScreenSandbox] = useState(false)
+
+  // 监听全屏试玩时的背景滚动锁定与 Esc 退出
+  useEffect(() => {
+    if (!fullScreenSandbox) return
+    const origOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setFullScreenSandbox(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.body.style.overflow = origOverflow
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [fullScreenSandbox])
 
   // 下载信息与二维码
   const [downloadInfo, setDownloadInfo] = useState<DownloadInfo | null>(null)
@@ -704,6 +728,29 @@ export default function LandingPage() {
 
       {/*  */}
       <section id="preview" className="max-w-[1280px] mx-auto px-4 sm:px-8 pb-20">
+        {/* 📱 手机端专属沉浸全屏试玩推荐横幅 */}
+        <div className="sm:hidden mb-3 p-3 rounded-2xl bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 text-white border border-indigo-400/40 flex items-center justify-between gap-2 shadow-md">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="text-xl">🎮</span>
+            <div className="min-w-0">
+              <div className="text-xs font-bold text-white flex items-center gap-1.5 truncate">
+                <span>手机端沉浸全屏试玩</span>
+                <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-amber-400 text-amber-950 font-extrabold">推荐</span>
+              </div>
+              <div className="text-[10px] text-indigo-200/90 truncate">画布宽广 · 无黑边截断 · 顺畅滑动</div>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFullScreenSandbox(true)}
+            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-500 to-sky-500 hover:from-indigo-600 hover:to-sky-600 text-white text-xs font-extrabold shadow-sm active:scale-95 transition-all flex items-center gap-1 shrink-0 cursor-pointer"
+            title="一键全屏打开试玩功能"
+          >
+            <Maximize2 className="w-3.5 h-3.5" />
+            <span>全屏打开</span>
+          </button>
+        </div>
+
         {/* 试玩模式与视窗切换药丸控制栏 */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">
@@ -758,17 +805,28 @@ export default function LandingPage() {
                 <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span className="text-[10px] sm:text-[11px]">{modeConfigs[activeMode].heroSubject}</span>
               </div>
-              <div className="hidden md:flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
-                  onClick={() => {
-                    if (isAuthenticated) navigate('/dashboard')
-                    else setAuthModalOpen(true)
-                  }}
-                  className="px-2.5 py-0.5 rounded bg-zinc-900 text-white font-medium text-[10px] hover:bg-zinc-800 transition-colors cursor-pointer"
+                  onClick={() => setFullScreenSandbox(true)}
+                  className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 font-bold text-[10.5px] transition-all active:scale-95 flex items-center gap-1 cursor-pointer"
+                  title="全屏沉浸试玩（无黑边截断，大屏操作更舒适）"
                 >
-                  进入完整工作台 →
+                  <Maximize2 className="w-3 h-3 text-indigo-600" />
+                  <span>全屏试玩</span>
                 </button>
+                <div className="hidden md:flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isAuthenticated) navigate('/dashboard')
+                      else setAuthModalOpen(true)
+                    }}
+                    className="px-2.5 py-0.5 rounded bg-zinc-900 text-white font-medium text-[10px] hover:bg-zinc-800 transition-colors cursor-pointer"
+                  >
+                    进入完整工作台 →
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -818,7 +876,7 @@ export default function LandingPage() {
                       </div>
 
                       {/* 3 个试玩节点横向切换条 */}
-                      <div className="grid grid-cols-3 gap-2.5 my-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 my-3 sm:my-4">
                         {[
                           { year: 1851, title: '金田起义与太平天国', city: '广西桂平', tag: '旧民主主义' },
                           { year: 1935, title: '遵义会议伟大转折', city: '贵州遵义', tag: '生死攸关' },
@@ -1803,6 +1861,230 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+      {/* ── 📱 全屏沉浸式试玩视窗模态框 (document.body Portal) ── */}
+      {fullScreenSandbox && createPortal(
+        <div 
+          className="fixed inset-0 z-[100] bg-slate-950 flex flex-col w-screen h-dvh overflow-hidden select-none animate-in fade-in zoom-in-95 duration-200"
+          role="dialog"
+          aria-modal="true"
+        >
+          {/* 全屏顶栏 */}
+          <div className="h-13 px-3 sm:px-5 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 flex items-center justify-between shrink-0 pt-[env(safe-area-inset-top,0px)]">
+            {/* 左侧：Logo + 标题 */}
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-neutral-900 p-1 border border-slate-700 shrink-0">
+                <img src="/favicon.svg" alt="研核" className="h-full w-full object-contain" />
+              </div>
+              <span className="font-extrabold text-white text-xs sm:text-sm truncate">
+                沉浸试玩实验室
+              </span>
+              <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                免登录免注册
+              </span>
+            </div>
+
+            {/* 中间：学科切换胶囊 */}
+            <div className="flex items-center gap-1 p-0.5 rounded-xl bg-slate-800/80 border border-slate-700 text-xs">
+              <button
+                type="button"
+                onClick={() => setActiveMode('408')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  activeMode === '408' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                408 树形仿真
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveMode('politics')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  activeMode === 'politics' ? 'bg-amber-500 text-slate-950 font-black shadow-xs' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                史纲时空
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveMode('english')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  activeMode === 'english' ? 'bg-sky-500 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                英语批改
+              </button>
+            </div>
+
+            {/* 右侧：横屏提示 + 退出全屏按钮 */}
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-[11px] text-slate-400 hidden lg:inline">
+                💡 手机横屏操作更自如 · 支持双指缩放与拖动
+              </span>
+              <button
+                type="button"
+                onClick={() => setFullScreenSandbox(false)}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs font-bold transition-all active:scale-95 cursor-pointer shrink-0"
+                title="退出全屏试玩 (或按 ESC 键)"
+              >
+                <Minimize2 className="w-3.5 h-3.5" />
+                <span>退出全屏</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 全屏主体试玩内容 */}
+          <div className="flex-1 w-full min-h-0 bg-slate-950 relative overflow-hidden flex flex-col">
+            {activeMode === '408' ? (
+              <div className="w-full h-full flex flex-col overflow-hidden">
+                <iframe
+                  srcDoc={avlTreeCourseware.embedHtml}
+                  title="AVL 树全屏沉浸仿真课件"
+                  className="w-full flex-1 border-0 bg-transparent"
+                  sandbox="allow-scripts allow-same-origin"
+                />
+              </div>
+            ) : activeMode === 'politics' ? (
+              <div className="w-full h-full overflow-y-auto p-4 sm:p-6 bg-[#070b14] text-slate-100 flex flex-col justify-between">
+                <div>
+                  <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-amber-500/20">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
+                      <span className="font-bold text-amber-300 text-base tracking-wide">
+                        考研政治 · 史纲近代全景时空 (全屏试玩版)
+                      </span>
+                      <span className="text-xs text-amber-400/80 border border-amber-500/30 px-2 py-0.5 rounded-full">
+                        肖秀荣 1000 题考点实时联动
+                      </span>
+                    </div>
+                    <span className="text-xs text-slate-400">
+                      试玩核心 3 大转折节点 · 完整工作台收录 1840~2024 近代全史
+                    </span>
+                  </div>
+
+                  {/* 3 个试玩节点 */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 my-4">
+                    {[
+                      { year: 1851, title: '金田起义与太平天国', city: '广西桂平', tag: '旧民主主义' },
+                      { year: 1935, title: '遵义会议伟大转折', city: '贵州遵义', tag: '生死攸关' },
+                      { year: 1945, title: '中共七大与思想确立', city: '陕西延安', tag: '毛泽东思想' },
+                    ].map((node, idx) => (
+                      <button
+                        key={node.year}
+                        type="button"
+                        onClick={() => setPoliticsDemoIdx(idx)}
+                        className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                          politicsDemoIdx === idx
+                            ? 'bg-amber-500/20 border-amber-400 text-white shadow-[0_0_20px_rgba(245,158,11,0.25)]'
+                            : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700'
+                        }`}
+                      >
+                        <div className="text-base font-black font-mono text-amber-400">{node.year} 年</div>
+                        <div className="text-xs sm:text-sm font-bold text-white mt-1 truncate">{node.title}</div>
+                        <div className="text-[11px] text-slate-400 mt-1.5 flex items-center justify-between">
+                          <span>📍 {node.city}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-amber-300">{node.tag}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* 选中的节点深度考点卡 */}
+                  <div className="rounded-2xl border border-amber-500/30 bg-slate-900/80 p-4 sm:p-5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs sm:text-sm font-bold text-amber-300 flex items-center gap-1.5">
+                        <span>📜 肖秀荣 1000 题核心命题眼与陷阱解析</span>
+                      </span>
+                      <span className="text-xs font-mono text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-lg border border-amber-500/20">
+                        {politicsDemoIdx === 0
+                          ? '纲领对比: 天朝田亩制度 vs 资政新篇'
+                          : politicsDemoIdx === 1
+                          ? '转折标志: 军事与组织领导地位确立'
+                          : '思想里程碑: 毛泽东思想写入党章'}
+                      </span>
+                    </div>
+
+                    <p className="text-xs sm:text-sm text-slate-200 leading-relaxed font-sans">
+                      {politicsDemoIdx === 0
+                        ? '《天朝田亩制度》是最能体现太平天国农民战争特点的纲领性文件，具有绝对平均主义空想色彩；《资政新篇》是中国近代历史上第一个比较系统的发展资本主义的方案，但未能付诸实施。'
+                        : politicsDemoIdx === 1
+                        ? '遵义会议集中解决了当时具有决定意义的军事问题和组织问题，结束了王明“左”倾冒险主义在党中央的统治，事实上确立了毛泽东同志在党中央和红军的领导地位，是中国共产党第一次独立自主地运用马克思主义原理解决自己的路线问题。'
+                        : '中共七大总结了中国新民主主义革命二十多年曲折发展的历史经验，制定了正确的政治路线，把毛泽东思想确立为全党的指导思想并写入党章，为争取抗日战争的彻底胜利奠定了思想基础。'}
+                    </p>
+
+                    <div className="p-3 rounded-xl bg-black/40 border border-white/5 text-xs text-amber-200/90 font-mono">
+                      考题陷阱提示：{politicsDemoIdx === 0
+                        ? '易混淆点：《资政新篇》没有涉及农民土地问题，并非农民战争的直接产物。'
+                        : politicsDemoIdx === 1
+                        ? '易混淆点：遵义会议并未解决思想路线问题（思想问题在延安整风中解决）。'
+                        : '易混淆点：中共七大确立毛泽东思想为指导思想，八大开始探索社会主义建设道路。'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400 mt-4">
+                  <span>已载入 3D 矢量中国地图高精度时空坐标</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFullScreenSandbox(false)
+                      if (isAuthenticated) navigate('/politics')
+                      else setAuthModalOpen(true)
+                    }}
+                    className="text-amber-400 hover:text-amber-300 font-bold underline cursor-pointer"
+                  >
+                    解锁完整时空大屏 →
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="w-full h-full overflow-y-auto p-4 sm:p-6 bg-slate-900 text-white flex flex-col justify-between">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-indigo-500/20">
+                    <span className="font-bold text-indigo-300 text-base">考研英语 · 20 分制 AI 智能批改示范 (全屏版)</span>
+                    <span className="text-xs text-indigo-400 bg-indigo-500/20 px-2 py-0.5 rounded-lg">~1.2s 极速精批</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                      <span className="text-slate-400 font-bold">考生原始作答草稿：</span>
+                      <p className="font-mono text-slate-300 leading-relaxed text-xs">
+                        "As is vividly depicted in the cartoon, two individuals are standing at a crossroads. Many people lose their minds in smartphones. I think it is very good if government can help us make better rules."
+                      </p>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-indigo-950/60 border border-indigo-500/30 space-y-2">
+                      <span className="text-amber-300 font-bold">AI 20 分制深度诊断与词汇升级：</span>
+                      <p className="font-mono text-indigo-200 leading-relaxed text-xs">
+                        得分：18.5 / 20.0 (一档良好)<br />
+                        平庸词升级：<br />
+                        • very good → of paramount importance<br />
+                        • I think → I harbor the firm conviction that<br />
+                        • lose minds → succumb to digital distraction
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400 mt-4">
+                  <span>支持拍照 OCR 录入、历年图画/图表真题模板对比</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFullScreenSandbox(false)
+                      if (isAuthenticated) navigate('/english')
+                      else setAuthModalOpen(true)
+                    }}
+                    className="text-indigo-400 hover:text-indigo-300 font-bold underline cursor-pointer"
+                  >
+                    进入完整英语作文研学舱 →
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
+
     </div>
   )
 }

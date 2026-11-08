@@ -194,6 +194,44 @@ export const avlTreeCourseware: InteractiveCoursewareItem = {
     color: var(--text-secondary);
   }
   .stat-pill b { color: var(--accent); }
+
+  @media (max-width: 768px) {
+    body {
+      padding: 10px;
+      height: auto;
+      min-height: 100%;
+      overflow-x: auto;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+      padding-bottom: 8px;
+      margin-bottom: 8px;
+    }
+    h1 {
+      font-size: 13.5px;
+    }
+    .layout {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 100%;
+    }
+    .panel {
+      padding: 10px;
+      overflow: visible;
+      max-height: none;
+    }
+    .canvas-panel {
+      min-height: 400px;
+      height: 400px;
+      overflow: hidden;
+      border-radius: 12px;
+    }
+  }
 </style>
 </head>
 <body>
