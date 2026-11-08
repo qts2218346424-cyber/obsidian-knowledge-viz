@@ -1,3 +1,4 @@
+import ChinaHistoricalMap from '../components/ChinaHistoricalMap'
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import {
   Landmark,
@@ -641,107 +642,13 @@ export default function Politics() {
                   </span>
                 </div>
 
-                {/* 矢量发光中国地图画布 */}
-                <div className="relative my-2 flex-1 flex items-center justify-center">
-                  <svg
-                    viewBox="0 0 800 600"
-                    className="w-full h-full max-h-[380px] drop-shadow-[0_0_20px_rgba(56,189,248,0.15)] select-none"
-                  >
-                    {/* 背景科技网格 */}
-                    <defs>
-                      <pattern id="radarGrid" width="40" height="40" patternUnits="userSpaceOnUse">
-                        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
-                      </pattern>
-                      <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
-                        <stop offset="0%" stopColor="rgba(239, 68, 68, 0.25)" />
-                        <stop offset="100%" stopColor="rgba(10, 15, 29, 0)" />
-                      </radialGradient>
-                    </defs>
-                    <rect width="800" height="600" fill="url(#radarGrid)" />
-
-                    {/* 中国地图简化写意轮廓 (包含主要国界特征与海岸线) */}
-                    <path
-                      d="M 170 180 Q 230 110, 310 130 T 420 120 T 520 100 T 640 120 T 700 170 T 680 240 T 620 280 T 640 350 T 580 430 T 540 500 T 460 520 T 400 480 T 310 470 T 240 430 T 180 370 T 140 280 Z"
-                      fill="#121829"
-                      stroke="#1e293b"
-                      strokeWidth="2"
-                    />
-                    <path
-                      d="M 230 180 L 330 220 L 420 260 L 520 320 L 590 380 L 560 450 L 460 470 L 380 430 L 300 370 L 220 280 Z"
-                      fill="none"
-                      stroke="rgba(56,189,248,0.2)"
-                      strokeWidth="1.2"
-                      strokeDasharray="4 4"
-                    />
-
-                    {/* 长江与黄河写意水系光带 */}
-                    <path
-                      d="M 240 330 Q 340 300, 440 330 T 580 340 T 630 350"
-                      fill="none"
-                      stroke="rgba(56,189,248,0.3)"
-                      strokeWidth="2"
-                    />
-                    <path
-                      d="M 260 260 Q 360 230, 430 250 T 530 240 T 610 230"
-                      fill="none"
-                      stroke="rgba(245,158,11,0.25)"
-                      strokeWidth="1.8"
-                    />
-
-                    {/* 预设各大主要历史名城背景常驻点 */}
-                    {[
-                      { name: '北京', x: 530, y: 190 },
-                      { name: '南京', x: 580, y: 340 },
-                      { name: '上海', x: 620, y: 350 },
-                      { name: '广州', x: 510, y: 490 },
-                      { name: '武昌', x: 510, y: 360 },
-                      { name: '延安', x: 440, y: 250 },
-                      { name: '遵义', x: 410, y: 410 },
-                      { name: '西柏坡', x: 490, y: 220 },
-                      { name: '沈阳', x: 620, y: 150 },
-                      { name: '桂平金田', x: 480, y: 480 },
-                      { name: '井冈山', x: 520, y: 420 },
-                      { name: '瑞金', x: 540, y: 430 },
-                    ].map((city) => (
-                      <g key={city.name} className="opacity-45 hover:opacity-100 transition-opacity">
-                        <circle cx={city.x} cy={city.y} r="2.5" fill="#64748b" />
-                        <text x={city.x + 5} y={city.y + 3} fill="#64748b" fontSize="9" fontFamily="sans-serif">
-                          {city.name}
-                        </text>
-                      </g>
-                    ))}
-
-                    {/* 当前活跃年份城市的大型发光涟漪与地标 Pin */}
-                    {(() => {
-                      const coords = activeItem?.coordinates || [116.4, 39.9]
-                      // 投影算法：将经纬度转化为 800x600 视图坐标
-                      const px = Math.min(740, Math.max(120, ((coords[0] - 78) / (132 - 78)) * 640 + 80))
-                      const py = Math.min(540, Math.max(80, 560 - ((coords[1] - 19) / (52 - 19)) * 480))
-
-                      return (
-                        <g>
-                          {/* 扩散光晕 */}
-                          <circle cx={px} cy={py} r="28" fill="url(#centerGlow)" className="animate-pulse" />
-                          <circle cx={px} cy={py} r="16" fill="none" stroke="#ef4444" strokeWidth="1.5" opacity="0.6">
-                            <animate attributeName="r" values="8;24;36" dur="2s" repeatCount="indefinite" />
-                            <animate attributeName="opacity" values="0.8;0.3;0" dur="2s" repeatCount="indefinite" />
-                          </circle>
-                          <circle cx={px} cy={py} r="5" fill="#f59e0b" stroke="#fff" strokeWidth="2" />
-
-                          {/* 坐标悬浮卡牌 */}
-                          <g transform={`translate(${px - 55}, ${py - 48})`}>
-                            <rect width="110" height="34" rx="8" fill="#1e293b" stroke="#ef4444" strokeWidth="1.5" />
-                            <text x="55" y="16" fill="#fca5a5" fontSize="10" fontWeight="bold" textAnchor="middle">
-                              📍 {activeItem?.cityName || '历史坐标'}
-                            </text>
-                            <text x="55" y="27" fill="#94a3b8" fontSize="8" textAnchor="middle">
-                              {activeItem?.date}
-                            </text>
-                          </g>
-                        </g>
-                      )
-                    })()}
-                  </svg>
+                {/* 阿里 DataV 阿里标准高精矢量发光中国地图 */}
+                <div className="relative my-2 flex-1 flex items-center justify-center min-h-[340px]">
+                  <ChinaHistoricalMap
+                    activeCoordinates={activeItem?.coordinates}
+                    activeCityName={activeItem?.cityName}
+                    activeDate={activeItem?.date}
+                  />
                 </div>
 
                 {/* 地图下方空间位置说明与肖秀荣千题直达按钮 */}

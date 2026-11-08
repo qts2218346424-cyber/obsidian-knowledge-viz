@@ -174,7 +174,7 @@ export default function Layout({ children }: LayoutProps) {
   }, [openModal, closeModal, activeModals])
 
   useEffect(() => {
-    document.title = `${currentPage?.label || '首页'} · ${vaultName} | CoreForge 研核 (408 + 考研数学)`
+    document.title = '研核'
     setMobileNavOpen(false)
     setMoreOpen(false)
 
@@ -222,9 +222,8 @@ export default function Layout({ children }: LayoutProps) {
             </div>
             <div className="flex items-center gap-1.5 min-w-0">
               <span className="text-[14px] sm:text-[15px] font-bold tracking-tight text-neutral-900 whitespace-nowrap">
-                CoreForge
+                研核
               </span>
-              <span className="text-xs font-semibold text-neutral-500 whitespace-nowrap">研核</span>
               <div 
                 className="hidden sm:inline-flex items-center gap-1.5 subframe-pill text-[10.5px] px-2 py-0.5"
                 title={connected ? `知识库已连接：共 ${noteCount ?? 0} 篇笔记` : '知识库离线'}

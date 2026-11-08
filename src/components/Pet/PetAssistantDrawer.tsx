@@ -492,7 +492,7 @@ export default function PetAssistantDrawer({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-bold text-warm-900 dark:text-slate-100 text-sm">{(PET_PERSONAS[getSavedPetTheme()]?.name || '奶龙')} · 考研伴学与笔记管家</h3>
+              <h3 className="font-bold text-warm-900 dark:text-slate-100 text-sm">奶龙 · 考研伴学与笔记管家</h3>
               <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${activeAgent.badgeClass}`}>
                 {activeAgent.icon} {activeAgent.title}
               </span>

@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react'
+import { Suspense, lazy, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AudioProvider } from './contexts/AudioContext'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
@@ -128,6 +128,17 @@ function ProtectedRoutes() {
 }
 
 function App() {
+  useEffect(() => {
+    // 立即在后台静默预热政治专区与做题中心，彻底消除导航点击延迟感
+    const timer = setTimeout(() => {
+      try {
+        prefetchRoute('/politics')
+        prefetchRoute('/quiz')
+      } catch {}
+    }, 150)
+    return () => clearTimeout(timer)
+  }, [])
+
   return (
     <AuthProvider>
       <AudioProvider>

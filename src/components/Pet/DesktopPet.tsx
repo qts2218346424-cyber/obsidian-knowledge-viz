@@ -5,7 +5,6 @@ import {
   MessageSquare,
   Maximize2,
   Minimize2,
-  Palette,
   Bot,
   Volume2,
   VolumeX,
@@ -13,7 +12,7 @@ import {
   Utensils,
   Award,
 } from 'lucide-react'
-import LuluAvatar, { PET_PERSONAS, getSavedPetTheme, type LuluTheme } from './LuluAvatar'
+import LuluAvatar, { NAILONG_PERSONA } from './LuluAvatar'
 import {
   playPetSynthSound,
   NAILONG_DIALOGUES,
@@ -34,54 +33,32 @@ interface PetVoiceItem {
   audio: string
 }
 
-const PET_VOICE_PACKS: Record<LuluTheme, PetVoiceItem[]> = {
-  yellow: [
-    {
-      text: '哈哈哈好痒呀！别戳俺的大肚皮，再戳俺就要变成小黄球滚走咯~ 🐲✨',
-      audio: '/pets/voices/nailong_1.mp3?v=3',
-    },
-    {
-      text: '我是奶龙！咦——？一加一等于几来着？等于两个大鸡腿！跟着奶龙混，高数408全都稳过哟！🍗',
-      audio: '/pets/voices/nailong_2.mp3?v=3',
-    },
-    {
-      text: '啊呜——！香迷糊了！大鸡腿配高数真题，越啃越有劲，啊呜一口全吃掉！😋',
-      audio: '/pets/voices/nailong_3.mp3?v=3',
-    },
-    {
-      text: '哼哼，我才是真的奶龙！你看我圆滚滚的大肚子，里面装的全是一战成硕的秘籍哟！💪',
-      audio: '/pets/voices/nailong_4.mp3?v=3',
-    },
-    {
-      text: '呼噜噜……啊？我没睡着，我才没流口水呢！我刚刚是在闭着眼睛帮你想难题呢，信奶龙一回嘛~ 🫧',
-      audio: '/pets/voices/nailong_5.mp3?v=3',
-    },
-    {
-      text: '芜湖！你居然学了这么久，太酷啦！快看奶龙给你跳个扭屁股舞，12月19号咱们妥妥考上岸，耶！🌟',
-      audio: '/pets/voices/nailong_6.mp3?v=3',
-    },
-  ],
-  pink: [
-    {
-      text: '咕噜噜~ 头顶小橘子稳稳当当，祝你心态超稳，「橘」定上岸哟！🍊',
-      audio: '/pets/voices/lulu_1.mp3?v=2',
-    },
-    {
-      text: '摸摸水豚头，做题不用愁，深呼吸慢慢推导吧~ 🌿',
-      audio: '/pets/voices/lulu_2.mp3?v=2',
-    },
-  ],
-  purple: [
-    {
-      text: '收到召唤啦！学妹小核抱着错题本为你全力应援，冲鸭！🎀📖',
-      audio: '/pets/voices/xiaohe_1.mp3?v=2',
-    },
-    {
-      text: '遇到卡壳的知识点别着急，随时点开伴学空间问我哟！✨',
-      audio: '/pets/voices/xiaohe_2.mp3?v=2',
-    },
-  ],
-}
+const NAILONG_VOICE_PACK: PetVoiceItem[] = [
+  {
+    text: '哈哈哈好痒呀！别戳俺的大肚皮，再戳俺就要变成小黄球滚走咯~ 🐲✨',
+    audio: '/pets/voices/nailong_1.mp3?v=3',
+  },
+  {
+    text: '我是奶龙！咦——？一加一等于几来着？等于两个大鸡腿！跟着奶龙混，高数408全都稳过哟！🍗',
+    audio: '/pets/voices/nailong_2.mp3?v=3',
+  },
+  {
+    text: '啊呜——！香迷糊了！大鸡腿配高数真题，越啃越有劲，啊呜一口全吃掉！😋',
+    audio: '/pets/voices/nailong_3.mp3?v=3',
+  },
+  {
+    text: '哼哼，我才是真的奶龙！你看我圆滚滚的大肚子，里面装的全是一战成硕的秘籍哟！💪',
+    audio: '/pets/voices/nailong_4.mp3?v=3',
+  },
+  {
+    text: '呼噜噜……啊？我没睡着，我才没流口水呢！我刚刚是在闭着眼睛帮你想难题呢，信奶龙一回嘛~ 🫧',
+    audio: '/pets/voices/nailong_5.mp3?v=3',
+  },
+  {
+    text: '芜湖！你居然学了这么久，太酷啦！快看奶龙给你跳个扭屁股舞，12月19号咱们妥妥考上岸，耶！🌟',
+    audio: '/pets/voices/nailong_6.mp3?v=3',
+  },
+]
 
 export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
   const location = useLocation()
@@ -187,9 +164,8 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
   const lastLineIdxRef = useRef<number>(-1)
   const bubbleTimerRef = useRef<number | null>(null)
 
-  // 角色形象（默认原版奶龙）
-  const [theme, setTheme] = useState<LuluTheme>(() => getSavedPetTheme())
-  const persona = PET_PERSONAS[theme] || PET_PERSONAS.yellow
+  // 角色形象：奶龙专属
+  const persona = NAILONG_PERSONA
 
   // 360° 视差目光跟随与自然呼吸/闲置瞌睡
   useEffect(() => {
@@ -323,11 +299,9 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
       } catch {
         /* ignore */
       }
-      const curTheme = getSavedPetTheme()
-      const p = PET_PERSONAS[curTheme] || PET_PERSONAS.yellow
-      const firstAudio = PET_VOICE_PACKS[curTheme]?.[0]?.audio || '/pets/voices/nailong_1.mp3'
-      setBubbleText(`考研倒计时 ${daysToExam} 天！我是${p.name}，摸摸我头或者戳戳大肚皮听我唠叨哟~`)
-      setBubbleSubtext('真·骨骼分层矢量奶龙已就绪 · 支持 360° 眼神跟随')
+      const firstAudio = NAILONG_VOICE_PACK[1]?.audio || '/pets/voices/nailong_2.mp3?v=3'
+      setBubbleText(`考研倒计时 ${daysToExam} 天！我是奶龙，摸摸我头或者戳戳大肚皮听我唠叨哟~`)
+      setBubbleSubtext('真·正版 3D 软萌奶龙已就绪 · 支持 360° 眼神跟随')
       setCurrentAudioUrl(firstAudio)
       const triggerPractice = onOpenQuickPractice || (() => navigate('/quiz'))
       setBubbleAction({
@@ -414,38 +388,14 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
       if (nextMuted) {
         audioRef.current?.pause()
         setIsSpeaking(false)
-        showBubbleWithVoice(`🔇 已切换为自习静音模式，${persona.name}安安静静陪你学习~`, undefined, 3000)
+        showBubbleWithVoice(`🔇 已切换为自习静音模式，奶龙安安静静陪你学习~`, undefined, 3000)
       } else {
         playPetSynthSound('cheer', false)
-        const firstLine = PET_VOICE_PACKS[theme]?.[0] || PET_VOICE_PACKS.yellow[0]
+        const firstLine = NAILONG_VOICE_PACK[0]
         showBubbleWithVoice(`🔊 语音与Q弹音效已开启！${firstLine.text}`, firstLine.audio, 5000, true)
       }
       return nextMuted
     })
-  }
-
-  // 一键切换萌宠形象
-  const toggleTheme = () => {
-    const themes: LuluTheme[] = ['yellow', 'pink', 'purple']
-    const nextIndex = (themes.indexOf(theme) + 1) % themes.length
-    const nextTheme = themes[nextIndex]
-    const nextPersona = PET_PERSONAS[nextTheme]
-    const greetLine = PET_VOICE_PACKS[nextTheme]?.[0]
-    setTheme(nextTheme)
-    lastLineIdxRef.current = 0
-    localStorage.setItem('coreforge_lulu_theme', nextTheme)
-    window.dispatchEvent(new Event('coreforge-pet-theme-change'))
-    setIsSquishing(true)
-    playPetSynthSound('boing', voiceMuted)
-    setTimeout(() => setIsSquishing(false), 450)
-    setMood('happy')
-    setTimeout(() => setMood(focusActive ? 'focus' : 'idle'), 1800)
-    setBubbleAction(null)
-    showBubbleWithVoice(
-      `✨ 变身：${nextPersona.emoji} ${nextPersona.fullTitle}！${greetLine ? greetLine.text : ''}`,
-      greetLine?.audio,
-      4800
-    )
   }
 
   // 投喂大烤鸡腿动作
@@ -496,10 +446,8 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
       hasDraggedRef.current = true
       if (showMobileMenu) setShowMobileMenu(false)
       playPetSynthSound('lift', voiceMuted)
-      if (theme === 'yellow') {
-        const liftLine = NAILONG_DIALOGUES.dragLift[0]
-        showBubbleWithVoice(liftLine.text, undefined, 2600, false, liftLine.subtext)
-      }
+      const liftLine = NAILONG_DIALOGUES.dragLift[0]
+      showBubbleWithVoice(liftLine.text, undefined, 2600, false, liftLine.subtext)
     }
 
     if (isDragging || Math.hypot(dx, dy) > 8) {
@@ -533,10 +481,8 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
       // 落地重力回弹
       playPetSynthSound('land', voiceMuted)
       setLandingBounce(true)
-      if (theme === 'yellow') {
-        const landLine = NAILONG_DIALOGUES.landDrop[0]
-        showBubbleWithVoice(landLine.text, undefined, 2500, false, landLine.subtext)
-      }
+      const landLine = NAILONG_DIALOGUES.landDrop[0]
+      showBubbleWithVoice(landLine.text, undefined, 2500, false, landLine.subtext)
       setTimeout(() => {
         setLandingBounce(false)
         setMood(focusActive ? 'focus' : 'idle')
@@ -568,14 +514,13 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
   }
 
   const pickNextVoiceLine = (): PetVoiceItem => {
-    const lines = PET_VOICE_PACKS[theme] || PET_VOICE_PACKS.yellow
-    if (lines.length <= 1) return lines[0]
-    let idx = Math.floor(Math.random() * lines.length)
+    if (NAILONG_VOICE_PACK.length <= 1) return NAILONG_VOICE_PACK[0]
+    let idx = Math.floor(Math.random() * NAILONG_VOICE_PACK.length)
     if (idx === lastLineIdxRef.current) {
-      idx = (idx + 1) % lines.length
+      idx = (idx + 1) % NAILONG_VOICE_PACK.length
     }
     lastLineIdxRef.current = idx
-    return lines[idx]
+    return NAILONG_VOICE_PACK[idx]
   }
 
   // 分区点击：摸大脑袋 vs 戳大白肚皮
@@ -748,7 +693,6 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
             <LuluAvatar
               mood={mood}
               size={isMobile ? 'sm' : 'md'}
-              theme={theme}
               isSquishing={isSquishing}
               isDragging={isDragging}
               isSpeaking={isSpeaking}
@@ -870,7 +814,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                       playPetSynthSound('cheer', voiceMuted)
                       showBubbleWithVoice(
                         `⏱️ 嘘——！专注时间到咯，${persona.name}戴上降噪耳机，乖乖在旁边陪你学 25 分钟哟，嘿嘿~`,
-                        theme === 'yellow' ? '/pets/voices/nailong_focus_start.mp3?v=2' : undefined,
+                        '/pets/voices/nailong_focus_start.mp3?v=3',
                         4800,
                         false,
                         '头戴降噪小耳机 · 开启 408 考研心流模式'
@@ -890,19 +834,6 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                 title={focusActive ? '暂停番茄钟' : '开启 25 分钟考研专注伴学'}
               >
                 <Clock className="w-4 h-4" />
-              </button>
-
-              {/* 切换角色形象 */}
-              <button
-                type="button"
-                onClick={e => {
-                  e.stopPropagation()
-                  toggleTheme()
-                }}
-                className="w-8 h-8 rounded-full bg-white/95 dark:bg-slate-800 text-rose-500 shadow-lg border border-rose-200 dark:border-slate-700 flex items-center justify-center hover:bg-rose-50 hover:scale-110 active:scale-95 transition-all cursor-pointer select-none"
-                title="切换萌宠形象 (🐲原版奶龙 / 🍊水豚噜噜 / 🎀学妹小核)"
-              >
-                <Palette className="w-4 h-4" />
               </button>
 
               {/* 最小化为胶囊徽章 */}
@@ -952,7 +883,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/95 dark:bg-slate-900/95 text-amber-900 dark:text-amber-300 text-xs font-bold shadow-xl border border-amber-300 dark:border-amber-700/60 hover:scale-105 active:scale-95 transition-all cursor-pointer whitespace-nowrap select-none backdrop-blur-md"
             title="点击展开伴学奶龙（可按住自由拖拽）"
           >
-            <LuluAvatar size="xs" theme={theme} showAccessories={false} />
+            <LuluAvatar size="xs" showAccessories={false} />
             <span>{persona.name}</span>
             {focusActive && (
               <span className="text-[10px] text-amber-600 font-mono">

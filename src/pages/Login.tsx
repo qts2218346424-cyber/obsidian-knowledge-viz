@@ -115,8 +115,7 @@ export default function Login() {
                   </svg>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-base tracking-tight text-[#18181b]">CoreForge</span>
-                  <span className="text-xs font-semibold text-zinc-500 bg-black/[0.04] px-1.5 py-0.5 rounded">研核</span>
+                  <span className="font-bold text-base tracking-tight text-[#18181b]">研核</span>
                 </div>
               </div>
 
@@ -254,23 +253,7 @@ export default function Login() {
                 </button>
               </form>
 
-              {/* 超级管理员快捷通道 */}
-              {!isInitMode && activeTab === 'login' && (
-                <div className="mt-3.5 pt-3 border-t border-zinc-200/80 flex items-center justify-between text-[11px] text-zinc-500">
-                  <span>站长测试账号：<code className="text-zinc-800 font-mono font-semibold">admin</code></span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setUsername('admin')
-                      setPassword('AdminPassword123!')
-                      setError(null)
-                    }}
-                    className="font-medium text-zinc-900 hover:underline cursor-pointer"
-                  >
-                    一键填入
-                  </button>
-                </div>
-              )}
+              
             </div>
 
             <div className="pt-4 border-t border-zinc-200 mt-4 text-[11px] text-zinc-400 leading-relaxed">
