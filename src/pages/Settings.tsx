@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { useThemeStyle } from '../hooks/useThemeStyle'
+import { getSecuritySettings, updateSecuritySettings } from '../services/auth'
 import { api, type AppSettings, type CloudEndpoint } from '../services/api'
 import {
-  Save, RefreshCw, CheckCircle, AlertCircle, FolderOpen, Globe, Cpu,
+  Save, RefreshCw, CheckCircle, AlertCircle, FolderOpen, Globe, Cpu, Palette,
   Eye, EyeOff, Folder, AlertTriangle, Zap, ChevronRight, ArrowUp,
-  Loader2, X, HardDrive, Check, Download, Plug, Plus, Trash2, Star
+  Loader2, X, HardDrive, Check, Download, Plug, Plus, Trash2, Star, KeyRound, ShieldCheck, Copy, ShieldAlert
 } from 'lucide-react'
 
 declare global {
@@ -58,6 +60,91 @@ export default function Settings() {
   const [endpoints, setEndpoints] = useState<CloudEndpoint[]>([])
   const [activeEndpointId, setActiveEndpointId] = useState<string>('default')
   const [newModelInput, setNewModelInput] = useState('')
+
+  // 考生个性化备考偏好（本地与账号隔离）
+  const [targetSubject, setTargetSubject] = useState<'408' | 'math' | 'all'>(() => {
+    return (localStorage.getItem('coreforge_pref_target_subject') as any) || 'all'
+  })
+  const [dailyQuizGoal, setDailyQuizGoal] = useState<number>(() => {
+    return Number(localStorage.getItem('coreforge_pref_daily_quiz_goal')) || 20
+  })
+  const [dailyVocabGoal, setDailyVocabGoal] = useState<number>(() => {
+    return Number(localStorage.getItem('coreforge_pref_daily_vocab_goal')) || 30
+  })
+  const [defaultEditorMode, setDefaultEditorMode] = useState<'write' | 'markdown'>(() => {
+    return (localStorage.getItem('coreforge_pref_editor_mode') as any) || 'write'
+  })
+  const [adminTab, setAdminTab] = useState<'student' | 'system'>('student')
+  const { themeStyle, isVibrant, setThemeStyle } = useThemeStyle()
+
+  // 考生账号安全与密码找回（密保与救援码）状态
+  const [securityInfo, setSecurityInfo] = useState<{
+    hasSecurityQuestion: boolean
+    securityQuestion: string | null
+    recoveryCode: string
+  } | null>(null)
+  const [secQuestionInput, setSecQuestionInput] = useState('')
+  const [secAnswerInput, setSecAnswerInput] = useState('')
+  const [savingSec, setSavingSec] = useState(false)
+  const [secMessage, setSecMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [copiedCode, setCopiedCode] = useState(false)
+
+  const loadSecuritySettings = useCallback(async () => {
+    try {
+      const res = await getSecuritySettings()
+      setSecurityInfo(res)
+      if (res.securityQuestion) {
+        setSecQuestionInput(res.securityQuestion)
+      }
+    } catch {
+      // 忽略未登录或接口错误
+    }
+  }, [])
+
+  useEffect(() => {
+    loadSecuritySettings()
+  }, [loadSecuritySettings])
+
+  const handleSaveSecuritySettings = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSecMessage(null)
+    if (!secQuestionInput.trim()) {
+      setSecMessage({ type: 'error', text: '请填写安全密保问题' })
+      return
+    }
+    if (!secAnswerInput.trim()) {
+      setSecMessage({ type: 'error', text: '请填写安全密保答案' })
+      return
+    }
+    setSavingSec(true)
+    try {
+      const res = await updateSecuritySettings({
+        question: secQuestionInput.trim(),
+        answer: secAnswerInput.trim(),
+      })
+      setSecMessage({ type: 'success', text: res.message || '安全密保设置已生效！' })
+      setSecurityInfo(prev => prev ? {
+        ...prev,
+        hasSecurityQuestion: true,
+        securityQuestion: secQuestionInput.trim(),
+      } : null)
+      setSecAnswerInput('')
+      setTimeout(() => setSecMessage(null), 3000)
+    } catch (err: any) {
+      setSecMessage({ type: 'error', text: err.message || '保存密保失败' })
+    } finally {
+      setSavingSec(false)
+    }
+  }
+
+  const handleCopyRecoveryCode = () => {
+    if (!securityInfo?.recoveryCode) return
+    navigator.clipboard.writeText(securityInfo.recoveryCode).then(() => {
+      setCopiedCode(true)
+      setTimeout(() => setCopiedCode(false), 2000)
+    }).catch(() => {})
+  }
+
 
   useEffect(() => {
     loadSettings()
@@ -373,20 +460,6 @@ export default function Settings() {
     )
   }
 
-  // 考生个性化备考偏好（本地与账号隔离）
-  const [targetSubject, setTargetSubject] = useState<'408' | 'math' | 'all'>(() => {
-    return (localStorage.getItem('coreforge_pref_target_subject') as any) || 'all'
-  })
-  const [dailyQuizGoal, setDailyQuizGoal] = useState<number>(() => {
-    return Number(localStorage.getItem('coreforge_pref_daily_quiz_goal')) || 20
-  })
-  const [dailyVocabGoal, setDailyVocabGoal] = useState<number>(() => {
-    return Number(localStorage.getItem('coreforge_pref_daily_vocab_goal')) || 30
-  })
-  const [defaultEditorMode, setDefaultEditorMode] = useState<'write' | 'markdown'>(() => {
-    return (localStorage.getItem('coreforge_pref_editor_mode') as any) || 'write'
-  })
-  const [adminTab, setAdminTab] = useState<'student' | 'system'>('student')
 
   const handleSaveStudentPref = () => {
     try {
@@ -451,9 +524,20 @@ export default function Settings() {
               </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
-                <span className="text-slate-400">当前备考登录身份：</span>
-                <p className="font-bold text-slate-900 text-sm">{user?.username || '未登录备考者'} <span className="text-xs text-slate-400 font-normal">({user?.role === 'admin' ? '系统站长' : '考研研学者'})</span></p>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-2">
+                <div className="space-y-1 min-w-0">
+                  <span className="text-slate-400">当前备考登录身份：</span>
+                  <p className="font-bold text-slate-900 text-sm truncate">{user?.username || '未登录备考者'} <span className="text-xs text-slate-400 font-normal">({user?.role === 'admin' ? '系统站长' : '考研研学者'})</span></p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent('open-change-password-modal'))}
+                  className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 text-slate-700 hover:text-indigo-600 text-xs font-semibold shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+                  title="修改当前账号的登录密码"
+                >
+                  <KeyRound className="w-3.5 h-3.5 text-indigo-500" />
+                  <span>修改密码</span>
+                </button>
               </div>
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
                 <span className="text-slate-400">研核伴学积分余额：</span>
@@ -463,6 +547,120 @@ export default function Settings() {
             <p className="text-[11px] text-slate-400 leading-relaxed">
               🔒 隐私保证：您的自建笔记、错题本复盘记录以及每日模考成绩均受沙箱加密隔离保护，仅您个人账号可见。
             </p>
+          </section>
+
+          {/* 账号安全与密码找回（密保与专属救援码） */}
+          <section className="bento-card bg-white border border-neutral-200/80 rounded-xl shadow-xs p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2 text-sm font-bold text-slate-800">
+                <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                <span>账号安全与密码找回凭证</span>
+              </div>
+              <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
+                securityInfo?.hasSecurityQuestion
+                  ? 'text-indigo-700 bg-indigo-50 border-indigo-200'
+                  : 'text-amber-700 bg-amber-50 border-amber-200'
+              }`}>
+                {securityInfo?.hasSecurityQuestion ? '密保已绑定' : '建议预设密保'}
+              </span>
+            </div>
+
+            {secMessage && (
+              <div className={`p-2.5 rounded-lg text-xs flex items-center gap-1.5 ${
+                secMessage.type === 'success'
+                  ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+                  : 'bg-rose-50 border border-rose-200 text-rose-700'
+              }`}>
+                {secMessage.type === 'success' ? <CheckCircle className="w-3.5 h-3.5 shrink-0" /> : <ShieldAlert className="w-3.5 h-3.5 shrink-0" />}
+                <span>{secMessage.text}</span>
+              </div>
+            )}
+
+            {/* 专属 8 位安全救援码卡片 */}
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <KeyRound className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>专属安全救援码 (Recovery Code)</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={handleCopyRecoveryCode}
+                  className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-semibold shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
+                  title="点击复制救援码"
+                >
+                  <Copy className="w-3 h-3 text-slate-500" />
+                  <span>{copiedCode ? '已复制！' : '复制救援码'}</span>
+                </button>
+              </div>
+              <div className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200 font-mono text-sm font-bold text-slate-900 tracking-wider">
+                <span>{securityInfo?.recoveryCode || '正在生成...'}</span>
+                <span className="text-[10px] text-emerald-600 font-sans font-medium bg-emerald-50 px-1.5 py-0.5 rounded">
+                  一键应急重置
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                📌 提示：在登录页面点击「忘记密码？」，可直接输入此救援码秒级重置新密码。请截图或抄写备份！
+              </p>
+            </div>
+
+            {/* 安全密保问答设置 */}
+            <form onSubmit={handleSaveSecuritySettings} className="space-y-3 pt-1">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                <span>绑定 / 修改安全密保问答</span>
+                {securityInfo?.hasSecurityQuestion && (
+                  <span className="text-[11px] font-normal text-slate-400">
+                    当前问题：{securityInfo.securityQuestion}
+                  </span>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <div>
+                  <input
+                    type="text"
+                    required
+                    value={secQuestionInput}
+                    onChange={(e) => setSecQuestionInput(e.target.value)}
+                    placeholder="输入或选择密保问题 (如：我的考研目标大学是？)"
+                    className="w-full py-2 px-3 rounded-lg border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-all bg-slate-50/50"
+                  />
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {['我的考研目标大学是？', '我的第一志愿专业名称是？', '我的本科母校全称是？', '我的高中班主任姓名是？'].map(q => (
+                      <button
+                        key={q}
+                        type="button"
+                        onClick={() => setSecQuestionInput(q)}
+                        className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
+                      >
+                        + {q}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <input
+                    type="text"
+                    required
+                    value={secAnswerInput}
+                    onChange={(e) => setSecAnswerInput(e.target.value)}
+                    placeholder="设置密保问题答案 (验证时忽略大小写)"
+                    className="w-full py-2 px-3 rounded-lg border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-all bg-slate-50/50"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  disabled={savingSec}
+                  className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {savingSec ? '正在保存...' : '保存安全密保设置'}
+                </button>
+              </div>
+            </form>
           </section>
 
           {/* 备考目标学科定制 */}
@@ -569,6 +767,64 @@ export default function Settings() {
                   <div className="text-[10.5px] text-slate-400 mt-0.5">纯文本双链极速录入与快捷键编辑</div>
                 </button>
               </div>
+            </div>
+          </section>
+
+          {/* 研学视觉色彩风格偏好 */}
+          <section className="bento-card bg-white border border-neutral-200/80 rounded-xl shadow-xs p-5 space-y-3">
+            <div className="text-sm font-bold text-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Palette className="w-4 h-4 text-indigo-600" />
+                <span>研学界面视觉风格</span>
+              </div>
+              <span className="text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full">
+                实时生效并跨端同步
+              </span>
+            </div>
+            <p className="text-xs text-slate-500">
+              定制您偏好的工作台界面色彩风格，告别单一黑白，赋予学科鲜明生命力：
+            </p>
+            <div className="grid grid-cols-2 gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setThemeStyle('vibrant')}
+                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer relative overflow-hidden ${
+                  isVibrant
+                    ? 'border-indigo-600 bg-gradient-to-br from-indigo-50/80 via-purple-50/30 to-pink-50/20 ring-1 ring-indigo-500 shadow-xs'
+                    : 'border-slate-200 bg-white hover:bg-slate-50'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <div className="font-bold text-xs text-indigo-950 flex items-center gap-1.5">
+                    <span>🎨 鲜艳活力风</span>
+                    <span className="text-[10px] bg-indigo-600 text-white px-1.5 py-0.2 rounded font-normal">推荐</span>
+                  </div>
+                  {isVibrant && <CheckCircle className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
+                </div>
+                <div className="text-[11px] text-slate-500 leading-relaxed">
+                  408科技蓝、政治正气红、数学极光紫、英语薄荷绿，告别黑白沉闷，记忆更高效。
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setThemeStyle('minimal')}
+                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer relative overflow-hidden ${
+                  !isVibrant
+                    ? 'border-slate-800 bg-slate-50 ring-1 ring-slate-800 shadow-xs'
+                    : 'border-slate-200 bg-white hover:bg-slate-50'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <div className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+                    <span>♟️ 经典极简黑白风</span>
+                  </div>
+                  {!isVibrant && <CheckCircle className="w-3.5 h-3.5 text-slate-800 shrink-0" />}
+                </div>
+                <div className="text-[11px] text-slate-500 leading-relaxed">
+                  严谨冷淡灰度 Subframe 黑白极简设计，专注纯文本与低饱和沉浸排版。
+                </div>
+              </button>
             </div>
           </section>
 

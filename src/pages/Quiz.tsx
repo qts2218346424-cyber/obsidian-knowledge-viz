@@ -563,10 +563,27 @@ export default function Quiz() {
   }, [view, currentIndex, questions, handleOptionSelect, advanceQuestion])
 
 
+  const handleExitQuiz = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current)
+    setIsExitModalOpen(false)
+    setIsSubmitModalOpen(false)
+    setMobileDrawerOpen(false)
+    setView('start')
+    try {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } catch {}
+  }, [])
+
   const finishQuiz = useCallback(async (overrideAnswers?: Record<string, string>) => {
     if (timerRef.current) clearInterval(timerRef.current)
+    setIsSubmitModalOpen(false)
+    setIsExitModalOpen(false)
+    setMobileDrawerOpen(false)
     const finalAnswers = overrideAnswers || answers
     setView('results')
+    try {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } catch {}
 
     let correctCount = 0
     const wrongQuestions: QuizResult['wrongQuestions'] = []
@@ -944,10 +961,7 @@ export default function Quiz() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsExitModalOpen(false)
-                    setView('start')
-                  }}
+                  onClick={handleExitQuiz}
                   className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-xs transition-colors cursor-pointer"
                 >
                   确认退出
@@ -1304,8 +1318,8 @@ export default function Quiz() {
 
                 <WarmButton
                   onClick={advanceQuestion}
-                  disabled={mode === 'practice' && !showFeedback}
-                  className="bg-accent-orange text-white px-6"
+                  disabled={mode === 'practice' && !showFeedback && currentIndex < questions.length - 1}
+                  className="bg-accent-orange text-white px-6 cursor-pointer"
                 >
                   <span>{currentIndex < questions.length - 1 ? '下一题 →' : '交卷结算'}</span>
                 </WarmButton>
@@ -1625,10 +1639,14 @@ export default function Quiz() {
           <button
             type="button"
             onClick={advanceQuestion}
-            disabled={mode === 'practice' && !showFeedback}
-            className="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold disabled:opacity-35 active:scale-95 transition-all flex items-center gap-1 cursor-pointer shadow-xs"
+            disabled={mode === 'practice' && !showFeedback && currentIndex < questions.length - 1}
+            className={`px-4 py-2 rounded-xl text-white text-xs font-bold active:scale-95 transition-all flex items-center gap-1 cursor-pointer shadow-xs ${
+              currentIndex < questions.length - 1
+                ? 'bg-slate-900 disabled:opacity-35'
+                : 'bg-emerald-600 hover:bg-emerald-500'
+            }`}
           >
-            <span>{currentIndex < questions.length - 1 ? '下一题' : '交卷'}</span>
+            <span>{currentIndex < questions.length - 1 ? '下一题' : '立即交卷'}</span>
             <ArrowRight size={14} />
           </button>
         </div>
@@ -1771,10 +1789,7 @@ export default function Quiz() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsExitModalOpen(false)
-                    setView('start')
-                  }}
+                  onClick={handleExitQuiz}
                   className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-xs transition-colors cursor-pointer"
                 >
                   确认退出
@@ -2074,10 +2089,7 @@ export default function Quiz() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsExitModalOpen(false)
-                    setView('start')
-                  }}
+                  onClick={handleExitQuiz}
                   className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-xs transition-colors cursor-pointer"
                 >
                   确认退出

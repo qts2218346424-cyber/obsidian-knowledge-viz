@@ -5,6 +5,7 @@ import {
   verifyPassword,
   generateSecureToken,
   generateUserId,
+  generateRecoveryCode,
 } from '../utils/auth-crypto.js'
 import { requireAuth, requireRole } from '../middleware/auth.js'
 import { ensureUserSandboxSync } from '../services/user-sandbox.js'
@@ -42,7 +43,7 @@ authRouter.post('/auth/init-admin', async (req, res) => {
     return
   }
 
-  const { username, password, displayName } = req.body || {}
+  const { username, password, displayName, securityQuestion, securityAnswer } = req.body || {}
   if (!username || typeof username !== 'string' || username.trim().length < 3) {
     res.status(400).json({ error: '账号名至少需要 3 个字符' })
     return
@@ -62,6 +63,7 @@ authRouter.post('/auth/init-admin', async (req, res) => {
     salt,
     role: 'admin' as UserRole,
     points: 100.0, // 超级管理员初始赠送 100 积分
+    recoveryCode: generateRecoveryCode(),
     createdAt: now,
     updatedAt: now,
   }
@@ -103,7 +105,7 @@ authRouter.post('/auth/register', async (req, res) => {
     return
   }
 
-  const { username, password, displayName } = req.body || {}
+  const { username, password, displayName, securityQuestion, securityAnswer } = req.body || {}
   if (!username || typeof username !== 'string' || username.trim().length < 3) {
     res.status(400).json({ error: '用户名至少需要 3 个字符' })
     return
@@ -123,6 +125,15 @@ authRouter.post('/auth/register', async (req, res) => {
   const now = new Date().toISOString()
   const { hash, salt } = await hashPassword(password.trim())
   
+  const recoveryCode = generateRecoveryCode()
+  let secAnswerHash: string | undefined = undefined
+  let secAnswerSalt: string | undefined = undefined
+  if (securityQuestion && securityAnswer && typeof securityAnswer === 'string' && securityAnswer.trim().length > 0) {
+    const hashed = await hashPassword(securityAnswer.trim().toLowerCase())
+    secAnswerHash = hashed.hash
+    secAnswerSalt = hashed.salt
+  }
+
   // 严格强制默认角色为 student（学生只读），杜绝越权提权；新注册赠送 5.0 积分
   const user = {
     id: generateUserId(),
@@ -132,6 +143,10 @@ authRouter.post('/auth/register', async (req, res) => {
     salt,
     role: 'student' as UserRole,
     points: 5.0,
+    securityQuestion: securityQuestion && typeof securityQuestion === 'string' ? securityQuestion.trim() : undefined,
+    securityAnswerHash: secAnswerHash,
+    securityAnswerSalt: secAnswerSalt,
+    recoveryCode,
     createdAt: now,
     updatedAt: now,
   }
@@ -159,6 +174,7 @@ authRouter.post('/auth/register', async (req, res) => {
       displayName: user.displayName,
       role: user.role,
       points: user.points,
+      recoveryCode: user.recoveryCode,
     },
   })
 })
@@ -277,6 +293,171 @@ authRouter.post('/auth/change-password', requireAuth, async (req, res) => {
   database.deleteUserSessions(req.user!.id)
 
   res.json({ message: '密码已修改，请使用新密码重新登录' })
+})
+
+// ==========================================
+// ===== 找回密码与安全密保重置接口 (公开) =====
+// ==========================================
+
+/**
+ * 忘记密码第一步：查询指定用户名预设的安全密保问题
+ */
+authRouter.get('/auth/security-question', (req, res) => {
+  const username = String(req.query.username || '').trim()
+  if (!username) {
+    res.status(400).json({ error: '请输入用户名' })
+    return
+  }
+
+  const secInfo = database.findUserSecurityInfo(username)
+  if (!secInfo) {
+    res.status(404).json({ error: '未检索到该用户名，请核对是否拼写正确' })
+    return
+  }
+
+  res.json({
+    username: secInfo.username,
+    hasSecurityQuestion: secInfo.hasSecurityQuestion,
+    securityQuestion: secInfo.securityQuestion || null,
+    hasRecoveryCode: secInfo.hasRecoveryCode,
+  })
+})
+
+/**
+ * 忘记密码第二步：通过安全密保答案或应急救援码验证并重置新密码
+ */
+authRouter.post('/auth/reset-password', async (req, res) => {
+  const { username, answer, recoveryCode, newPassword } = req.body || {}
+  if (!username || typeof username !== 'string' || !username.trim()) {
+    res.status(400).json({ error: '请输入用户名' })
+    return
+  }
+  if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 6) {
+    res.status(400).json({ error: '重置的新密码长度不能少于 6 位' })
+    return
+  }
+
+  const user = database.findUserByUsername(username.trim())
+  if (!user) {
+    res.status(404).json({ error: '未找到该用户名，请核对账号' })
+    return
+  }
+
+  let verified = false
+  let verifyType = ''
+
+  // 1. 优先校验安全密保答案（忽略首尾空格并小写比对）
+  if (answer && typeof answer === 'string' && answer.trim()) {
+    if (!user.securityAnswerHash || !user.securityAnswerSalt) {
+      res.status(400).json({ error: '该账号未预设密保答案，请改用专属救援码重置或联系管理员协助' })
+      return
+    }
+    const cleanAnswer = answer.trim().toLowerCase()
+    const isAnswerMatched = await verifyPassword(cleanAnswer, user.securityAnswerHash, user.securityAnswerSalt)
+    if (!isAnswerMatched) {
+      res.status(400).json({ error: '密保问题答案验证错误，请重新核对' })
+      return
+    }
+    verified = true
+    verifyType = '安全密保'
+  } else if (recoveryCode && typeof recoveryCode === 'string' && recoveryCode.trim()) {
+    // 2. 次选校验备用应急救援码
+    if (!user.recoveryCode) {
+      res.status(400).json({ error: '该账号未生成或绑定备用救援码，请联系研学管理员协助重置' })
+      return
+    }
+    const cleanInputCode = recoveryCode.trim().toUpperCase().replace(/\s+/g, '')
+    const userCode = user.recoveryCode.toUpperCase().replace(/\s+/g, '')
+    if (cleanInputCode !== userCode) {
+      res.status(400).json({ error: '备用安全救援码无效或不匹配' })
+      return
+    }
+    verified = true
+    verifyType = '应急救援码'
+  } else {
+    res.status(400).json({ error: '请提供安全密保答案或备用安全救援码进行身份校验' })
+    return
+  }
+
+  if (!verified) {
+    res.status(400).json({ error: '身份凭证校验未通过' })
+    return
+  }
+
+  // 验证通过，计算新密码哈希并刷新救援码
+  const { hash, salt } = await hashPassword(newPassword.trim())
+  const newRecoveryCode = generateRecoveryCode()
+
+  database.updateUser(user.id, {
+    passwordHash: hash,
+    salt,
+    recoveryCode: newRecoveryCode,
+  })
+
+  // 强制清除旧登录会话
+  database.deleteUserSessions(user.id)
+
+  res.json({
+    message: `身份凭证（${verifyType}）验证通过，新密码已重置成功，请重新登录！`,
+    newRecoveryCode,
+  })
+})
+
+/**
+ * 考生已登录：获取自身的安全密保与专属救援码
+ */
+authRouter.get('/auth/security-settings', requireAuth, (req, res) => {
+  const user = req.user!
+  // 若历史老用户尚未生成救援码，自动为其生成并存入
+  let recoveryCode = user.recoveryCode
+  if (!recoveryCode) {
+    recoveryCode = generateRecoveryCode()
+    database.updateUser(user.id, { recoveryCode })
+  }
+
+  res.json({
+    username: user.username,
+    hasSecurityQuestion: Boolean(user.securityQuestion && user.securityAnswerHash),
+    securityQuestion: user.securityQuestion || null,
+    recoveryCode,
+  })
+})
+
+/**
+ * 考生已登录：设置或修改自身安全密保问题与答案
+ */
+authRouter.post('/auth/security-settings', requireAuth, async (req, res) => {
+  const { question, answer, refreshRecoveryCode } = req.body || {}
+  const user = req.user!
+
+  const updates: any = {}
+
+  if (question && typeof question === 'string' && question.trim().length >= 2) {
+    if (!answer || typeof answer !== 'string' || answer.trim().length < 1) {
+      res.status(400).json({ error: '请提供对应的密保答案' })
+      return
+    }
+    const cleanAnswer = answer.trim().toLowerCase()
+    const { hash, salt } = await hashPassword(cleanAnswer)
+    updates.securityQuestion = question.trim()
+    updates.securityAnswerHash = hash
+    updates.securityAnswerSalt = salt
+  }
+
+  let finalRecoveryCode = user.recoveryCode
+  if (refreshRecoveryCode || !finalRecoveryCode) {
+    finalRecoveryCode = generateRecoveryCode()
+    updates.recoveryCode = finalRecoveryCode
+  }
+
+  database.updateUser(user.id, updates)
+
+  res.json({
+    message: '账号安全密保与救援码已更新',
+    recoveryCode: finalRecoveryCode,
+    hasSecurityQuestion: Boolean(updates.securityQuestion || user.securityQuestion),
+    securityQuestion: updates.securityQuestion || user.securityQuestion || null,
+  })
 })
 
 // ==========================================

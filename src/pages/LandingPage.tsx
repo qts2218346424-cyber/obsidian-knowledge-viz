@@ -25,8 +25,12 @@ import {
   Layers,
   Search,
   ExternalLink,
+  KeyRound,
+  HelpCircle,
+  ShieldAlert,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { getSecurityQuestion, resetPassword } from '../services/auth'
 
 interface DownloadInfo {
   desktop: {
@@ -69,11 +73,24 @@ export default function LandingPage() {
 
   // Subframe 标志性“双栏交互工作台弹窗”显隐控制
   const [authModalOpen, setAuthModalOpen] = useState(false)
-  const [modalTab, setModalTab] = useState<'login' | 'register'>('login')
+  const [modalTab, setModalTab] = useState<'login' | 'register' | 'forgot'>('login')
   const [modalUsername, setModalUsername] = useState('')
   const [modalPassword, setModalPassword] = useState('')
   const [modalError, setModalError] = useState<string | null>(null)
   const [modalLoading, setModalLoading] = useState(false)
+
+  // 找回密码（Forgot Password）相关交互状态
+  const [forgotStep, setForgotStep] = useState<1 | 2>(1)
+  const [forgotUsername, setForgotUsername] = useState('')
+  const [securityQuestion, setSecurityQuestion] = useState<string | null>(null)
+  const [hasSecurityQuestion, setHasSecurityQuestion] = useState<boolean>(false)
+  const [hasRecoveryCode, setHasRecoveryCode] = useState<boolean>(false)
+  const [securityAnswer, setSecurityAnswer] = useState('')
+  const [recoveryCodeInput, setRecoveryCodeInput] = useState('')
+  const [newPasswordInput, setNewPasswordInput] = useState('')
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState('')
+  const [useRecoveryCodeMode, setUseRecoveryCodeMode] = useState(false)
+  const [resetSuccessMessage, setResetSuccessMessage] = useState<string | null>(null)
 
   // 吐司反馈提示
   const [toastMessage, setToastMessage] = useState<string | null>(null)
@@ -161,6 +178,83 @@ export default function LandingPage() {
       navigate('/dashboard', { replace: true })
     } catch (err: any) {
       setModalError(err.message || '操作失败，请重试')
+    } finally {
+      setModalLoading(false)
+    }
+  }
+
+  // 找回密码第一步：查询密保问题
+  const handleQuerySecurityQuestion = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setModalError(null)
+    if (!forgotUsername.trim()) {
+      setModalError('请输入需要找回密码的用户名')
+      return
+    }
+    setModalLoading(true)
+    try {
+      const res = await getSecurityQuestion(forgotUsername.trim())
+      setSecurityQuestion(res.securityQuestion)
+      setHasSecurityQuestion(res.hasSecurityQuestion)
+      setHasRecoveryCode(res.hasRecoveryCode)
+      setForgotStep(2)
+      if (!res.hasSecurityQuestion) {
+        setUseRecoveryCodeMode(true)
+      } else {
+        setUseRecoveryCodeMode(false)
+      }
+    } catch (err: any) {
+      setModalError(err.message || '查询密保信息失败，请检查用户名是否输入正确')
+    } finally {
+      setModalLoading(false)
+    }
+  }
+
+  // 找回密码第二步：提交验证并重置新密码
+  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setModalError(null)
+
+    if (newPasswordInput.length < 6) {
+      setModalError('新密码长度不能少于 6 位')
+      return
+    }
+    if (newPasswordInput !== confirmPasswordInput) {
+      setModalError('两次输入的新密码不一致')
+      return
+    }
+    if (!useRecoveryCodeMode && !securityAnswer.trim()) {
+      setModalError('请输入安全密保答案')
+      return
+    }
+    if (useRecoveryCodeMode && !recoveryCodeInput.trim()) {
+      setModalError('请输入备用安全救援码（例如 CF-XXXX-XXXX）')
+      return
+    }
+
+    setModalLoading(true)
+    try {
+      const res = await resetPassword({
+        username: forgotUsername.trim(),
+        answer: useRecoveryCodeMode ? undefined : securityAnswer.trim(),
+        recoveryCode: useRecoveryCodeMode ? recoveryCodeInput.trim() : undefined,
+        newPassword: newPasswordInput.trim(),
+      })
+      showToast('密码重置成功，请使用新密码登录')
+      setResetSuccessMessage(res.message)
+      setModalUsername(forgotUsername.trim())
+      setModalPassword(newPasswordInput.trim())
+      setTimeout(() => {
+        setModalTab('login')
+        setForgotStep(1)
+        setSecurityAnswer('')
+        setRecoveryCodeInput('')
+        setNewPasswordInput('')
+        setConfirmPasswordInput('')
+        setResetSuccessMessage(null)
+      }, 1600)
+    } catch (err: any) {
+      setModalError(err.message || '重置密码失败，请核对凭证')
     } finally {
       setModalLoading(false)
     }
@@ -955,7 +1049,7 @@ export default function LandingPage() {
               <X className="w-4 h-4" />
             </button>
 
-            {/* 左栏：身份认证与进入系统 */}
+            {/* 左栏：身份认证、注册与找回密码 */}
             <div className="lg:col-span-5 bg-[#efefef] rounded-[14px] p-6 sm:p-7 flex flex-col justify-between text-left border border-white/70">
               <div>
                 <div className="w-8 h-8 rounded-lg bg-[#18181b] text-white flex items-center justify-center shadow-sm mb-5">
@@ -967,79 +1061,306 @@ export default function LandingPage() {
                 </div>
 
                 <h2 className="text-[22px] sm:text-[25px] leading-[1.18] tracking-[-0.03em] font-bold text-[#18181b] mb-4">
-                  {modalTab === 'register' ? '注册研学空间' : '进入研核空间'}<br />
-                  <span className="text-[#8d9096] font-normal">CoreForge Workspace</span>
+                  {modalTab === 'forgot'
+                    ? '找回研学密码'
+                    : modalTab === 'register'
+                    ? '注册研学空间'
+                    : '进入研核空间'}
+                  <br />
+                  <span className="text-[#8d9096] font-normal">
+                    {modalTab === 'forgot'
+                      ? 'Account Security Recovery'
+                      : 'CoreForge Workspace'}
+                  </span>
                 </h2>
 
-                <ul className="space-y-2 mb-6 text-[12px] text-[#27272a] font-medium">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span>本地优先，支持 Obsidian 知识库</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span>SM-2 艾宾浩斯智能记忆闪卡</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span>408 与 考研数学真题智能批改</span>
-                  </li>
-                </ul>
+                {modalTab !== 'forgot' && (
+                  <ul className="space-y-2 mb-6 text-[12px] text-[#27272a] font-medium">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>本地优先，支持 Obsidian 知识库</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>SM-2 艾宾浩斯智能记忆闪卡</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>408 与 考研数学真题智能批改</span>
+                    </li>
+                  </ul>
+                )}
 
                 {modalError && (
-                  <div className="mb-4 p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs">
-                    {modalError}
+                  <div className="mb-4 p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-1.5">
+                    <ShieldAlert className="w-4 h-4 shrink-0 text-rose-500" />
+                    <span>{modalError}</span>
                   </div>
                 )}
 
-                {/* 登录表单 */}
-                <form onSubmit={handleModalAuthSubmit} className="space-y-2.5">
-                  <div>
-                    <input
-                      type="text"
-                      required
-                      value={modalUsername}
-                      onChange={(e) => setModalUsername(e.target.value)}
-                      placeholder="用户名 / 账号 (如 admin)"
-                      className="w-full py-2 px-3 rounded-[9px] bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-[13px] focus:outline-none focus:ring-2 focus:ring-zinc-400 transition-all"
-                    />
+                {resetSuccessMessage && (
+                  <div className="mb-4 p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                    <span>{resetSuccessMessage}</span>
                   </div>
+                )}
 
-                  <div>
-                    <input
-                      type="password"
-                      required
-                      value={modalPassword}
-                      onChange={(e) => setModalPassword(e.target.value)}
-                      placeholder="登录密码 (至少 6 位)"
-                      className="w-full py-2 px-3 rounded-[9px] bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-[13px] focus:outline-none focus:ring-2 focus:ring-zinc-400 transition-all"
-                    />
+                {/* 模式一：登录表单 */}
+                {modalTab === 'login' && (
+                  <form onSubmit={handleModalAuthSubmit} className="space-y-2.5">
+                    <div>
+                      <input
+                        type="text"
+                        required
+                        value={modalUsername}
+                        onChange={(e) => setModalUsername(e.target.value)}
+                        placeholder="用户名 / 账号 (如 admin)"
+                        className="w-full py-2 px-3 rounded-[9px] bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-[13px] focus:outline-none focus:ring-2 focus:ring-zinc-400 transition-all"
+                      />
+                    </div>
+
+                    <div>
+                      <input
+                        type="password"
+                        required
+                        value={modalPassword}
+                        onChange={(e) => setModalPassword(e.target.value)}
+                        placeholder="登录密码 (至少 6 位)"
+                        className="w-full py-2 px-3 rounded-[9px] bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-[13px] focus:outline-none focus:ring-2 focus:ring-zinc-400 transition-all"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-end">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setModalTab('forgot')
+                          setModalError(null)
+                          setForgotStep(1)
+                          setForgotUsername(modalUsername)
+                        }}
+                        className="text-[11px] text-zinc-500 hover:text-zinc-900 transition-colors cursor-pointer"
+                      >
+                        忘记密码？
+                      </button>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={modalLoading}
+                      className="w-full py-2.5 px-4 rounded-[9px] bg-[#1c1c1f] hover:bg-[#2a2a2e] text-white text-[13px] font-semibold transition-all cursor-pointer shadow-sm disabled:opacity-60"
+                    >
+                      {modalLoading ? '正在验证...' : '登入研学空间'}
+                    </button>
+                  </form>
+                )}
+
+                {/* 模式二：注册表单 */}
+                {modalTab === 'register' && (
+                  <form onSubmit={handleModalAuthSubmit} className="space-y-2.5">
+                    <div>
+                      <input
+                        type="text"
+                        required
+                        value={modalUsername}
+                        onChange={(e) => setModalUsername(e.target.value)}
+                        placeholder="设置账号用户名 (如 kaoyan2026)"
+                        className="w-full py-2 px-3 rounded-[9px] bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-[13px] focus:outline-none focus:ring-2 focus:ring-zinc-400 transition-all"
+                      />
+                    </div>
+
+                    <div>
+                      <input
+                        type="password"
+                        required
+                        value={modalPassword}
+                        onChange={(e) => setModalPassword(e.target.value)}
+                        placeholder="设置登录密码 (至少 6 位)"
+                        className="w-full py-2 px-3 rounded-[9px] bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-[13px] focus:outline-none focus:ring-2 focus:ring-zinc-400 transition-all"
+                      />
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-zinc-200/60 border border-zinc-300/60 text-[11px] text-zinc-600">
+                      💡 注册成功后将为您自动颁发专属救援码，支持在遗忘密码时自助找回！
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={modalLoading}
+                      className="w-full py-2.5 px-4 rounded-[9px] bg-[#1c1c1f] hover:bg-[#2a2a2e] text-white text-[13px] font-semibold transition-all cursor-pointer shadow-sm disabled:opacity-60"
+                    >
+                      {modalLoading ? '正在创建...' : '注册账号并登入'}
+                    </button>
+                  </form>
+                )}
+
+                {/* 模式三：找回密码 / 密码重置表单 */}
+                {modalTab === 'forgot' && (
+                  <div className="space-y-3">
+                    {forgotStep === 1 ? (
+                      <form onSubmit={handleQuerySecurityQuestion} className="space-y-2.5">
+                        <div className="text-xs text-zinc-600 leading-relaxed">
+                          请输入您的研学用户名，系统将检索您的安全密保问题或救援通道：
+                        </div>
+                        <div>
+                          <input
+                            type="text"
+                            required
+                            value={forgotUsername}
+                            onChange={(e) => setForgotUsername(e.target.value)}
+                            placeholder="请输入用户名 / 账号"
+                            className="w-full py-2 px-3 rounded-[9px] bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-[13px] focus:outline-none focus:ring-2 focus:ring-zinc-400 transition-all"
+                          />
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={modalLoading}
+                          className="w-full py-2.5 px-4 rounded-[9px] bg-[#1c1c1f] hover:bg-[#2a2a2e] text-white text-[13px] font-semibold transition-all cursor-pointer shadow-sm disabled:opacity-60"
+                        >
+                          {modalLoading ? '正在检索密保...' : '下一步：验证身份'}
+                        </button>
+                      </form>
+                    ) : (
+                      <form onSubmit={handleResetPasswordSubmit} className="space-y-2.5">
+                        <div className="flex items-center justify-between text-xs px-2.5 py-1.5 rounded-lg bg-zinc-200/80 text-zinc-700 font-medium">
+                          <span>账号：{forgotUsername}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setForgotStep(1)
+                              setModalError(null)
+                            }}
+                            className="text-zinc-500 hover:text-zinc-900 underline cursor-pointer text-[11px]"
+                          >
+                            更换账号
+                          </button>
+                        </div>
+
+                        {/* 密保问题回答 OR 备用救援码输入 */}
+                        {!useRecoveryCodeMode && hasSecurityQuestion ? (
+                          <div className="space-y-2">
+                            <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs">
+                              <span className="font-bold">安全密保问题：</span>
+                              <div className="mt-0.5 font-medium">{securityQuestion}</div>
+                            </div>
+                            <input
+                              type="text"
+                              required
+                              value={securityAnswer}
+                              onChange={(e) => setSecurityAnswer(e.target.value)}
+                              placeholder="请输入您的密保答案"
+                              className="w-full py-2 px-3 rounded-[9px] bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-[13px] focus:outline-none focus:ring-2 focus:ring-zinc-400 transition-all"
+                            />
+                            <div className="text-right">
+                              <button
+                                type="button"
+                                onClick={() => setUseRecoveryCodeMode(true)}
+                                className="text-[11px] text-zinc-500 hover:text-zinc-800 underline cursor-pointer"
+                              >
+                                忘记答案？改用专属救援码验证 →
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="p-2 rounded-lg bg-sky-50 border border-sky-200 text-sky-900 text-xs leading-relaxed">
+                              {hasSecurityQuestion ? (
+                                <span>请输入注册时保存的 8 位专属救援码（格式如 CF-XXXX-XXXX）：</span>
+                              ) : (
+                                <span>该账号未预设密保问题。请输入您的备用救援码（格式 CF-XXXX-XXXX），或联系管理员在后台协助重置：</span>
+                              )}
+                            </div>
+                            <input
+                              type="text"
+                              required
+                              value={recoveryCodeInput}
+                              onChange={(e) => setRecoveryCodeInput(e.target.value)}
+                              placeholder="请输入救援码 (如 CF-78A9-2B4C)"
+                              className="w-full py-2 px-3 rounded-[9px] bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-[13px] font-mono focus:outline-none focus:ring-2 focus:ring-zinc-400 transition-all uppercase"
+                            />
+                            {hasSecurityQuestion && (
+                              <div className="text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => setUseRecoveryCodeMode(false)}
+                                  className="text-[11px] text-zinc-500 hover:text-zinc-800 underline cursor-pointer"
+                                >
+                                  ← 改用密保问题答案验证
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* 设置新密码 */}
+                        <div>
+                          <input
+                            type="password"
+                            required
+                            value={newPasswordInput}
+                            onChange={(e) => setNewPasswordInput(e.target.value)}
+                            placeholder="设置新密码 (至少 6 位)"
+                            className="w-full py-2 px-3 rounded-[9px] bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-[13px] focus:outline-none focus:ring-2 focus:ring-zinc-400 transition-all"
+                          />
+                        </div>
+
+                        <div>
+                          <input
+                            type="password"
+                            required
+                            value={confirmPasswordInput}
+                            onChange={(e) => setConfirmPasswordInput(e.target.value)}
+                            placeholder="再次确认新密码"
+                            className="w-full py-2 px-3 rounded-[9px] bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-[13px] focus:outline-none focus:ring-2 focus:ring-zinc-400 transition-all"
+                          />
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={modalLoading}
+                          className="w-full py-2.5 px-4 rounded-[9px] bg-indigo-600 hover:bg-indigo-700 text-white text-[13px] font-semibold transition-all cursor-pointer shadow-sm disabled:opacity-60"
+                        >
+                          {modalLoading ? '正在重置密码...' : '确认重置新密码'}
+                        </button>
+                      </form>
+                    )}
                   </div>
+                )}
 
-                  <button
-                    type="submit"
-                    disabled={modalLoading}
-                    className="w-full py-2.5 px-4 rounded-[9px] bg-[#1c1c1f] hover:bg-[#2a2a2e] text-white text-[13px] font-semibold transition-all cursor-pointer shadow-sm disabled:opacity-60"
-                  >
-                    {modalLoading ? '正在验证...' : modalTab === 'register' ? '注册账号并登入' : '登入研学空间'}
-                  </button>
-                </form>
-
+                {/* 底部模式切换按钮 */}
                 <div className="mt-3 flex items-center justify-between text-[11px] text-zinc-500">
-                  <button
-                    type="button"
-                    onClick={() => setModalTab(modalTab === 'login' ? 'register' : 'login')}
-                    className="hover:text-zinc-900 underline cursor-pointer"
-                  >
-                    {modalTab === 'login' ? '没有账号？立即自主注册' : '已有账号？返回登录'}
-                  </button>
+                  {modalTab === 'forgot' ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setModalTab('login')
+                        setModalError(null)
+                        setForgotStep(1)
+                      }}
+                      className="hover:text-zinc-900 underline cursor-pointer font-medium"
+                    >
+                      ← 想起密码了？返回登录
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setModalTab(modalTab === 'login' ? 'register' : 'login')
+                        setModalError(null)
+                      }}
+                      className="hover:text-zinc-900 underline cursor-pointer"
+                    >
+                      {modalTab === 'login' ? '没有账号？立即自主注册' : '已有账号？返回登录'}
+                    </button>
+                  )}
 
-                  <span className="text-zinc-400">请使用注册账号登录</span>
+                  <span className="text-zinc-400">本地优先 · 安全隔离</span>
                 </div>
               </div>
 
               <div className="pt-4 border-t border-zinc-200 mt-4 text-[10.5px] text-zinc-400">
-                支持超级管理员与学生只读多角色隔离
+                支持安全密保问答与 8 位应急救援码双轨找回
               </div>
             </div>
 

@@ -12,6 +12,8 @@ import type {
   CheckinResult,
   RedeemCouponResult,
   RechargeResult,
+  ResetPasswordPayload,
+  ResetPasswordResponse,
 } from '../types/auth'
 import * as authService from '../services/auth'
 
@@ -36,6 +38,7 @@ export interface AuthContextValue {
   login: (username: string, password: string) => Promise<void>
   register: (username: string, password: string, displayName?: string) => Promise<void>
   initAdmin: (username: string, password: string, displayName?: string) => Promise<void>
+  resetPassword: (payload: ResetPasswordPayload) => Promise<ResetPasswordResponse>
   logout: () => Promise<void>
   refreshUser: () => Promise<void>
   checkStatus: () => Promise<void>
@@ -194,6 +197,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const handleResetPassword = async (payload: ResetPasswordPayload) => {
+    return await authService.resetPassword(payload)
+  }
+
   const handleInitAdmin = async (username: string, password: string, displayName?: string) => {
     setIsLoading(true)
     try {
@@ -249,6 +256,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login: handleLogin,
         register: handleRegister,
         initAdmin: handleInitAdmin,
+        resetPassword: handleResetPassword,
         logout: handleLogout,
         refreshUser,
         checkStatus,

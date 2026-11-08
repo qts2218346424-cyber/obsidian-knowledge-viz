@@ -1,3 +1,21 @@
+export type {
+  UserProfile,
+  UserRole,
+  AuthStatusResponse,
+  LoginResponse,
+  UserPermissions,
+  UserPointsInfo,
+  CheckinResult,
+  AdminGrantResult,
+  PointLogItem,
+  CouponCodeItem,
+  RedeemCouponResult,
+  RechargeResult,
+  SecurityQuestionResponse,
+  ResetPasswordPayload,
+  ResetPasswordResponse,
+  SecuritySettingsResponse,
+} from '../types/auth'
 import type {
   UserProfile,
   UserRole,
@@ -11,6 +29,10 @@ import type {
   CouponCodeItem,
   RedeemCouponResult,
   RechargeResult,
+  SecurityQuestionResponse,
+  ResetPasswordPayload,
+  ResetPasswordResponse,
+  SecuritySettingsResponse,
 } from '../types/auth'
 
 const TOKEN_KEY = 'coreforge_auth_token'
@@ -144,12 +166,15 @@ export async function getCurrentUser(): Promise<{
 
 /** 修改个人密码 */
 export async function changePassword(
-  oldPassword: string,
-  newPassword: string
+  oldPasswordOrPayload: string | { oldPassword: string; newPassword: string },
+  newPassword?: string
 ): Promise<{ message: string }> {
+  const body = typeof oldPasswordOrPayload === 'string'
+    ? { oldPassword: oldPasswordOrPayload, newPassword: newPassword! }
+    : oldPasswordOrPayload
   return requestJSON<{ message: string }>(`${BASE}/change-password`, {
     method: 'POST',
-    body: JSON.stringify({ oldPassword, newPassword }),
+    body: JSON.stringify(body),
   })
 }
 
@@ -267,5 +292,37 @@ export async function adminCreateCoupons(data: {
 export async function adminDeleteCoupon(code: string): Promise<{ message: string }> {
   return requestJSON<{ message: string }>(`/api/admin/coupons/${code}`, {
     method: 'DELETE',
+  })
+}
+
+// ===== 找回密码与安全密保 API =====
+
+/** 查询指定用户的安全密保问题（找回密码第一步） */
+export async function getSecurityQuestion(username: string): Promise<SecurityQuestionResponse> {
+  return requestJSON<SecurityQuestionResponse>(`/api/auth/security-question?username=${encodeURIComponent(username)}`)
+}
+
+/** 提交安全验证并重置新密码（找回密码第二步） */
+export async function resetPassword(payload: ResetPasswordPayload): Promise<ResetPasswordResponse> {
+  return requestJSON<ResetPasswordResponse>('/api/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+/** 考生获取自身安全设置（密保与救援码） */
+export async function getSecuritySettings(): Promise<SecuritySettingsResponse> {
+  return requestJSON<SecuritySettingsResponse>('/api/auth/security-settings')
+}
+
+/** 考生设置/修改自身安全密保问题与救援码 */
+export async function updateSecuritySettings(data: {
+  question?: string
+  answer?: string
+  refreshRecoveryCode?: boolean
+}): Promise<{ message: string; recoveryCode: string; hasSecurityQuestion: boolean; securityQuestion: string | null }> {
+  return requestJSON('/api/auth/security-settings', {
+    method: 'POST',
+    body: JSON.stringify(data),
   })
 }

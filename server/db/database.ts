@@ -135,6 +135,10 @@ export interface DbUser {
   role: UserRole
   points: number
   lastCheckinAt?: string
+  securityQuestion?: string
+  securityAnswerHash?: string
+  securityAnswerSalt?: string
+  recoveryCode?: string
   createdAt: string
   updatedAt: string
 }
@@ -345,6 +349,10 @@ class CoreForgeDatabase {
     this.ensureColumn('sm2_flashcards', 'user_id', "TEXT DEFAULT 'default'")
     this.ensureColumn('users', 'points', 'REAL DEFAULT 5.0')
     this.ensureColumn('users', 'last_checkin_at', 'TEXT')
+    this.ensureColumn('users', 'security_question', 'TEXT')
+    this.ensureColumn('users', 'security_answer_hash', 'TEXT')
+    this.ensureColumn('users', 'security_answer_salt', 'TEXT')
+    this.ensureColumn('users', 'recovery_code', 'TEXT')
 
     // 平滑修复旧用户可能为 null 的积分值
     try {
@@ -674,6 +682,10 @@ class CoreForgeDatabase {
       role: row.role as UserRole,
       points: typeof row.points === 'number' ? row.points : 5.0,
       lastCheckinAt: row.last_checkin_at || undefined,
+      securityQuestion: row.security_question || undefined,
+      securityAnswerHash: row.security_answer_hash || undefined,
+      securityAnswerSalt: row.security_answer_salt || undefined,
+      recoveryCode: row.recovery_code || undefined,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }
@@ -692,6 +704,10 @@ class CoreForgeDatabase {
       role: row.role as UserRole,
       points: typeof row.points === 'number' ? row.points : 5.0,
       lastCheckinAt: row.last_checkin_at || undefined,
+      securityQuestion: row.security_question || undefined,
+      securityAnswerHash: row.security_answer_hash || undefined,
+      securityAnswerSalt: row.security_answer_salt || undefined,
+      recoveryCode: row.recovery_code || undefined,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }
@@ -715,8 +731,8 @@ class CoreForgeDatabase {
   insertUser(user: DbUser): void {
     if (!this.db) return
     const stmt = this.db.prepare(`
-      INSERT INTO users (id, username, display_name, password_hash, salt, role, points, last_checkin_at, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO users (id, username, display_name, password_hash, salt, role, points, last_checkin_at, security_question, security_answer_hash, security_answer_salt, recovery_code, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     stmt.run(
       user.id,
@@ -727,12 +743,28 @@ class CoreForgeDatabase {
       user.role,
       user.points !== undefined ? user.points : 5.0,
       user.lastCheckinAt || null,
+      user.securityQuestion || null,
+      user.securityAnswerHash || null,
+      user.securityAnswerSalt || null,
+      user.recoveryCode || null,
       user.createdAt,
       user.updatedAt
     )
   }
 
-  updateUser(id: string, updates: { displayName?: string; role?: UserRole; passwordHash?: string; salt?: string }): void {
+  updateUser(
+    id: string,
+    updates: {
+      displayName?: string
+      role?: UserRole
+      passwordHash?: string
+      salt?: string
+      securityQuestion?: string | null
+      securityAnswerHash?: string | null
+      securityAnswerSalt?: string | null
+      recoveryCode?: string | null
+    }
+  ): void {
     if (!this.db) return
     const fields: string[] = []
     const values: any[] = []
@@ -749,6 +781,18 @@ class CoreForgeDatabase {
       fields.push('password_hash = ?', 'salt = ?')
       values.push(updates.passwordHash, updates.salt)
     }
+    if (updates.securityQuestion !== undefined) {
+      fields.push('security_question = ?')
+      values.push(updates.securityQuestion)
+    }
+    if (updates.securityAnswerHash !== undefined && updates.securityAnswerSalt !== undefined) {
+      fields.push('security_answer_hash = ?', 'security_answer_salt = ?')
+      values.push(updates.securityAnswerHash, updates.securityAnswerSalt)
+    }
+    if (updates.recoveryCode !== undefined) {
+      fields.push('recovery_code = ?')
+      values.push(updates.recoveryCode)
+    }
 
     if (fields.length === 0) return
 
@@ -758,6 +802,24 @@ class CoreForgeDatabase {
 
     const query = `UPDATE users SET ${fields.join(', ')} WHERE id = ?`
     this.db.prepare(query).run(...values)
+  }
+
+  findUserSecurityInfo(username: string): {
+    exists: boolean
+    username: string
+    hasSecurityQuestion: boolean
+    securityQuestion?: string
+    hasRecoveryCode: boolean
+  } | null {
+    const user = this.findUserByUsername(username)
+    if (!user) return null
+    return {
+      exists: true,
+      username: user.username,
+      hasSecurityQuestion: Boolean(user.securityQuestion && user.securityAnswerHash),
+      securityQuestion: user.securityQuestion || undefined,
+      hasRecoveryCode: Boolean(user.recoveryCode),
+    }
   }
 
   deleteUser(id: string): void {

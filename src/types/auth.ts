@@ -97,3 +97,30 @@ export interface RechargeResult {
   recharged: number
   message: string
 }
+
+export interface SecurityQuestionResponse {
+  username: string
+  hasSecurityQuestion: boolean
+  securityQuestion: string | null
+  hasRecoveryCode: boolean
+  message?: string
+}
+
+export interface ResetPasswordPayload {
+  username: string
+  answer?: string
+  recoveryCode?: string
+  newPassword: string
+}
+
+export interface ResetPasswordResponse {
+  message: string
+  newRecoveryCode?: string
+}
+
+export interface SecuritySettingsResponse {
+  username: string
+  hasSecurityQuestion: boolean
+  securityQuestion: string | null
+  recoveryCode: string
+}

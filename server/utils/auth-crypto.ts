@@ -47,3 +47,19 @@ export function generateSecureToken(): string {
 export function generateUserId(): string {
   return 'usr_' + crypto.randomBytes(8).toString('hex')
 }
+
+/**
+ * 生成 8 位格式化的高强度备用安全救援码，例如 CF-9A2E-8B7C
+ * 排除易混淆字符（0/O/1/I），便于考生抄写备份与应急重置密码
+ */
+export function generateRecoveryCode(): string {
+  const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
+  let part1 = ''
+  let part2 = ''
+  const bytes = crypto.randomBytes(8)
+  for (let i = 0; i < 4; i++) {
+    part1 += chars[bytes[i] % chars.length]
+    part2 += chars[bytes[i + 4] % chars.length]
+  }
+  return `CF-${part1}-${part2}`
+}

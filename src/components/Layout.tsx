@@ -24,16 +24,19 @@ import {
   Smartphone,
   Sparkles,
   Coins,
+  Palette,
 } from 'lucide-react'
 import { useVaultStats, useApiHealth } from '../hooks/useVaultData'
+import { useThemeStyle } from '../hooks/useThemeStyle'
 import { useVaultEvents } from '../hooks/useVaultEvents'
 import DesktopPet from './Pet/DesktopPet'
 import { useAuth } from '../contexts/AuthContext'
 import UserManagementModal from './UserManagementModal'
 import UserGuideModal from './UserGuideModal'
 import CheckinModal from './CheckinModal'
+import ChangePasswordModal from './ChangePasswordModal'
 import InteractiveTourGuide from './InteractiveTourGuide'
-import { HelpCircle, Compass } from 'lucide-react'
+import { HelpCircle, Compass, KeyRound } from 'lucide-react'
 import { LogOut, Users as UsersIcon, ShieldAlert as ShieldAlertIcon } from 'lucide-react'
 import { prefetchRoute } from '../App'
 import { useUIModalStore } from '../shared/store/useUIModalStore'
@@ -88,6 +91,7 @@ function navClass(isActive: boolean) {
 }
 
 export default function Layout({ children }: LayoutProps) {
+  const { isVibrant, toggleThemeStyle } = useThemeStyle()
   const location = useLocation()
   const currentPage = allNavItems.find(item => location.pathname === item.to)
   const isFullHeightPage = ['/chat', '/editor', '/graph'].includes(location.pathname)
@@ -105,6 +109,7 @@ export default function Layout({ children }: LayoutProps) {
   const { user, isAdmin, isStudent, logout, points, canCheckinToday } = useAuth()
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [userManagementOpen, setUserManagementOpen] = useState(false)
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false)
   const [guideOpen, setGuideOpen] = useState(false)
   const [interactiveTourOpen, setInteractiveTourOpen] = useState(false)
   const [checkinOpen, setCheckinOpen] = useState(false)
@@ -128,6 +133,8 @@ export default function Layout({ children }: LayoutProps) {
     window.addEventListener('open-user-guide', onOpenGuide)
     const onStartTour = () => setInteractiveTourOpen(true)
     window.addEventListener('start-interactive-tour', onStartTour)
+    const onOpenChangePassword = () => setChangePasswordOpen(true)
+    window.addEventListener('open-change-password-modal', onOpenChangePassword)
     const onOpenCheckin = (e?: Event) => {
       const custom = e as CustomEvent<{ tab?: 'checkin' | 'redeem' | 'recharge' | 'logs' }>
       if (custom?.detail?.tab) {
@@ -176,6 +183,7 @@ export default function Layout({ children }: LayoutProps) {
       window.removeEventListener('open-quick-note', onOpenQuickNote)
       window.removeEventListener('open-user-guide', onOpenGuide)
       window.removeEventListener('start-interactive-tour', onStartTour)
+      window.removeEventListener('open-change-password-modal', onOpenChangePassword)
       window.removeEventListener('open-checkin-modal', onOpenCheckin)
       window.removeEventListener('vault-notes-updated', onNotesUpdated)
       window.removeEventListener('vault-stats-updated', onNotesUpdated)
@@ -378,6 +386,22 @@ export default function Layout({ children }: LayoutProps) {
               >
                 <Settings className="h-3.5 w-3.5 shrink-0" />
               </Link>
+
+              {/* UI 风格切换：鲜艳活力 / 经典黑白 */}
+              <button
+                type="button"
+                onClick={toggleThemeStyle}
+                aria-label="切换UI色彩风格"
+                title={isVibrant ? '当前风格：鲜艳活力风（点击切换为经典极简黑白）' : '当前风格：经典极简黑白（点击切换为鲜艳活力风）'}
+                className={`h-8 px-2 sm:px-2.5 inline-flex items-center gap-1.5 rounded-lg border text-xs font-semibold shadow-2xs cursor-pointer active:scale-95 transition-all select-none ${
+                  isVibrant
+                    ? 'bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 border-indigo-200/90 text-indigo-700 hover:border-indigo-300'
+                    : 'border-neutral-200/90 bg-white text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900'
+                }`}
+              >
+                <Palette className={`h-3.5 w-3.5 shrink-0 ${isVibrant ? 'text-indigo-600' : 'text-neutral-500'}`} />
+                <span className="hidden sm:inline font-medium">{isVibrant ? '鲜艳风' : '黑白风'}</span>
+              </button>
             </div>
 
             <div className="hidden sm:block h-3.5 w-[1px] bg-neutral-200/80 mx-0.5" />
@@ -521,6 +545,17 @@ export default function Layout({ children }: LayoutProps) {
                       <button
                         onClick={() => {
                           setUserMenuOpen(false)
+                          setChangePasswordOpen(true)
+                        }}
+                        className="w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900 transition-colors cursor-pointer"
+                      >
+                        <KeyRound className="h-3.5 w-3.5 text-neutral-500" />
+                        <span>修改登录密码</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setUserMenuOpen(false)
                           logout()
                         }}
                         className="w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
@@ -545,6 +580,7 @@ export default function Layout({ children }: LayoutProps) {
           </div>
         </div>
       </header>
+      <ChangePasswordModal isOpen={changePasswordOpen} onClose={() => setChangePasswordOpen(false)} />
       <UserManagementModal isOpen={Boolean(userManagementOpen || activeModals['user-management'])} onClose={() => { setUserManagementOpen(false); closeModal('user-management') }} />
       <UserGuideModal
         isOpen={Boolean(guideOpen || activeModals['user-guide'])}
