@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from 'recharts'
 import {
@@ -1257,14 +1258,15 @@ export default function Study() {
       </Suspense>
 
       {/* 修改教材/资料名称弹窗 */}
-      {renamingBook && (
+      {renamingBook && createPortal(
         <div
           onClick={() => setRenamingBook(null)}
-          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-fade-in"
         >
           <div
             onClick={e => e.stopPropagation()}
-            className="bg-white rounded-2xl border border-cream-300 shadow-2xl w-full max-w-md p-6 animate-in fade-in zoom-in-95 duration-150"
+            className="bg-white rounded-2xl border border-cream-300 shadow-2xl w-full max-w-md max-h-[88dvh] overflow-y-auto overscroll-contain p-5 sm:p-6 animate-scale-up"
+            style={{ WebkitOverflowScrolling: 'touch' }}
           >
             <div className="flex items-center justify-between border-b border-cream-200 pb-3 mb-4">
               <div className="flex items-center gap-2.5">
@@ -1359,7 +1361,8 @@ export default function Study() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

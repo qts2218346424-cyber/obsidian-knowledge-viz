@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import {
   X,
   Lock,
@@ -97,14 +98,14 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-fade-in">
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-xs animate-fade-in">
       <div
-        className="w-full max-w-md rounded-2xl bg-white border border-slate-200/90 shadow-2xl overflow-hidden flex flex-col animate-scale-up"
+        className="w-full max-w-md max-h-[88dvh] rounded-2xl bg-white border border-slate-200/90 shadow-2xl overflow-hidden flex flex-col animate-scale-up"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-gradient-to-r from-slate-50 to-indigo-50/30">
+        <div className="flex items-center justify-between border-b border-slate-100 px-5 sm:px-6 py-3.5 sm:py-4 bg-gradient-to-r from-slate-50 to-indigo-50/30 shrink-0">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm">
               <KeyRound className="h-5 w-5" />
@@ -125,7 +126,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-4">
+        <div className="p-4 sm:p-6 space-y-4 flex-1 overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
           {/* 当前账户身份卡片 */}
           <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
             <div className="space-y-0.5">
@@ -304,6 +305,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

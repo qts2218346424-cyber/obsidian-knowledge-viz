@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { Folder, FolderOpen, HardDrive, ArrowUp, X, Loader2, AlertCircle, ChevronRight, Monitor } from 'lucide-react'
 import { api } from '../services/api'
 
@@ -74,9 +75,9 @@ export default function FolderPickerModal({
     }
   }
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/45 backdrop-blur-sm animate-fade-in">
-      <div className="bg-surface border border-cream-200 rounded-2xl w-full max-w-[500px] max-h-[85vh] sm:max-h-[540px] flex flex-col shadow-2xl overflow-hidden">
+      <div className="bg-surface border border-cream-200 rounded-2xl w-full max-w-[500px] max-h-[88dvh] sm:max-h-[540px] flex flex-col shadow-2xl overflow-hidden">
         {/* 标题栏 */}
         <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 border-b border-cream-200 bg-cream-50/70">
           <div className="flex items-center gap-2 min-w-0">
@@ -206,6 +207,7 @@ export default function FolderPickerModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

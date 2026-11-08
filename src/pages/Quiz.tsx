@@ -1,5 +1,6 @@
 import { getAuthHeaders } from '../services/auth'
 import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react'
+import { createPortal } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
 import {
   Upload,
@@ -1138,14 +1139,14 @@ export default function Quiz() {
           )}
         </Suspense>
         {/* ── AI 举一反三 · 变式题强化训练舱 Modal ── */}
-        {variantModalOpen && variantSourceQ && (
+        {variantModalOpen && variantSourceQ && createPortal(
           <div
             className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 animate-in fade-in"
             onClick={(e) => {
               if (e.target === e.currentTarget) setVariantModalOpen(false)
             }}
           >
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden text-left font-sans animate-in zoom-in-95 duration-150">
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[90dvh] flex flex-col overflow-hidden text-left font-sans animate-in zoom-in-95 duration-150">
               {/* Modal Header */}
               <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-indigo-50/70 via-white to-amber-50/50">
                 <div className="flex items-center gap-2.5">
@@ -1173,7 +1174,7 @@ export default function Quiz() {
               </div>
 
               {/* Modal Body */}
-              <div className="p-5 overflow-y-auto space-y-5 flex-1 text-xs sm:text-[13px] no-scrollbar">
+              <div className="p-4 sm:p-5 overflow-y-auto overscroll-contain space-y-4 sm:space-y-5 flex-1 text-xs sm:text-[13px]" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
                 {/* 原错题原貌提示卡 */}
                 <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1.5">
                   <div className="text-[11px] font-bold text-slate-500 flex items-center gap-1.5">
@@ -1286,7 +1287,8 @@ export default function Quiz() {
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
       </div>
@@ -2214,14 +2216,14 @@ export default function Quiz() {
           )}
         </Suspense>
         {/* ── AI 举一反三 · 变式题强化训练舱 Modal ── */}
-        {variantModalOpen && variantSourceQ && (
+        {variantModalOpen && variantSourceQ && createPortal(
           <div
             className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 animate-in fade-in"
             onClick={(e) => {
               if (e.target === e.currentTarget) setVariantModalOpen(false)
             }}
           >
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden text-left font-sans animate-in zoom-in-95 duration-150">
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[90dvh] flex flex-col overflow-hidden text-left font-sans animate-in zoom-in-95 duration-150">
               {/* Modal Header */}
               <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-indigo-50/70 via-white to-amber-50/50">
                 <div className="flex items-center gap-2.5">
@@ -2249,7 +2251,7 @@ export default function Quiz() {
               </div>
 
               {/* Modal Body */}
-              <div className="p-5 overflow-y-auto space-y-5 flex-1 text-xs sm:text-[13px] no-scrollbar">
+              <div className="p-4 sm:p-5 overflow-y-auto overscroll-contain space-y-4 sm:space-y-5 flex-1 text-xs sm:text-[13px]" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
                 {/* 原错题原貌提示卡 */}
                 <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1.5">
                   <div className="text-[11px] font-bold text-slate-500 flex items-center gap-1.5">
@@ -2362,7 +2364,8 @@ export default function Quiz() {
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
       </div>
@@ -2683,14 +2686,14 @@ export default function Quiz() {
           )}
         </Suspense>
         {/* ── AI 举一反三 · 变式题强化训练舱 Modal ── */}
-        {variantModalOpen && variantSourceQ && (
+        {variantModalOpen && variantSourceQ && createPortal(
           <div
             className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 animate-in fade-in"
             onClick={(e) => {
               if (e.target === e.currentTarget) setVariantModalOpen(false)
             }}
           >
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden text-left font-sans animate-in zoom-in-95 duration-150">
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[90dvh] flex flex-col overflow-hidden text-left font-sans animate-in zoom-in-95 duration-150">
               {/* Modal Header */}
               <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-indigo-50/70 via-white to-amber-50/50">
                 <div className="flex items-center gap-2.5">
@@ -2718,7 +2721,7 @@ export default function Quiz() {
               </div>
 
               {/* Modal Body */}
-              <div className="p-5 overflow-y-auto space-y-5 flex-1 text-xs sm:text-[13px] no-scrollbar">
+              <div className="p-4 sm:p-5 overflow-y-auto overscroll-contain space-y-4 sm:space-y-5 flex-1 text-xs sm:text-[13px]" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
                 {/* 原错题原貌提示卡 */}
                 <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1.5">
                   <div className="text-[11px] font-bold text-slate-500 flex items-center gap-1.5">
@@ -2831,7 +2834,8 @@ export default function Quiz() {
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
       </div>

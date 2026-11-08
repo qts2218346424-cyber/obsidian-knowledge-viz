@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Save, Trash2, FileEdit, FilePlus, Upload,
   ChevronDown, ChevronRight, X, Loader2, AlertTriangle,
@@ -1487,14 +1488,15 @@ export default function Editor() {
       </div>
 
       {/* New File Dialog */}
-      {showNewDialog && (
+      {showNewDialog && createPortal(
         <div
           onClick={() => setShowNewDialog(false)}
-          className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-[100] animate-in fade-in duration-150 p-4"
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-[100] animate-in fade-in duration-150 p-3 sm:p-4"
         >
           <div
             onClick={e => e.stopPropagation()}
-            className="bg-surface border border-cream-300 rounded-3xl p-6 w-[min(94vw,32rem)] shadow-2xl space-y-4"
+            className="bg-surface border border-cream-300 rounded-3xl p-5 sm:p-6 w-[min(94vw,32rem)] max-h-[90dvh] overflow-y-auto overscroll-contain shadow-2xl space-y-4"
+            style={{ WebkitOverflowScrolling: 'touch' }}
           >
             <div className="flex items-center justify-between">
               <div>
@@ -1625,50 +1627,53 @@ export default function Editor() {
               </p>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Delete Confirm */}
-      {showDeleteConfirm && currentFile && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-surface border border-cream-300 rounded-xl p-6 w-96 shadow-2xl">
+      {showDeleteConfirm && currentFile && createPortal(
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-surface border border-cream-300 rounded-2xl p-5 sm:p-6 w-full max-w-sm shadow-2xl animate-scale-up">
             <h3 className="text-sm font-semibold text-rose-400 mb-3 flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> 确认删除</h3>
             <p className="text-xs text-warm-500 mb-1">将把文件移入回收站：</p>
-            <p className="text-xs text-warm-700 font-mono bg-cream-200 rounded px-2 py-1.5 mb-4">{currentFile.path}</p>
-            <div className="flex gap-2">
-              <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 px-3 py-2 rounded-lg text-xs bg-cream-200 text-warm-600 hover:bg-cream-300">取消</button>
-              <button onClick={handleDelete} className="flex-1 px-3 py-2 rounded-lg text-xs bg-rose-600 text-white hover:bg-rose-500">删除</button>
+            <p className="text-xs text-warm-700 font-mono bg-cream-200 rounded-xl px-2.5 py-2 mb-4 break-all">{currentFile.path}</p>
+            <div className="flex gap-2.5">
+              <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-cream-200 text-warm-600 hover:bg-cream-300 transition-colors cursor-pointer">取消</button>
+              <button onClick={handleDelete} className="flex-1 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-rose-600 text-white hover:bg-rose-500 shadow-xs transition-colors cursor-pointer">删除</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Rename Dialog */}
-      {showRenameDialog && currentFile && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-surface border border-cream-300 rounded-xl p-6 w-96 shadow-2xl">
+      {showRenameDialog && currentFile && createPortal(
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-surface border border-cream-300 rounded-2xl p-5 sm:p-6 w-full max-w-sm shadow-2xl animate-scale-up">
             <h3 className="text-sm font-semibold text-warm-700 mb-4">重命名笔记</h3>
             <div className="space-y-3">
               <div><label className="text-[11px] text-warm-500 mb-1 block">当前路径</label>
-                <div className="text-xs text-warm-400 font-mono bg-cream-200 rounded px-2 py-1.5">{currentFile.path}</div></div>
+                <div className="text-xs text-warm-400 font-mono bg-cream-200 rounded-xl px-2.5 py-2 break-all">{currentFile.path}</div></div>
               <div><label className="text-[11px] text-warm-500 mb-1 block">新路径</label>
                 <input type="text" value={renamePath} onChange={e => setRenamePath(e.target.value)}
                   placeholder="new-folder/new-name.md" autoFocus
-                  className="w-full bg-cream-200 border border-cream-300 rounded-lg px-3 py-2 text-sm text-warm-700 outline-none focus:border-accent-orange" /></div>
+                  className="w-full bg-cream-200 border border-cream-300 rounded-xl px-3 py-2 text-sm text-warm-700 outline-none focus:border-accent-orange" /></div>
               <p className="text-[10px] text-warm-400">重命名后会自动更新所有 [[wikilinks]]。</p>
               <div className="flex gap-2 pt-2">
-                <button onClick={() => { setShowRenameDialog(false); setRenamePath('') }} className="flex-1 px-3 py-2 rounded-lg text-xs bg-cream-200 text-warm-600 hover:bg-cream-300">取消</button>
-                <button onClick={handleRename} disabled={!renamePath} className="flex-1 px-3 py-2 rounded-lg text-xs bg-accent-orange text-white hover:bg-accent-orange/90 disabled:opacity-40">重命名</button>
+                <button onClick={() => { setShowRenameDialog(false); setRenamePath('') }} className="flex-1 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-cream-200 text-warm-600 hover:bg-cream-300 transition-colors cursor-pointer">取消</button>
+                <button onClick={handleRename} disabled={!renamePath} className="flex-1 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-accent-orange text-white hover:bg-accent-orange/90 shadow-xs transition-colors disabled:opacity-40 cursor-pointer">重命名</button>
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* AI Edit Result Panel */}
-      {showAiResult && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-surface border border-cream-300 rounded-2xl w-[600px] max-h-[80vh] shadow-2xl flex flex-col animate-fade-in-up">
+      {showAiResult && createPortal(
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-3 sm:p-5 animate-fade-in">
+          <div className="bg-surface border border-cream-300 rounded-2xl w-full max-w-2xl max-h-[88dvh] shadow-2xl flex flex-col animate-scale-up overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-cream-200">
               <div className="flex items-center gap-2">
@@ -1680,7 +1685,7 @@ export default function Editor() {
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-auto p-6">
+            <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6" style={{ WebkitOverflowScrolling: 'touch' }}>
               {aiEditing ? (
                 <div className="flex flex-col items-center justify-center py-12 gap-3">
                   <Loader2 className="w-6 h-6 text-accent-orange animate-spin" />
@@ -1716,7 +1721,7 @@ export default function Editor() {
 
             {/* Footer */}
             {!aiEditing && aiResult && (
-              <div className="flex items-center justify-between px-6 py-4 border-t border-cream-200 bg-cream-100/50">
+              <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 border-t border-cream-200 bg-cream-100/50 shrink-0">
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => { navigator.clipboard.writeText(aiResult) }}
@@ -1738,7 +1743,8 @@ export default function Editor() {
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Quick Practice Modal */}

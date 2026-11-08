@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import {
   X, Folder, RefreshCw, CheckCircle2,
   FolderOpen, Activity, FileText, Hash, Link2, Copy, Check
@@ -101,11 +102,11 @@ export default function ObsidianSyncModal({
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="dark bg-[#121622] border border-white/15 rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden text-slate-100 flex flex-col">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="dark bg-[#121622] border border-white/15 rounded-3xl w-full max-w-xl max-h-[88dvh] shadow-2xl overflow-hidden text-slate-100 flex flex-col">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
+        <div className="px-5 sm:px-6 py-3.5 sm:py-4 border-b border-white/10 flex items-center justify-between bg-white/[0.02] shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-2xl bg-purple-500/15 text-purple-400 border border-purple-500/30">
               <Folder className="w-5 h-5" />
@@ -132,7 +133,7 @@ export default function ObsidianSyncModal({
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-5">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 flex-1 overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
           {/* Path Card */}
           <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2">
             <div className="flex items-center justify-between">
@@ -245,7 +246,7 @@ export default function ObsidianSyncModal({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 border-t border-white/10 bg-white/[0.02] flex items-center justify-between text-xs text-slate-400">
+        <div className="px-5 sm:px-6 py-3 border-t border-white/10 bg-white/[0.02] flex items-center justify-between text-xs text-slate-400 shrink-0">
           <span>文件监听状态：正常监听中</span>
           <button
             onClick={onClose}
@@ -255,6 +256,7 @@ export default function ObsidianSyncModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

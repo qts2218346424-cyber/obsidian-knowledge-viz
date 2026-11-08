@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useThemeStyle } from '../hooks/useThemeStyle'
 import { getSecuritySettings, updateSecuritySettings } from '../services/auth'
@@ -1599,27 +1600,27 @@ function FolderPickerModal({
     browse()
   }, [browse])
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-surface border border-cream-200 rounded-2xl w-[480px] max-h-[520px] flex flex-col shadow-xl">
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
+      <div className="bg-surface border border-cream-200 rounded-2xl w-full max-w-[480px] max-h-[85dvh] flex flex-col shadow-2xl overflow-hidden animate-scale-up">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-cream-200">
-          <div className="flex items-center gap-2">
-            <Folder className="w-4 h-4 text-accent-orange" />
-            <span className="text-sm font-medium text-warm-800">选择知识库文件夹</span>
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 border-b border-cream-200 shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <Folder className="w-4 h-4 text-accent-orange shrink-0" />
+            <span className="text-sm font-semibold text-warm-800 truncate">选择知识库文件夹</span>
           </div>
-          <button onClick={onClose} className="text-warm-400 hover:text-warm-600 transition-colors">
+          <button onClick={onClose} className="p-1 rounded-lg text-warm-400 hover:text-warm-600 hover:bg-cream-200 transition-colors cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Current path */}
         {currentPath && (
-          <div className="flex items-center gap-2 px-5 py-2.5 bg-cream-100/60 border-b border-cream-200">
+          <div className="flex items-center gap-2 px-3 sm:px-5 py-2.5 bg-cream-100/60 border-b border-cream-200 shrink-0">
             {parent && (
               <button
                 onClick={() => browse(parent)}
-                className="flex items-center gap-1 text-xs text-accent-orange hover:text-accent-orange/80 transition-colors"
+                className="flex items-center gap-1 text-xs text-accent-orange hover:text-accent-orange/80 font-medium transition-colors shrink-0"
               >
                 <ArrowUp className="w-3 h-3" />
                 上级
@@ -1632,7 +1633,7 @@ function FolderPickerModal({
         )}
 
         {/* File list */}
-        <div className="flex-1 overflow-auto px-2 py-2">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-2 py-2" style={{ WebkitOverflowScrolling: 'touch' }}>
           {loading && (
             <div className="flex items-center gap-2 text-sm text-warm-500 py-8 justify-center">
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -1667,35 +1668,36 @@ function FolderPickerModal({
                   <FolderOpen className="w-4 h-4 text-accent-orange/60 shrink-0" />
                 )}
                 <span className="text-sm text-warm-700 flex-1 truncate">{entry.name}</span>
-                <ChevronRight className="w-3.5 h-3.5 text-warm-300 group-hover:text-warm-500 transition-colors" />
+                <ChevronRight className="w-3.5 h-3.5 text-warm-300 group-hover:text-warm-500 transition-colors shrink-0" />
               </button>
             )
           })}
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-t border-cream-200">
-          <div className="text-[11px] text-warm-400 truncate flex-1 mr-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5 py-3 border-t border-cream-200 bg-cream-50/50 shrink-0">
+          <div className="text-[11px] text-warm-400 truncate max-w-full sm:max-w-[240px]">
             {currentPath ? `当前: ${currentPath}` : '请选择一个磁盘或文件夹'}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 ml-auto">
             <button
               onClick={onClose}
-              className="px-4 py-1.5 rounded-lg text-xs text-warm-500 hover:text-warm-700 transition-colors"
+              className="px-3.5 py-1.5 rounded-lg text-xs text-warm-500 hover:text-warm-700 hover:bg-cream-200 transition-colors cursor-pointer"
             >
               取消
             </button>
             <button
               onClick={() => currentPath && onSelect(currentPath)}
               disabled={!currentPath}
-              className="px-4 py-1.5 rounded-lg bg-accent-orange text-white text-xs font-medium hover:bg-accent-orange/85 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="px-4 py-1.5 rounded-lg bg-accent-orange text-white text-xs font-medium hover:bg-accent-orange/85 shadow-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
             >
               选择此文件夹
             </button>
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 

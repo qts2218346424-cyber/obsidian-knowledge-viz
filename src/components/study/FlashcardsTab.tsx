@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Sparkles,
   Plus,
@@ -691,7 +692,7 @@ export default function FlashcardsTab() {
       )}
 
       {/* 4. 沉浸式极速背诵模态框 (Anki Mode) */}
-      {reviewModalOpen && reviewQueue.length > 0 && (
+      {reviewModalOpen && reviewQueue.length > 0 && createPortal(
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-cream-300 shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             {/* 顶栏进度 */}
@@ -730,7 +731,7 @@ export default function FlashcardsTab() {
             </div>
 
             {/* 卡片大窗口 */}
-            <div className="p-6 flex-1 overflow-y-auto space-y-4">
+            <div className="p-4 sm:p-6 flex-1 overflow-y-auto overscroll-contain space-y-4" style={{ WebkitOverflowScrolling: "touch" }}>
               {reviewQueue[currentReviewIdx] && (() => {
                 const cur = reviewQueue[currentReviewIdx]
                 return (
@@ -830,12 +831,12 @@ export default function FlashcardsTab() {
             )}
           </div>
         </div>
-      )}
+      , document.body)}
 
       {/* 5. 新建 / 编辑卡片弹窗 */}
-      {editModalOpen && editingCard && (
+      {editModalOpen && editingCard && createPortal(
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-cream-300 shadow-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-3xl border border-cream-300 shadow-2xl w-full max-w-lg p-5 sm:p-6 max-h-[88dvh] overflow-y-auto overscroll-contain animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-cream-200 pb-3 mb-4">
               <h3 className="text-sm font-bold text-warm-900">
                 {editingCard.id ? '编辑知识点记忆卡片' : '新建 408 知识点记忆闪卡'}
@@ -961,12 +962,12 @@ export default function FlashcardsTab() {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
 
       {/* 6. AI 智能提炼卡片弹窗 */}
-      {aiModalOpen && (
+      {aiModalOpen && createPortal(
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-cream-300 shadow-2xl w-full max-w-md p-6 animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-3xl border border-cream-300 shadow-2xl w-full max-w-md p-5 sm:p-6 max-h-[88dvh] overflow-y-auto overscroll-contain animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-cream-200 pb-3 mb-4">
               <div className="flex items-center gap-2">
                 <div className="p-2 bg-purple-50 rounded-xl text-purple-600 border border-purple-200">
@@ -1041,7 +1042,7 @@ export default function FlashcardsTab() {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
     </div>
   )
 }
