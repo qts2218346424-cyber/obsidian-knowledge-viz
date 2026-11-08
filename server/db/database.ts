@@ -661,7 +661,9 @@ class CoreForgeDatabase {
 
   findUserByUsername(username: string): DbUser | null {
     if (!this.db) return null
-    const row = this.db.prepare('SELECT * FROM users WHERE username = ? COLLATE NOCASE').get(username) as any
+    const row = this.db
+      .prepare('SELECT * FROM users WHERE username = ? COLLATE NOCASE OR display_name = ? COLLATE NOCASE')
+      .get(username, username) as any
     if (!row) return null
     return {
       id: row.id,

@@ -41,11 +41,12 @@ import VocabTab from '../components/study/VocabTab'
 import WordBrowser from '../components/vocab/WordBrowser'
 import VocabStats from '../components/vocab/VocabStats'
 import WordRelations from '../components/vocab/WordRelations'
+import DailyReadingTab from '../components/english/DailyReadingTab'
 
-type EnglishMainTab = 'vocab' | 'templates' | 'papers' | 'grading'
+type EnglishMainTab = 'dailyReading' | 'templates' | 'grading' | 'papers' | 'vocab'
 
 export default function English() {
-  const [activeTab, setActiveTab] = useState<EnglishMainTab>('templates')
+  const [activeTab, setActiveTab] = useState<EnglishMainTab>('dailyReading')
 
   // -------------------------------------------------------------
   // 1. 词汇子选项卡
@@ -197,6 +198,21 @@ export default function English() {
         <div className="mt-6 flex items-center gap-2 overflow-x-auto no-scrollbar border-t border-slate-200/60 pt-4">
           <button
             type="button"
+            onClick={() => setActiveTab('dailyReading')}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'dailyReading'
+                ? 'bg-slate-900 text-white shadow-md'
+                : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>每日文献精读 (AI伴读)</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950 font-black">
+              外刊题源
+            </span>
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveTab('templates')}
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'templates'
@@ -254,6 +270,11 @@ export default function English() {
           </button>
         </div>
       </section>
+
+      {/* ─────────────────────────────────────────────────────────────
+          板块 0: 每日文献精读 (AI长难句拆解 + 考研AI伴读导师)
+          ───────────────────────────────────────────────────────────── */}
+      {activeTab === 'dailyReading' && <DailyReadingTab />}
 
       {/* ─────────────────────────────────────────────────────────────
           板块 1: 作文高分模板库 & 万能金句
