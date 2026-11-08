@@ -47,6 +47,19 @@ app.use(cors({
 }))
 
 app.use(express.json({ limit: '50mb' }))
+
+// 对所有页面路由注入边缘 CDN 与浏览器无缓存头，杜绝 Cloudflare 及移动端强缓存旧版本
+app.use((req, res, next) => {
+  if (req.method === 'GET' && (!req.path.includes('.') || req.path.endsWith('.html'))) {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0')
+    res.setHeader('Pragma', 'no-cache')
+    res.setHeader('Expires', '0')
+    res.setHeader('Surrogate-Control', 'no-store')
+    res.setHeader('CDN-Cache-Control', 'no-store')
+    res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store')
+  }
+  next()
+})
 app.use((err: unknown, _req: express.Request, res: express.Response, next: express.NextFunction) => {
   if (err instanceof Error && err.message === 'Origin is not allowed') {
     res.status(403).json({ error: err.message })
@@ -124,6 +137,9 @@ app.use((req, res) => {
   }
   const indexPath = path.join(distPath, 'index.html')
   if (fs.existsSync(indexPath)) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, proxy-revalidate')
+    res.setHeader('Pragma', 'no-cache')
+    res.setHeader('Expires', '0')
     res.sendFile(indexPath)
   } else {
     res.status(404).send('Frontend not built. Run: npm run build')
