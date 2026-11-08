@@ -402,6 +402,39 @@ function buildErrorLog(date: string, questions: any[]): string {
   return content
 }
 
+function parseSingleErrorNote(content: string, fileName: string): any | null {
+  try {
+    const { data: meta, content: body } = matter(content)
+    if (meta?.type !== 'error_log' && !body.includes('错题复盘')) {
+      return null
+    }
+
+    const questionMatch = body.match(/### 题面：\s*([\s\S]*?)(?:### 选项：|## 2\.|$)/)
+    const question = questionMatch ? questionMatch[1].trim() : ''
+    if (!question) return null
+
+    const userAnsMatch = body.match(/当时作答[：:*]*\s*`?([^`\r\n]+)`?/)
+    const correctAnsMatch = body.match(/标准答案[：:*]*\s*`?([^`\r\n]+)`?/)
+    const explMatch = body.match(/## 3\. 标准分步严谨推导\s*([\s\S]*?)(?:## 4\.|$)/)
+    const subjectMatch = body.match(/科目[：:*]*\s*([^\r\n*]+)/)
+
+    return {
+      source: fileName,
+      question,
+      userAnswer: userAnsMatch ? userAnsMatch[1].trim() : '',
+      correctAnswer: correctAnsMatch ? correctAnsMatch[1].trim() : '',
+      explanation: explMatch ? explMatch[1].trim() : '',
+      reviewCount: '0',
+      nextReview: meta?.created || new Date().toISOString().split('T')[0],
+      _sourceFile: fileName,
+      subject: meta?.subject || (subjectMatch ? subjectMatch[1].trim() : '')
+    }
+  } catch {
+    return null
+  }
+}
+
+
 studyRouter.post('/study/error-log', async (req, res) => {
   try {
     const { notePath, question, userAnswer, correctAnswer, explanation } = req.body as {
@@ -432,7 +465,8 @@ studyRouter.post('/study/error-log', async (req, res) => {
 
     let questions: any[] = []
     try {
-      const existing = getFile(config.vaultPath, logPath)
+      const vaultPath = getRequestVaultPath(req)
+    const existing = getFile(vaultPath, logPath)
       if (existing) {
         const parsed = parseErrorLog(existing.content)
         questions = parsed.questions
@@ -446,9 +480,9 @@ studyRouter.post('/study/error-log', async (req, res) => {
     const fm = { date: today, type: 'error-log' }
 
     try {
-      updateFile(config.vaultPath, logPath, content, fm)
+      updateFile(vaultPath, logPath, content, fm)
     } catch {
-      createFile(config.vaultPath, logPath, content, fm)
+      createFile(vaultPath, logPath, content, fm)
     }
     markSelfWrite(logPath)
     invalidateCache()
@@ -464,7 +498,8 @@ studyRouter.get('/study/error-log', (req, res) => {
     const date = String(req.query.date || new Date().toISOString().split('T')[0])
     const logPath = `${getErrorLogDir()}/${date}.md`
     try {
-      const file = getFile(config.vaultPath, logPath)
+      const vaultPath = getRequestVaultPath(req)
+    const file = getFile(vaultPath, logPath)
       if (file) {
         const parsed = parseErrorLog(file.content)
         res.json({ date, questions: parsed.questions, path: logPath })
@@ -486,16 +521,22 @@ studyRouter.get('/study/daily-review', (req, res) => {
     const allQuestions: any[] = []
     const seenQuestionKeys = new Set<string>()
 
-    // 1. 聚合多目录错题日志 (兼容 错题本/ 与 03-刷题与复盘/ 以及 03-真题与错题/)
+    // 1. 聚合多目录错题日志与单题复盘笔记 (全量覆盖 03-真题错题归因 及其子目录)
     const candidateDirs = [
       path.resolve(vaultPath, getErrorLogDir()),
+      path.resolve(vaultPath, '03-真题错题归因/408错题本'),
+      path.resolve(vaultPath, '03-真题错题归因/数学错题本'),
+      path.resolve(vaultPath, '03-真题错题归因/每日错题集'),
+      path.resolve(vaultPath, '03-真题错题归因'),
       path.resolve(vaultPath, '03-刷题与复盘/408错题本'),
       path.resolve(vaultPath, '03-刷题与复盘/数学错题本'),
       path.resolve(vaultPath, '03-刷题与复盘/错题集'),
       path.resolve(vaultPath, '03-真题与错题/408错题本'),
       path.resolve(vaultPath, '03-真题与错题/数学错题本'),
-      path.resolve(config.vaultPath, getErrorLogDir()),
     ]
+    if (vaultPath === config.vaultPath) {
+      candidateDirs.push(path.resolve(config.vaultPath, getErrorLogDir()))
+    }
 
     for (const errorDir of candidateDirs) {
       if (fs.existsSync(errorDir)) {
@@ -505,12 +546,24 @@ studyRouter.get('/study/daily-review', (req, res) => {
             const fullPath = path.join(errorDir, file)
             const raw = fs.readFileSync(fullPath, 'utf-8')
             const parsed = parseErrorLog(raw)
-            for (const q of parsed.questions) {
-              const dedupeKey = (q.question || '').slice(0, 40)
-              if (dedupeKey && !seenQuestionKeys.has(dedupeKey)) {
-                seenQuestionKeys.add(dedupeKey)
-                q._sourceFile = file
-                allQuestions.push(q)
+            if (parsed.questions && parsed.questions.length > 0) {
+              for (const q of parsed.questions) {
+                const dedupeKey = (q.question || '').slice(0, 40)
+                if (dedupeKey && !seenQuestionKeys.has(dedupeKey)) {
+                  seenQuestionKeys.add(dedupeKey)
+                  q._sourceFile = file
+                  allQuestions.push(q)
+                }
+              }
+            } else {
+              // 尝试作为单题复盘笔记解析
+              const singleQ = parseSingleErrorNote(raw, file)
+              if (singleQ) {
+                const dedupeKey = (singleQ.question || '').slice(0, 40)
+                if (dedupeKey && !seenQuestionKeys.has(dedupeKey)) {
+                  seenQuestionKeys.add(dedupeKey)
+                  allQuestions.push(singleQ)
+                }
               }
             }
           } catch {
@@ -619,7 +672,8 @@ studyRouter.post('/study/review-complete', (req, res) => {
 
     const logPath = `${getErrorLogDir()}/${date}.md`
     try {
-      const file = getFile(config.vaultPath, logPath)
+      const vaultPath = getRequestVaultPath(req)
+    const file = getFile(vaultPath, logPath)
       if (!file) {
         res.status(404).json({ error: 'Log not found' })
         return

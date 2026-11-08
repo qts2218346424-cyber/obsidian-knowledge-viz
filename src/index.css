@@ -1283,3 +1283,39 @@ input[type="range"].history-range-slider:focus-visible {
     border-radius: 1rem !important;
   }
 }
+
+
+/* ==========================================================================
+   Linear/Notion 风格视觉规范升级：学术题干行高、等宽字体与 LaTeX 公式排版
+   ========================================================================== */
+.prose-math .katex,
+.markdown-body .katex,
+.katex {
+  font-size: 1.05em !important;
+  text-rendering: auto;
+}
+
+.prose-math .katex-display > .katex {
+  font-size: 1.1em !important;
+}
+
+/* 统一代码与等宽字体栈 */
+code, pre, kbd, samp, .font-mono {
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+}
+
+/* 题干与 AI 解析区域的正文行高扩展到 1.75，段间距留足 */
+.academic-body,
+.ai-explanation,
+.quiz-content,
+.prose-math {
+  line-height: 1.75 !important;
+}
+
+.academic-body p,
+.ai-explanation p,
+.quiz-content p,
+.prose-math p {
+  line-height: 1.75 !important;
+  margin: 0.65rem 0 !important;
+}

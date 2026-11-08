@@ -293,10 +293,23 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
   // 并在流式输出期间平滑闭合未完成的块级公式 $$，防止公式源码闪烁跳动
   const normalizedContent = useMemo(() => {
     if (!mainContent) return ''
-    let processed = mainContent.replace(
-      /!\[\[(.*?\.(?:png|jpg|jpeg|gif|webp|svg|bmp))\]\]/gi,
-      (_match, filename) => `![${filename}](/api/vault/attachment?path=${encodeURIComponent(filename)})`
-    )
+    let processed = mainContent
+      // 1. 规整图片双链 ![[xxx.png]] -> ![](/api/vault/attachment?path=xxx.png)
+      .replace(
+        /!\[\[(.*?\.(?:png|jpg|jpeg|gif|webp|svg|bmp))\]\]/gi,
+        (_match, filename) => `![${filename}](/api/vault/attachment?path=${encodeURIComponent(filename)})`
+      )
+      // 2. 规整普通带别名双链 [[笔记名|显示别名]] -> [显示别名](#wikilink:笔记名)
+      .replace(
+        /\[\[([^\]\|]+)\|([^\]]+)\]\]/g,
+        (_match, note, alias) => `[${alias}](#wikilink:${encodeURIComponent(note.trim())})`
+      )
+      // 3. 规整普通单向双链 [[笔记名]] -> [笔记名](#wikilink:笔记名)
+      .replace(
+        /\[\[([^\]]+)\]\]/g,
+        (_match, note) => `[${note.trim()}](#wikilink:${encodeURIComponent(note.trim())})`
+      )
+
     if (isStreaming) {
       const blockMathMatches = processed.match(/\$\$/g)
       if (blockMathMatches && blockMathMatches.length % 2 === 1) {
@@ -329,6 +342,39 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
         )
       },
       // 标题分级高亮展示
+            a({ href, children, ...props }: any) {
+        if (href && href.startsWith('#wikilink:')) {
+          const targetNote = decodeURIComponent(href.replace('#wikilink:', ''))
+          return (
+            <span
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                window.dispatchEvent(new CustomEvent('wikilink-clicked', { detail: { target: targetNote } }))
+                if (!window.location.pathname.includes('/editor')) {
+                  window.location.href = `/editor?path=${encodeURIComponent(targetNote)}`
+                }
+              }}
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 mx-0.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 hover:bg-indigo-500/20 hover:border-indigo-500/40 font-medium cursor-pointer transition-all active:scale-95 text-[0.95em]"
+              title={`点击在知识库编辑器中快速打开或创建关联笔记：[[${targetNote}]]`}
+            >
+              <span className="text-[10px] text-indigo-400">🔗</span>
+              <span className="underline decoration-indigo-400/40 underline-offset-2">{children}</span>
+            </span>
+          )
+        }
+        return (
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-accent-orange hover:underline font-medium"
+            {...props}
+          >
+            {children}
+          </a>
+        )
+      },
       h1({ children }: any) {
         return (
           <h1 className="text-base sm:text-lg font-bold text-warm-900 dark:text-white mt-4 mb-2 pb-1.5 border-b border-cream-300 dark:border-white/10 flex items-center gap-2">

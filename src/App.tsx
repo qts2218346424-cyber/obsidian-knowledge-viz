@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AudioProvider } from './contexts/AudioContext'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import Layout from './components/Layout'
@@ -141,13 +141,14 @@ function PageFallback() {
 
 function ProtectedRoutes() {
   const { isAuthenticated, isLoading } = useAuth()
+  const location = useLocation()
 
   if (isLoading) {
     return <PageFallback />
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
+    return <Navigate to="/login" state={{ from: location }} replace />
   }
 
   return (
@@ -157,7 +158,7 @@ function ProtectedRoutes() {
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/graph" element={<KnowledgeGraph />} />
+            <Route path="/graph" element={<Navigate to="/study?tab=graph" replace />} />
             <Route path="/workflow" element={<Workflow />} />
             <Route path="/editor" element={<Editor />} />
             <Route path="/study" element={<Study />} />

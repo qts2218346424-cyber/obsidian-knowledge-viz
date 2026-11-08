@@ -22,11 +22,12 @@ const StepTutorModal = lazy(() => import('../components/study/StepTutorModal'))
 const BookExtractModal = lazy(() => import('../components/study/BookExtractModal').then(m => ({ default: m.BookExtractModal })))
 const MasteryTopologyView = lazy(() => import('../components/study/MasteryTopologyView'))
 const FlashcardsTab = lazy(() => import('../components/study/FlashcardsTab'))
+const KnowledgeGraph = lazy(() => import('./KnowledgeGraph'))
 
 // 内存级缓存，避免切页时出现空白等待
 let cachedBooksList: BookItem[] | null = null
 
-type Tab = 'topology' | 'mastery' | 'flashcards' | 'handouts' | 'pdfs' | 'coursewares' | 'errors' | 'progress'
+type Tab = 'graph' | 'topology' | 'mastery' | 'flashcards' | 'handouts' | 'pdfs' | 'coursewares' | 'errors' | 'progress'
 
 // Palette for charts
 const colorPalette = [
@@ -411,7 +412,7 @@ export default function Study() {
   // 支持通过 URL searchParams 直达指定 Tab 与指定仿真课件 (例如 /study?tab=coursewares&cw=cw-history-timeline)
   useEffect(() => {
     const tabParam = searchParams.get('tab') as Tab
-    if (tabParam && ['topology', 'flashcards', 'handouts', 'pdfs', 'coursewares', 'errors', 'progress'].includes(tabParam)) {
+    if (tabParam && ['graph', 'topology', 'mastery', 'flashcards', 'handouts', 'pdfs', 'coursewares', 'errors', 'progress'].includes(tabParam)) {
       setTab(tabParam)
     }
     const cwParam = searchParams.get('cw') || searchParams.get('courseware')
@@ -573,14 +574,40 @@ export default function Study() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0 self-stretch sm:self-auto justify-between sm:justify-end">
+          {/* 视图切换：讲义列表 vs 全景图谱 */}
+          <div className="inline-flex items-center rounded-xl bg-neutral-100 p-1 border border-neutral-200/80 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => handleTabChange('handouts')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                tab !== 'graph'
+                  ? 'bg-white text-neutral-900 shadow-2xs'
+                  : 'text-neutral-500 hover:text-neutral-900'
+              }`}
+            >
+              <span>📖 讲义精读列表</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTabChange('graph')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                tab === 'graph'
+                  ? 'bg-neutral-900 text-white shadow-2xs'
+                  : 'text-neutral-500 hover:text-neutral-900'
+              }`}
+            >
+              <span>🕸️ 全景知识图谱</span>
+            </button>
+          </div>
+
           <button
             type="button"
             onClick={() => window.dispatchEvent(new CustomEvent('open-quick-note'))}
-            className="subframe-btn-secondary h-8 px-3 text-xs font-medium cursor-pointer"
-            title="一键呼出随手记，记录考点与错题"
+            className="subframe-btn-secondary h-8 px-3 text-xs font-semibold cursor-pointer"
+            title="一键呼出考点批注，随时记下心得并归档进知识库"
           >
-            <Edit3 className="w-3.5 h-3.5 text-neutral-500" />
-            <span>随手记</span>
+            <Edit3 className="w-3.5 h-3.5 text-neutral-600" />
+            <span>✏️ 考点随手批注</span>
           </button>
           <button
             type="button"
@@ -607,10 +634,11 @@ export default function Study() {
         {/* Navigation tabs - Subframe Pill Design */}
         <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 scroll-smooth shrink-0">
           {[
+            { key: 'graph' as Tab, label: '🕸️ 全景知识图谱', count: null },
+            { key: 'handouts' as Tab, label: '📖 核心讲义', count: allHandouts.length },
             { key: 'topology' as Tab, label: '🔥 考点掌握度热力图', count: null },
             { key: 'mastery' as Tab, label: '🎨 考点色谱', count: 22 },
             { key: 'flashcards' as Tab, label: '🎴 易忘闪卡', count: null },
-            { key: 'handouts' as Tab, label: '📖 核心讲义', count: allHandouts.length },
             { key: 'pdfs' as Tab, label: '📑 PDF 教材与真题', count: pdfBooks.length },
             { key: 'coursewares' as Tab, label: '🌐 仿真课件', count: INTERACTIVE_COURSEWARES.length },
             { key: 'errors' as Tab, label: '📝 每日错题', count: null },
@@ -677,6 +705,45 @@ export default function Study() {
       <div className="flex-1 overflow-visible xl:overflow-y-auto pr-0 sm:pr-1 min-h-0">
         <Suspense fallback={<div className="py-12 flex justify-center text-xs text-slate-400"><Loader2 className="w-4 h-4 animate-spin mr-2 text-indigo-500" />正在按需渲染视图...</div>}>
           {/* TAB 0: 考点知识拓扑与掌握度热力分布 */}
+          {tab === 'graph' && (
+            <div className="flex-1 w-full bg-white rounded-2xl border border-neutral-200/90 overflow-hidden shadow-xs relative min-h-[680px] h-[calc(100vh-240px)] flex flex-col animate-fade-in">
+              <div className="px-4 py-2 bg-neutral-50/90 border-b border-neutral-200/80 flex items-center justify-between text-xs text-neutral-600 shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="font-semibold text-neutral-800">全景考研知识双链网络图谱 (D3 物理力导向拓扑)</span>
+                  <span className="hidden sm:inline text-neutral-400">· 支持拖拽节点、缩放探索与点击打开关联讲义</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new CustomEvent('open-quick-note'))}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 font-medium transition-colors"
+                  >
+                    <Edit3 className="w-3 h-3" />
+                    <span>针对此考点批注</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('handouts')}
+                    className="px-2.5 py-1 rounded-lg bg-white border border-neutral-200 hover:bg-neutral-100 text-neutral-700 font-medium transition-colors"
+                  >
+                    返回讲义精读 →
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 relative w-full h-full overflow-hidden">
+                <Suspense fallback={
+                  <div className="flex flex-col items-center justify-center h-full gap-3 text-neutral-500">
+                    <Loader2 className="w-6 h-6 animate-spin text-neutral-900" />
+                    <span className="text-xs font-medium">正在装载考研知识双链拓扑...</span>
+                  </div>
+                }>
+                  <KnowledgeGraph />
+                </Suspense>
+              </div>
+            </div>
+          )}
+
           {tab === 'topology' && <MasteryTopologyView />}
 
           {/* TAB 0.2: Subframe Screen 4 考点掌握度状态色谱 */}

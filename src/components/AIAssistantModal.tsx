@@ -17,6 +17,8 @@ import {
   Sparkles,
   Trash2,
   X,
+  AlertTriangle,
+  Zap,
 } from 'lucide-react'
 import MarkdownRenderer from './MarkdownRenderer'
 import ToolCallCard from './ToolCallCard'
@@ -39,7 +41,9 @@ import {
 interface AIAssistantModalProps {
   isOpen: boolean
   onClose: () => void
-  pagePath: string
+  pagePath?: string
+  initialContextPrompt?: string | null
+  initialDefaultInput?: string | null
 }
 
 const pageContext: Record<string, { title: string; description: string; prompts: string[] }> = {
@@ -81,8 +85,8 @@ const defaultContext = {
   prompts: ['搜索我的知识库', '帮我整理一个学习主题', '根据我的笔记给出下一步建议'],
 }
 
-export default function AIAssistantModal({ isOpen, onClose, pagePath }: AIAssistantModalProps) {
-  const context = pageContext[pagePath] || defaultContext
+export default function AIAssistantModal({ isOpen, onClose, pagePath, initialContextPrompt, initialDefaultInput }: AIAssistantModalProps) {
+  const context = (pagePath ? pageContext[pagePath] : undefined) || defaultContext
   const [workspace, setWorkspace] = useState<AIWorkspaceState>(() => loadWorkspace())
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -97,6 +101,75 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath }: AIAssist
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
+  // 分阶段流式等待反馈与超时容错状态
+  const [loadingSeconds, setLoadingSeconds] = useState(0)
+  const lastUserPromptRef = useRef<string>('')
+  const [pendingContext, setPendingContext] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (initialContextPrompt) {
+      setPendingContext(initialContextPrompt)
+    }
+    if (initialDefaultInput) {
+      setInput(initialDefaultInput)
+    }
+  }, [initialContextPrompt, initialDefaultInput])
+
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      const custom = e as CustomEvent<{ contextPrompt?: string; defaultInput?: string }>
+      if (custom?.detail?.contextPrompt) {
+        setPendingContext(custom.detail.contextPrompt)
+      }
+      if (custom?.detail?.defaultInput) {
+        setInput(custom.detail.defaultInput)
+      }
+      setTimeout(() => inputRef.current?.focus(), 150)
+    }
+    window.addEventListener('open-ai-assistant', onOpen)
+    const handleSwitchFastModelAndRetry = () => {
+    if (abortRef.current) {
+      abortRef.current.abort()
+    }
+    setLoading(false)
+    if (activeSession) {
+      updateSession(activeSession.id, session => ({
+        ...session,
+        model: 'deepseek-v3',
+      }))
+    }
+    setTimeout(() => {
+      if (lastUserPromptRef.current) {
+        void sendMessage(lastUserPromptRef.current)
+      }
+    }, 200)
+  }
+
+  return () => window.removeEventListener('open-ai-assistant', onOpen)
+  }, [])
+
+  useEffect(() => {
+    if (!loading) {
+      setLoadingSeconds(0)
+      return
+    }
+    const timer = setInterval(() => {
+      setLoadingSeconds(prev => prev + 1)
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [loading])
+
+  const loadingStatusText = useMemo(() => {
+    if (loadingSeconds < 3) {
+      return '正在检索 408 / 考研数学考点知识库...'
+    } else if (loadingSeconds < 6) {
+      return '双核智能体正在推演分步解题步骤与易错逻辑...'
+    } else if (loadingSeconds < 8) {
+      return '正在生成分步严谨推导与变式防错策略...'
+    } else {
+      return `深度推演中（已耗时 ${loadingSeconds} 秒）...`
+    }
+  }, [loadingSeconds])
 
   // 窗口自由尺寸与最大化状态
   const [isMaximized, setIsMaximized] = useState(() => {
@@ -186,6 +259,25 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath }: AIAssist
       || workspace.sessions.find(session => session.projectId === activeProject?.id),
     [workspace, activeProject],
   )
+
+  const handleSwitchFastModelAndRetry = () => {
+    if (abortRef.current) {
+      abortRef.current.abort()
+    }
+    setLoading(false)
+    const curSessionId = activeSession?.id || workspace.activeSessionIdByProject[activeProject?.id || '']
+    if (curSessionId) {
+      updateSession(curSessionId, session => ({
+        ...session,
+        model: 'deepseek-v3',
+      }))
+    }
+    setTimeout(() => {
+      if (lastUserPromptRef.current) {
+        void sendMessage(lastUserPromptRef.current)
+      }
+    }, 200)
+  }
   const activeSkills = useMemo(() => getSkills(activeSession?.skillIds || ['knowledge']), [activeSession])
   const activeProvider = activeSession?.provider || 'web'
   const activeLocalStatus = localAgents.find(agent => agent.provider === activeProvider)
@@ -277,10 +369,13 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath }: AIAssist
   }
 
   const sendMessage = async (preset?: string) => {
-    const text = (preset ?? input).trim()
-    if (!text || loading) return
+    const rawText = (preset ?? input).trim()
+    if (!rawText || loading) return
+    const text = pendingContext ? `${pendingContext}\n\n【我的具体疑问】：${rawText}` : rawText
+    lastUserPromptRef.current = rawText
+    setPendingContext(null)
 
-    const userMessage = createWorkspaceMessage('user', text)
+    const userMessage = createWorkspaceMessage('user', rawText)
     const assistantMessage = createWorkspaceMessage('assistant', '', { streaming: true, toolCalls: [] })
     const history = activeSession.messages
       .filter(message => !message.streaming && message.content)
@@ -473,6 +568,9 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath }: AIAssist
             <div className="flex items-center gap-2">
               <h2 className="truncate text-sm font-semibold text-warm-900">{activeProject.name}</h2>
               <span className="hidden rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-warm-400 sm:inline">{context.title}</span>
+              <span className="hidden sm:inline-flex items-center gap-1 rounded-md bg-indigo-50 border border-indigo-200/80 px-2 py-0.5 text-[10px] font-mono font-bold text-indigo-700">
+                伴学抽屉 ⌘J
+              </span>
             </div>
             <p className="mt-0.5 truncate text-xs text-warm-400">{activeSession.title} · {activeProject.description || '本地 AI 工作区'}</p>
           </div>
@@ -658,7 +756,7 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath }: AIAssist
                   </div>
                   <p className="mt-1 text-xs leading-5 text-warm-400">当前项目、页面上下文和已启用 Skill 会自动带入这次对话。</p>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {context.prompts.map(prompt => (
+                    {context.prompts.map((prompt: string) => (
                       <button key={prompt} onClick={() => void sendMessage(prompt)} className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-left text-xs text-warm-600 hover:border-accent-orange/40 hover:bg-accent-orange/5 hover:text-warm-900">
                         {prompt}
                       </button>
@@ -668,7 +766,7 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath }: AIAssist
               )}
 
               <div className="mx-auto max-w-2xl space-y-4">
-                {activeSession.messages.map(message => <MessageBubble key={message.id} message={message} />)}
+                {activeSession.messages.map(message => <MessageBubble key={message.id} message={message} loadingStatusText={loadingStatusText} loadingSeconds={loadingSeconds} onSwitchFastModel={handleSwitchFastModelAndRetry} />)}
                 <div ref={messagesEndRef} />
               </div>
             </div>
@@ -705,7 +803,17 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath }: AIAssist
   )
 }
 
-function MessageBubble({ message }: { message: AIWorkspaceMessage }) {
+function MessageBubble({
+  message,
+  loadingStatusText,
+  loadingSeconds = 0,
+  onSwitchFastModel,
+}: {
+  message: AIWorkspaceMessage
+  loadingStatusText?: string
+  loadingSeconds?: number
+  onSwitchFastModel?: () => void
+}) {
   const isUser = message.role === 'user'
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -730,7 +838,33 @@ function MessageBubble({ message }: { message: AIWorkspaceMessage }) {
             {message.content ? (
               <MarkdownRenderer content={message.content} isStreaming={message.streaming} />
             ) : (
-              <Loader2 className="h-4 w-4 animate-spin text-accent-orange" />
+              <div className="space-y-2.5 py-1">
+                <div className="flex items-center gap-2 text-xs font-medium text-warm-700">
+                  <Loader2 className="h-4 w-4 animate-spin text-accent-orange shrink-0" />
+                  <span className="font-semibold text-accent-orange animate-pulse">
+                    {loadingStatusText || '正在检索知识库并深度推演中...'}
+                  </span>
+                </div>
+                {loadingSeconds >= 8 && onSwitchFastModel && (
+                  <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800 space-y-1.5 animate-in fade-in">
+                    <div className="flex items-center gap-1.5 font-bold">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <span>思考耗时较长（已用时 {loadingSeconds} 秒，未重复扣费）</span>
+                    </div>
+                    <p className="text-[10.5px] text-amber-700 leading-relaxed">
+                      您可以继续等待推理，或一键切换备用极速模型即刻重答：
+                    </p>
+                    <button
+                      type="button"
+                      onClick={onSwitchFastModel}
+                      className="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-[10.5px] shadow-2xs transition-colors flex items-center gap-1 cursor-pointer active:scale-95"
+                    >
+                      <Zap className="w-3 h-3" />
+                      <span>切换备用极速模型重试</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}

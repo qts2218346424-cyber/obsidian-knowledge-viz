@@ -1,3 +1,4 @@
+import { authService } from '../services/auth'
 import { useState, useMemo, useEffect, useRef } from 'react'
 import {
   BookOpen,
@@ -25,11 +26,16 @@ import {
   ChevronDown,
   Volume2,
   BarChart2,
+  Camera,
+  Image as ImageIcon,
+  X,
 } from 'lucide-react'
 import {
   ESSAY_TEMPLATES,
   ESSAY_GOLDEN_SENTENCES,
   ENGLISH_PAST_PAPERS,
+  PAST_ESSAY_PROMPTS,
+  type PastEssayPrompt,
   type EssayTemplate,
   type GoldenSentence,
   type PastPaperReading,
@@ -86,6 +92,221 @@ export default function English() {
   )
   const [gradingResult, setGradingResult] = useState<EssayGradingResult | null>(null)
   const [isGrading, setIsGrading] = useState(false)
+
+  // -------------------------------------------------------------
+  // 5.1 历年真题题库速选与墨卷 AI 批改状态
+  // -------------------------------------------------------------
+  const [selectedPromptId, setSelectedPromptId] = useState<string>(PAST_ESSAY_PROMPTS[0].id)
+  const activePrompt = useMemo(() => {
+    return PAST_ESSAY_PROMPTS.find((p) => p.id === selectedPromptId) || PAST_ESSAY_PROMPTS[0]
+  }, [selectedPromptId])
+
+  const [activeGradingEngine, setActiveGradingEngine] = useState<'local' | 'mojuan'>('local')
+  const [isMojuanGrading, setIsMojuanGrading] = useState(false)
+  const [mojuanStreamingText, setMojuanStreamingText] = useState('')
+  const [mojuanError, setMojuanError] = useState<string | null>(null)
+  const [mojuanStatusNotice, setMojuanStatusNotice] = useState<string | null>(null)
+
+  // -------------------------------------------------------------
+  // 5.2 拍照/截图答题卡 OCR 识别与考研大纲多维批改状态
+  // -------------------------------------------------------------
+  const [handwritingImage, setHandwritingImage] = useState<string | null>(null)
+  const [isOcrExtracting, setIsOcrExtracting] = useState(false)
+  const handwritingInputRef = useRef<HTMLInputElement>(null)
+  const [templateDrawerOpen, setTemplateDrawerOpen] = useState(false)
+  const [aiEssayEvaluation, setAiEssayEvaluation] = useState<any | null>(null)
+
+  const handleHandwritingPaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items
+    if (!items) return
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile()
+        if (file) {
+          e.preventDefault()
+          const reader = new FileReader()
+          reader.onload = (loadEvent) => {
+            const base64 = loadEvent.target?.result as string
+            setHandwritingImage(base64)
+          }
+          reader.readAsDataURL(file)
+          break
+        }
+      }
+    }
+  }
+
+  const handleHandwritingFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (loadEvent) => {
+        const base64 = loadEvent.target?.result as string
+        setHandwritingImage(base64)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleOcrExtractHandwriting = async () => {
+    if (!handwritingImage) return
+    setIsOcrExtracting(true)
+    try {
+      const res = await fetch('/api/english/grade-essay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authService.getAuthHeaders() },
+        body: JSON.stringify({
+          image: handwritingImage,
+          essayType: gradingEssayType,
+          questionPrompt: activePrompt.promptZh,
+        }),
+      })
+      const data = await res.json()
+      if (data.extractedText) {
+        setEssayInput(data.extractedText)
+        setAiEssayEvaluation(data)
+      } else {
+        alert(data.error || '图片文本识别失败，请确保图片清晰包含手写英文作文')
+      }
+    } catch (err: any) {
+      alert('手写答题卡识别异常: ' + err.message)
+    } finally {
+      setIsOcrExtracting(false)
+    }
+  }
+
+  const handleStartAiGrading = async () => {
+    if (!essayInput.trim()) {
+      alert('请先输入或粘贴英文作文草稿')
+      return
+    }
+    setIsGrading(true)
+    try {
+      const res = await fetch('/api/english/grade-essay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authService.getAuthHeaders() },
+        body: JSON.stringify({
+          essayText: essayInput,
+          essayType: gradingEssayType,
+          questionPrompt: `${activePrompt.title}: ${activePrompt.promptZh}`,
+          image: handwritingImage || undefined,
+        }),
+      })
+      const data = await res.json()
+      if (data.totalScore !== undefined) {
+        setAiEssayEvaluation(data)
+      } else {
+        alert(data.error || 'AI 阅卷评估返回异常')
+      }
+    } catch (err: any) {
+      const localFallback = gradeEssayLocally(essayInput, gradingEssayType)
+      setGradingResult(localFallback)
+      alert('网络波动，已自动为您启用本地离线规则引擎进行诊断：' + err.message)
+    } finally {
+      setIsGrading(false)
+    }
+  }
+
+  // 墨卷导师 AI 流式批改 (复用 /api/local-agents/chat)
+  const handleStartMojuanGrading = async () => {
+    if (!essayInput.trim()) return
+    setIsMojuanGrading(true)
+    setActiveGradingEngine('mojuan')
+    setMojuanStreamingText('')
+    setMojuanError(null)
+    setMojuanStatusNotice('墨卷导师正在审阅考题与您的作答，推演多维诊断...')
+
+    const maxScore = gradingEssayType === 'big_essay' ? 20 : 10
+    const promptMessage = `【考研英语作文 AI 多维批改请求】
+真题背景与题目：
+- 题目标题：${activePrompt.title} (${activePrompt.subType})
+- 官方要求：${activePrompt.promptZh}
+- 图画/图表核心要素：${activePrompt.visualDescription}
+- 目标满分制：${maxScore} 分制 (${gradingEssayType === 'big_essay' ? '大作文' : '小作文'})
+
+考生作答文本如下：
+"""
+${essayInput.trim()}
+"""
+
+请你作为【墨卷（政治/英语双科领航导师）】，按照全国考研英语大纲官方评阅标准进行深度多维诊断：
+1. 【考研官方得分评估】给出建议总得分（${maxScore}分制，如 17.5 / ${maxScore}），并拆分四项小分：切题与立意(25%)、框架结构与衔接(25%)、句法精准度(25%)、高级闪光词汇(25%)，给出所在档次（一档优秀/二档良好/三档及格）与一句话核心点评；
+2. 【逐句排雷与语法抓虫】逐句指出考生句子中的语法缺陷、主谓不一致、介词冠词搭配不当、或过于口语化的句子，并给出地道修正；
+3. 【平庸词升级矩阵】挑选 3-5 个初级词汇（如 important, good, many 等），给出考研一档闪光升级词汇与例句示范；
+4. 【墨卷一档高分重构示范范文】根据本题立意，给出 1 篇辞藻优美、衔接自如、符合考研大纲要求的满分示范范文。`
+
+    try {
+      const res = await fetch('/api/local-agents/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authService.getAuthHeaders(),
+        },
+        body: JSON.stringify({
+          message: promptMessage,
+          agentId: 'mojuan',
+          history: [],
+          projectName: '考研英语研学中枢 · 作文批改舱',
+          pageContext: '考研英语作文 AI 深度批改 (墨卷导师)',
+        }),
+      })
+
+      if (!res.ok) {
+        if (res.status === 402) {
+          throw new Error('伴学积分不足（单次批改消耗 0.1 积分），请签到领积分或联系管理员。')
+        }
+        throw new Error(`服务连接异常 (HTTP ${res.status})`)
+      }
+
+      const reader = res.body?.getReader()
+      if (!reader) throw new Error('流式读取不可用')
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let accumulated = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (!trimmed.startsWith('data:')) continue
+          const rawData = trimmed.replace(/^data:\s*/, '')
+          try {
+            const data = JSON.parse(rawData)
+            if (data.type === 'delta' && data.text) {
+              accumulated += data.text
+              setMojuanStreamingText(accumulated)
+            } else if (data.type === 'points_updated') {
+              if (data.deducted > 0) {
+                setMojuanStatusNotice(`批改完成，已扣除 ${data.deducted} 伴学积分 (剩余 ${data.remainingPoints?.toFixed(1)} 分)`)
+              } else {
+                setMojuanStatusNotice('由于本次返回未达标或超时，系统已自动保留您的伴学积分，未扣除费用。')
+              }
+            } else if (data.type === 'error') {
+              setMojuanError(data.message || '批改过程遇到异常')
+            }
+          } catch {}
+        }
+      }
+    } catch (err: any) {
+      setMojuanError(err.message || '网络连接超时，已为您免除积分扣除，请重试。')
+    } finally {
+      setIsMojuanGrading(false)
+    }
+  }
+
+  // 载入选中的真题题干与示例
+  const handleSelectPrompt = (prompt: PastEssayPrompt) => {
+    setSelectedPromptId(prompt.id)
+    setGradingEssayType(prompt.category)
+    if (prompt.sampleDraft) {
+      setEssayInput(prompt.sampleDraft)
+    }
+  }
 
   const activeTemplate = useMemo(() => {
     return ESSAY_TEMPLATES.find((t) => t.id === selectedTemplateId) || ESSAY_TEMPLATES[0]
@@ -211,6 +432,37 @@ export default function English() {
               外刊题源
             </span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('papers')}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'papers'
+                ? 'bg-slate-900 text-white shadow-md'
+                : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80'
+            }`}
+          >
+            <FileEdit className="w-3.5 h-3.5 text-indigo-500" />
+            <span>历年真题精析与模考</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-white/20">长难句</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('grading')}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === 'grading'
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
+                : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80 ring-1 ring-indigo-500/30'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            <span>作文批改舱 (大/小作文 20分制)</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950 font-black">
+              墨卷AI精批
+            </span>
+          </button>
+
           <button
             type="button"
             onClick={() => setActiveTab('templates')}
@@ -227,36 +479,6 @@ export default function English() {
 
           <button
             type="button"
-            onClick={() => setActiveTab('grading')}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'grading'
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
-                : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-            <span>AI 作文智能批改</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950 font-black">
-              实测推荐
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('papers')}
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'papers'
-                ? 'bg-slate-900 text-white shadow-md'
-                : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80'
-            }`}
-          >
-            <BookOpen className="w-3.5 h-3.5" />
-            <span>历年真题精析</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-white/20">中英对照+长难句</span>
-          </button>
-
-          <button
-            type="button"
             onClick={() => setActiveTab('vocab')}
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'vocab'
@@ -264,9 +486,9 @@ export default function English() {
                 : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80'
             }`}
           >
-            <Layers className="w-3.5 h-3.5" />
-            <span>大纲背单词中心</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-white/20">艾宾浩斯复盘</span>
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>核心词汇打卡复盘</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-white/20">艾宾浩斯</span>
           </button>
         </div>
       </section>
@@ -555,23 +777,100 @@ export default function English() {
         </div>
       )}
 
-      {/* ─────────────────────────────────────────────────────────────
-          板块 2: AI 作文智能批改工作室
+            {/* ─────────────────────────────────────────────────────────────
+          板块 2: AI 作文智能批改舱 (大/小作文 20分制 · 墨卷双核引擎)
           ───────────────────────────────────────────────────────────── */}
       {activeTab === 'grading' && (
         <div className="space-y-6">
+          {/* 顶栏：历年真题写作精选题库快捷选取栏 */}
+          <div className="rounded-3xl border border-slate-200/90 bg-white p-5 shadow-xs space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-indigo-600 text-white text-xs font-bold shadow-2xs">
+                  🎯
+                </span>
+                <span className="text-xs font-black text-slate-900 tracking-tight">考研英语历年真题作文题库速选</span>
+                <span className="text-[10px] text-slate-400 hidden sm:inline">· 点击即可载入真题题干、图意要求与参考草稿</span>
+              </div>
+              <span className="text-[11px] font-mono text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100">
+                英语一 / 英语二 双轨图文真题
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+              {PAST_ESSAY_PROMPTS.map((prompt) => (
+                <button
+                  key={prompt.id}
+                  type="button"
+                  onClick={() => handleSelectPrompt(prompt)}
+                  className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                    selectedPromptId === prompt.id
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                      : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200/80'
+                  }`}
+                >
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-white/20">
+                    {prompt.year} {prompt.examType === 'english_1' ? '英一' : prompt.examType === 'english_2' ? '英二' : '通用'}
+                  </span>
+                  <span>{prompt.subType}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* 当前选中考题的要求展示卡片 */}
+            <div className="rounded-2xl border border-indigo-100/80 bg-indigo-50/30 p-4 space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                  <span className="text-base">📌</span>
+                  <span>{activePrompt.title}</span>
+                </h3>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800">
+                  {activePrompt.category === 'big_essay' ? '大作文 (满分 20 分)' : '小作文 (满分 10 分)'}
+                </span>
+              </div>
+
+              <p className="text-xs text-slate-700 font-mono leading-relaxed bg-white/80 p-2.5 rounded-xl border border-indigo-100">
+                {activePrompt.promptZh}
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-2 pt-1 text-xs">
+                <div className="md:col-span-7 text-[11px] text-slate-600">
+                  <strong className="text-slate-800">🖼️ 图画/图表核心要点：</strong>
+                  <span>{activePrompt.visualDescription}</span>
+                </div>
+                <div className="md:col-span-5 text-[11px] flex flex-wrap items-center gap-1">
+                  <strong className="text-indigo-900 shrink-0">✨ 推荐闪光词：</strong>
+                  {activePrompt.recommendedKeywords.slice(0, 3).map((kw, kwIdx) => (
+                    <span key={kwIdx} className="px-1.5 py-0.2 rounded bg-white border border-indigo-200 text-indigo-700 font-mono text-[10px]">
+                      {kw.split(' ')[0]}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 下部左右分栏工作台 */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
             {/* 左侧：输入工作台 (6列) */}
             <div className="lg:col-span-6 space-y-4">
               <div className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xs space-y-4">
+                <input
+                  type="file"
+                  ref={handwritingInputRef}
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleHandwritingFile}
+                />
+
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
                       ✍️
                     </div>
                     <div>
-                      <h2 className="text-sm font-bold text-slate-900">考研英语作文 撰写与诊断台</h2>
-                      <p className="text-[11px] text-slate-400">支持直接粘贴或键入您的作文草稿</p>
+                      <h2 className="text-sm font-bold text-slate-900">英语写作作答区</h2>
+                      <p className="text-[11px] text-slate-400">支持键盘打字、Ctrl+V 粘贴手写试卷识别或载入草稿</p>
                     </div>
                   </div>
 
@@ -597,61 +896,187 @@ export default function English() {
                   </div>
                 </div>
 
+                {/* 拍照/截图 OCR 答题卡图片捕获展示条 */}
+                {handwritingImage && (
+                  <div className="rounded-2xl border border-indigo-200 bg-indigo-50/40 p-3 flex items-center justify-between gap-3 animate-fade-in">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <img
+                        src={handwritingImage}
+                        alt="手写作文预览"
+                        className="w-12 h-12 object-cover rounded-xl border border-indigo-200 shadow-2xs shrink-0"
+                      />
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                          <span>已捕获手写作文图片</span>
+                          <span className="text-[10px] text-indigo-600 bg-white px-1.5 py-0.2 rounded font-mono">OCR就绪</span>
+                        </div>
+                        <p className="text-[11px] text-indigo-600/80 truncate">
+                          可一键识别将文字填入下方输入框，或直接提交 AI 综合批改
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={handleOcrExtractHandwriting}
+                        disabled={isOcrExtracting}
+                        className="px-2.5 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold shadow-xs hover:bg-indigo-500 transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                      >
+                        {isOcrExtracting ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                        <span>{isOcrExtracting ? '识别中...' : '提取文字'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setHandwritingImage(null)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                        title="移除此图片"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="relative">
                   <textarea
                     rows={12}
+                    onPaste={handleHandwritingPaste}
                     value={essayInput}
                     onChange={(e) => setEssayInput(e.target.value)}
-                    placeholder="请在此输入或粘贴您的考研英语作文（英文文本）..."
+                    placeholder="请在此输入或粘贴您的考研英语作文作答文本...（支持直接按 Ctrl + V 粘贴手写作文截图）"
                     className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all text-xs sm:text-sm font-mono leading-relaxed outline-none resize-none text-slate-800"
                   />
-                  <div className="absolute right-3 bottom-3 text-[11px] font-mono text-slate-400 bg-white/80 px-2 py-0.5 rounded-md border border-slate-200">
+                  <div className="absolute right-3 bottom-3 text-[11px] font-mono text-slate-400 bg-white/90 px-2 py-0.5 rounded-md border border-slate-200 shadow-2xs">
                     当前: {(essayInput.match(/[a-zA-Z]+/g) || []).length} 词 · {essayInput.split(/\n+/).filter(Boolean).length} 段
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-1">
-                  <div className="text-[11px] text-slate-400">
-                    标准字数要求：{gradingEssayType === 'big_essay' ? '160–200 词' : '100 词左右'}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 border-t border-slate-100">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handwritingInputRef.current?.click()}
+                      className="px-2.5 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100/60 text-xs text-indigo-700 cursor-pointer font-bold flex items-center gap-1 shadow-2xs transition-colors"
+                      title="上传手写答题卡照片进行识别"
+                    >
+                      <Camera className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>拍照/上传手写</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTemplateDrawerOpen(!templateDrawerOpen)}
+                      className="px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs text-slate-600 hover:bg-slate-50 cursor-pointer font-medium flex items-center gap-1"
+                    >
+                      <ScrollText className="w-3.5 h-3.5 text-amber-500" />
+                      <span>{templateDrawerOpen ? '收起模板' : '速查万能模板'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => activePrompt.sampleDraft && setEssayInput(activePrompt.sampleDraft)}
+                      className="px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs text-slate-600 hover:bg-slate-50 cursor-pointer font-medium"
+                    >
+                      载入草稿
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEssayInput('')}
+                      className="px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs text-rose-600 hover:bg-rose-50 cursor-pointer font-medium"
+                    >
+                      清空
+                    </button>
                   </div>
 
+                  {/* 多核智能批改入口 */}
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() =>
-                        setEssayInput(
-                          'The bar chart clearly shows the changes in mobile payment from 2018 to 2024. In 2018, the number was small, but it grew fast to reach a high level in 2024. Many things cause this. Modern smartphones are very good and people like easy life. I think this trend will continue in future.'
-                        )
-                      }
-                      className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs text-slate-600 hover:bg-slate-50 cursor-pointer font-medium"
-                    >
-                      填入测试样篇
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={isGrading || !essayInput.trim()}
-                      onClick={handleStartGrading}
-                      className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-bold transition-all shadow-md shadow-indigo-600/20 disabled:opacity-50 cursor-pointer"
+                      disabled={isGrading || isMojuanGrading || !essayInput.trim()}
+                      onClick={handleStartAiGrading}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 active:scale-95 text-white text-xs font-bold transition-all shadow-md shadow-indigo-600/25 disabled:opacity-50 cursor-pointer"
+                      title="调用全国考研英语大纲官方评阅标准，输出档次分、逐句纠错、闪光升级与满分范文"
                     >
                       {isGrading ? (
                         <>
                           <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          <span>正在多维度深度诊断...</span>
+                          <span>阅卷专家采点评分中...</span>
                         </>
                       ) : (
                         <>
-                          <Sparkles className="w-3.5 h-3.5" />
-                          <span>一键智能批改与润色</span>
+                          <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                          <span>AI 五档深度批改 (推荐)</span>
                         </>
                       )}
                     </button>
                   </div>
                 </div>
+
+                {/* 万能模板速背抽屉 (可随手展开) */}
+                {templateDrawerOpen && (
+                  <div className="rounded-2xl border border-amber-200/80 bg-amber-50/30 p-4 space-y-3 animate-fade-in text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-amber-950 flex items-center gap-1.5">
+                        <ScrollText className="w-4 h-4 text-amber-600" />
+                        <span>考研英语写作万能高分模板背诵舱</span>
+                      </span>
+                      <span className="text-[10px] text-amber-700 bg-amber-100 px-2 py-0.5 rounded font-mono">
+                        点击一键套用
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {ESSAY_TEMPLATES.slice(0, 3).map((tpl) => (
+                        <div key={tpl.id} className="p-3 rounded-xl bg-white border border-amber-100 shadow-2xs space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-slate-800">{tpl.title}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const full = tpl.structure.map(s => s.templateText).join('\n\n')
+                                setEssayInput(full)
+                                setTemplateDrawerOpen(false)
+                              }}
+                              className="text-[11px] text-indigo-600 hover:underline font-bold cursor-pointer"
+                            >
+                              套用此模板 →
+                            </button>
+                          </div>
+                          <p className="text-[11px] text-slate-500">{tpl.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 状态与扣费兜底安全提示 */}
+                {mojuanStatusNotice && (
+                  <div className="p-2.5 rounded-xl bg-indigo-50/80 border border-indigo-200/80 text-[11px] text-indigo-800 flex items-center justify-between">
+                    <span>💡 {mojuanStatusNotice}</span>
+                    <button
+                      type="button"
+                      onClick={() => setMojuanStatusNotice(null)}
+                      className="text-indigo-400 hover:text-indigo-700 font-bold ml-2"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+                {mojuanError && (
+                  <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-[11px] text-rose-700 flex items-center justify-between">
+                    <span>⚠️ {mojuanError}</span>
+                    <button
+                      type="button"
+                      onClick={() => setMojuanError(null)}
+                      className="text-rose-400 hover:text-rose-700 font-bold ml-2"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
               </div>
 
-              {/* 批改报告：词汇升级与语法排雷 */}
-              {gradingResult && (
+              {/* 批改报告：词汇升级与语法排雷 (当有本地诊断结果时) */}
+              {gradingResult && activeGradingEngine === 'local' && (
                 <div className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xs space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
@@ -693,18 +1118,231 @@ export default function English() {
                     </div>
                   ) : (
                     <p className="text-xs text-slate-400 text-center py-4">
-                      🎉 暂未检测到常见初级平庸词，词汇选用表现优异！
+                      🎉 暂未检测到初级平庸词，选用表现良好！
                     </p>
                   )}
                 </div>
               )}
             </div>
 
-            {/* 右侧：诊断报告与评分面板 (6列) */}
+            {/* 右侧：多维诊断报告面板 (6列) */}
             <div className="lg:col-span-6 space-y-4">
-              {gradingResult ? (
+              {/* 分支 0：AI 五档官方阅卷专家深度精批结果 */}
+              {aiEssayEvaluation ? (
+                <div className="space-y-4 animate-fade-in">
+                  {/* 档次总分大奖章 */}
+                  <div className="rounded-3xl border border-indigo-200 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-6 shadow-xl space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-indigo-200 uppercase tracking-wider flex items-center gap-1.5">
+                        <Award className="w-4 h-4 text-amber-300" />
+                        <span>考研英语大纲官方阅卷评估</span>
+                      </span>
+                      <span className="px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-mono text-xs font-bold">
+                        {aiEssayEvaluation.tier}
+                      </span>
+                    </div>
+
+                    <div className="flex items-baseline gap-2.5">
+                      <span className="text-5xl font-black font-mono text-amber-300">
+                        {aiEssayEvaluation.totalScore}
+                      </span>
+                      <span className="text-xl text-slate-400 font-mono">/ {aiEssayEvaluation.maxScore} 分</span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/10 text-center">
+                      <div className="p-2 rounded-xl bg-white/5">
+                        <div className="text-[10px] text-slate-400">总字数统计</div>
+                        <div className="text-sm font-bold font-mono text-white mt-0.5">{aiEssayEvaluation.wordCount} 词</div>
+                      </div>
+                      <div className="p-2 rounded-xl bg-white/5">
+                        <div className="text-[10px] text-slate-400">平均句长</div>
+                        <div className="text-sm font-bold font-mono text-white mt-0.5">{aiEssayEvaluation.avgWordsPerSentence} 词</div>
+                      </div>
+                      <div className="p-2 rounded-xl bg-white/5">
+                        <div className="text-[10px] text-slate-400">评分标准制</div>
+                        <div className="text-sm font-bold font-mono text-emerald-300 mt-0.5">全国统考五档制</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 四维阅卷雷达分项 */}
+                  {aiEssayEvaluation.dimensions && (
+                    <div className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xs space-y-3">
+                      <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        <BarChart2 className="w-3.5 h-3.5 text-indigo-600" />
+                        <span>考研英语写作四维阅卷细分</span>
+                      </h3>
+                      <div className="space-y-3">
+                        {aiEssayEvaluation.dimensions.map((dim: any, idx: number) => (
+                          <div key={idx} className="space-y-1">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="font-bold text-slate-700">{dim.dimension}</span>
+                              <span className="font-mono font-bold text-indigo-600">{dim.score} / 100</span>
+                            </div>
+                            <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-indigo-600 rounded-full transition-all duration-500"
+                                style={{ width: `${dim.score}%` }}
+                              />
+                            </div>
+                            <p className="text-[11px] text-slate-500 leading-snug">{dim.comment}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 逐句排雷与语法纠错红线对比 */}
+                  {aiEssayEvaluation.sentenceDiagnostics && aiEssayEvaluation.sentenceDiagnostics.length > 0 && (
+                    <div className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xs space-y-3">
+                      <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
+                        <span>逐句语法排雷与红线纠错对比 ({aiEssayEvaluation.sentenceDiagnostics.length})</span>
+                      </h3>
+                      <div className="space-y-3">
+                        {aiEssayEvaluation.sentenceDiagnostics.map((diag: any, idx: number) => (
+                          <div key={idx} className="p-3.5 rounded-2xl border border-rose-100 bg-rose-50/20 text-xs space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-100 text-rose-800">
+                                {diag.errorType || '语法与语用规范'}
+                              </span>
+                            </div>
+                            <div className="p-2 rounded-xl bg-white border border-rose-200/80 text-rose-700 font-mono line-through leading-relaxed">
+                              {diag.original}
+                            </div>
+                            <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 font-mono font-semibold leading-relaxed">
+                              ✓ {diag.corrected}
+                            </div>
+                            <p className="text-[11px] text-slate-600">{diag.explanation}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 闪光句型替换推荐 */}
+                  {aiEssayEvaluation.sparkleUpgrades && aiEssayEvaluation.sparkleUpgrades.length > 0 && (
+                    <div className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xs space-y-3">
+                      <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                        <span>替换为高分闪光句型 (倒装/强调/无灵主语)</span>
+                      </h3>
+                      <div className="space-y-3">
+                        {aiEssayEvaluation.sparkleUpgrades.map((item: any, idx: number) => (
+                          <div key={idx} className="p-3.5 rounded-2xl border border-amber-200 bg-amber-50/20 text-xs space-y-2">
+                            <div className="text-[11px] text-slate-400 font-mono line-through">{item.original}</div>
+                            <div className="text-xs text-amber-950 font-bold font-mono bg-white p-2.5 rounded-xl border border-amber-200 leading-relaxed">
+                              ✨ {item.upgrade}
+                            </div>
+                            <p className="text-[11px] text-amber-800/90 leading-relaxed">{item.reason}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 基于原意的一档满分示范范文 (双语对照) */}
+                  {aiEssayEvaluation.polishedVersion && (
+                    <div className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xs space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>基于您的立意重构的一档满分范文</span>
+                        </h3>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard?.writeText?.(aiEssayEvaluation.polishedVersion)
+                            alert('已复制满分范文！')
+                          }}
+                          className="text-[11px] font-semibold text-indigo-600 hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          <Copy className="w-3 h-3" />
+                          <span>复制范文</span>
+                        </button>
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-indigo-50/40 border border-indigo-100 font-mono text-xs text-slate-800 leading-relaxed whitespace-pre-wrap">
+                        {aiEssayEvaluation.polishedVersion}
+                      </div>
+
+                      {aiEssayEvaluation.translation && (
+                        <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-600 leading-relaxed">
+                          <span className="font-bold text-slate-800 block mb-1">地道中文参考译文：</span>
+                          {aiEssayEvaluation.translation}
+                        </div>
+                      )}
+
+                      {aiEssayEvaluation.flashcardsVocab && aiEssayEvaluation.flashcardsVocab.length > 0 && (
+                        <div className="pt-2 border-t border-slate-100">
+                          <span className="text-[11px] font-bold text-slate-700 block mb-1.5">📚 本文核心高频闪光词卡：</span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {aiEssayEvaluation.flashcardsVocab.map((v: any, vIdx: number) => (
+                              <span key={vIdx} className="px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 text-[11px] font-mono">
+                                <strong>{v.word}</strong>: {v.meaning}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : activeGradingEngine === 'mojuan' && (isMojuanGrading || mojuanStreamingText) ? (
+                <div className="rounded-3xl border border-indigo-200/90 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-6 shadow-xl space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-indigo-500 text-white flex items-center justify-center text-xs font-bold shadow-xs">
+                        墨
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                          <span>墨卷导师 · 考研官方 20 分制深度精批</span>
+                          {isMojuanGrading && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-[10px] font-mono animate-pulse">
+                              <Sparkles className="w-2.5 h-2.5" /> 逐维推演中
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[10px] text-indigo-300">政治/英语双科领航导师 · 阅卷采分点严审</div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard?.writeText?.(mojuanStreamingText)
+                        alert('已复制墨卷导师批改全案！')
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-medium text-indigo-200 transition-colors flex items-center gap-1 cursor-pointer"
+                    >
+                      <Copy className="w-3 h-3" />
+                      <span>复制全案</span>
+                    </button>
+                  </div>
+
+                  {/* 墨卷流式推演输出视窗 */}
+                  <div className="rounded-2xl bg-black/40 border border-white/10 p-4 max-h-[560px] overflow-y-auto no-scrollbar space-y-3 font-sans">
+                    <div className="text-xs text-slate-200 leading-relaxed whitespace-pre-wrap font-sans">
+                      {mojuanStreamingText || '墨卷导师正在建立采分点矩阵，请稍候...'}
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px] text-indigo-300">
+                    <span>💡 批改标准：严格对标考研英语大纲 4 大阅卷维度</span>
+                    <button
+                      type="button"
+                      disabled={isMojuanGrading}
+                      onClick={handleStartMojuanGrading}
+                      className="text-amber-400 hover:text-amber-300 font-bold underline cursor-pointer"
+                    >
+                      重新批改
+                    </button>
+                  </div>
+                </div>
+              ) : gradingResult ? (
+                /* 分支 2：本地秒级诊断报告 */
                 <>
-                  {/* 核心总分卡 */}
                   <div className="rounded-3xl border border-slate-200/90 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-6 shadow-md space-y-4">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-indigo-200 uppercase tracking-wider">
@@ -726,7 +1364,6 @@ export default function English() {
                       {gradingResult.tierFeedback}
                     </p>
 
-                    {/* 统计微指标 */}
                     <div className="grid grid-cols-4 gap-2 pt-2 border-t border-white/10 text-center">
                       <div>
                         <div className="text-[10px] text-slate-400">总字数</div>
@@ -755,7 +1392,7 @@ export default function English() {
                     </div>
                   </div>
 
-                  {/* 四维雷达得分拆解 */}
+                  {/* 四维细分 */}
                   <div className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xs space-y-3">
                     <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                       <BarChart2 className="w-3.5 h-3.5 text-indigo-600" />
@@ -781,7 +1418,7 @@ export default function English() {
                     </div>
                   </div>
 
-                  {/* AI 润色重构示范版 */}
+                  {/* 示范版 */}
                   <div className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xs space-y-3">
                     <div className="flex items-center justify-between">
                       <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
@@ -807,13 +1444,14 @@ export default function English() {
                   </div>
                 </>
               ) : (
+                /* 空态提示卡 */
                 <div className="h-full min-h-[420px] rounded-3xl border border-dashed border-slate-300 bg-slate-50/50 flex flex-col items-center justify-center p-8 text-center space-y-3">
                   <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 text-xl shadow-2xs">
                     📝
                   </div>
                   <h3 className="text-sm font-bold text-slate-700">等待提交作文进行批改</h3>
                   <p className="text-xs text-slate-400 max-w-xs leading-relaxed">
-                    在左侧输入您的作文草稿，点击“一键智能批改”，系统将秒级生成满分折算、词汇升级与 AI 润色建议。
+                    在左侧选择历年真题或输入作答，点击“本地秒级诊断”或“呼叫墨卷导师精批”，系统将即时生成 20 分制雷达评分与名师润色范文。
                   </p>
                 </div>
               )}
@@ -822,9 +1460,7 @@ export default function English() {
         </div>
       )}
 
-      {/* ─────────────────────────────────────────────────────────────
-          板块 3: 历年真题精读与长难句树状解析
-          ───────────────────────────────────────────────────────────── */}
+      {/* 板块 3: 历年真题精读与长难句树状解析 */}
       {activeTab === 'papers' && (
         <div className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">

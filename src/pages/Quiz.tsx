@@ -1,3 +1,4 @@
+import { getAuthHeaders } from '../services/auth'
 import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
@@ -17,16 +18,20 @@ import {
   BarChart3,
   Database,
   Save,
+  MessageCircle,
+  Camera,
+  Code2,
 } from 'lucide-react'
 import WarmButton from '../components/ui/WarmButton'
 import MarkdownRenderer from '../components/MarkdownRenderer'
-import MathScratchpadCanvas from '../features/quiz/components/MathScratchpadCanvas'
+import DoodleScratchpadCanvas from '../features/quiz/components/DoodleScratchpadCanvas'
 import { api } from '../services/api'
 import { QUESTION_BANK, type QuizQuestion } from '../data/questions'
 import { MATH_QUESTION_BANK } from '../data/questions/math'
 import type { MathCategory, MathSubject, CsSubject, UnifiedQuestion } from '../types/subject'
 
 const ImportResourceModal = lazy(() => import('../components/ImportResourceModal'))
+const AlgorithmSandboxModal = lazy(() => import('../features/quiz/components/AlgorithmSandboxModal'))
 
 // 内存级题库缓存，切页秒开不闪烁
 let cachedCustomQuestionsList: ActiveQuizQuestion[] | null = null
@@ -210,16 +215,23 @@ export default function Quiz() {
   const [customQuestions, setCustomQuestions] = useState<ActiveQuizQuestion[]>(() => cachedCustomQuestionsList || [])
   const [importModalOpen, setImportModalOpen] = useState(false)
   const [defaultModalTab, setDefaultModalTab] = useState<'books' | 'import_quiz' | 'analytics'>('books')
+  const [algoModalOpen, setAlgoModalOpen] = useState(false)
+  const [selectedAlgoId, setSelectedAlgoId] = useState<string | undefined>(undefined)
   const [savingError, setSavingError] = useState(false)
   const [savedErrorMsg, setSavedErrorMsg] = useState<string | null>(null)
   const [generatingVariants, setGeneratingVariants] = useState(false)
+  const [variantModalOpen, setVariantModalOpen] = useState(false)
+  const [variantSourceQ, setVariantSourceQ] = useState<ActiveQuizQuestion | null>(null)
+  const [variantQuestions, setVariantQuestions] = useState<ActiveQuizQuestion[]>([])
+  const [variantAnswers, setVariantAnswers] = useState<Record<string, string>>({})
+  const [variantShowExplanation, setVariantShowExplanation] = useState<Record<string, boolean>>({})
   const [savingAllErrors, setSavingAllErrors] = useState(false)
   const [saveAllMsg, setSaveAllMsg] = useState<string | null>(null)
   const [savedItemIds, setSavedItemIds] = useState<Set<string>>(new Set())
 
   const fetchCustomQuestions = useCallback(async () => {
     try {
-      const res = await fetch('/api/quiz/custom')
+      const res = await fetch('/api/quiz/custom', { headers: getAuthHeaders() })
       const data = await res.json()
       if (data.questions && Array.isArray(data.questions)) {
         const mapped: ActiveQuizQuestion[] = data.questions.map((q: any) => ({
@@ -268,7 +280,7 @@ export default function Quiz() {
     try {
       const res = await fetch('/api/quiz/save-error', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({
           question: currentQ,
           userAnswer: answers[currentQ.id] || selectedOption || blankInput,
@@ -280,6 +292,8 @@ export default function Quiz() {
       if (data.success) {
         setSavedItemIds(prev => new Set(prev).add(currentQ.id))
         setSavedErrorMsg(`已自动生成知识库错题笔记: ${data.fileName}`)
+        window.dispatchEvent(new CustomEvent('vault-updated'))
+        window.dispatchEvent(new CustomEvent('daily-errors-updated'))
         setTimeout(() => setSavedErrorMsg(null), 4000)
       } else {
         alert(data.error || '保存失败')
@@ -299,8 +313,8 @@ export default function Quiz() {
       let successCount = 0
       for (const item of result.wrongQuestions) {
         const res = await fetch('/api/quiz/save-error', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
           body: JSON.stringify({
             question: item.question,
             userAnswer: item.userAnswer,
@@ -315,6 +329,8 @@ export default function Quiz() {
         }
       }
       setSaveAllMsg(`🎉 成功将 ${successCount} 道错题批量沉淀至 Obsidian 错题集！`)
+      window.dispatchEvent(new CustomEvent('vault-updated'))
+      window.dispatchEvent(new CustomEvent('daily-errors-updated'))
       setTimeout(() => setSaveAllMsg(null), 5000)
     } catch (err: any) {
       alert('批量归档失败: ' + err.message)
@@ -325,10 +341,13 @@ export default function Quiz() {
 
   const handleGenerateVariants = async (currentQ: ActiveQuizQuestion) => {
     setGeneratingVariants(true)
+    setVariantSourceQ(currentQ)
+    setVariantAnswers({})
+    setVariantShowExplanation({})
     try {
       const res = await fetch('/api/quiz/variant', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({ question: currentQ }),
       })
       const data = await res.json()
@@ -346,10 +365,10 @@ export default function Quiz() {
           explanation: v.explanation,
           tags: v.tags || ['变式强化'],
         }))
-        setQuestions(prev => [...prev, ...formatted])
-        alert(`已成功生成 ${formatted.length} 道针对考点「${currentQ.chapter || currentQ.subject}」的举一反三变式题，已加入当前答题卡！`)
+        setVariantQuestions(formatted)
+        setVariantModalOpen(true)
       } else {
-        alert(data.error || '未生成有效变式题')
+        alert(data.error || '未生成有效变式题，请重试')
       }
     } catch (err: any) {
       alert('生成变式题失败: ' + err.message)
@@ -396,34 +415,7 @@ export default function Quiz() {
     }
   }, [view])
 
-  // ── Keyboard Shortcuts (Linear-style) ──────────────────────────────────────
-
-  useEffect(() => {
-    if (view !== 'quiz' || questions.length === 0) return
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if typing in text inputs or textarea
-      const target = e.target as HTMLElement
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return
-
-      const key = e.key.toUpperCase()
-      if (['A', 'B', 'C', 'D'].includes(key)) {
-        handleOptionSelect(key)
-      } else if (['1', '2', '3', '4'].includes(e.key)) {
-        const map: Record<string, string> = { '1': 'A', '2': 'B', '3': 'C', '4': 'D' }
-        handleOptionSelect(map[e.key])
-      } else if (e.key === 'Enter' || e.key === 'ArrowRight') {
-        if (mode === 'practice' && showFeedback) {
-          advanceQuestion()
-        }
-      } else if (e.key === 'ArrowLeft') {
-        if (currentIndex > 0) goToQuestion(currentIndex - 1)
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [view, questions, currentIndex, mode, showFeedback, answers])
+  // (键盘快捷键流已统一定义在下方，包含 A/B/C/D、1/2/3/4、方向键翻题与 Enter 展开解析)
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -530,37 +522,99 @@ export default function Quiz() {
     }
   }, [currentIndex, questions, answers, mode])
 
-  // UI/UX Pro Max · 极速刷题无障碍键盘监听 (A/B/C/D 选答，方向键翻题)
+  // 原地闭环唤起双核 AI 伴学舱追问当前题目
+  const handleAskAI = useCallback((q: ActiveQuizQuestion) => {
+    const userAns = answers[q.id]
+    const subjectInfo = ALL_SUBJECTS.find(s => s.key === q.subject)?.key || q.subject || '考研真题'
+    
+    let optionsText = ''
+    if (q.options) {
+      optionsText = Object.entries(q.options)
+        .filter(([_, text]) => Boolean(text))
+        .map(([key, text]) => `   ${key}. ${text}`)
+        .join('\n')
+    }
+    
+    const contextPrompt = [
+      `【当前考研科目与考点】：${subjectInfo} · ${q.chapter || '考点演练'}`,
+      `【题型与题号】：${q.type === 'blank' ? '填空/计算题' : '单项选择题'} (题号 #${q.id})`,
+      `【完整题干】：\n${q.question}`,
+      optionsText ? `【题目选项】：\n${optionsText}` : null,
+      `【我的作答】：${userAns ? userAns : '（尚未作答 / 存在疑惑）'}`,
+      q.answer ? `【标准答案】：${q.answer}` : null,
+      q.explanation ? `【参考解析与定理】：\n${q.explanation}` : null
+    ].filter(Boolean).join('\n\n')
+
+    const defaultInput = userAns && q.answer && userAns.toUpperCase() !== q.answer.toUpperCase()
+      ? `为什么我的选项 ${userAns} 不对？请结合考研定理与本题陷阱详细剖析：`
+      : `请针对这道题的核心考点与解题突破口，为我详细拆解思维推导过程：`
+
+    window.dispatchEvent(new CustomEvent('open-ai-assistant', {
+      detail: {
+        contextPrompt,
+        defaultInput
+      }
+    }))
+  }, [answers])
+
+  // UI/UX Pro Max · 全面补齐键盘快捷键流 (Keyboard-First 体验)
+  // 支持 A/B/C/D 或 1/2/3/4 直接选答案；←/→ 翻题；Enter 展开/收起解析
   useEffect(() => {
-    if (view !== 'quiz') return
+    if (view !== 'quiz' || questions.length === 0) return
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // 如果焦点在输入框、文本域或按下修饰键，不劫持
-      const activeEl = document.activeElement
-      const isInput = activeEl instanceof HTMLInputElement || activeEl instanceof HTMLTextAreaElement
-      if (isInput || e.ctrlKey || e.metaKey || e.altKey) return
+      // 遇到系统级修饰键 (Ctrl/Cmd/Alt) 时不拦截，方便用户触发 ⌘J / Ctrl+J
+      if (e.ctrlKey || e.metaKey || e.altKey) return
+
+      // 如果焦点在输入框、文本域或可编辑区域，不劫持
+      const activeEl = document.activeElement as HTMLElement | null
+      const isInput = activeEl instanceof HTMLInputElement || 
+                      activeEl instanceof HTMLTextAreaElement || 
+                      (activeEl && activeEl.isContentEditable)
+      if (isInput) return
+
+      const curQ = questions[currentIndex]
+      if (!curQ) return
 
       const upperKey = e.key.toUpperCase()
+      // 1. A / B / C / D 直接选答案
       if (['A', 'B', 'C', 'D'].includes(upperKey)) {
-        const q = questions[currentIndex]
-        if (q && q.options && (q.options as any)[upperKey]) {
+        if (curQ.options && (curQ.options as any)[upperKey]) {
           e.preventDefault()
           handleOptionSelect(upperKey)
         }
-      } else if (e.key === 'ArrowRight') {
-        e.preventDefault()
-        advanceQuestion()
-      } else if (e.key === 'ArrowLeft') {
+      }
+      // 2. 1 / 2 / 3 / 4 选答案
+      else if (['1', '2', '3', '4'].includes(e.key)) {
+        const numToOpt: Record<string, string> = { '1': 'A', '2': 'B', '3': 'C', '4': 'D' }
+        const targetOpt = numToOpt[e.key]
+        if (curQ.options && (curQ.options as any)[targetOpt]) {
+          e.preventDefault()
+          handleOptionSelect(targetOpt)
+        }
+      }
+      // 3. 方向键 ← 上一题
+      else if (e.key === 'ArrowLeft') {
         e.preventDefault()
         if (currentIndex > 0) {
           goToQuestion(currentIndex - 1)
         }
       }
+      // 4. 方向键 → 下一题
+      else if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        advanceQuestion()
+      }
+      // 5. Enter 展开 / 收起解析 (原地秒查定理)
+      else if (e.key === 'Enter') {
+        e.preventDefault()
+        setShowFeedback(prev => !prev)
+      }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [view, currentIndex, questions, handleOptionSelect, advanceQuestion])
+  }, [view, currentIndex, questions, handleOptionSelect, advanceQuestion, goToQuestion])
 
 
   const handleExitQuiz = useCallback(() => {
@@ -627,7 +681,7 @@ export default function Quiz() {
     try {
       const resp = await fetch('/api/quiz/submit', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({
           mode,
           answers: finalAnswers,
@@ -907,27 +961,52 @@ export default function Quiz() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             <button
+              type="button"
+              onClick={() => {
+                setDefaultModalTab('import_quiz')
+                setImportModalOpen(true)
+              }}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-300 text-amber-800 text-xs font-bold shadow-2xs hover:bg-amber-50 transition-all cursor-pointer"
+              title="支持粘贴数学公式截图与 408 图表，AI 视觉自动识别转 LaTeX"
+            >
+              <Camera className="h-4 w-4 text-amber-600" />
+              <span>📸 拍照/截图导错题</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setAlgoModalOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold shadow-sm hover:bg-slate-800 transition-all cursor-pointer"
+              title="进入 408 统考第 42 题算法大题 C/C++ 手写判题沙箱"
+            >
+              <Code2 className="h-4 w-4 text-emerald-400" />
+              <span>💻 408 算法大题 (第42题)</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => {
                 setDefaultModalTab('analytics')
                 setImportModalOpen(true)
               }}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-semibold shadow-2xs hover:bg-slate-50 transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-semibold shadow-2xs hover:bg-slate-50 transition-all cursor-pointer"
             >
               <BarChart3 className="h-4 w-4 text-indigo-600" />
               <span>学情画像</span>
             </button>
 
             <button
+              type="button"
               onClick={() => {
                 setDefaultModalTab('books')
                 setImportModalOpen(true)
               }}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold shadow-md shadow-indigo-500/20 hover:bg-indigo-500 transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold shadow-md shadow-indigo-500/20 hover:bg-indigo-500 transition-all cursor-pointer"
             >
               <Upload className="h-4 w-4" />
-              <span>导入参考书 / 题库</span>
+              <span>题库与书架</span>
             </button>
           </div>
         </div>
@@ -1046,7 +1125,166 @@ export default function Quiz() {
             onQuestionsUpdated={fetchCustomQuestions}
             defaultTab={defaultModalTab}
           />
+          {algoModalOpen && (
+            <AlgorithmSandboxModal
+              isOpen={algoModalOpen}
+              onClose={() => setAlgoModalOpen(false)}
+              initialQuestionId={selectedAlgoId}
+            />
+          )}
         </Suspense>
+        {/* ── AI 举一反三 · 变式题强化训练舱 Modal ── */}
+        {variantModalOpen && variantSourceQ && (
+          <div
+            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 animate-in fade-in"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setVariantModalOpen(false)
+            }}
+          >
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden text-left font-sans animate-in zoom-in-95 duration-150">
+              {/* Modal Header */}
+              <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-indigo-50/70 via-white to-amber-50/50">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                    <Sparkles size={16} />
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                      <span>AI 举一反三 · 变式题强化训练舱</span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] bg-indigo-100 text-indigo-800 font-bold">
+                        定向弱项击破
+                      </span>
+                    </h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      针对错题考点「{variantSourceQ.chapter || variantSourceQ.subject}」同类概念命制，改变设问参数深化理解
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setVariantModalOpen(false)}
+                  className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-5 overflow-y-auto space-y-5 flex-1 text-xs sm:text-[13px] no-scrollbar">
+                {/* 原错题原貌提示卡 */}
+                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+                  <div className="text-[11px] font-bold text-slate-500 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                    <span>错题溯源原型：</span>
+                  </div>
+                  <div className="text-slate-700 font-serif leading-relaxed line-clamp-2">
+                    {variantSourceQ.question}
+                  </div>
+                </div>
+
+                {/* 变式题列表 */}
+                <div className="space-y-4">
+                  {variantQuestions.map((vq, idx) => {
+                    const chosen = variantAnswers[vq.id]
+                    const isAnswered = Boolean(chosen)
+                    const isCorrect = chosen === vq.answer
+
+                    return (
+                      <div
+                        key={vq.id}
+                        className="p-4 rounded-2xl border border-slate-200/90 bg-white shadow-2xs space-y-3"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 font-bold text-[11px]">
+                            <span>变式题 0{idx + 1}</span>
+                            <span className="text-indigo-400 font-normal">· {vq.difficulty}</span>
+                          </span>
+                          {isAnswered && (
+                            <span className={`text-xs font-black ${isCorrect ? 'text-emerald-600' : 'text-rose-600'}`}>
+                              {isCorrect ? '✓ 回答正确' : `✗ 回答错误 (正确选项: ${vq.answer})`}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* 题干 */}
+                        <div className="text-slate-900 font-medium leading-relaxed">
+                          {vq.question}
+                        </div>
+
+                        {/* 选项组 */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 font-sans">
+                          {vq.options && Object.entries(vq.options).map(([optKey, optVal]) => {
+                            const isPicked = chosen === optKey
+                            return (
+                              <button
+                                key={optKey}
+                                type="button"
+                                onClick={() => {
+                                  setVariantAnswers(prev => ({ ...prev, [vq.id]: optKey }))
+                                  setVariantShowExplanation(prev => ({ ...prev, [vq.id]: true }))
+                                }}
+                                className={`text-left p-2.5 rounded-xl text-xs font-medium border transition-all cursor-pointer flex items-center gap-2 ${
+                                  isPicked
+                                    ? isCorrect
+                                      ? 'bg-emerald-50 border-emerald-400 text-emerald-950 font-bold shadow-2xs'
+                                      : 'bg-rose-50 border-rose-400 text-rose-950 font-bold shadow-2xs'
+                                    : 'bg-slate-50/70 border-slate-200/80 text-slate-700 hover:bg-slate-100/80'
+                                }`}
+                              >
+                                <span className={`w-5 h-5 rounded-lg flex items-center justify-center font-bold text-[11px] shrink-0 ${
+                                  isPicked
+                                    ? isCorrect ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'
+                                    : 'bg-white border border-slate-200 text-slate-600'
+                                }`}>
+                                  {optKey}
+                                </span>
+                                <span className="leading-snug">{String(optVal)}</span>
+                              </button>
+                            )
+                          })}
+                        </div>
+
+                        {/* 解析与考点总结 */}
+                        {variantShowExplanation[vq.id] && (
+                          <div className="mt-2.5 p-3 rounded-xl bg-amber-50/70 border border-amber-200/80 text-xs space-y-1.5 animate-in fade-in">
+                            <div className="font-bold text-amber-900 flex items-center gap-1">
+                              <span>💡 考点命题深度解析：</span>
+                            </div>
+                            <p className="text-slate-700 leading-relaxed font-sans">{vq.explanation}</p>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="px-5 py-3.5 border-t border-slate-100 bg-slate-50 flex flex-wrap items-center justify-between gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const promptText = `我在做题中心刷题时遇到了这道关于「${variantSourceQ.chapter || variantSourceQ.subject}」的错题：\n> "${variantSourceQ.question}"\n\n请老师帮我详细剖析该考点的命题本质、高频设坑方式与秒杀解题技巧！`
+                    sessionStorage.setItem('pending_chat_prompt', promptText)
+                    window.location.href = '/chat'
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 transition-colors cursor-pointer"
+                >
+                  <MessageCircle size={13} />
+                  <span>携带本题前往【AI 伴学舱】向导师追问 →</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setVariantModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  完成巩固并关闭
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     )
   }
@@ -1147,7 +1385,7 @@ export default function Quiz() {
                   : 'text-[#52525b] hover:text-[#18181b]'
               }`}
             >
-              <span>📝 草稿推演</span>
+              <span>✍️ 手写白板</span>
             </button>
             <button
               type="button"
@@ -1252,15 +1490,28 @@ export default function Quiz() {
                   )}
                 </div>
 
-                <button
-                  onClick={() => toggleBookmark(currentQ.id)}
-                  title={isBookmarked ? '取消标星' : '标星关注此题'}
-                  className={`p-1.5 rounded-xl transition-colors ${
-                    isBookmarked ? 'text-amber-500 bg-amber-50' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  <Star size={17} className={isBookmarked ? 'fill-amber-500' : ''} />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleAskAI(currentQ)}
+                    title="唤起双核 AI 伴学抽屉追问此题（快捷键 ⌘J / Ctrl+J）"
+                    className="p-1.5 px-2.5 rounded-xl text-indigo-700 bg-indigo-50/90 border border-indigo-200/90 hover:bg-indigo-100 hover:border-indigo-300 transition-all text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
+                  >
+                    <Sparkles size={13} className="text-indigo-600" />
+                    <span>✨ 追问 AI</span>
+                    <kbd className="hidden sm:inline-block text-[9px] font-mono text-indigo-500 bg-white/90 border border-indigo-200 rounded px-1 py-0.2">⌘J</kbd>
+                  </button>
+
+                  <button
+                    onClick={() => toggleBookmark(currentQ.id)}
+                    title={isBookmarked ? '取消标星' : '标星关注此题'}
+                    className={`p-1.5 rounded-xl transition-colors cursor-pointer ${
+                      isBookmarked ? 'text-amber-500 bg-amber-50' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Star size={17} className={isBookmarked ? 'fill-amber-500' : ''} />
+                  </button>
+                </div>
               </div>
 
               {/* Question Text (KaTeX Rendered) */}
@@ -1315,9 +1566,11 @@ export default function Quiz() {
                           <MarkdownRenderer content={optionText} inline />
                         </div>
 
-                        {/* 快捷键提示徽章 */}
-                        <kbd className="hidden sm:inline-block text-[10px] font-mono px-1.5 py-0.5 rounded border border-slate-200/80 bg-slate-50 text-slate-400 group-hover:text-slate-600 group-hover:border-slate-300 transition-colors shrink-0 mt-0.5">
-                          {key}
+                        {/* 键盘快捷键提示徽章 */}
+                        <kbd className="hidden sm:inline-flex items-center gap-0.5 text-[10px] font-mono px-1.5 py-0.5 rounded border border-slate-200/80 bg-slate-50 text-slate-400 group-hover:text-slate-600 group-hover:border-slate-300 transition-colors shrink-0 mt-0.5">
+                          <span>{key}</span>
+                          <span className="text-slate-300">/</span>
+                          <span>{key === 'A' ? '1' : key === 'B' ? '2' : key === 'C' ? '3' : '4'}</span>
                         </kbd>
 
                         {showResult && isCorrectAnswer && (
@@ -1359,26 +1612,58 @@ export default function Quiz() {
               )}
 
               {/* Bottom Navigation Buttons */}
-              <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+              <div className="flex flex-wrap items-center justify-between gap-2.5 pt-4 border-t border-slate-100">
                 <button
                   onClick={() => goToQuestion(currentIndex - 1)}
                   disabled={currentIndex === 0}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 disabled:opacity-30 transition-colors flex items-center gap-1.5"
+                  className="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 disabled:opacity-30 transition-colors flex items-center gap-1.5 cursor-pointer rounded-xl hover:bg-slate-100/70"
+                  title="上一题（快捷键 ←）"
                 >
                   <ArrowLeft size={14} />
                   <span>上一题</span>
+                  <kbd className="hidden sm:inline-block text-[10px] font-mono px-1 py-0.2 rounded border border-slate-200 bg-slate-100 text-slate-400">
+                    ←
+                  </kbd>
                 </button>
 
-                <div className="hidden md:block text-xs text-slate-400">
-                  键盘快捷键：<kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-600 font-mono text-[10px]">A/B/C/D</kbd> 作答 · <kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-600 font-mono text-[10px]">Enter</kbd> 下一题
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowFeedback(prev => !prev)}
+                    className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
+                    title="按 Enter 键展开/收起解析"
+                  >
+                    <BookOpen size={13} className="text-indigo-600" />
+                    <span>{showFeedback ? '收起解析' : '展开解析'}</span>
+                    <kbd className="text-[10px] font-mono px-1 py-0.2 rounded border border-slate-200 bg-slate-100 text-slate-400">
+                      Enter
+                    </kbd>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleAskAI(currentQ)}
+                    className="px-3 py-1.5 rounded-xl border border-indigo-200/90 bg-indigo-50/80 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95"
+                    title="唤起双核 AI 伴学舱追问（快捷键 ⌘J / Ctrl+J）"
+                  >
+                    <Sparkles size={13} className="text-indigo-600" />
+                    <span>✨ 追问 AI</span>
+                    <kbd className="text-[10px] font-mono px-1 py-0.2 rounded border border-indigo-200 bg-white/80 text-indigo-500">
+                      ⌘J
+                    </kbd>
+                  </button>
                 </div>
 
                 <WarmButton
                   onClick={advanceQuestion}
                   disabled={mode === 'practice' && !showFeedback && currentIndex < questions.length - 1}
-                  className="bg-accent-orange text-white px-6 cursor-pointer"
+                  className="bg-accent-orange text-white px-5 cursor-pointer flex items-center gap-1.5"
+                  title="下一题（快捷键 →）"
                 >
-                  <span>{currentIndex < questions.length - 1 ? '下一题 →' : '交卷结算'}</span>
+                  <span>{currentIndex < questions.length - 1 ? '下一题' : '交卷结算'}</span>
+                  <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded border border-white/30 bg-black/20 text-white">
+                    →
+                  </kbd>
                 </WarmButton>
               </div>
             </div>
@@ -1515,7 +1800,7 @@ export default function Quiz() {
                   activeSideTab === 'scratchpad' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
-                📝 研考草稿纸
+                ✍️ 手写演算白板
               </button>
               <button
                 onClick={() => setActiveSideTab('hints')}
@@ -1603,16 +1888,21 @@ export default function Quiz() {
               </div>
             )}
 
-            {/* TAB 2: Scratchpad & Math Virtual Keyboard (Symbolab 风格) */}
+            {/* TAB 2: 手写演算白板 (纯手写涂鸦，支持 iPad/触控笔/触控板/鼠标画树与演算) */}
             {activeSideTab === 'scratchpad' && (
               <div className="space-y-3 animate-fade-in-up">
                 <div className="flex items-center justify-between text-xs text-slate-500">
-                  <span className="font-semibold text-slate-800">当前试题专用草稿</span>
-                  <span className="text-[11px] text-slate-400">自动绑定第 {currentIndex + 1} 题</span>
+                  <span className="font-semibold text-slate-800 flex items-center gap-1.5">
+                    <span>✍️ 考研手写演算白板</span>
+                    <span className="text-[10px] text-indigo-600 bg-indigo-50 px-1.5 py-0.2 rounded font-mono">第 {currentIndex + 1} 题</span>
+                  </span>
+                  <span className="text-[11px] text-slate-400">支持 iPad/触控板画二叉树与算式</span>
                 </div>
 
-                <MathScratchpadCanvas
-                  value={currentScratchpad}
+                <DoodleScratchpadCanvas
+                  questionId={currentQ.id}
+                  questionIndex={currentIndex}
+                  initialDataUrl={scratchpads[currentQ.id]}
                   onChange={(val) => setScratchpads({ ...scratchpads, [currentQ.id]: val })}
                   onClear={() => setScratchpads({ ...scratchpads, [currentQ.id]: '' })}
                 />
@@ -1911,7 +2201,166 @@ export default function Quiz() {
             onQuestionsUpdated={fetchCustomQuestions}
             defaultTab={defaultModalTab}
           />
+          {algoModalOpen && (
+            <AlgorithmSandboxModal
+              isOpen={algoModalOpen}
+              onClose={() => setAlgoModalOpen(false)}
+              initialQuestionId={selectedAlgoId}
+            />
+          )}
         </Suspense>
+        {/* ── AI 举一反三 · 变式题强化训练舱 Modal ── */}
+        {variantModalOpen && variantSourceQ && (
+          <div
+            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 animate-in fade-in"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setVariantModalOpen(false)
+            }}
+          >
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden text-left font-sans animate-in zoom-in-95 duration-150">
+              {/* Modal Header */}
+              <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-indigo-50/70 via-white to-amber-50/50">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                    <Sparkles size={16} />
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                      <span>AI 举一反三 · 变式题强化训练舱</span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] bg-indigo-100 text-indigo-800 font-bold">
+                        定向弱项击破
+                      </span>
+                    </h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      针对错题考点「{variantSourceQ.chapter || variantSourceQ.subject}」同类概念命制，改变设问参数深化理解
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setVariantModalOpen(false)}
+                  className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-5 overflow-y-auto space-y-5 flex-1 text-xs sm:text-[13px] no-scrollbar">
+                {/* 原错题原貌提示卡 */}
+                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+                  <div className="text-[11px] font-bold text-slate-500 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                    <span>错题溯源原型：</span>
+                  </div>
+                  <div className="text-slate-700 font-serif leading-relaxed line-clamp-2">
+                    {variantSourceQ.question}
+                  </div>
+                </div>
+
+                {/* 变式题列表 */}
+                <div className="space-y-4">
+                  {variantQuestions.map((vq, idx) => {
+                    const chosen = variantAnswers[vq.id]
+                    const isAnswered = Boolean(chosen)
+                    const isCorrect = chosen === vq.answer
+
+                    return (
+                      <div
+                        key={vq.id}
+                        className="p-4 rounded-2xl border border-slate-200/90 bg-white shadow-2xs space-y-3"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 font-bold text-[11px]">
+                            <span>变式题 0{idx + 1}</span>
+                            <span className="text-indigo-400 font-normal">· {vq.difficulty}</span>
+                          </span>
+                          {isAnswered && (
+                            <span className={`text-xs font-black ${isCorrect ? 'text-emerald-600' : 'text-rose-600'}`}>
+                              {isCorrect ? '✓ 回答正确' : `✗ 回答错误 (正确选项: ${vq.answer})`}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* 题干 */}
+                        <div className="text-slate-900 font-medium leading-relaxed">
+                          {vq.question}
+                        </div>
+
+                        {/* 选项组 */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 font-sans">
+                          {vq.options && Object.entries(vq.options).map(([optKey, optVal]) => {
+                            const isPicked = chosen === optKey
+                            return (
+                              <button
+                                key={optKey}
+                                type="button"
+                                onClick={() => {
+                                  setVariantAnswers(prev => ({ ...prev, [vq.id]: optKey }))
+                                  setVariantShowExplanation(prev => ({ ...prev, [vq.id]: true }))
+                                }}
+                                className={`text-left p-2.5 rounded-xl text-xs font-medium border transition-all cursor-pointer flex items-center gap-2 ${
+                                  isPicked
+                                    ? isCorrect
+                                      ? 'bg-emerald-50 border-emerald-400 text-emerald-950 font-bold shadow-2xs'
+                                      : 'bg-rose-50 border-rose-400 text-rose-950 font-bold shadow-2xs'
+                                    : 'bg-slate-50/70 border-slate-200/80 text-slate-700 hover:bg-slate-100/80'
+                                }`}
+                              >
+                                <span className={`w-5 h-5 rounded-lg flex items-center justify-center font-bold text-[11px] shrink-0 ${
+                                  isPicked
+                                    ? isCorrect ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'
+                                    : 'bg-white border border-slate-200 text-slate-600'
+                                }`}>
+                                  {optKey}
+                                </span>
+                                <span className="leading-snug">{String(optVal)}</span>
+                              </button>
+                            )
+                          })}
+                        </div>
+
+                        {/* 解析与考点总结 */}
+                        {variantShowExplanation[vq.id] && (
+                          <div className="mt-2.5 p-3 rounded-xl bg-amber-50/70 border border-amber-200/80 text-xs space-y-1.5 animate-in fade-in">
+                            <div className="font-bold text-amber-900 flex items-center gap-1">
+                              <span>💡 考点命题深度解析：</span>
+                            </div>
+                            <p className="text-slate-700 leading-relaxed font-sans">{vq.explanation}</p>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="px-5 py-3.5 border-t border-slate-100 bg-slate-50 flex flex-wrap items-center justify-between gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const promptText = `我在做题中心刷题时遇到了这道关于「${variantSourceQ.chapter || variantSourceQ.subject}」的错题：\n> "${variantSourceQ.question}"\n\n请老师帮我详细剖析该考点的命题本质、高频设坑方式与秒杀解题技巧！`
+                    sessionStorage.setItem('pending_chat_prompt', promptText)
+                    window.location.href = '/chat'
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 transition-colors cursor-pointer"
+                >
+                  <MessageCircle size={13} />
+                  <span>携带本题前往【AI 伴学舱】向导师追问 →</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setVariantModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  完成巩固并关闭
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     )
   }
@@ -2093,12 +2542,22 @@ export default function Quiz() {
                         </button>
 
                         <button
-                          onClick={() => handleGenerateVariants(q)}
-                          disabled={generatingVariants}
-                          className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl subframe-btn-secondary px-3.5 py-2 text-xs font-medium text-neutral-800"
+                          type="button"
+                          onClick={() => handleAskAI(q)}
+                          className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-indigo-700 bg-indigo-50/90 border border-indigo-200/90 hover:bg-indigo-100 transition-all cursor-pointer shadow-2xs active:scale-95"
+                          title="唤起双核 AI 伴学抽屉深度答疑此错题（快捷键 ⌘J / Ctrl+J）"
                         >
                           <Sparkles size={13} className="text-indigo-600" />
-                          <span>AI 变式题强化</span>
+                          <span>✨ 追问 AI (⌘J)</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleGenerateVariants(q)}
+                          disabled={generatingVariants}
+                          className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl subframe-btn-secondary px-3.5 py-2 text-xs font-semibold text-indigo-700 bg-indigo-50/60 border border-indigo-200/80 hover:bg-indigo-100/70 transition-all cursor-pointer shadow-2xs active:scale-95"
+                        >
+                          <Sparkles size={13} className={`text-indigo-600 ${generatingVariants && variantSourceQ?.id === q.id ? 'animate-spin' : ''}`} />
+                          <span>{generatingVariants && variantSourceQ?.id === q.id ? 'AI 命题构思中...' : '🔄 AI 变式题强化'}</span>
                         </button>
                       </div>
                     </div>
@@ -2211,7 +2670,166 @@ export default function Quiz() {
             onQuestionsUpdated={fetchCustomQuestions}
             defaultTab={defaultModalTab}
           />
+          {algoModalOpen && (
+            <AlgorithmSandboxModal
+              isOpen={algoModalOpen}
+              onClose={() => setAlgoModalOpen(false)}
+              initialQuestionId={selectedAlgoId}
+            />
+          )}
         </Suspense>
+        {/* ── AI 举一反三 · 变式题强化训练舱 Modal ── */}
+        {variantModalOpen && variantSourceQ && (
+          <div
+            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 animate-in fade-in"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setVariantModalOpen(false)
+            }}
+          >
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden text-left font-sans animate-in zoom-in-95 duration-150">
+              {/* Modal Header */}
+              <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-indigo-50/70 via-white to-amber-50/50">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                    <Sparkles size={16} />
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                      <span>AI 举一反三 · 变式题强化训练舱</span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] bg-indigo-100 text-indigo-800 font-bold">
+                        定向弱项击破
+                      </span>
+                    </h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      针对错题考点「{variantSourceQ.chapter || variantSourceQ.subject}」同类概念命制，改变设问参数深化理解
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setVariantModalOpen(false)}
+                  className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-5 overflow-y-auto space-y-5 flex-1 text-xs sm:text-[13px] no-scrollbar">
+                {/* 原错题原貌提示卡 */}
+                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+                  <div className="text-[11px] font-bold text-slate-500 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                    <span>错题溯源原型：</span>
+                  </div>
+                  <div className="text-slate-700 font-serif leading-relaxed line-clamp-2">
+                    {variantSourceQ.question}
+                  </div>
+                </div>
+
+                {/* 变式题列表 */}
+                <div className="space-y-4">
+                  {variantQuestions.map((vq, idx) => {
+                    const chosen = variantAnswers[vq.id]
+                    const isAnswered = Boolean(chosen)
+                    const isCorrect = chosen === vq.answer
+
+                    return (
+                      <div
+                        key={vq.id}
+                        className="p-4 rounded-2xl border border-slate-200/90 bg-white shadow-2xs space-y-3"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 font-bold text-[11px]">
+                            <span>变式题 0{idx + 1}</span>
+                            <span className="text-indigo-400 font-normal">· {vq.difficulty}</span>
+                          </span>
+                          {isAnswered && (
+                            <span className={`text-xs font-black ${isCorrect ? 'text-emerald-600' : 'text-rose-600'}`}>
+                              {isCorrect ? '✓ 回答正确' : `✗ 回答错误 (正确选项: ${vq.answer})`}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* 题干 */}
+                        <div className="text-slate-900 font-medium leading-relaxed">
+                          {vq.question}
+                        </div>
+
+                        {/* 选项组 */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 font-sans">
+                          {vq.options && Object.entries(vq.options).map(([optKey, optVal]) => {
+                            const isPicked = chosen === optKey
+                            return (
+                              <button
+                                key={optKey}
+                                type="button"
+                                onClick={() => {
+                                  setVariantAnswers(prev => ({ ...prev, [vq.id]: optKey }))
+                                  setVariantShowExplanation(prev => ({ ...prev, [vq.id]: true }))
+                                }}
+                                className={`text-left p-2.5 rounded-xl text-xs font-medium border transition-all cursor-pointer flex items-center gap-2 ${
+                                  isPicked
+                                    ? isCorrect
+                                      ? 'bg-emerald-50 border-emerald-400 text-emerald-950 font-bold shadow-2xs'
+                                      : 'bg-rose-50 border-rose-400 text-rose-950 font-bold shadow-2xs'
+                                    : 'bg-slate-50/70 border-slate-200/80 text-slate-700 hover:bg-slate-100/80'
+                                }`}
+                              >
+                                <span className={`w-5 h-5 rounded-lg flex items-center justify-center font-bold text-[11px] shrink-0 ${
+                                  isPicked
+                                    ? isCorrect ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'
+                                    : 'bg-white border border-slate-200 text-slate-600'
+                                }`}>
+                                  {optKey}
+                                </span>
+                                <span className="leading-snug">{String(optVal)}</span>
+                              </button>
+                            )
+                          })}
+                        </div>
+
+                        {/* 解析与考点总结 */}
+                        {variantShowExplanation[vq.id] && (
+                          <div className="mt-2.5 p-3 rounded-xl bg-amber-50/70 border border-amber-200/80 text-xs space-y-1.5 animate-in fade-in">
+                            <div className="font-bold text-amber-900 flex items-center gap-1">
+                              <span>💡 考点命题深度解析：</span>
+                            </div>
+                            <p className="text-slate-700 leading-relaxed font-sans">{vq.explanation}</p>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="px-5 py-3.5 border-t border-slate-100 bg-slate-50 flex flex-wrap items-center justify-between gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const promptText = `我在做题中心刷题时遇到了这道关于「${variantSourceQ.chapter || variantSourceQ.subject}」的错题：\n> "${variantSourceQ.question}"\n\n请老师帮我详细剖析该考点的命题本质、高频设坑方式与秒杀解题技巧！`
+                    sessionStorage.setItem('pending_chat_prompt', promptText)
+                    window.location.href = '/chat'
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 transition-colors cursor-pointer"
+                >
+                  <MessageCircle size={13} />
+                  <span>携带本题前往【AI 伴学舱】向导师追问 →</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setVariantModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  完成巩固并关闭
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     )
   }

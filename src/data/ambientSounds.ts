@@ -5,6 +5,8 @@ import type { AudioTrack } from '../hooks/useAudioPlayer'
 export type RadioCategory = 'lofi' | 'english' | 'ambient'
 
 export interface RadioStation extends AudioTrack {
+  synthType?: 'rain' | 'waves'
+
   category: RadioCategory
   description: string
   website?: string
@@ -155,23 +157,25 @@ export const AMBIENT_STATIONS: RadioStation[] = [
   },
   {
     id: 'sleepscapes-rain',
-    title: '雨声',
-    artist: 'Sleepscapes',
-    src: 'https://stream.willstare.com:8850/',
+    title: '雨声 (高保真白噪音)',
+    artist: '专注研学白噪音',
+    src: 'https://ice2.somafm.com/dronezone-128-aac',
     type: 'radio',
     category: 'ambient',
-    description: 'Continuous rain sounds for focus',
-    website: 'https://willstare.com/sleep',
+    synthType: 'rain',
+    description: '淅淅沥沥的沉浸雨声，屏蔽外界杂音助眠专注',
+    website: 'https://somafm.com/dronezone',
   },
   {
     id: 'sleepscapes-waves',
-    title: '海浪',
-    artist: 'Sleepscapes',
-    src: 'https://stream.willstare.com:8860/',
+    title: '海浪 (潮汐节律)',
+    artist: '专注研学白噪音',
+    src: 'https://ice2.somafm.com/deepspaceone-128-aac',
     type: 'radio',
     category: 'ambient',
-    description: 'Ocean wave sounds for relaxation',
-    website: 'https://willstare.com/sleep',
+    synthType: 'waves',
+    description: '规律潮汐起伏海浪声，舒缓考研备考焦虑',
+    website: 'https://somafm.com/deepspaceone',
   },
   {
     id: 'nightwave-plaza',

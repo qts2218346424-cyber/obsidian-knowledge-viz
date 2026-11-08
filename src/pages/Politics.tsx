@@ -407,18 +407,18 @@ export default function Politics() {
           : 'max-w-[1520px] space-y-4 sm:space-y-5 animate-fade-in-up text-slate-900'
       }`}
     >
-      {/* ── 顶部统一政治专区导航驾驶舱 ── */}
-      <section className="bento-card rounded-3xl p-3.5 sm:p-5 relative overflow-hidden bg-gradient-to-r from-white via-white to-rose-50/40">
+      {/* ── 顶部统一政治专区导航驾驶舱 (Linear 极简微阴影与克制色阶) ── */}
+      <section className="rounded-3xl p-4 sm:p-5 relative overflow-hidden bg-white border border-slate-200/60 shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-1.5">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-50 border border-rose-200/80 text-[11px] font-bold text-rose-700">
-                <Landmark className="w-3.5 h-3.5 text-rose-600" />
-                <span>2026/2027 考研政治总攻专区</span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-200/60 text-[11px] font-semibold text-indigo-700">
+                <Landmark className="w-3.5 h-3.5 text-indigo-600" />
+                <span>2026/2027 考研政治专攻</span>
               </span>
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200/80 text-[11px] font-bold text-amber-800">
-                <Flame className="w-3 h-3 text-amber-600" />
-                <span>全屏史纲时空轴 · 肖秀荣1000题 · 知识点收藏</span>
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 text-[11px] font-medium text-slate-600 border border-slate-200/60">
+                <Flame className="w-3 h-3 text-amber-500" />
+                <span>史纲时空轴 · 肖秀荣 1000 题 · 易混对比</span>
               </span>
             </div>
 
@@ -1084,7 +1084,7 @@ export default function Politics() {
                         userAnswer.every((x, i) => x === (q.answer as string[])[i])
 
                   return (
-                    <div className="bento-card rounded-3xl p-5 sm:p-7 space-y-5">
+                    <div className="bg-white rounded-3xl p-5 sm:p-7 space-y-5 border border-slate-200/60 shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
                       {/* 题目头部元信息 */}
                       <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
                         <div className="flex flex-wrap items-center gap-2">
@@ -1126,7 +1126,7 @@ export default function Politics() {
                       </div>
 
                       {/* 题干内容 */}
-                      <div className="text-base sm:text-lg font-bold text-slate-900 leading-relaxed">
+                      <div className="text-base sm:text-lg font-bold text-slate-900 leading-[1.75] tracking-tight">
                         <span className="text-indigo-600 font-mono mr-2">第 {activeQuestionIdx + 1} 题.</span>
                         {q.question}
                       </div>
@@ -1206,7 +1206,7 @@ export default function Politics() {
 
                       {/* 做题结果反馈与肖秀荣名师深度解析 */}
                       {isSubmitted && (
-                        <div className="rounded-2xl p-4 sm:p-5 bg-slate-50 border border-slate-200 space-y-3.5 animate-fade-in-up">
+                        <div className="rounded-2xl p-4 sm:p-5 bg-slate-50/70 border border-slate-200/50 space-y-3.5 animate-fade-in-up leading-[1.75]">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               {isCorrect ? (

@@ -270,7 +270,7 @@ export const ChatMessageItem = memo(
 
             {/* 智能体 B 卡片 */}
             {(dualViewMode === 'split' || dualViewMode === 'tab-b') && (
-              <div className="flex flex-col bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs hover:border-purple-300/80 transition-all min-w-0">
+              <div className="flex flex-col bg-white border border-slate-200/60 rounded-2xl p-4 sm:p-5 shadow-[0_2px_10px_rgba(0,0,0,0.02)] hover:border-indigo-300/60 transition-all min-w-0 leading-[1.75] academic-body">
                 <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-100">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="text-lg p-1.5 rounded-xl bg-purple-500/10 text-purple-600 shrink-0">
@@ -502,7 +502,7 @@ export const ChatMessageItem = memo(
             className={`px-4 py-3 sm:px-5 sm:py-4 rounded-2xl max-w-full overflow-x-hidden ${fontSizeClass} shadow-2xs ${
               isUser
                 ? 'bg-neutral-900 text-white rounded-2xl rounded-br-xs shadow-xs text-sm border border-neutral-800'
-                : 'w-full bg-white border border-neutral-200/80 text-neutral-900 rounded-2xl rounded-tl-xs shadow-xs'
+                : 'w-full bg-white border border-slate-200/60 text-slate-900 rounded-2xl rounded-tl-xs shadow-[0_2px_10px_rgba(0,0,0,0.02)] leading-[1.75] academic-body'
             }`}
           >
             {/* 工具调用折叠卡 */}

@@ -941,6 +941,26 @@ class CoreForgeDatabase {
     }
   }
 
+  refundUserPoints(
+    userId: string,
+    amount: number = 0.1,
+    remark: string = 'AI 伴学提问异常自动原路返还'
+  ): { success: boolean; points: number; refunded: number } {
+    if (!this.db || !userId) return { success: false, points: 0, refunded: 0 }
+    const user = this.findUserById(userId)
+    if (!user) return { success: false, points: 0, refunded: 0 }
+    const refunded = Math.round(amount * 100) / 100
+    const newPoints = Math.round((user.points + refunded) * 100) / 100
+    const now = new Date().toISOString()
+    this.db.prepare('UPDATE users SET points = ?, updated_at = ? WHERE id = ?').run(newPoints, now, userId)
+    const logId = `pl_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+    this.db.prepare(`
+      INSERT INTO point_logs (id, user_id, type, amount, balance_after, remark, operator_id, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(logId, userId, 'refund', refunded, newPoints, remark, null, now)
+    return { success: true, points: newPoints, refunded }
+  }
+
   deductUserPoints(
     userId: string,
     amount: number = 0.1,

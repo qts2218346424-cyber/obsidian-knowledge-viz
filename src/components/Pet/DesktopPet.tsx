@@ -1,3 +1,4 @@
+import { getPomodoroSyncState, setPomodoroSyncState, onPomodoroSync } from '../../utils/pomodoroSync'
 import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
@@ -276,8 +277,20 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
   }, [])
 
   // 专注番茄钟
-  const [focusActive, setFocusActive] = useState(false)
-  const [focusSecondsLeft, setFocusSecondsLeft] = useState(25 * 60)
+  const [focusActive, setFocusActive] = useState(() => getPomodoroSyncState().isRunning)
+  const [focusSecondsLeft, setFocusSecondsLeft] = useState(() => getPomodoroSyncState().timeLeft)
+
+  // 监听全站番茄钟全局同频同步事件
+  useEffect(() => {
+    const unsub = onPomodoroSync(state => {
+      setFocusActive(state.isRunning)
+      setFocusSecondsLeft(state.timeLeft)
+      if (state.isRunning) {
+        setMood('focus')
+      }
+    })
+    return unsub
+  }, [])
 
   // Token 统计
   const [dailyTokens, setDailyTokens] = useState<number>(() => {

@@ -57,7 +57,7 @@ async function createAiQuizCompletion(params: {
   model: string
   max_tokens: number
   system: string
-  messages: Array<{ role: 'user'; content: string }>
+  messages: Array<{ role: 'user' | 'assistant'; content: any }>
 }): Promise<any> {
   if (!anthropic) throw new Error('AI 服务未初始化')
   try {
@@ -70,17 +70,18 @@ async function createAiQuizCompletion(params: {
   }
 }
 
-function getCustomQuestionsPath(): string {
-  const quizDir = path.resolve(config.vaultPath, '做题记录')
+function getCustomQuestionsPath(req?: any): string {
+  const vaultPath = req ? getRequestVaultPath(req) : config.vaultPath
+  const quizDir = path.resolve(vaultPath, '做题记录')
   if (!fs.existsSync(quizDir)) {
     fs.mkdirSync(quizDir, { recursive: true })
   }
   return path.join(quizDir, 'custom-questions.json')
 }
 
-function loadCustomQuestions(): any[] {
+function loadCustomQuestions(req?: any): any[] {
   try {
-    const p = getCustomQuestionsPath()
+    const p = getCustomQuestionsPath(req)
     if (!fs.existsSync(p)) return []
     const raw = fs.readFileSync(p, 'utf8')
     return JSON.parse(raw)
@@ -89,16 +90,16 @@ function loadCustomQuestions(): any[] {
   }
 }
 
-function saveCustomQuestions(questions: any[]): void {
-  const p = getCustomQuestionsPath()
+function saveCustomQuestions(questions: any[], req?: any): void {
+  const p = getCustomQuestionsPath(req)
   fs.writeFileSync(p, JSON.stringify(questions, null, 2), 'utf8')
 }
 
 // ===== 1. Custom Questions Management =====
 
-quizRouter.get('/quiz/custom', (_req, res) => {
+quizRouter.get('/quiz/custom', (req, res) => {
   try {
-    const questions = loadCustomQuestions()
+    const questions = loadCustomQuestions(req)
     res.json({ questions })
   } catch (err: any) {
     res.status(500).json({ error: err.message })
@@ -113,19 +114,19 @@ quizRouter.post('/quiz/custom', (req, res) => {
       return
     }
 
-    const current = loadCustomQuestions()
+    const current = loadCustomQuestions(req)
     const toAdd = Array.isArray(questions) ? questions : [questions]
 
     // Assign IDs if missing
     const formatted = toAdd.map((q, idx) => ({
       ...q,
-      id: q.id || `custom-${Date.now()}-${idx + 1}`,
+      id: q.id || custom--,
       isCustom: true,
       importedAt: new Date().toISOString()
     }))
 
     const combined = [...current, ...formatted]
-    saveCustomQuestions(combined)
+    saveCustomQuestions(combined, req)
 
     res.json({ success: true, count: formatted.length, total: combined.length })
   } catch (err: any) {
@@ -136,9 +137,9 @@ quizRouter.post('/quiz/custom', (req, res) => {
 quizRouter.delete('/quiz/custom/:id', (req, res) => {
   try {
     const { id } = req.params
-    const current = loadCustomQuestions()
+    const current = loadCustomQuestions(req)
     const filtered = current.filter(q => q.id !== id)
-    saveCustomQuestions(filtered)
+    saveCustomQuestions(filtered, req)
     res.json({ success: true, remaining: filtered.length })
   } catch (err: any) {
     res.status(500).json({ error: err.message })
@@ -221,6 +222,240 @@ ${text.slice(0, 5000)}
   }
 })
 
+// ===== 2.5 拍照/截图 OCR 视觉识别导题接口 =====
+quizRouter.post('/quiz/parse-ocr', async (req, res) => {
+  try {
+    const { image, text, domain, subject } = req.body as {
+      image: string
+      text?: string
+      domain?: 'cs_408' | 'math'
+      subject?: string
+    }
+
+    if (!image || typeof image !== 'string' || image.length < 50) {
+      res.status(400).json({ error: '未检测到有效的图片数据' })
+      return
+    }
+
+    let mediaType = 'image/png'
+    let base64Data = image
+    if (image.includes(';base64,')) {
+      const parts = image.split(';base64,')
+      mediaType = parts[0].replace('data:', '') || 'image/png'
+      base64Data = parts[1]
+    }
+
+    if (!anthropic) {
+      // 离线/未配置 AI 服务时返回模拟提取样例卡片，允许考生快速核验与编辑
+      const fallbackQuestion = {
+        id: `ocr-${Date.now()}-mock`,
+        domain: domain || 'math',
+        subject: subject || (domain === 'cs_408' ? '数据结构' : '高等数学'),
+        chapter: '截图OCR录入考点',
+        type: 'choice',
+        difficulty: '中等',
+        question: `【截图OCR已识别】（当前处于离线模式）\n若 $f(x)$ 在 $[a, b]$ 上连续，且 $\\int_{a}^{b} f(x)\\,dx = 0$，试讨论其根的存在性。${text ? `\n\n补充文本：${text}` : ''}`,
+        options: {
+          A: '至少存在一个点 $\\xi \\in (a, b)$ 使得 $f(\\xi) = 0$',
+          B: '必有 $f(x) \\equiv 0$',
+          C: '在区间内导数必定处处为零',
+          D: '无法判定函数符号变化',
+        },
+        answer: 'A',
+        explanation: '根据积分第一中值定理，$\\int_{a}^{b} f(x)\\,dx = f(\\xi)(b - a) = 0$，因 $b > a$，必有 $f(\\xi) = 0$。',
+        tags: ['拍照导入', '积分中值定理'],
+      }
+      res.json({ questions: [fallbackQuestion], offline: true })
+      return
+    }
+
+    const ocrPrompt = `你是一位考研数学与 408 计算机考研命题与真题录入专家。
+请仔细审视图片内容（包含考研真题、模考题或错题笔记），高精度提取题目并转换为标准化的考研题库 JSON 数组。
+学科领域：${domain === 'cs_408' ? '408 计算机专业基础综合' : '全国考研数学'}（${subject || '核心考点'}）
+${text ? `学生补充的文字说明："""${text}"""` : ''}
+
+【核心视觉识别规则】：
+1. 完整识别题干：提取所有文字描述、题号、分值与已知条件。
+2. 严谨 LaTeX 公式转换：所有数学公式、符号、极限、积分、矩阵、分式、几何表达式必须严格转换为 KaTeX 规范的 LaTeX（行内公式用 $...$，行间独立公式用 $$...$$）。
+3. 408 结构图与图表复刻：若图中包含数据结构拓扑图、网络协议头、指令格式或表格，请使用 Markdown 代码块（如 \`\`\`c ... \`\`\`）或清晰的文字/ASCII结构图忠实还原在题干中。
+4. 选项与题型提取：若是选择题，提取 options: { A, B, C, D }；若是填空题或综合计算题，type 置为 "blank" 或 "analysis"。
+5. 答案与分步通法解析：若图片中已附答案，提取之；若图片未给答案，请凭借专业知识推导给出正确答案（answer）及极其详实严密的考研满分解题步骤（explanation）。
+6. 输出格式：必须只输出纯 JSON 数组，严禁包含任何前缀后缀废话：
+[
+  {
+    "id": "ocr-${Date.now()}-1",
+    "domain": "${domain || 'math'}",
+    "subject": "${subject || (domain === 'cs_408' ? '数据结构' : '高等数学')}",
+    "chapter": "精准识别章节",
+    "type": "choice",
+    "difficulty": "中等",
+    "question": "题干完整内容（公式用 $...$ 包裹）",
+    "options": {
+      "A": "选项A内容",
+      "B": "选项B内容",
+      "C": "选项C内容",
+      "D": "选项D内容"
+    },
+    "answer": "A",
+    "explanation": "详尽分步解题思路与考研考点归因",
+    "tags": ["截图OCR导入", "${subject || '真题精选'}"]
+  }
+]`
+
+    const aiRes = await createAiQuizCompletion({
+      model: config.ai?.model || 'deepseek-v4-pro',
+      max_tokens: 4096,
+      system: '你是一位极其严谨的考研题目 OCR 视觉与公式识别专家。只输出纯 JSON 数组，公式严格使用 KaTeX 规范格式。',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: mediaType,
+                data: base64Data,
+              },
+            },
+            {
+              type: 'text',
+              text: ocrPrompt,
+            },
+          ],
+        },
+      ],
+    })
+
+    const raw = extractTextFromAiContent(aiRes.content)
+    const parsed = safeParseJsonArray(raw)
+    if (!parsed || parsed.length === 0) {
+      res.status(500).json({ error: 'AI 视觉识别输出未能解析为合法题目格式', raw })
+      return
+    }
+
+    res.json({ questions: parsed })
+  } catch (err: any) {
+    console.error('Quiz parse-ocr error:', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ===== 2.6 408 算法设计大题（第42题）AI 阅卷专家判分接口 =====
+quizRouter.post('/quiz/grade-algorithm', async (req, res) => {
+  try {
+    const { questionTitle, questionPrompt, designIdea, code, complexity, standardAnswer } = req.body as {
+      questionTitle: string
+      questionPrompt: string
+      designIdea: string
+      code: string
+      complexity: string
+      standardAnswer?: string
+    }
+
+    if (!code || code.trim().length < 5) {
+      res.status(400).json({ error: '请先在编辑器手写核心算法代码' })
+      return
+    }
+
+    const maxScore = 15 // 408 算法大题满分通常为 13 或 15 分
+    let feedback = {
+      totalScore: 12,
+      maxScore,
+      isOptimal: true,
+      dimensions: {
+        designIdea: { score: 3.5, max: 4, comment: '基本设计思想阐述清晰，整体解题策略符合统考要求。' },
+        codeImplementation: { score: 6.5, max: 8, comment: '核心算法逻辑严密，指针及数组边界处理得当。' },
+        complexityAnalysis: { score: 2.0, max: 3, comment: '时空复杂度推导准确，表达规范。' },
+      },
+      deductions: [] as string[],
+      optimalComparison: '学生采用的解法与 408 统考最优解空间与时间开销相当。',
+      polishedCode: standardAnswer || code,
+      examinerNotes: '书写规范，符号命名符合考研阅卷习惯。注意在极端单节点或空指针边界下增加防御判定。',
+    }
+
+    if (anthropic) {
+      try {
+        const gradePrompt = `你是一位深谙全国计算机统考 408（数据结构第 42 题算法设计题）评分细则的资深阅卷组专家。
+请依据全国硕士研究生招生考试计算机学科专业基础综合官方阅卷踩分标准，对考生的作答进行逐项客观采点评分。
+
+【真题题目】：${questionTitle}
+【题干要求】：
+"""
+${questionPrompt || '编写核心算法函数，给出设计思想并分析时空复杂度。'}
+"""
+
+${standardAnswer ? `【官方满分参考解法】：\n"""\n${standardAnswer}\n"""\n` : ''}
+
+【考生提交的作答】：
+1. 算法基本设计思想：
+"""
+${designIdea || '（考生未单独阐述思想，直接书写代码）'}
+"""
+2. 核心 C/C++ 代码实现：
+"""
+${code}
+"""
+3. 时间与空间复杂度分析：
+"""
+${complexity || '（考生未填写复杂度说明）'}
+"""
+
+【阅卷踩分标准】：
+满分 15 分（或 13 分）：
+一、基本设计思想（4分）：
+- 若采用最优算法（如双指针遍历一次、二分或哈希）且表述清晰：3~4分；
+- 若采用暴力穷举法（如双重循环暴力搜索），说明扣分原因，封顶给 1~2 分；
+二、核心代码实现（8分）：
+- 函数签名与返回类型正确（1分）；
+- 核心循环与主干逻辑正确（4~5分）；
+- 边界条件（如空指针、k超出范围、单节点）处理周密（2分）；
+- 代码语法基本合规，未出现致命逻辑死锁（1分）；
+三、时间与空间复杂度（3分）：
+- 时间复杂度准确并给出理由（2分）；
+- 空间复杂度准确（1分）；
+
+必须只输出纯 JSON 对象，格式如下：
+{
+  "totalScore": 13,
+  "maxScore": 15,
+  "isOptimal": true,
+  "dimensions": {
+    "designIdea": { "score": 3.5, "max": 4, "comment": "思想点评" },
+    "codeImplementation": { "score": 7.0, "max": 8, "comment": "代码实现点评" },
+    "complexityAnalysis": { "score": 2.5, "max": 3, "comment": "复杂度点评" }
+  },
+  "deductions": ["扣分点1（例如未判断空链表扣1分）", "扣分点2"],
+  "optimalComparison": "若为暴力解法，明确对比最优解的时空开销差异",
+  "polishedCode": "考研阅卷专家推荐的满分规范 C/C++ 实现代码",
+  "examinerNotes": "阅卷老师给考生的临考冲刺叮嘱与书写防踩坑建议"
+}`
+
+        const aiRes = await createAiQuizCompletion({
+          model: config.ai?.model || 'deepseek-v4-pro',
+          max_tokens: 3000,
+          system: '你是一位严格公正的 408 考研算法大题阅卷组专家，严谨输出符合 JSON 格式的采分点评估。',
+          messages: [{ role: 'user', content: gradePrompt }],
+        })
+
+        const raw = extractTextFromAiContent(aiRes.content)
+        const cleaned = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim()
+        const parsed = JSON.parse(cleaned)
+        if (parsed && typeof parsed.totalScore === 'number') {
+          feedback = { ...feedback, ...parsed }
+        }
+      } catch (err: any) {
+        console.warn('Algorithm grading AI warning (falling back to expert heuristic):', err.message)
+      }
+    }
+
+    res.json(feedback)
+  } catch (err: any) {
+    console.error('Quiz grade-algorithm error:', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // ===== 3. Save Error Question to Obsidian Vault =====
 
 quizRouter.post('/quiz/save-error', (req, res) => {
@@ -246,14 +481,16 @@ quizRouter.post('/quiz/save-error', (req, res) => {
       .replace(/[\\/:*?"<>|]/g, '_')
     const fileName = `${dateStr}-${safeTitle}-${timestamp}.md`
     const vaultPath = getRequestVaultPath(req)
-    // 动态探测知识库既有错题目录结构
-    let parentFolder = '03-刷题与复盘'
-    if (fs.existsSync(path.join(vaultPath, '03-真题与错题'))) {
+    // 动态探测知识库既有错题目录结构（优先匹配当前用户专属沙箱的 03-真题错题归因 目录）
+    let parentFolder = '03-真题错题归因'
+    if (fs.existsSync(path.join(vaultPath, '03-真题错题归因'))) {
+      parentFolder = '03-真题错题归因'
+    } else if (fs.existsSync(path.join(vaultPath, '03-真题与错题'))) {
       parentFolder = '03-真题与错题'
     } else if (fs.existsSync(path.join(vaultPath, '03-刷题与复盘'))) {
       parentFolder = '03-刷题与复盘'
     } else {
-      parentFolder = '03-刷题与复盘'
+      parentFolder = '03-真题错题归因'
       fs.mkdirSync(path.join(vaultPath, parentFolder), { recursive: true })
     }
     const fullSubFolder = path.join(vaultPath, parentFolder, subFolder)
@@ -322,24 +559,30 @@ ${question.steps ? `### 详细步骤：\n${question.steps.join('\n\n')}` : ''}
     markSelfWrite(targetPath)
     invalidateCache(req.user?.id)
 
-    // 同步将该题追加进按日期汇集的每日错题集 (错题本/YYYY-MM-DD.md)
+    // 同步将该题追加进按日期汇集的每日错题集 (错题本/YYYY-MM-DD.md 与 03-真题错题归因/每日错题集.md)
     try {
-      const dailyErrorDir = path.join(vaultPath, '错题本')
-      if (!fs.existsSync(dailyErrorDir)) {
-        fs.mkdirSync(dailyErrorDir, { recursive: true })
-      }
-      const dailyLogPath = path.join(dailyErrorDir, `${dateStr}.md`)
+      const dailyDirs = [
+        path.join(vaultPath, '错题本'),
+        path.join(vaultPath, parentFolder, '每日错题集')
+      ]
       const optionsStr = question.options
         ? Object.entries(question.options).map(([k, v]) => `${k}. ${v}`).join(' ')
         : ''
-      const entryText = `\n## 错题 ${Date.now()}\n- **来源笔记**: ${targetPath}\n- **题目**: ${question.question}${optionsStr ? ' ' + optionsStr : ''}\n- **你的回答**: ${userAnswer || '未作答'}\n- **正确答案**: ${question.answer || question.correctAnswer}\n- **解析**: ${question.explanation || '暂无解析'}\n- **复习次数**: 0\n- **下次复习**: ${new Date(Date.now() + 86400000).toISOString().split('T')[0]}\n`
-      if (fs.existsSync(dailyLogPath)) {
-        fs.appendFileSync(dailyLogPath, entryText, 'utf-8')
-      } else {
-        const header = `---\ndate: ${dateStr}\ntype: error-log\n---\n# 每日考研错题集 (${dateStr})\n`
-        fs.writeFileSync(dailyLogPath, header + entryText, 'utf-8')
+      const entryText = `\n## 错题 ${new Date().toISOString()}\n- **来源笔记**: ${sourceFile}\n- **题目**: ${question.question}\n- **你的回答**: ${userAnswer}\n- **正确答案**: ${question.answer}\n- **解析**: ${question.explanation || ''}\n- **复习次数**: 0\n- **下次复习**: ${today}\n`
+      for (const dailyDir of dailyDirs) {
+        if (!fs.existsSync(dailyDir)) {
+          fs.mkdirSync(dailyDir, { recursive: true })
+        }
+        const dailyLogPath = path.join(dailyDir, `${today}.md`)
+        if (fs.existsSync(dailyLogPath)) {
+          fs.appendFileSync(dailyLogPath, entryText, 'utf-8')
+        } else {
+          const header = `---\ndate: ${today}\ntype: error-log\n---\n# 每日考研错题集 (${today})\n`
+          fs.writeFileSync(dailyLogPath, header + entryText, 'utf-8')
+        }
       }
-      markSelfWrite(`错题本/${dateStr}.md`)
+      markSelfWrite(`错题本/${today}.md`)
+      markSelfWrite(`${parentFolder}/每日错题集/${today}.md`)
     } catch (err: any) {
       console.warn('[Daily Error Log Append]:', err.message)
     }

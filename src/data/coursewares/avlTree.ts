@@ -56,7 +56,7 @@ export const avlTreeCourseware: InteractiveCoursewareItem = {
   .badge { background: rgba(56,189,248,0.15); color: #38bdf8; font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid rgba(56,189,248,0.3); }
   .layout {
     display: grid;
-    grid-template-columns: 280px 1fr;
+    grid-template-columns: 340px 1fr;
     gap: 12px;
     flex: 1;
     min-height: 0;
@@ -133,6 +133,33 @@ export const avlTreeCourseware: InteractiveCoursewareItem = {
     color: #fbbf24;
     line-height: 1.6;
   }
+  
+  .code-viewer {
+    background: #060911;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 11px;
+    line-height: 1.6;
+    color: #94a3b8;
+    overflow-x: auto;
+  }
+  .code-line {
+    padding: 1px 4px;
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+  .code-line.active {
+    background: rgba(56, 189, 248, 0.2);
+    color: #38bdf8;
+    font-weight: bold;
+    border-left: 2.5px solid #38bdf8;
+  }
+  .code-kw { color: #f43f5e; font-weight: 600; }
+  .code-fn { color: #38bdf8; font-weight: 600; }
+  .code-cm { color: #64748b; font-style: italic; }
+
   svg { width: 100%; height: 100%; }
   .node-circle {
     fill: #1e293b;
@@ -201,8 +228,22 @@ export const avlTreeCourseware: InteractiveCoursewareItem = {
     </div>
 
     <div class="controls-group">
-      <div class="label">旋转调优过程日志</div>
-      <div class="log-box" id="logBox">准备就绪，请插入节点或点击预设。</div>
+      <div class="label">408 核心算法步进代码</div>
+      <div class="code-viewer" id="codeBox">
+        <div class="code-line" id="line1"><span class="code-cm">// 最小失衡子树 A 自平衡调整</span></div>
+        <div class="code-line" id="line2"><span class="code-kw">AVLNode*</span> <span class="code-fn">RotateRight</span>(A) {</div>
+        <div class="code-line" id="line3">&nbsp;&nbsp;B = A->left;</div>
+        <div class="code-line" id="line4">&nbsp;&nbsp;A->left = B->right;</div>
+        <div class="code-line" id="line5">&nbsp;&nbsp;B->right = A;</div>
+        <div class="code-line" id="line6">&nbsp;&nbsp;UpdateHeight(A); UpdateHeight(B);</div>
+        <div class="code-line" id="line7">&nbsp;&nbsp;<span class="code-kw">return</span> B; <span class="code-cm">// 新根</span></div>
+        <div class="code-line" id="line8">}</div>
+      </div>
+    </div>
+
+    <div class="controls-group">
+      <div class="label">旋转调优实时追踪日志</div>
+      <div class="log-box" id="logBox">准备就绪，请插入节点或点击上方预设。</div>
     </div>
 
     <div class="tips-card">

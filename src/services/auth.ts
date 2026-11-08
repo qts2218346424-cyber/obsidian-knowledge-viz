@@ -36,6 +36,7 @@ import type {
 } from '../types/auth'
 
 const TOKEN_KEY = 'coreforge_auth_token'
+const USER_KEY = 'coreforge_user'
 const BASE = '/api/auth'
 
 export function getStoredToken(): string | null {
@@ -52,6 +53,27 @@ export function setStoredToken(token: string | null): void {
       localStorage.setItem(TOKEN_KEY, token)
     } else {
       localStorage.removeItem(TOKEN_KEY)
+    }
+  } catch {
+    // ignore
+  }
+}
+
+export function getStoredUser(): UserProfile | null {
+  try {
+    const raw = localStorage.getItem(USER_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+export function setStoredUser(user: UserProfile | null): void {
+  try {
+    if (user) {
+      localStorage.setItem(USER_KEY, JSON.stringify(user))
+    } else {
+      localStorage.removeItem(USER_KEY)
     }
   } catch {
     // ignore
@@ -325,4 +347,17 @@ export async function updateSecuritySettings(data: {
     method: 'POST',
     body: JSON.stringify(data),
   })
+}
+
+export const authService = {
+  getStoredToken,
+  setStoredToken,
+  getStoredUser,
+  setStoredUser,
+  getAuthHeaders,
+  getAuthStatus,
+  login,
+  logout,
+  register,
+  getCurrentUser,
 }

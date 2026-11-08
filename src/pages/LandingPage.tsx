@@ -1,3 +1,4 @@
+import { avlTreeCourseware } from '../data/coursewares/avlTree'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
@@ -64,6 +65,10 @@ export default function LandingPage() {
 
   // 3D 金属胶囊当前切换模式
   const [activeMode, setActiveMode] = useState<ModeType>('408')
+  // 试玩交互视窗切换: 'interactive' (免登录动手试玩) | 'workbench' (三栏工作台实景)
+  const [previewTab, setPreviewTab] = useState<'interactive' | 'workbench'>('interactive')
+  // 政治时空大屏试玩当前选中的节点索引 (0: 1851 金田起义, 1: 1935 遵义会议, 2: 1945 中共七大)
+  const [politicsDemoIdx, setPoliticsDemoIdx] = useState(0)
 
   // 下载信息与二维码
   const [downloadInfo, setDownloadInfo] = useState<DownloadInfo | null>(null)
@@ -655,175 +660,429 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* 💻 桌面端 / 平板端 CTA 按钮组（保持电脑端下载为第一视觉） */}
-        <div className="hidden sm:flex flex-wrap items-center justify-center gap-3">
+        {/* 💻 桌面端 / 平板端 CTA 按钮组（免安装网页版置为第一主视觉，辅以客户端与移动端） */}
+        <div className="hidden sm:flex flex-wrap items-center justify-center gap-3.5">
+          <button
+            type="button"
+            onClick={() => {
+              if (isAuthenticated) {
+                navigate('/dashboard')
+              } else {
+                setModalTab('login')
+                setAuthModalOpen(true)
+              }
+            }}
+            className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-xl bg-[#1c1c1f] hover:bg-black text-white text-[15px] font-bold shadow-[0_4px_16px_rgba(0,0,0,0.22)] ring-1 ring-white/20 transition-all active:scale-[0.98] cursor-pointer"
+          >
+            <Globe className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>立即开启研学 (免安装网页版)</span>
+            <ArrowRight className="w-4 h-4 text-zinc-400 shrink-0" />
+          </button>
+
           <button
             type="button"
             onClick={handleDownloadDesktop}
             disabled={downloading}
-            className="inline-flex items-center gap-2.5 px-6 py-3 rounded-[11px] bg-[#1c1c1f] hover:bg-[#2a2a2e] text-white text-[14px] font-medium shadow-[0_2px_8px_rgba(0,0,0,0.18)] transition-all active:scale-[0.98] cursor-pointer"
+            className="inline-flex items-center gap-2 px-5 py-3.5 rounded-xl bg-[#e3e4e7] hover:bg-[#d8d9dd] text-[#18181b] text-[14px] font-medium border border-black/[0.05] transition-all active:scale-[0.98] cursor-pointer"
           >
-            <Download className="w-4 h-4 text-white" />
-            <span>
-              {downloading ? '正在拉取安装包...' : '下载电脑客户端 (Windows 64位)'}
-            </span>
-            <span className="text-[11px] bg-white/20 px-2 py-0.5 rounded font-mono">
+            <Download className="w-4 h-4 text-zinc-700" />
+            <span>{downloading ? '正在拉取安装包...' : '下载 Windows 电脑客户端'}</span>
+            <span className="text-[11px] bg-black/10 px-2 py-0.5 rounded font-mono">
               {downloadInfo?.desktop?.size || '109 MB'}
             </span>
           </button>
 
           <a
             href="#download"
-            className="inline-flex items-center gap-2 px-5 py-3 rounded-[11px] bg-[#e3e4e7] hover:bg-[#d8d9dd] text-[#18181b] text-[14px] font-medium border border-black/[0.05] transition-all active:scale-[0.98]"
+            className="inline-flex items-center gap-2 px-5 py-3.5 rounded-xl bg-white/80 hover:bg-white text-[#18181b] text-[14px] font-medium border border-zinc-200/90 shadow-xs transition-all active:scale-[0.98]"
           >
-            <Smartphone className="w-4 h-4 text-[#27272a]" />
+            <Smartphone className="w-4 h-4 text-zinc-600" />
             <span>移动端扫码</span>
           </a>
-
-          <button
-            type="button"
-            onClick={() => setAuthModalOpen(true)}
-            className="inline-flex items-center gap-2 px-5 py-3 rounded-[11px] bg-white/80 hover:bg-white text-[#18181b] text-[14px] font-medium border border-zinc-200/90 shadow-xs transition-all active:scale-[0.98] cursor-pointer"
-          >
-            <Globe className="w-4 h-4 text-zinc-600" />
-            <span>免安装网页版</span>
-          </button>
         </div>
       </section>
 
       {/*  */}
       <section id="preview" className="max-w-[1280px] mx-auto px-4 sm:px-8 pb-20">
+        {/* 试玩模式与视窗切换药丸控制栏 */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 text-[11px] font-bold text-emerald-700 shadow-2xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+              <span>免登录沉浸试玩体验已就绪</span>
+            </span>
+            <span className="text-xs text-zinc-500 hidden md:inline">· 无需注册，直接动手体验 408 动画课件与时空时局图</span>
+          </div>
+
+          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-zinc-200/80 border border-zinc-300/80 text-xs self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => setPreviewTab('interactive')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                previewTab === 'interactive'
+                  ? 'bg-white text-zinc-900 shadow-xs'
+                  : 'text-zinc-600 hover:text-zinc-900'
+              }`}
+            >
+              <Play className="w-3.5 h-3.5 text-indigo-600" />
+              <span>🎮 免登录动手试玩</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPreviewTab('workbench')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                previewTab === 'workbench'
+                  ? 'bg-white text-zinc-900 shadow-xs'
+                  : 'text-zinc-600 hover:text-zinc-900'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5 text-slate-500" />
+              <span>三栏工作台实景</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 视窗外壳 */}
         <div className="rounded-[18px] bg-[#e3e3e6] p-2.5 sm:p-3 shadow-[0_24px_64px_rgba(0,0,0,0.12)] border border-white/60">
           <div className="w-full bg-white rounded-[13px] shadow-[0_8px_30px_rgba(0,0,0,0.06)] border border-black/[0.08] overflow-hidden text-left select-none">
-            {/* 工作台顶部仿 Chrome 导航条（移动端自适应防挤压） */}
+            {/* 工作台顶部仿 Chrome 导航条 */}
             <div className="h-9 px-3 sm:px-4 bg-[#fafafa] border-b border-zinc-200/80 flex items-center justify-between text-[11px] text-zinc-500 overflow-hidden">
               <div className="flex items-center gap-2 sm:gap-3.5 truncate">
-                <span className="font-semibold text-zinc-900 truncate">408 · 数学 · 政治 · 英语 全科考研工作台</span>
+                <span className="font-semibold text-zinc-900 truncate">CoreForge 考研研核 · 沉浸实景视窗</span>
                 <span className="text-zinc-400 hidden sm:inline">·</span>
-                <span className="hidden sm:inline">知识拓扑</span>
-                <span className="text-zinc-800 font-medium hidden sm:inline">+ 真题导入</span>
+                <span className="hidden sm:inline">
+                  {previewTab === 'interactive' ? '🎮 动态仿真试玩实验室' : '三栏双链编辑拓扑'}
+                </span>
               </div>
               <div className="flex items-center gap-1.5 font-medium text-zinc-800 shrink-0">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span className="text-[10px] sm:text-[11px]">{modeConfigs[activeMode].heroSubject}</span>
               </div>
               <div className="hidden md:flex items-center gap-2 shrink-0">
-                <span className="px-2 py-0.5 rounded bg-zinc-200/70 text-zinc-900 font-medium text-[10px]">
-                  沉浸研学
-                </span>
-                <span className="text-[10px] text-zinc-400">SM-2 调度活跃</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isAuthenticated) navigate('/dashboard')
+                    else setAuthModalOpen(true)
+                  }}
+                  className="px-2.5 py-0.5 rounded bg-zinc-900 text-white font-medium text-[10px] hover:bg-zinc-800 transition-colors cursor-pointer"
+                >
+                  进入完整工作台 →
+                </button>
               </div>
             </div>
 
-            {/* 三栏式实景编辑器视窗（与顶部选中科目 activeMode 实时联动） */}
-            <div className="grid grid-cols-12 min-h-[360px] bg-white text-[11px] transition-all duration-300">
-              {/* 左栏：组件库 / 学科章节树 */}
-              <div className="col-span-12 md:col-span-3 border-r border-zinc-200/80 p-3 bg-[#fbfbfc] flex flex-col gap-2.5">
-                <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-white border border-zinc-200 text-zinc-700">
-                  <div className="flex items-center gap-1.5">
-                    <Search className="w-3 h-3 text-zinc-400" />
-                    <span className="text-[11px]">搜索考点与真题...</span>
-                  </div>
-                  <span className="text-zinc-400 text-xs">⌘K</span>
-                </div>
-
-                <div className="text-[10px] text-zinc-400 font-semibold tracking-wider uppercase mt-1 flex items-center justify-between">
-                  <span>{workbenchPreviews[activeMode].sidebarTitle}</span>
-                  <span className="text-[9px] text-indigo-600 bg-indigo-50 px-1 py-0.2 rounded font-mono">联动实景</span>
-                </div>
-
-                <div className="space-y-1">
-                  {workbenchPreviews[activeMode].sidebarItems.map((item, idx) => (
-                    <div
-                      key={idx}
-                      className={`p-2 rounded-lg border text-zinc-800 font-medium flex items-center justify-between transition-colors ${
-                        idx === 0 ? 'bg-zinc-100/90 border-zinc-300/80 shadow-2xs' : 'bg-white border-zinc-200 hover:bg-zinc-50'
-                      }`}
-                    >
-                      <span className="truncate pr-1">{item.icon} {item.title}</span>
-                      <span className={`text-[10px] px-1 rounded shrink-0 ${item.badgeColor}`}>{item.badge}</span>
+            {/* ── 视窗模式 A: 免登录动手试玩专区 ── */}
+            {previewTab === 'interactive' ? (
+              <div className="min-h-[500px] bg-slate-950 text-white relative">
+                {activeMode === '408' ? (
+                  /* 408 模块：直接嵌入 AVL 平衡二叉树仿真课件 */
+                  <div className="flex flex-col h-[520px]">
+                    <div className="p-3 bg-slate-900/90 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 font-bold font-mono">
+                          408 数据结构真题实验室
+                        </span>
+                        <span className="text-slate-300 font-semibold truncate">
+                          🌳 AVL 平衡二叉树四种自平衡旋转 (LL/RR/LR/RL)
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-slate-400">
+                        提示：可在下方画布中直接动手点击插入节点或单步右旋
+                      </span>
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* 中栏：真题演练与 LaTeX 公式推导画板 */}
-              <div className="col-span-12 md:col-span-6 p-4 sm:p-5 bg-white flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="px-2 py-0.5 rounded-full bg-zinc-900 text-white font-mono text-[10px]">
-                      {workbenchPreviews[activeMode].mainBadge}
-                    </span>
-                    <span className="text-zinc-400 text-[10px]">难度：{workbenchPreviews[activeMode].difficulty}</span>
-                    <span className="text-[9.5px] text-amber-700 bg-amber-50 border border-amber-200/80 px-1.5 py-0.2 rounded">交互实景示意</span>
-                  </div>
-
-                  <h3 className="text-[14px] font-semibold text-zinc-900 leading-snug mb-3">
-                    {workbenchPreviews[activeMode].mainQuestion}
-                  </h3>
-
-                  {/* 步骤启发式点拨卡片 */}
-                  <div className="p-3.5 rounded-xl bg-blue-50/40 border border-blue-200 space-y-2">
-                    <div className="flex items-center gap-2 text-blue-900 font-semibold text-xs">
-                      <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                      <span>{workbenchPreviews[activeMode].aiAnalysisTitle}</span>
-                    </div>
-                    <p className="text-zinc-700 leading-relaxed text-[11px]">
-                      {workbenchPreviews[activeMode].aiAnalysisDesc}
-                    </p>
-                    <div className="p-2 rounded bg-zinc-900 text-emerald-300 font-mono text-[10px] sm:text-[10.5px] overflow-x-auto whitespace-nowrap">
-                      {workbenchPreviews[activeMode].aiAnalysisCode}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-zinc-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-zinc-400 text-[11px]">
-                  <span>已联动「{modeConfigs[activeMode].heroSubject}」· 按 ⌘+Enter 提交作答</span>
-                  <button
-                    onClick={() => setAuthModalOpen(true)}
-                    className="text-zinc-900 font-semibold hover:underline cursor-pointer"
-                  >
-                    在完整工作台中打开 →
-                  </button>
-                </div>
-              </div>
-
-              {/* 右栏：知识网络属性检查器 (Inspector) */}
-              <div className="col-span-12 md:col-span-3 border-l border-zinc-200/80 p-3 bg-[#fbfbfc] flex flex-col gap-3">
-                <div className="font-semibold text-zinc-900 pb-1.5 border-b border-zinc-200 flex items-center justify-between">
-                  <span>知识点属性检查器</span>
-                  <span className="text-[9px] text-zinc-400 font-normal">示意图</span>
-                </div>
-
-                <div>
-                  <div className="text-zinc-400 text-[10px] mb-1">{workbenchPreviews[activeMode].inspectorTitle}</div>
-                  <div className="w-full bg-zinc-200 h-2 rounded-full overflow-hidden">
-                    <div
-                      className="bg-emerald-500 h-full transition-all duration-500"
-                      style={{ width: `${workbenchPreviews[activeMode].inspectorPercent}%` }}
+                    <iframe
+                      srcDoc={avlTreeCourseware.embedHtml}
+                      title="AVL 树动态仿真课件"
+                      className="w-full flex-1 border-0 bg-transparent"
+                      sandbox="allow-scripts allow-same-origin"
                     />
                   </div>
-                  <div className="flex justify-between text-[10px] text-zinc-500 mt-1">
-                    <span>{workbenchPreviews[activeMode].inspectorLabel}</span>
-                  </div>
-                </div>
+                ) : activeMode === 'politics' ? (
+                  /* 政治模块：嵌入史纲时空大屏前 3 个核心节点试玩 */
+                  <div className="flex flex-col h-[520px] bg-[#070b14] p-4 sm:p-6 text-slate-100 justify-between">
+                    <div>
+                      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-amber-500/20">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
+                          <span className="font-bold text-amber-300 text-sm tracking-wide">
+                            考研政治 · 史纲时空全景大屏 (试玩演示)
+                          </span>
+                          <span className="text-[10px] text-amber-400/70 border border-amber-500/30 px-2 py-0.5 rounded-full">
+                            肖秀荣 1000 题考点联动
+                          </span>
+                        </div>
+                        <span className="text-xs text-slate-400">
+                          试玩节点 3 个 · 完整工作台收录 1840~2024 近代全史
+                        </span>
+                      </div>
 
-                <div>
-                  <div className="text-zinc-400 text-[10px] mb-1">Obsidian 双链网络关联</div>
+                      {/* 3 个试玩节点横向切换条 */}
+                      <div className="grid grid-cols-3 gap-2.5 my-4">
+                        {[
+                          { year: 1851, title: '金田起义与太平天国', city: '广西桂平', tag: '旧民主主义' },
+                          { year: 1935, title: '遵义会议伟大转折', city: '贵州遵义', tag: '生死攸关' },
+                          { year: 1945, title: '中共七大与思想确立', city: '陕西延安', tag: '毛泽东思想' },
+                        ].map((node, idx) => (
+                          <button
+                            key={node.year}
+                            type="button"
+                            onClick={() => setPoliticsDemoIdx(idx)}
+                            className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                              politicsDemoIdx === idx
+                                ? 'bg-amber-500/20 border-amber-400 text-white shadow-[0_0_20px_rgba(245,158,11,0.25)]'
+                                : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700'
+                            }`}
+                          >
+                            <div className="text-sm font-black font-mono text-amber-400">{node.year} 年</div>
+                            <div className="text-xs font-bold text-white mt-0.5 truncate">{node.title}</div>
+                            <div className="text-[10px] text-slate-400 mt-1 flex items-center justify-between">
+                              <span>📍 {node.city}</span>
+                              <span className="text-[9px] px-1 rounded bg-white/10 text-amber-300">{node.tag}</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* 选中的节点深度考点卡 */}
+                      <div className="rounded-2xl border border-amber-500/30 bg-slate-900/80 p-4 sm:p-5 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                            <span>📜 肖秀荣 1000 题核心命题眼与陷阱解析</span>
+                          </span>
+                          <span className="text-[11px] font-mono text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-lg border border-amber-500/20">
+                            {politicsDemoIdx === 0
+                              ? '纲领对比: 天朝田亩制度 vs 资政新篇'
+                              : politicsDemoIdx === 1
+                              ? '转折标志: 军事与组织领导地位确立'
+                              : '思想里程碑: 毛泽东思想写入党章'}
+                          </span>
+                        </div>
+
+                        <p className="text-xs sm:text-sm text-slate-200 leading-relaxed font-sans">
+                          {politicsDemoIdx === 0
+                            ? '《天朝田亩制度》是最能体现太平天国农民战争特点的纲领性文件，具有绝对平均主义空想色彩；《资政新篇》是中国近代历史上第一个比较系统的发展资本主义的方案，但未能付诸实施。'
+                            : politicsDemoIdx === 1
+                            ? '遵义会议集中解决了当时具有决定意义的军事问题和组织问题，结束了王明“左”倾冒险主义在党中央的统治，事实上确立了毛泽东同志在党中央和红军的领导地位，是中国共产党第一次独立自主地运用马克思主义原理解决自己的路线问题。'
+                            : '中共七大总结了中国新民主主义革命二十多年曲折发展的历史经验，制定了正确的政治路线，把毛泽东思想确立为全党的指导思想并写入党章，为争取抗日战争的彻底胜利奠定了思想基础。'}
+                        </p>
+
+                        <div className="p-2.5 rounded-xl bg-black/40 border border-white/5 text-[11px] text-amber-200/90 font-mono">
+                          考题陷阱提示：{politicsDemoIdx === 0
+                            ? '易混淆点：《资政新篇》没有涉及农民土地问题，并非农民战争的直接产物。'
+                            : politicsDemoIdx === 1
+                            ? '易混淆点：遵义会议并未解决思想路线问题（思想问题在延安整风中解决）。'
+                            : '易混淆点：中共七大确立毛泽东思想为指导思想，八大开始探索社会主义建设道路。'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                      <span>已载入 3D 阿里 DataV 矢量中国地图高精度时空坐标</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isAuthenticated) navigate('/politics')
+                          else setAuthModalOpen(true)
+                        }}
+                        className="text-amber-400 hover:text-amber-300 font-bold underline cursor-pointer"
+                      >
+                        解锁全部 1840~2024 时空大屏 →
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* 英语与其他模块试玩 */
+                  <div className="flex flex-col h-[520px] bg-slate-900 p-6 text-white justify-between">
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between pb-3 border-b border-indigo-500/20">
+                        <span className="font-bold text-indigo-300 text-sm">考研英语 · 20 分制 AI 智能批改示范</span>
+                        <span className="text-xs text-indigo-400 bg-indigo-500/20 px-2 py-0.5 rounded-lg">~1.2s 极速精批</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                          <span className="text-slate-400 font-bold">考生原始作答草稿：</span>
+                          <p className="font-mono text-slate-300 leading-relaxed text-[11.5px]">
+                            "As is vividly depicted in the cartoon, two individuals are standing at a crossroads. Many people lose their minds in smartphones. I think it is very good if government can help us make better rules."
+                          </p>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-indigo-950/60 border border-indigo-500/30 space-y-2">
+                          <span className="text-amber-300 font-bold">AI 20 分制深度诊断与词汇升级：</span>
+                          <p className="font-mono text-indigo-200 leading-relaxed text-[11.5px]">
+                            得分：18.5 / 20.0 (一档良好)<br />
+                            平庸词升级：<br />
+                            • very good → of paramount importance<br />
+                            • I think → I harbor the firm conviction that<br />
+                            • lose minds → succumb to digital distraction
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                      <span>支持拍照 OCR 录入、历年图画/图表真题模板对比</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isAuthenticated) navigate('/english')
+                          else setAuthModalOpen(true)
+                        }}
+                        className="text-indigo-400 hover:text-indigo-300 font-bold underline cursor-pointer"
+                      >
+                        进入英语作文研学舱 →
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* ── 视窗模式 B: 三栏式实景编辑器视窗 ── */
+              <div className="grid grid-cols-12 min-h-[360px] bg-white text-[11px] transition-all duration-300">
+                {/* 左栏：组件库 / 学科章节树 */}
+                <div className="col-span-12 md:col-span-3 border-r border-zinc-200/80 p-3 bg-[#fbfbfc] flex flex-col gap-2.5">
+                  <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-white border border-zinc-200 text-zinc-700">
+                    <div className="flex items-center gap-1.5">
+                      <Search className="w-3 h-3 text-zinc-400" />
+                      <span className="text-[11px]">搜索考点与真题...</span>
+                    </div>
+                    <span className="text-zinc-400 text-xs">⌘K</span>
+                  </div>
+
+                  <div className="text-[10px] text-zinc-400 font-semibold tracking-wider uppercase mt-1 flex items-center justify-between">
+                    <span>{workbenchPreviews[activeMode].sidebarTitle}</span>
+                    <span className="text-[9px] text-indigo-600 bg-indigo-50 px-1 py-0.2 rounded font-mono">联动实景</span>
+                  </div>
+
                   <div className="space-y-1">
-                    {workbenchPreviews[activeMode].links.map((link, idx) => (
-                      <div key={idx} className="px-2 py-1 rounded bg-white border border-zinc-200 text-zinc-700 truncate">
-                        🔗 {link}
+                    {workbenchPreviews[activeMode].sidebarItems.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className={`p-2 rounded-lg border text-zinc-800 font-medium flex items-center justify-between transition-colors ${
+                          idx === 0 ? 'bg-zinc-100/90 border-zinc-300/80 shadow-2xs' : 'bg-white border-zinc-200 hover:bg-zinc-50'
+                        }`}
+                      >
+                        <span className="truncate pr-1">{item.icon} {item.title}</span>
+                        <span className={`text-[10px] px-1 rounded shrink-0 ${item.badgeColor}`}>{item.badge}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div>
-                  <div className="text-zinc-400 text-[10px] mb-1">错因归因记录</div>
-                  <div className="p-2 rounded bg-amber-50/60 border border-amber-200/80 text-amber-900 text-[10.5px]">
-                    {workbenchPreviews[activeMode].errorAnalysis}
+                {/* 中栏：真题演练与 LaTeX 公式推导画板 */}
+                <div className="col-span-12 md:col-span-6 p-4 sm:p-5 bg-white flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="px-2 py-0.5 rounded-full bg-zinc-900 text-white font-mono text-[10px]">
+                        {workbenchPreviews[activeMode].mainBadge}
+                      </span>
+                      <span className="text-zinc-400 text-[10px]">难度：{workbenchPreviews[activeMode].difficulty}</span>
+                    </div>
+
+                    <h3 className="text-[14px] font-semibold text-zinc-900 leading-snug mb-3">
+                      {workbenchPreviews[activeMode].mainQuestion}
+                    </h3>
+
+                    <div className="p-3.5 rounded-xl bg-blue-50/40 border border-blue-200 space-y-2">
+                      <div className="flex items-center gap-2 text-blue-900 font-semibold text-xs">
+                        <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                        <span>{workbenchPreviews[activeMode].aiAnalysisTitle}</span>
+                      </div>
+                      <p className="text-zinc-700 leading-relaxed text-[11px]">
+                        {workbenchPreviews[activeMode].aiAnalysisDesc}
+                      </p>
+                      <div className="p-2 rounded bg-zinc-900 text-emerald-300 font-mono text-[10px] sm:text-[10.5px] overflow-x-auto whitespace-nowrap">
+                        {workbenchPreviews[activeMode].aiAnalysisCode}
+                      </div>
+                    </div>
                   </div>
+
+                  <div className="mt-4 pt-3 border-t border-zinc-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-zinc-400 text-[11px]">
+                    <span>已联动「{modeConfigs[activeMode].heroSubject}」</span>
+                    <button
+                      onClick={() => setAuthModalOpen(true)}
+                      className="text-zinc-900 font-semibold hover:underline cursor-pointer"
+                    >
+                      在完整工作台中打开 →
+                    </button>
+                  </div>
+                </div>
+
+                {/* 右栏：属性检查器 */}
+                <div className="col-span-12 md:col-span-3 border-l border-zinc-200/80 p-3 bg-[#fbfbfc] flex flex-col gap-3">
+                  <div className="font-semibold text-zinc-900 pb-1.5 border-b border-zinc-200 flex items-center justify-between">
+                    <span>知识点属性检查器</span>
+                    <span className="text-[9px] text-zinc-400 font-normal">示意图</span>
+                  </div>
+
+                  <div>
+                    <div className="text-zinc-400 text-[10px] mb-1">{workbenchPreviews[activeMode].inspectorTitle}</div>
+                    <div className="w-full bg-zinc-200 h-2 rounded-full overflow-hidden">
+                      <div
+                        className="bg-emerald-500 h-full transition-all duration-500"
+                        style={{ width: `${workbenchPreviews[activeMode].inspectorPercent}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-zinc-500 mt-1">
+                      <span>{workbenchPreviews[activeMode].inspectorLabel}</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-zinc-400 text-[10px] mb-1">Obsidian 双链网络关联</div>
+                    <div className="space-y-1">
+                      {workbenchPreviews[activeMode].links.map((link, idx) => (
+                        <div key={idx} className="px-2 py-1 rounded bg-white border border-zinc-200 text-zinc-700 truncate">
+                          🔗 {link}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-zinc-400 text-[10px] mb-1">错因归因记录</div>
+                    <div className="p-2 rounded bg-amber-50/60 border border-amber-200/80 text-amber-900 text-[10.5px]">
+                      {workbenchPreviews[activeMode].errorAnalysis}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/*  */}
+            {/* ── 知识库本地所有权与 Obsidian 双向同步安全背书 ── */}
+      <section className="py-14 border-t border-zinc-200/80 bg-white">
+        <div className="max-w-[1280px] mx-auto px-4 sm:px-8">
+          <div className="rounded-3xl border border-zinc-200 bg-gradient-to-br from-zinc-50 via-white to-zinc-50 p-6 sm:p-10 shadow-sm">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+              <div className="space-y-2 max-w-2xl">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 text-[11px] font-bold text-emerald-800">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>100% 本地优先与数据自主权承诺</span>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
+                  拒绝格式锁定，你的备考笔记永远属于你自己
+                </h3>
+                <p className="text-xs sm:text-sm text-zinc-500 leading-relaxed">
+                  通过现代化 Web File System Access API 授权，网页端可直接挂载并双向同步您本地磁盘的 Obsidian 知识库目录；更支持一键将全部考研讲义、真题笔记与手写草稿打包导出为通用 .zip 知识库，终身离线可用。
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 shrink-0 w-full md:w-auto">
+                <div className="p-3.5 rounded-2xl bg-white border border-zinc-200/80 shadow-2xs">
+                  <div className="text-xs font-bold text-zinc-800 flex items-center gap-1.5">
+                    <span>📂 本地目录原生直连</span>
+                  </div>
+                  <div className="text-[11px] text-zinc-400 mt-1">无缝联动 Obsidian 桌面端</div>
+                </div>
+                <div className="p-3.5 rounded-2xl bg-white border border-zinc-200/80 shadow-2xs">
+                  <div className="text-xs font-bold text-zinc-800 flex items-center gap-1.5">
+                    <span>📦 一键导出 .zip 全量包</span>
+                  </div>
+                  <div className="text-[11px] text-zinc-400 mt-1">随时离线迁移，数据零丢失</div>
                 </div>
               </div>
             </div>
@@ -831,7 +1090,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/*  */}
       <section id="download" className="py-20 border-t border-zinc-200/80 bg-[#f4f4f6]/80 relative">
         <div className="max-w-[1280px] mx-auto px-4 sm:px-8">
           <div className="text-center max-w-2xl mx-auto mb-14">

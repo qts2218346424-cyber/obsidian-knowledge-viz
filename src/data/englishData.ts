@@ -446,3 +446,68 @@ export const ENGLISH_PAST_PAPERS: PastPaperReading[] = [
     ],
   },
 ]
+
+
+export interface PastEssayPrompt {
+  id: string
+  year: number
+  examType: EnglishExamType
+  category: 'big_essay' | 'small_essay'
+  subType: '图画大作文' | '图表大作文' | '书信小作文' | '告示小作文'
+  title: string
+  promptZh: string
+  visualDescription: string
+  recommendedKeywords: string[]
+  sampleDraft: string
+}
+
+export const PAST_ESSAY_PROMPTS: PastEssayPrompt[] = [
+  {
+    id: 'prompt_2024_eng1_pic',
+    year: 2024,
+    examType: 'english_1',
+    category: 'big_essay',
+    subType: '图画大作文',
+    title: '2024 英语一 · 网络算法信息茧房与个人自律',
+    promptZh: 'Directions: Write an essay of 160-200 words based on the following drawing. In your essay, you should 1) describe the drawing briefly, 2) interpret its intended meaning, and 3) give your personal comments.',
+    visualDescription: '图画中一位年轻人在手机荧幕前被无数弹出的短视频标签环绕捆绑，前方道路被算法推荐的迷雾遮挡。',
+    recommendedKeywords: ['information cocoon (信息茧房)', 'algorithmic recommendation (算法推荐)', 'self-discipline (自我克制)', 'digital detox (数字排毒)', 'rational cognition (理性认知)'],
+    sampleDraft: 'As is graphically portrayed in the cartoon, a youngster is mesmerized by the glowing smartphone screen, oblivious to the vibrant real world around him. This thought-provoking scenario epitomizes the rampant phenomenon of information cocoons in the contemporary digital era. While algorithmic recommendations provide convenience and instant gratification, excessive reliance on them inevitably hampers our independent contemplation and alienates meaningful human connections. Therefore, it is of paramount importance that we cultivate self-discipline and achieve a healthy equilibrium between cyberspace and real-life reality.'
+  },
+  {
+    id: 'prompt_2023_eng1_pic',
+    year: 2023,
+    examType: 'english_1',
+    category: 'big_essay',
+    subType: '图画大作文',
+    title: '2023 英语一 · 人生漫漫征程与脚踏实地',
+    promptZh: 'Directions: Write an essay based on the drawing. Interpret the meaning that persistence and steady steps outweigh empty dreams.',
+    visualDescription: '两人站于漫长的马拉松山道前，一人因路途遥远心生畏惧止步不前，另一人则聚精会神迈出第一步。',
+    recommendedKeywords: ['perseverance (坚韧不拔)', 'arduous journey (艰苦征程)', 'procrastination (拖延)', 'take the initiative (主动出击)', 'unyielding tenacity (不屈韧性)'],
+    sampleDraft: 'The cartoon vividly contrasts two attitudes toward life: one individual is paralyzed by the distant mountaintop, while the other resolutely takes the initial step. What the artist intends to convey is crystal clear: the journey of a thousand miles begins with a single step. Success is never an effortless destination but an arduous process requiring unwavering tenacity and pragmatic actions. Instead of indulging in groundless anxieties, we should harbor the conviction that steady perseverance will ultimately lead to monumental triumphs.'
+  },
+  {
+    id: 'prompt_2024_eng2_chart',
+    year: 2024,
+    examType: 'english_2',
+    category: 'big_essay',
+    subType: '图表大作文',
+    title: '2024 英语二 · 我国新能源汽车市场渗透率激增',
+    promptZh: 'Directions: Write an essay based on the chart showing the rapid ascension of new energy vehicles in China from 2018 to 2023.',
+    visualDescription: '柱状折线复合图：从 2018 年的不足 5% 飙升至 2023 年超过 35%，呈现爆发式跨越式增长态势。',
+    recommendedKeywords: ['soar dramatically (急剧攀升)', 'green transition (绿色转型)', 'technological innovation (科技创新)', 'carbon neutrality (碳中和)', 'lucrative prospects (广阔前景)'],
+    sampleDraft: 'The column chart vividly demonstrates the exponential surge in the market penetration of new energy vehicles in China from 2018 to 2023, escalating remarkably from under 5% to over 35%. A myriad of intertwining factors contribute to this gratifying trajectory. Chief among them is the unswerving governmental support towards carbon neutrality, coupled with substantial subsidies. Furthermore, domestic automotive pioneers have made monumental breakthroughs in battery life and smart driving, making green mobility increasingly compelling to cost-conscious consumers.'
+  },
+  {
+    id: 'prompt_2024_small_letter',
+    year: 2024,
+    examType: 'both',
+    category: 'small_essay',
+    subType: '书信小作文',
+    title: '2024 英语一/二 · 给外国留学生的文化融入建议信',
+    promptZh: 'Directions: Write a letter of advice to international freshmen regarding how to immerse themselves in Chinese campus culture and traditional festivals.',
+    visualDescription: '书信写作（约 100 词）：包含礼貌寒暄、2-3 条切实可行的建议、真诚祝愿。',
+    recommendedKeywords: ['warmest congratulations (热烈祝贺)', 'cultural immersion (文化融入)', 'participate actively (积极参与)', 'foster friendships (增进友谊)'],
+    sampleDraft: 'Dear International Students,\n\nOn behalf of the Student Union, I extend my heartfelt welcome to our campus. In order to help you adapt seamlessly to your upcoming academic and daily life, I take the liberty of proposing a few practical suggestions.\n\nFirst and foremost, you are highly encouraged to participate in traditional cultural workshops such as calligraphy and dumpling making during festival seasons. In addition, pairing up with a local student mentor will effectively dismantle language barriers and cultivate lasting friendships.\n\nMay your stay here be fruitful and memorable.\n\nYours sincerely,\nLi Ming'
+  }
+]

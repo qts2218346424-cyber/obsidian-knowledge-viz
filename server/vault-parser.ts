@@ -70,7 +70,13 @@ function parseFile(filePath: string, vaultPath: string): VaultNote | null {
       links: extractLinks(content),
       tags: extractTags(content, frontmatter),
       modified: stat.mtime,
-      wordCount: content.split(/\s+/).filter(Boolean).length,
+      wordCount: (() => {
+      if (!content) return 0
+      const clean = content.replace(/---[\s\S]*?---/, '').trim()
+      const cjk = (clean.match(/[\u4e00-\u9fa5\u3040-\u30ff\uac00-\ud7af]/g) || []).length
+      const words = (clean.replace(/[\u4e00-\u9fa5\u3040-\u30ff\uac00-\ud7af]/g, ' ').match(/[a-zA-Z0-9_\-]+/g) || []).length
+      return cjk + words
+    })(),
     }
   } catch {
     return null

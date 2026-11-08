@@ -207,10 +207,10 @@ export default function CoursewareViewerModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-3 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
       <div
-        className={`dark bg-[#0d111d] border-0 sm:border sm:border-white/12 flex flex-col shadow-2xl overflow-hidden transition-all duration-200 ${
+        className={`dark bg-[#0a0e17] border-0 sm:border sm:border-white/10 flex flex-col shadow-[0_24px_70px_rgba(0,0,0,0.85)] overflow-hidden transition-all duration-200 ${
           isFullscreen
             ? 'w-full h-dvh rounded-none'
-            : 'w-full h-dvh sm:w-[96vw] sm:max-w-[1440px] sm:h-[92dvh] sm:rounded-2xl'
+            : 'w-full h-dvh sm:w-[94vw] sm:h-[90vh] sm:max-w-[1720px] sm:rounded-2xl ring-1 ring-white/10'
         }`}
       >
         {/* 顶部沉浸式工具栏 */}

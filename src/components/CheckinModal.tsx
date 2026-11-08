@@ -211,7 +211,7 @@ export default function CheckinModal({ isOpen, onClose, defaultTab = 'checkin' }
                 <span>{points.toFixed(1)}</span>
                 <span className="text-xs font-normal text-amber-200">积分</span>
                 <span className="text-[11px] text-white/60 ml-2 font-normal">
-                  (约可向导师提问 {Math.floor(points / 0.1)} 次)
+                  (约可向导师提问 {Math.round(points * 10)} 次)
                 </span>
               </div>
             </div>

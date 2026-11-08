@@ -1,7 +1,9 @@
+import { ambientSynthesizer } from '../utils/ambientSynthesizer'
 import { useState, useRef, useCallback, useEffect } from 'react'
 
 export interface AudioTrack {
   id: string
+  synthType?: 'rain' | 'waves'
   title: string
   artist?: string
   src: string
@@ -148,6 +150,25 @@ export function useAudioPlayer() {
       }
     })
     audio.addEventListener('error', () => {
+      const curTrack = activeTrackRef.current
+      if (curTrack && (curTrack.synthType || curTrack.title.includes('雨声') || curTrack.title.includes('海浪'))) {
+        // 自动激活本地 Web Audio API 高保真白噪音合成器，0 秒无损平滑接管！
+        console.log('[useAudioPlayer] Stream unreachable, activating native Web Audio synthesizer for', curTrack.title)
+        if (curTrack.synthType === 'waves' || curTrack.title.includes('海浪')) {
+          ambientSynthesizer.playWaves(stateRef.current.volume)
+        } else {
+          ambientSynthesizer.playRain(stateRef.current.volume)
+        }
+        wantsPlaybackRef.current = true
+        updateState(current => ({
+          ...current,
+          isPlaying: true,
+          status: 'playing',
+          error: null,
+        }))
+        return
+      }
+
       wantsPlaybackRef.current = false
       stopProgress()
       updateState(current => ({
@@ -184,6 +205,23 @@ export function useAudioPlayer() {
       duration: 0,
     }))
 
+    // 若为本地高保真环境合成白噪音，优先启动合成器保障秒级发声
+    if (track.synthType || track.title.includes('雨声') || track.title.includes('海浪')) {
+      if (track.synthType === 'waves' || track.title.includes('海浪')) {
+        ambientSynthesizer.playWaves(stateRef.current.volume)
+      } else {
+        ambientSynthesizer.playRain(stateRef.current.volume)
+      }
+      updateState(current => ({
+        ...current,
+        isPlaying: true,
+        status: 'playing',
+        error: null,
+      }))
+      return
+    }
+
+    ambientSynthesizer.stop()
     audio.src = track.src
     audio.load()
     audio.play().then(() => {

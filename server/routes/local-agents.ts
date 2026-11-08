@@ -168,23 +168,17 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
       return
     }
 
-    // 伴学积分校验与扣除：单次提问消耗 0.1 积分（学生/编辑者用户扣除，管理员免受阻断）
-    let deductInfo = null
-    if (req.user) {
-      const deductRes = database.deductUserPoints(
-        req.user.id,
-        0.1,
-        `AI 伴学提问 (${body.model || body.provider || 'default'})`
-      )
-      if (!deductRes.success) {
+    // 伴学积分资格预检：校验当前用户是否拥有至少 0.1 积分（管理员免受阻断）
+    if (req.user && req.user.role !== 'admin') {
+      const currentPoints = database.getUserPoints(req.user.id)?.points ?? req.user.points ?? 0
+      if (currentPoints < 0.1) {
         res.status(402).json({
           error: 'INSUFFICIENT_POINTS',
-          message: deductRes.message || '伴学积分不足（当前单次对话需 0.1 积分），请每日签到领取或联系管理员分配。',
-          currentPoints: deductRes.points,
+          message: '伴学积分不足（当前单次对话需 0.1 积分），请每日签到领取或联系管理员分配。',
+          currentPoints,
         })
         return
       }
-      deductInfo = { points: deductRes.points, deducted: deductRes.deducted }
     }
 
     const requestedCwd = body.cwd || config.localAgents?.defaultCwd || config.vaultPath
@@ -219,18 +213,82 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
     res.setHeader('Connection', 'keep-alive')
     res.flushHeaders()
 
-  const sendEvent = (event: unknown) => {
+  let totalGeneratedChars = 0
+  let hasSettledDeduction = false
+
+  const settlePointsIfEligible = () => {
+    if (hasSettledDeduction) return
+    if (req.user && totalGeneratedChars >= 20) {
+      hasSettledDeduction = true
+      const deductRes = database.deductUserPoints(
+        req.user.id,
+        0.1,
+        `AI 伴学提问 (${body.model || body.provider || 'default'})`
+      )
+      if (deductRes.success) {
+        sendEvent({
+          type: 'points_updated',
+          points: deductRes.points,
+          deducted: deductRes.deducted,
+        })
+      }
+    }
+  }
+
+  const handleRunFailure = (errorMsg: string) => {
+    if (!hasSettledDeduction && req.user) {
+      const userPts = database.getUserPoints(req.user.id)?.points ?? req.user.points ?? 0
+      sendEvent({
+        type: 'points_updated',
+        points: userPts,
+        deducted: 0,
+      })
+      sendEvent({
+        type: 'text',
+        content: `\n\n> 💡 **系统温馨提示**：本次大模型推演出现网络波动或未返回有效文本，**系统未扣除您的伴学积分**（0.1 积分已安全保留）。您可以直接点击重新生成或切换备用模型重试。`,
+      })
+    }
+    sendEvent({ type: 'error', content: errorMsg })
+  }
+
+  const sendEvent = (event: any) => {
+    if (event?.type === 'text' && typeof event.content === 'string') {
+      totalGeneratedChars += event.content.length
+      if (totalGeneratedChars >= 20 && !hasSettledDeduction) {
+        settlePointsIfEligible()
+      }
+    }
     res.write(`data: ${JSON.stringify(event)}\n\n`)
   }
 
-  // 立即向下游下发最新的积分余额事件，供前端实时更新
-  if (deductInfo) {
+  // 初始向前端下发当前积分状态（不扣费）
+  if (req.user) {
+    const curPts = database.getUserPoints(req.user.id)?.points ?? req.user.points ?? 0
     sendEvent({
       type: 'points_updated',
-      points: deductInfo.points,
-      deducted: deductInfo.deducted,
+      points: curPts,
+      deducted: 0,
     })
   }
+
+  let hasProducedContent = false
+  const safeRefundPointsIfNeeded = (reason: string) => {
+    if (deductInfo && !hasProducedContent && req.user) {
+      try {
+        const refundRes = database.refundUserPoints(req.user.id, deductInfo.deducted, `提问异常自动原路返还 (${reason})`)
+        sendEvent({
+          type: 'points_updated',
+          points: refundRes.points,
+          refunded: deductInfo.deducted,
+          refundMessage: `💡 本次提问因服务响应异常未生成有效解答，已自动为您原路返还 ${deductInfo.deducted} 伴学积分。`,
+        })
+        deductInfo = null // 避免重复退款
+      } catch (refundErr: any) {
+        console.warn('[AutoRefund Error]:', refundErr.message)
+      }
+    }
+  }
+
   const abortController = new AbortController()
   const abortRun = () => abortController.abort()
   req.on('aborted', abortRun)
@@ -364,9 +422,37 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
         sendEvent(event)
         if (event.type === 'error') break
       }
-    } catch (error: any) {
-      sendEvent({ type: 'error', content: `Antigravity 智能体运行异常: ${error?.message || '未知错误'}` })
+    } catch (primaryErr: any) {
+      console.warn('[Antigravity Primary Failed, trying fallback]:', primaryErr?.message)
+      const fallbackTarget = getAiClientForModel()
+      if (fallbackTarget && (fallbackTarget.client !== client || fallbackTarget.model !== model)) {
+        try {
+          sendEvent({ type: 'status', content: '正在为您自动切换高可用轻量通道重推...' })
+          for await (const fbEvent of runAgentLoop(
+            fallbackTarget.client,
+            fallbackTarget.model,
+            conversationMessages,
+            config.vaultPath,
+            antigravityPrompt
+          )) {
+            sendEvent(fbEvent)
+            if (fbEvent.type === 'error') break
+          }
+        } catch (fbErr: any) {
+          handleRunFailure(`Antigravity 智能体运行异常: ${fbErr?.message || primaryErr?.message || '网络连接超时'}`)
+        }
+      } else {
+        handleRunFailure(`Antigravity 智能体运行异常: ${primaryErr?.message || '网络连接超时'}`)
+      }
     } finally {
+      if (!hasSettledDeduction && req.user) {
+        const userPts = database.getUserPoints(req.user.id)?.points ?? req.user.points ?? 0
+        sendEvent({
+          type: 'points_updated',
+          points: userPts,
+          deducted: 0,
+        })
+      }
       res.end()
     }
     return
@@ -435,8 +521,16 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
         if (event.type === 'error') break
       }
     } catch (error: any) {
-      sendEvent({ type: 'error', content: `Codex 智能体运行异常: ${error?.message || '未知错误'}` })
+      handleRunFailure(`Codex 智能体运行异常: ${error?.message || '未知错误'}`)
     } finally {
+      if (!hasSettledDeduction && req.user) {
+        const userPts = database.getUserPoints(req.user.id)?.points ?? req.user.points ?? 0
+        sendEvent({
+          type: 'points_updated',
+          points: userPts,
+          deducted: 0,
+        })
+      }
       res.end()
     }
     return
@@ -445,7 +539,7 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
   if (body.provider === 'web') {
     const aiTarget = getAiClientForModel(body.model)
     if (!aiTarget) {
-      sendEvent({ type: 'error', content: '云端 AI 尚未配置或对应接口不可用，请在系统设置中检查 API 配置' })
+      handleRunFailure('云端 AI 尚未配置或对应接口不可用，请在系统设置中检查 API 配置')
       res.end()
       return
     }
@@ -462,8 +556,16 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
         if (event.type === 'error') break
       }
     } catch (error: any) {
-      sendEvent({ type: 'error', content: `云端 AI 执行失败: ${error?.message || '未知错误'}` })
+      handleRunFailure(`云端 AI 执行失败: ${error?.message || '未知错误'}`)
     } finally {
+      if (!hasSettledDeduction && req.user) {
+        const userPts = database.getUserPoints(req.user.id)?.points ?? req.user.points ?? 0
+        sendEvent({
+          type: 'points_updated',
+          points: userPts,
+          deducted: 0,
+        })
+      }
       res.end()
     }
     return
@@ -484,12 +586,17 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
       if (event.type === 'error') break
     }
   } catch (error: any) {
+    safeRefundPointsIfNeeded('本地智能体调用异常')
     sendEvent({ type: 'error', content: error?.message || 'Local agent failed' })
   } finally {
+    if (!hasProducedContent) safeRefundPointsIfNeeded('调用未产生回答内容')
     res.end()
   }
 } catch (topLevelError: any) {
   console.error('[CHAT TOP LEVEL ERROR]', topLevelError)
+  if (req.user && deductInfo && !hasProducedContent) {
+    try { database.refundUserPoints(req.user.id, deductInfo.deducted, '服务器顶层异常自动退款') } catch {}
+  }
   res.status(500).json({ error: topLevelError?.message || 'Chat 内部异常', stack: topLevelError?.stack })
 }
 })

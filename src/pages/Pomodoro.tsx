@@ -1,3 +1,4 @@
+import { getPomodoroSyncState, setPomodoroSyncState, onPomodoroSync } from '../utils/pomodoroSync'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Timer,
@@ -176,9 +177,13 @@ export default function Pomodoro() {
       setTimeLeft(totalDuration)
     }
     setStatus('running')
+    setPomodoroSyncState({ isRunning: true, timeLeft: timeLeft || totalDuration, totalDuration, mode })
   }
 
-  const pause = () => setStatus('paused')
+  const pause = () => {
+    setStatus('paused')
+    setPomodoroSyncState({ isRunning: false, timeLeft, totalDuration, mode })
+  }
 
   const reset = () => {
     setStatus('idle')

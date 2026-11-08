@@ -61,16 +61,25 @@ export default function FileExplorer({ tree, onFileClick, selectedPath }: FileEx
 }
 
 function filterTree(nodes: TreeNode[], query: string): TreeNode[] {
-  const normalized = query.trim().toLowerCase()
-  if (!normalized) return nodes
+  const rawQuery = query.trim().toLowerCase()
+  if (!rawQuery) return nodes
+
+  // 支持用户输入 #标签 或纯标签名搜索，支持标签、文件名、相对路径深度多维匹配
+  const cleanTag = rawQuery.startsWith('#') ? rawQuery.slice(1).trim() : rawQuery
 
   return nodes.flatMap(node => {
     if (node.type === 'file') {
-      return node.name.toLowerCase().includes(normalized) || node.path.toLowerCase().includes(normalized) ? [node] : []
+      const nameMatch = node.name.toLowerCase().includes(rawQuery) || node.name.toLowerCase().includes(cleanTag)
+      const pathMatch = node.path.toLowerCase().includes(rawQuery) || node.path.toLowerCase().includes(cleanTag)
+      // 若节点挂载了 tags 数组，深度匹配标签
+      const tagMatch = Array.isArray((node as any).tags) && (node as any).tags.some((t: string) => 
+        t.toLowerCase().includes(cleanTag) || t.toLowerCase().includes(rawQuery)
+      )
+      return (nameMatch || pathMatch || tagMatch) ? [node] : []
     }
 
-    const children = node.children ? filterTree(node.children, normalized) : []
-    return node.name.toLowerCase().includes(normalized) || children.length > 0
+    const children = node.children ? filterTree(node.children, rawQuery) : []
+    return node.name.toLowerCase().includes(rawQuery) || children.length > 0
       ? [{ ...node, children }]
       : []
   })

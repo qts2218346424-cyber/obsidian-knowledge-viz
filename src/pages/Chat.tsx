@@ -1848,7 +1848,7 @@ export default function Chat() {
               ...msgs[idx],
               content:
                 rawContent ||
-                '💡 智能体已完成推演，但模型未返回文本，请检查网络或重新提问。',
+                '⚠️ **智能体已完成推演，但模型服务暂未返回文本内容（系统已自动保留您的伴学积分，本次未扣费）。**\n\n> 💡 建议检查网络连接或直接点击重新生成。',
               streaming: false,
             }
           }

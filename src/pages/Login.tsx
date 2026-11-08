@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Navigate, useNavigate, Link } from 'react-router-dom'
+import { Navigate, useNavigate, Link, useLocation } from 'react-router-dom'
 import {
   ShieldCheck,
   Lock,
@@ -31,9 +31,12 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  // 如果已经处于登录态，直接跳转至仪表盘
+  const location = useLocation()
+  const fromPath = (location.state as any)?.from?.pathname || '/dashboard'
+
+  // 如果已经处于登录态，直接跳转至原本目标路径或仪表盘
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to={fromPath} replace />
   }
 
   const isInitMode = !initialized
@@ -75,7 +78,7 @@ export default function Login() {
       } else {
         await login(username.trim(), password)
       }
-      navigate('/dashboard', { replace: true })
+      navigate(fromPath, { replace: true })
     } catch (err: any) {
       setError(err.message || '操作失败，请重试')
     } finally {

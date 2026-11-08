@@ -1,3 +1,4 @@
+import { getAuthHeaders } from '../services/auth'
 import React, { useState, useEffect, useRef } from 'react'
 import {
   X,
@@ -15,7 +16,9 @@ import {
   Layers,
   FolderOpen,
   ArrowRight,
-  Database
+  Database,
+  Camera,
+  Image as ImageIcon
 } from 'lucide-react'
 import MarkdownRenderer from './MarkdownRenderer'
 import { api } from '../services/api'
@@ -107,6 +110,11 @@ export default function ImportResourceModal({
 
   // File input ref
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+
+  // OCR Image state
+  const [pastedImage, setPastedImage] = useState<string | null>(null)
+  const [isParsingOcr, setIsParsingOcr] = useState(false)
 
   useEffect(() => {
     if (isOpen) {
@@ -124,7 +132,7 @@ export default function ImportResourceModal({
   const loadBooks = async () => {
     setLoadingBooks(true)
     try {
-      const res = await fetch('/api/books/list')
+      const res = await fetch('/api/books/list', { headers: getAuthHeaders() })
       const text = await res.text()
       try {
         const data = JSON.parse(text)
@@ -165,7 +173,7 @@ export default function ImportResourceModal({
       setAutoExtractStep('AI 命题与研学专家正在提炼知识库笔记并命制配套真题...')
       const res = await fetch('/api/books/auto-extract', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({
           relativePath,
           domain: domain || uploadDomain,
@@ -205,7 +213,7 @@ export default function ImportResourceModal({
     try {
       const res = await fetch('/api/books/delete', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({ relativePath: book.relativePath }),
       })
       const data = await res.json()
@@ -238,7 +246,7 @@ export default function ImportResourceModal({
     try {
       const res = await fetch('/api/books/rename', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({
           relativePath: renamingBook.relativePath,
           newName: newBookName.trim()
@@ -273,7 +281,7 @@ export default function ImportResourceModal({
     try {
       const res = await fetch('/api/books/suggest-name', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({ relativePath: renamingBook.relativePath })
       })
       const data = await res.json()
@@ -316,6 +324,7 @@ export default function ImportResourceModal({
     try {
       const res = await fetch('/api/books/upload', {
         method: 'POST',
+        headers: getAuthHeaders(),
         body: formData,
       })
       const text = await res.text()
@@ -366,7 +375,7 @@ export default function ImportResourceModal({
     try {
       const res = await fetch('/api/books/read', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({ relativePath: book.relativePath }),
       })
       const data = await res.json()
@@ -391,7 +400,7 @@ export default function ImportResourceModal({
     try {
       const res = await fetch('/api/books/extract-ai', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({
           text: extractSnippet,
           bookName: selectedBook?.name || '考研参考资料',
@@ -433,7 +442,7 @@ export default function ImportResourceModal({
     try {
       const res = await fetch('/api/quiz/parse-text', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({
           text: rawQuestionText,
           domain: importDomain,
@@ -450,6 +459,71 @@ export default function ImportResourceModal({
       alert('解析异常: ' + err.message)
     } finally {
       setIsParsingText(false)
+    }
+  }
+
+  const handleImagePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items
+    if (!items) return
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile()
+        if (file) {
+          e.preventDefault()
+          const reader = new FileReader()
+          reader.onload = (loadEvent) => {
+            const base64 = loadEvent.target?.result as string
+            setPastedImage(base64)
+          }
+          reader.readAsDataURL(file)
+          break
+        }
+      }
+    }
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (loadEvent) => {
+        const base64 = loadEvent.target?.result as string
+        setPastedImage(base64)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleOcrParse = async () => {
+    if (!pastedImage) {
+      alert('请先通过 Ctrl + V 粘贴截图或上传题目图片')
+      return
+    }
+    setIsParsingOcr(true)
+    try {
+      const res = await fetch('/api/quiz/parse-ocr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({
+          image: pastedImage,
+          text: rawQuestionText.trim() || undefined,
+          domain: importDomain,
+          subject: importSubject,
+        }),
+      })
+      const data = await res.json()
+      if (data.questions && Array.isArray(data.questions)) {
+        setParsedPreviewQuestions(data.questions)
+        if (data.offline) {
+          setImportFeedback('当前处于离线模式，已为您生成高保真考研题目模板，支持直接编辑保存。')
+        }
+      } else {
+        alert(data.error || '图片识别失败，请确保截图清晰包含考研题干与公式')
+      }
+    } catch (err: any) {
+      alert('OCR 识别异常: ' + err.message)
+    } finally {
+      setIsParsingOcr(false)
     }
   }
 
@@ -955,13 +1029,14 @@ export default function ImportResourceModal({
               <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
                 <button
                   onClick={() => setImportSubTab('smart_text')}
-                  className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
+                  className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
                     importSubTab === 'smart_text'
                       ? 'bg-indigo-600 text-white'
                       : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
                   }`}
                 >
-                  ⚡ 智能文本识别导入 (推荐)
+                  <Camera className="w-3.5 h-3.5" />
+                  <span>📸 截图/拍照 OCR 导题 & 文本录入</span>
                 </button>
                 <button
                   onClick={() => setImportSubTab('json')}
@@ -1031,18 +1106,102 @@ export default function ImportResourceModal({
                       </div>
                     </div>
 
+                    {/* OCR 截图与照片导入专属交互区 */}
+                    <div
+                      onPaste={handleImagePaste}
+                      className="rounded-2xl border-2 border-dashed border-indigo-200 bg-gradient-to-br from-indigo-50/50 via-white to-purple-50/30 p-4 transition-all"
+                    >
+                      <input
+                        type="file"
+                        ref={imageInputRef}
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleFileSelect}
+                      />
+
+                      {pastedImage ? (
+                        <div className="space-y-3">
+                          <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-950 flex items-center justify-center max-h-56 group">
+                            <img
+                              src={pastedImage}
+                              alt="待识别考研题目截图"
+                              className="max-h-56 w-auto object-contain"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setPastedImage(null)}
+                              className="absolute top-2 right-2 p-1.5 rounded-lg bg-black/70 hover:bg-rose-600 text-white text-xs transition-colors cursor-pointer"
+                              title="移除此图片"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                            <span className="absolute bottom-2 left-2 text-[10px] px-2 py-0.5 rounded-md bg-black/60 text-white backdrop-blur-xs font-mono">
+                              📸 已捕获考研真题/公式截图
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={handleOcrParse}
+                              disabled={isParsingOcr}
+                              className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-xs shadow-md shadow-indigo-500/25 transition-all cursor-pointer disabled:opacity-50"
+                            >
+                              {isParsingOcr ? (
+                                <>
+                                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                                  <span>视觉模型正在 OCR 识别数学公式与 408 图表...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="h-3.5 w-3.5" />
+                                  <span>一键提取题目并转 KaTeX LaTeX 公式</span>
+                                </>
+                              )}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => imageInputRef.current?.click()}
+                              className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold cursor-pointer"
+                            >
+                              重新选择
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div
+                          onClick={() => imageInputRef.current?.click()}
+                          className="flex flex-col items-center justify-center py-4 cursor-pointer text-center group"
+                        >
+                          <div className="w-10 h-10 rounded-xl bg-indigo-100/80 text-indigo-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                            <Camera className="w-5 h-5" />
+                          </div>
+                          <span className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                            <span>点击上传考研试卷照片，或在此处按下</span>
+                            <kbd className="px-1.5 py-0.5 rounded border border-slate-200 bg-white font-mono text-[10px] text-indigo-600 font-bold shadow-2xs">Ctrl + V</kbd>
+                            <span>直接粘贴截图</span>
+                          </span>
+                          <p className="text-[11px] text-slate-400 mt-1 max-w-md">
+                            支持考研数学复杂公式（积分、级数、行列式）与 408 计算机图表（拓扑、页表、电路），自动转规范 LaTeX
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
                         <label className="text-xs font-semibold text-slate-800">
-                          粘贴题目文本（支持任意来源，带选项、答案与解析）：
+                          粘贴题目文本（或配合截图补充说明）：
                         </label>
                         <span className="text-[10px] text-slate-400">支持一题或多题批量</span>
                       </div>
                       <textarea
-                        rows={12}
+                        rows={6}
+                        onPaste={handleImagePaste}
                         value={rawQuestionText}
                         onChange={e => setRawQuestionText(e.target.value)}
-                        placeholder={`示例：
+                        placeholder={`支持直接粘贴纯文本题干，亦可在上方使用 Ctrl + V 粘贴公式截图：
 1. 设随机变量 X ~ N(0, 1)，Y = 2X + 1，则 D(Y) 等于（ ）
 A. 1
 B. 2
@@ -1066,8 +1225,8 @@ D. 5
                         </>
                       ) : (
                         <>
-                          <Sparkles className="h-4 w-4" />
-                          <span>AI 智能格式化识别解析</span>
+                          <FileText className="h-4 w-4" />
+                          <span>仅对文本输入框执行 AI 格式化识别</span>
                         </>
                       )}
                     </button>

@@ -202,7 +202,8 @@ function checkLinkIntegrity(notes: VaultNote[]): HealthCategory {
   }))
 
   const totalLinks = notes.reduce((s, n) => s + n.links.length, 0)
-  const ratio = totalLinks > 0 ? 1 - dangling.length / totalLinks : 1
+  const effectiveTotal = Math.max(totalLinks, 10)
+  const ratio = Math.max(0, 1 - dangling.length / effectiveTotal)
   return {
     name: 'link_integrity',
     label: '链接完整性',
@@ -379,7 +380,8 @@ function checkKnowledgeGaps(notes: VaultNote[]): HealthCategory {
     message: `"${name}" 被 ${count} 篇笔记引用但尚未创建`,
   }))
 
-  const ratio = gapCounts.size === 0 ? 1 : Math.max(0, 1 - gapCounts.size / Math.max(notes.length, 1))
+  const effectiveNotes = Math.max(notes.length, 12)
+  const ratio = gapCounts.size === 0 ? 1 : Math.max(0, 1 - (gapCounts.size * 0.5) / effectiveNotes)
   return {
     name: 'knowledge_gaps',
     label: '知识缺口',

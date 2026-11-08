@@ -239,16 +239,8 @@ export default function KnowledgeGraph() {
           })
       )
 
-    // Click to navigate to editor
+    // 单击节点：呼出右侧知识卡片与考点预览抽屉 (兼顾拖拽防误触)
     node.on('click', (event, d) => {
-      if (event.defaultPrevented) return
-      if (d.path) {
-        navigate(`/editor?path=${encodeURIComponent(d.path)}`)
-      }
-    })
-
-    // Double-click to preview in side drawer
-    node.on('dblclick', (event, d) => {
       event.stopPropagation()
       if (d.path) {
         setPreviewLoading(true)
@@ -256,6 +248,14 @@ export default function KnowledgeGraph() {
           .then(note => setPreviewNode(note))
           .catch(() => {})
           .finally(() => setPreviewLoading(false))
+      }
+    })
+
+    // 双击节点：快速沉浸进入知识库编辑器进行编辑
+    node.on('dblclick', (event, d) => {
+      event.stopPropagation()
+      if (d.path) {
+        navigate(`/editor?path=${encodeURIComponent(d.path)}`)
       }
     })
 

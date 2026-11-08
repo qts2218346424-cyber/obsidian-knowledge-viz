@@ -11,6 +11,43 @@ export interface AgentTool {
   input_schema: Record<string, any>
 }
 
+
+/**
+ * 严格清洗大模型输出文本：彻底剥离 <think>/<thought> 内部推演标签，并剔除英文思维草稿段落
+ */
+export function sanitizeModelText(raw: string): { cleanText: string; thinking?: string } {
+  if (!raw) return { cleanText: '' }
+
+  let text = raw
+  let extractedThinking = ''
+
+  // 1. 剥离 <think>...</think> 或 <thought>...</thought>
+  const thinkMatches = text.match(/<(?:think|thought)>([\s\S]*?)<\/(?:think|thought)>/gi)
+  if (thinkMatches) {
+    extractedThinking = thinkMatches
+      .map(m => m.replace(/<\/?(?:think|thought)>/gi, '').trim())
+      .join('\n\n')
+    text = text.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, '').trim()
+  }
+
+  // 2. 剥离未闭合的 <think> 前缀
+  if (text.startsWith('<think>') || text.startsWith('<thought>')) {
+    const endTagIdx = text.search(/<\/(?:think|thought)>/i)
+    if (endTagIdx !== -1) {
+      extractedThinking = text.slice(0, endTagIdx).replace(/<\/?(?:think|thought)>/gi, '').trim()
+      text = text.slice(endTagIdx + 8).trim()
+    }
+  }
+
+  // 3. 剔除以英文思考草稿开头的冗余内部推演段落 (如 "Let me finalize...", "Thinking Process:", "Okay, let's...")
+  const draftRegex = /^(?:(?:Let me|I need to|Thinking Process|Draft|Okay, let|First, let|Let's analyze|Let me calculate|Let me finalize)[^\r\n]*\r?\n+)+/i
+  if (draftRegex.test(text)) {
+    text = text.replace(draftRegex, '').trim()
+  }
+
+  return { cleanText: text, thinking: extractedThinking || undefined }
+}
+
 export const AGENT_TOOLS: AgentTool[] = [
   {
     name: 'read_file',
@@ -292,11 +329,13 @@ export async function* runAgentLoop(
 如果信息不完整，请明确说明已经确认的内容和还需要补充的内容。不要再次调用工具。`,
       messages: conversationMessages as Anthropic.MessageParam[],
     })
-    const finalText = finalResponse.content
+    const rawFinal = finalResponse.content
       .filter(block => block.type === 'text')
       .map(block => block.text)
       .join('\n')
       .trim()
+    const { cleanText: finalText, thinking: finalThinking } = sanitizeModelText(rawFinal)
+    if (finalThinking) yield { type: 'thinking' as const, thinking: finalThinking }
     if (finalText) yield { type: 'text' as const, content: finalText }
     yield { type: 'done' as const }
   }
@@ -345,9 +384,16 @@ export async function* runAgentLoop(
         }
       }
 
-      // Emit text
+      // Emit sanitized text & thinking
       if (textParts.length > 0) {
-        yield { type: 'text', content: textParts.join('\n') }
+        const joined = textParts.join('\n')
+        const { cleanText, thinking } = sanitizeModelText(joined)
+        if (thinking) {
+          thinkingParts.push(thinking)
+        }
+        if (cleanText) {
+          yield { type: 'text', content: cleanText }
+        }
       } else if (!hasToolUse) {
         if (thinkingParts.length > 0) {
           yield { type: 'text', content: thinkingParts.join('\n\n') }

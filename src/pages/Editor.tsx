@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Save, Trash2, FileEdit, FilePlus, Upload,
   ChevronDown, ChevronRight, X, Loader2, AlertTriangle,
@@ -409,17 +409,6 @@ export default function Editor() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [dirty])
 
-  // Check URL params for file to open (from graph click)
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const filePath = params.get('path')
-    if (filePath) {
-      loadFile(filePath)
-      // Clean URL
-      window.history.replaceState({}, '', '/editor')
-    }
-  }, [])
-
   const loadFile = useCallback(async (filePath: string) => {
     try {
       const note = await api.getFile(filePath)
@@ -456,6 +445,32 @@ export default function Editor() {
       setSaveMsg(`💡 考点笔记「${cleanName}」尚未收录，已自动加载考纲标准模版，点击「保存」即可一键入库！`)
     }
   }, [])
+
+  // Check URL params for file to open (from graph click)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const filePath = params.get('path')
+    if (filePath) {
+      loadFile(filePath)
+      // Clean URL
+      window.history.replaceState({}, '', '/editor')
+    }
+  }, [])
+
+  // 监听 Obsidian 预览双链点击事件 [[笔记名]]，实现无缝跳转与即时创建
+  useEffect(() => {
+    const handleWikilink = (e: any) => {
+      const target = e.detail?.target
+      if (!target) return
+      const cleanPath = target.endsWith('.md') ? target : (target + '.md')
+      loadFile(cleanPath)
+    }
+    window.addEventListener('wikilink-clicked', handleWikilink)
+    return () => window.removeEventListener('wikilink-clicked', handleWikilink)
+  }, [loadFile])
+
+
+
 
   const handleFileClick = (filePath: string) => {
     if (currentFile?.path === filePath) {

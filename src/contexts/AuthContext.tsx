@@ -47,7 +47,7 @@ export interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<UserProfile | null>(null)
+  const [user, setUser] = useState<UserProfile | null>(() => authService.getStoredUser())
   const [token, setToken] = useState<string | null>(authService.getStoredToken())
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [initialized, setInitialized] = useState<boolean>(true)
@@ -78,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await authService.getCurrentUser()
       setUser(data.user)
       setToken(currentToken)
+      authService.setStoredUser(data.user)
       if (typeof data.user.points === 'number') {
         setPoints(data.user.points)
       }
@@ -87,6 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null)
       setToken(null)
       authService.setStoredToken(null)
+      authService.setStoredUser(null)
     }
   }, [refreshPoints])
 
@@ -116,6 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null)
       setToken(null)
       authService.setStoredToken(null)
+      authService.setStoredUser(null)
     }
 
     const onPointsUpdated = (event: Event) => {

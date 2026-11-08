@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import {
   X, BookOpen, Clock, Target, CheckCircle2,
-  List, Sparkles
+  List, Sparkles, Edit3
 } from 'lucide-react'
 import MarkdownRenderer from './MarkdownRenderer'
 import type { HandoutItem } from '../data/handoutsData'
@@ -79,6 +79,17 @@ export default function HandoutReaderModal({
             >
               <Target className="w-3.5 h-3.5 shrink-0" />
               <span className="hidden sm:inline">随堂即练</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('open-quick-note'))
+              }}
+              className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/30 text-xs font-semibold transition-all active:scale-95"
+              title="为本篇讲义呼出侧边栏随手批注，心得将同步归档进知识库"
+            >
+              <Edit3 className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden sm:inline">随手批注</span>
             </button>
             <button
               onClick={() => onAskAI(handout)}
