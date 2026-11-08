@@ -1,3 +1,4 @@
+import { getRequestVaultPath } from '../services/user-sandbox.js'
 import { Router } from 'express'
 import fs from 'fs'
 import path from 'path'
@@ -478,27 +479,69 @@ studyRouter.get('/study/error-log', (req, res) => {
   }
 })
 
-studyRouter.get('/study/daily-review', (_req, res) => {
+studyRouter.get('/study/daily-review', (req, res) => {
   try {
     const todayStr = new Date().toISOString().split('T')[0]
-    const errorDir = path.resolve(config.vaultPath, getErrorLogDir())
+    const vaultPath = getRequestVaultPath(req)
     const allQuestions: any[] = []
+    const seenQuestionKeys = new Set<string>()
 
-    if (fs.existsSync(errorDir)) {
-      const files = fs.readdirSync(errorDir).filter(f => f.endsWith('.md'))
-      for (const file of files) {
-        try {
-          const fullPath = path.join(errorDir, file)
-          const raw = fs.readFileSync(fullPath, 'utf-8')
-          const parsed = parseErrorLog(raw)
-          for (const q of parsed.questions) {
-            q._sourceFile = file
-            allQuestions.push(q)
+    // 1. 聚合多目录错题日志 (兼容 错题本/ 与 03-刷题与复盘/ 以及 03-真题与错题/)
+    const candidateDirs = [
+      path.resolve(vaultPath, getErrorLogDir()),
+      path.resolve(vaultPath, '03-刷题与复盘/408错题本'),
+      path.resolve(vaultPath, '03-刷题与复盘/数学错题本'),
+      path.resolve(vaultPath, '03-刷题与复盘/错题集'),
+      path.resolve(vaultPath, '03-真题与错题/408错题本'),
+      path.resolve(vaultPath, '03-真题与错题/数学错题本'),
+      path.resolve(config.vaultPath, getErrorLogDir()),
+    ]
+
+    for (const errorDir of candidateDirs) {
+      if (fs.existsSync(errorDir)) {
+        const files = fs.readdirSync(errorDir).filter(f => f.endsWith('.md'))
+        for (const file of files) {
+          try {
+            const fullPath = path.join(errorDir, file)
+            const raw = fs.readFileSync(fullPath, 'utf-8')
+            const parsed = parseErrorLog(raw)
+            for (const q of parsed.questions) {
+              const dedupeKey = (q.question || '').slice(0, 40)
+              if (dedupeKey && !seenQuestionKeys.has(dedupeKey)) {
+                seenQuestionKeys.add(dedupeKey)
+                q._sourceFile = file
+                allQuestions.push(q)
+              }
+            }
+          } catch {
+            // skip bad files
           }
-        } catch {
-          // skip bad files
         }
       }
+    }
+
+    // 2. 深度融合 SQLite 数据库持久化错题，确保做题保存后 100% 毫秒级可见
+    try {
+      const dbErrors = database.getErrorQuestions({ userId: req.user?.id })
+      for (const errItem of dbErrors) {
+        const dedupeKey = (errItem.question || '').slice(0, 40)
+        if (dedupeKey && !seenQuestionKeys.has(dedupeKey)) {
+          seenQuestionKeys.add(dedupeKey)
+          allQuestions.push({
+            source: errItem.sourceNote || errItem.subject,
+            question: errItem.question,
+            userAnswer: errItem.userAnswer || '',
+            correctAnswer: errItem.correctAnswer,
+            explanation: errItem.explanation || '详尽分步解析已同步至错题本',
+            reviewCount: '0',
+            nextReview: todayStr,
+            _sourceFile: errItem.sourceNote || '数据库错题库',
+            _id: errItem.id,
+          })
+        }
+      }
+    } catch (dbErr: any) {
+      console.warn('[DailyReview DB Fetch]:', dbErr.message)
     }
 
     const dueQuestions = allQuestions.filter(q => {
@@ -663,7 +706,7 @@ function writeVocabProgress(progress: Record<string, VocabProgress>) {
     createFile(config.vaultPath, vocabPath, content, { type: 'vocab-progress', updated: todayStr })
   }
   markSelfWrite(vocabPath)
-  invalidateCache()
+  // 单词本进度只属于用户个人复盘数据，不污染全库图谱索引，避免触发全库 rebuild 导致 8 秒假死
 }
 
 studyRouter.get('/study/vocabulary', (_req, res) => {

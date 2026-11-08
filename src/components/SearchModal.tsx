@@ -111,8 +111,28 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
         {/* Results */}
         <div className="max-h-[62dvh] sm:max-h-88 overflow-y-auto modal-scroll-contain">
           {results.length === 0 && query.trim() && !loading && (
-            <div className="px-4 py-10 text-center text-xs text-slate-400">
-              未找到匹配「{query}」的笔记
+            <div className="px-4 py-8 text-center text-xs text-slate-500 space-y-3">
+              <p className="font-semibold text-slate-700">未在个人笔记中找到匹配「{query}」的篇章</p>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/90 text-[11px] text-slate-600 inline-block text-left max-w-sm">
+                <span className="font-bold text-slate-800">🔍 检索范围提示：</span>
+                <p className="mt-1 text-slate-500 leading-relaxed">此处检索您当前绑定的个人 Obsidian 笔记库（不覆盖公共讲义与 408/数学真题库）。</p>
+                <div className="mt-2.5 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { navigate('/study'); onClose() }}
+                    className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold cursor-pointer transition-colors"
+                  >
+                    前往【讲义中心】查阅 →
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { navigate('/quiz'); onClose() }}
+                    className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold cursor-pointer transition-colors"
+                  >
+                    前往【做题中心】搜索 →
+                  </button>
+                </div>
+              </div>
             </div>
           )}
           {results.length === 0 && !query.trim() && (

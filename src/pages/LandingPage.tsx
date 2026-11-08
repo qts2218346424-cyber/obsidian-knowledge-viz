@@ -191,7 +191,7 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen subframe-landing-bg text-[#171719] font-sans flex flex-col selection:bg-zinc-900 selection:text-white relative">
+    <div className="min-h-screen subframe-landing-bg text-[#171719] font-sans flex flex-col selection:bg-zinc-900 selection:text-white relative overflow-x-hidden w-full max-w-full">
       {/* 浮动吐司通知 */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 bg-[#18181b] text-white text-xs font-medium px-4 py-2.5 rounded-xl shadow-2xl border border-white/15 animate-fade-in-up">
@@ -303,7 +303,7 @@ export default function LandingPage() {
                   setActiveMode('408')
                   showToast('已切换至 408 计算机学科综合研学模式')
                 }}
-                className={`mode-switch-btn relative flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-[12px] text-[13px] sm:text-[14px] font-medium transition-all duration-200 cursor-pointer ${
+                className={`mode-switch-btn relative flex items-center justify-center gap-2 px-2.5 sm:px-6 py-2 sm:py-3 rounded-[12px] text-xs sm:text-[14px] font-medium transition-all duration-200 cursor-pointer ${
                   activeMode === '408' ? 'metal-tab-active' : 'metal-tab-inactive'
                 }`}
               >
@@ -318,7 +318,7 @@ export default function LandingPage() {
                   setActiveMode('math')
                   showToast('已切换至 全国考研数学 智能推导模式')
                 }}
-                className={`mode-switch-btn relative flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-[12px] text-[13px] sm:text-[14px] font-medium transition-all duration-200 cursor-pointer ${
+                className={`mode-switch-btn relative flex items-center justify-center gap-2 px-2.5 sm:px-6 py-2 sm:py-3 rounded-[12px] text-xs sm:text-[14px] font-medium transition-all duration-200 cursor-pointer ${
                   activeMode === 'math' ? 'metal-tab-active' : 'metal-tab-inactive'
                 }`}
               >
@@ -333,7 +333,7 @@ export default function LandingPage() {
                   setActiveMode('ai')
                   showToast('已切换至 本地双核多 Agent 协同模式')
                 }}
-                className={`mode-switch-btn relative flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-[12px] text-[13px] sm:text-[14px] font-medium transition-all duration-200 cursor-pointer ${
+                className={`mode-switch-btn relative flex items-center justify-center gap-2 px-2.5 sm:px-6 py-2 sm:py-3 rounded-[12px] text-xs sm:text-[14px] font-medium transition-all duration-200 cursor-pointer ${
                   activeMode === 'ai' ? 'metal-tab-active' : 'metal-tab-inactive'
                 }`}
               >
@@ -345,12 +345,12 @@ export default function LandingPage() {
         </div>
 
         {/* Subframe 标志性超大字号主标题 */}
-        <h1 className="text-[44px] sm:text-[64px] md:text-[76px] font-bold tracking-[-0.045em] leading-[1.04] text-[#171719] mb-4 max-w-4xl mx-auto">
+        <h1 className="text-[30px] sm:text-[56px] md:text-[76px] font-bold tracking-[-0.045em] leading-[1.04] text-[#171719] mb-4 max-w-4xl mx-auto">
           {modeConfigs[activeMode].title}
         </h1>
 
         {/* 细腻质感副标题 */}
-        <p className="text-[19px] sm:text-[26px] md:text-[30px] font-normal tracking-[-0.025em] leading-[1.25] text-[#8d9096] max-w-[720px] mb-8">
+        <p className="text-[16px] sm:text-[24px] md:text-[30px] font-normal tracking-[-0.025em] leading-[1.25] text-[#8d9096] max-w-[720px] mb-8">
           {modeConfigs[activeMode].subtitle}
         </p>
 
@@ -886,16 +886,7 @@ export default function LandingPage() {
                     {modalTab === 'login' ? '没有账号？立即自主注册' : '已有账号？返回登录'}
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setModalUsername('admin')
-                      setModalPassword('AdminPassword123!')
-                    }}
-                    className="text-amber-700 font-semibold hover:underline cursor-pointer"
-                  >
-                    填入站长账号
-                  </button>
+                  <span className="text-zinc-400">请使用注册账号登录</span>
                 </div>
               </div>
 

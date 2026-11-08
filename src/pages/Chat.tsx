@@ -2406,7 +2406,7 @@ export default function Chat() {
                         <div className="flex items-center gap-1 mt-0.5 text-[10px] text-slate-400 font-normal">
                           <span>
                             {conv.provider === 'antigravity'
-                              ? '✨ AGY'
+                              ? '✨ 研核官方 (Gemini 3.8 Flash)'
                               : conv.provider === 'codex'
                               ? '🤖 Codex'
                               : conv.provider === 'claude-code'

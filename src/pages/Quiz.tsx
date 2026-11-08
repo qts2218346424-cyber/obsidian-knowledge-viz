@@ -939,14 +939,15 @@ export default function Quiz() {
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
               onClick={() => {
-                if (window.confirm('确定要结算退出当前做题吗？已做答案会被统计。')) {
-                  finishQuiz()
+                if (window.confirm('确定要退出当前做题吗？已作答记录将自动保存，随时可重新开始。')) {
+                  setView('start')
                 }
               }}
               className="text-xs text-slate-600 hover:text-slate-900 flex items-center gap-1 font-semibold transition-colors cursor-pointer active:scale-95 shrink-0"
+              title="退出当前做题并返回题库"
             >
               <ArrowLeft size={14} />
-              <span>交卷</span>
+              <span>退出做题</span>
             </button>
             <div className="h-3.5 w-px bg-slate-200 shrink-0" />
             <span className="text-xs font-bold text-slate-800 truncate">
@@ -1016,6 +1017,25 @@ export default function Quiz() {
             <span className="text-xs font-bold text-slate-700 font-mono">
               {currentIndex + 1} / {questions.length} 题
             </span>
+            <div className="h-4 w-px bg-slate-200" />
+            <button
+              type="button"
+              onClick={() => {
+                const answered = Object.keys(answers).length
+                const unanswered = questions.length - answered
+                const promptMsg = unanswered > 0
+                  ? `您还有 ${unanswered} 道题未作答（已作答 ${answered}/${questions.length}），确定立即交卷结算吗？`
+                  : `您已作答全部 ${questions.length} 道题，确定立即交卷结算并查看解析吗？`
+                if (window.confirm(promptMsg)) {
+                  finishQuiz()
+                }
+              }}
+              className="text-xs px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold flex items-center gap-1 cursor-pointer shadow-xs active:scale-95 transition-all"
+              title="交卷并进入成绩与错因分析报告"
+            >
+              <CheckCircle2 size={13} />
+              <span>交卷结算</span>
+            </button>
             <button
               onClick={() => setMobileDrawerOpen(true)}
               className="lg:hidden ml-1 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold shadow-2xs active:scale-95 cursor-pointer"

@@ -258,6 +258,13 @@ export default function Dashboard() {
           </Link>
         </div>
 
+        {/* Top-Center Pill: 考研初试真实动态倒计时 */}
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-rose-200/80 text-xs">
+          <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse shrink-0" />
+          <span className="text-zinc-600 font-medium">2026 考研初试 (12月19日) 倒计时</span>
+          <span className="font-mono font-extrabold text-sm text-rose-600">{daysToExam} 天</span>
+        </div>
+
         {/* Top-Right Pill: Multi-AI Connection Icons + Avatar (Screen 3 Connect to code replica) */}
         <div className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-2xl bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-zinc-200/80">
           <Link
@@ -478,7 +485,7 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-neutral-900">考研政治 作战舱</h3>
-                  <p className="text-[11px] text-neutral-400">全屏史纲时空轴 · 肖秀荣 1000 题</p>
+                  <p className="text-[11px] text-neutral-400">全屏史纲时空轴 · 肖秀荣精选真题</p>
                 </div>
               </div>
               <span className="subframe-pill text-[10.5px]">
@@ -517,7 +524,7 @@ export default function Dashboard() {
                 to="/politics"
                 className="subframe-btn-black h-7 px-2.5 text-[11px]"
               >
-                刷 1000 题 →
+                刷政治真题 (15题) →
               </Link>
             </div>
           </div>

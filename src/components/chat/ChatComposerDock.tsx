@@ -381,7 +381,7 @@ export const ChatComposerDock = memo(function ChatComposerDock({
               placeholder={
                 selectedNote
                   ? `围绕伴读笔记《${selectedNote.title || selectedNote.path.split('/').pop()}》向 ${activeAgent.name} 提问（留空直接发送即可精讲全篇）...`
-                  : `向 ${activeAgent.name}（${activeAgent.title}）提问 408 / 数学考点，或直接粘贴代码与真题...`
+                  : `向 ${activeAgent.name} 提问（单次问答消耗 0.1 积分）408 / 数学考点，或直接粘贴代码与真题...`
               }
               rows={1}
               className="flex-1 bg-transparent border-none text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-hidden resize-none leading-relaxed py-0.5"
@@ -487,7 +487,7 @@ export const ChatComposerDock = memo(function ChatComposerDock({
               <button
                 type="button"
                 onClick={() => window.dispatchEvent(new CustomEvent('open-checkin-modal'))}
-                className="hidden sm:inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-lg border border-amber-200/80 bg-amber-50/70 hover:bg-amber-100 text-amber-800 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-lg border border-amber-200/80 bg-amber-50/70 hover:bg-amber-100 text-amber-800 transition-colors cursor-pointer"
                 title="单次提问消耗 0.1 积分 · 每日签到免费领 1 积分"
               >
                 <Coins className="w-3 h-3 text-amber-600" />

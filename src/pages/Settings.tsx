@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useAuth } from '../contexts/AuthContext'
 import { api, type AppSettings, type CloudEndpoint } from '../services/api'
 import {
   Save, RefreshCw, CheckCircle, AlertCircle, FolderOpen, Globe, Cpu,
@@ -16,6 +17,8 @@ declare global {
 }
 
 export default function Settings() {
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'admin'
   const [settings, setSettings] = useState<AppSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -254,6 +257,10 @@ export default function Settings() {
   }
 
   async function handleSave() {
+    if (!isAdmin) {
+      setMessage({ type: 'error', text: '普通学员账号不可修改服务器系统物理路径与全局大模型密钥，仅超级管理员可操作。' })
+      return
+    }
     setSaving(true)
     setMessage(null)
     try {
@@ -371,7 +378,9 @@ export default function Settings() {
       {/* Header */}
       <div>
         <h1 className="text-xl font-semibold text-warm-800">设置</h1>
-        <p className="text-sm text-warm-500 mt-1">配置 Vault 路径、AI 模型和应用参数</p>
+        <p className="text-sm text-warm-500 mt-1">
+          {isAdmin ? '系统配置中心（站长管理模式）' : '个人研学偏好设置（服务器系统参数已由站长统一部署锁定）'}
+        </p>
       </div>
 
       {/* Configuration status overview */}
@@ -447,22 +456,30 @@ export default function Settings() {
           <div>
             <label className="block text-xs text-warm-500 mb-1.5 font-medium">Obsidian Vault 路径</label>
             <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={vaultPath}
-                onChange={(e) => setVaultPath(e.target.value)}
-                placeholder="例如: E:\我的知识库"
-                className="flex-1 px-3 py-2 rounded-lg bg-cream-100 border border-cream-300 text-warm-700 text-sm placeholder:text-warm-400 focus:outline-none focus:border-accent-orange/40 focus:ring-1 focus:ring-accent-orange/15"
-              />
-              <button
-                type="button"
-                onClick={handleOpenPicker}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-cream-100 border border-cream-300 text-warm-600 text-sm hover:text-warm-800 hover:border-cream-200 transition-colors cursor-pointer"
-                title="浏览文件夹"
-              >
-                <Folder className="w-4 h-4" />
-                浏览
-              </button>
+              {isAdmin ? (
+                <input
+                  type="text"
+                  value={vaultPath}
+                  onChange={(e) => setVaultPath(e.target.value)}
+                  placeholder="例如: E:\我的知识库"
+                  className="flex-1 px-3 py-2 rounded-lg bg-cream-100 border border-cream-300 text-warm-700 text-sm placeholder:text-warm-400 focus:outline-none focus:border-accent-orange/40 focus:ring-1 focus:ring-accent-orange/15"
+                />
+              ) : (
+                <div className="flex-1 px-3 py-2 rounded-lg bg-zinc-100 border border-zinc-200 text-zinc-500 text-xs font-mono select-none">
+                  [云端研学知识库 · 安全沙箱隔离已就绪]
+                </div>
+              )}
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={handleOpenPicker}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-cream-100 border border-cream-300 text-warm-600 text-sm hover:text-warm-800 hover:border-cream-200 transition-colors cursor-pointer"
+                  title="浏览文件夹"
+                >
+                  <Folder className="w-4 h-4" />
+                  浏览
+                </button>
+              )}
             </div>
             <p className="text-[11px] text-warm-400 mt-1">你的 Obsidian 笔记所在的文件夹路径</p>
           </div>

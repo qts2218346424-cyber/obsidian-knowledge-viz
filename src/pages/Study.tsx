@@ -1527,7 +1527,7 @@ function ProgressTab() {
         </div>
         <div className="bg-surface border border-cream-200 rounded-xl p-4">
           <div className="text-xs text-warm-400">考研真题与题库</div>
-          <div className="text-2xl font-bold text-accent-sage mt-1">200+ <span className="text-xs font-normal text-warm-400">道统考真题</span></div>
+          <div className="text-2xl font-bold text-accent-sage mt-1">167 <span className="text-xs font-normal text-warm-400">道统考真题精选</span></div>
           <div className="text-[10px] text-warm-400 mt-1">支持随时随堂一键即练</div>
         </div>
         <div className="bg-surface border border-cream-200 rounded-xl p-4">

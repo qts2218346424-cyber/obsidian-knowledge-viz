@@ -28,6 +28,7 @@ export const routeLoaders = {
 export function prefetchRoute(routePath: string) {
   try {
     switch (routePath) {
+      case '/learn':
       case '/study':
         routeLoaders.study()
         break
@@ -110,6 +111,7 @@ function ProtectedRoutes() {
             <Route path="/workflow" element={<Workflow />} />
             <Route path="/editor" element={<Editor />} />
             <Route path="/study" element={<Study />} />
+            <Route path="/learn" element={<Navigate to="/study" replace />} />
             <Route path="/quiz" element={<Quiz />} />
             <Route path="/vocabulary" element={<Vocabulary />} />
             <Route path="/politics" element={<Politics />} />

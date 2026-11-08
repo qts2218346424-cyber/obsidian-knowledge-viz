@@ -410,7 +410,7 @@ export default function Politics() {
                 }`}
               >
                 <FileCheck2 className="w-3.5 h-3.5" />
-                <span>肖秀荣1000题</span>
+                <span>肖秀荣精选 (15题)</span>
                 <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-rose-500/15 text-rose-700 font-extrabold">
                   刷题
                 </span>
@@ -831,7 +831,7 @@ export default function Politics() {
       )}
 
       {/* =========================================================================
-          TAB 2: 肖秀荣 1000 题专项刷题中心 (单选、多选、名师解析与一键收藏)
+          TAB 2: 肖秀荣核心真题精炼 (15题)中心 (单选、多选、名师解析与一键收藏)
          ========================================================================= */}
       {activeTab === 'xiao1000' && (
         <div className="space-y-4">

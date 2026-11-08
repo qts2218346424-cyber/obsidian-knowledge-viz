@@ -783,6 +783,20 @@ export const api = {
   importAIPluginConfig: (pluginId: string) =>
     postJSON<{ ok: boolean; imported: { pluginId: string; displayName: string; baseURL: string; model: string } }>('/obsidian/plugins/import-ai-config', { pluginId }),
 
+  // Daily Error Log & Quiz Errors
+  saveErrorQuestion: (params: {
+    question: any
+    userAnswer: string
+    errorType: string
+    notes?: string
+  }) => postJSON<{ success: boolean; savedPath: string; fileName: string; syllabus?: any }>('/quiz/save-error', params),
+
+  getCustomQuestions: () => fetchJSON<{ questions: any[] }>('/quiz/custom'),
+
+  saveCustomQuestions: (questions: any[]) => postJSON<{ success: boolean; count: number; total: number }>('/quiz/custom', { questions }),
+
+  generateQuizVariants: (question: any) => postJSON<{ variants: any[] }>('/quiz/variant', { question }),
+
   // Daily Error Log
   addErrorLog: (data: { notePath?: string; question: string; userAnswer?: string; correctAnswer: string; explanation?: string }) =>
     postJSON<{ ok: boolean; path: string; totalQuestions: number }>('/study/error-log', data),

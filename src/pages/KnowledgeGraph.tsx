@@ -618,6 +618,37 @@ export default function KnowledgeGraph() {
           >
             <svg ref={svgRef} width={dimensions.width} height={dimensions.height} className="block h-full w-full" />
 
+            {/* 新账号或单节点空状态引导 */}
+            {totalNodes <= 1 && rawLinks.length === 0 && !loading && (
+              <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
+                <div className="pointer-events-auto max-w-sm rounded-2xl bg-white/95 backdrop-blur-md p-6 border border-zinc-200/90 shadow-xl text-center space-y-3 animate-fade-in-up">
+                  <div className="w-11 h-11 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center mx-auto text-indigo-600 font-bold">
+                    🌐
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-zinc-900">图谱网络待点亮</h3>
+                    <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                      当前账号仅有基础根节点。在【笔记中心】使用 <code>[[知识点]]</code> 创建双向链接，或查阅【讲义中心】，系统将实时交织出考研考点双链拓扑网。
+                    </p>
+                  </div>
+                  <div className="pt-2 flex items-center justify-center gap-2">
+                    <Link
+                      to="/editor"
+                      className="px-3.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold shadow-xs transition-colors"
+                    >
+                      新建双链笔记
+                    </Link>
+                    <Link
+                      to="/study"
+                      className="px-3.5 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-semibold transition-colors"
+                    >
+                      查阅核心讲义
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Floating on-canvas controls (top-left) */}
             <div className="absolute top-3 left-3 z-10 flex flex-col gap-1 rounded-lg border border-neutral-200/80 bg-white/95 p-1 shadow-xs backdrop-blur-md">
               <button

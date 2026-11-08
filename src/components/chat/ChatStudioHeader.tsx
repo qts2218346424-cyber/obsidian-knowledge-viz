@@ -41,8 +41,8 @@ const PROVIDER_META: Record<
   { short: string; label: string; badgeBg: string }
 > = {
   antigravity: {
-    short: '✨ AGY',
-    label: '✨ Antigravity',
+    short: '✨ 研核官方',
+    label: '✨ 研核官方 (Gemini 3.8 Flash)',
     badgeBg: 'text-neutral-900 bg-neutral-100 border-neutral-200',
   },
   codex: {

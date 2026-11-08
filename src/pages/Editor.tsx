@@ -933,7 +933,7 @@ export default function Editor() {
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
             <span className="font-medium">Obsidian 同步</span>
             <span className="subframe-pill text-[10px]">
-              {vaultStats?.totalNotes || 386} 篇
+              {typeof vaultStats?.totalNotes === 'number' ? `${vaultStats.totalNotes} 篇` : '就绪'}
             </span>
           </button>
           <button onClick={handleSave} disabled={saving || (!dirty && !!currentFile)}
@@ -1202,7 +1202,7 @@ export default function Editor() {
                   className="flex items-center gap-2.5 p-3 rounded-2xl bg-purple-50/70 border border-purple-200/70 text-xs font-bold text-purple-800 active:scale-95"
                 >
                   <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-                  <span>同步状态 ({vaultStats?.totalNotes || 443}篇)</span>
+                  <span>同步状态 ({typeof vaultStats?.totalNotes === 'number' ? vaultStats.totalNotes : 0} 篇)</span>
                 </button>
 
                 <button
