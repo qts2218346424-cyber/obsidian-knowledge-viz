@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+﻿import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { Search, X, FileText, Loader2 } from 'lucide-react'
@@ -201,6 +201,8 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
       </div>
     </div>
   )
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent
 }
 
 function highlightMatch(text: string, query: string): React.ReactNode {

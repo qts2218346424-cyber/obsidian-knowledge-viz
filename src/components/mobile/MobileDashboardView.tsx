@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+﻿import { useState, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   Flame,
@@ -25,6 +25,8 @@ import {
   ShieldAlert,
 } from 'lucide-react'
 import { getExamCountdownDays, EXAM_TARGET_LABEL } from '../../utils/examDate'
+import { Palette } from 'lucide-react'
+import { useThemeStyle } from '../../hooks/useThemeStyle'
 
 interface MobileDashboardViewProps {
   stats: { totalNotes: number; totalLinks: number; totalWords: number } | null
@@ -55,6 +57,7 @@ export default function MobileDashboardView({
 }: MobileDashboardViewProps) {
   const navigate = useNavigate()
   const countdownDays = getExamCountdownDays()
+  const { isVibrant, toggleThemeStyle } = useThemeStyle()
 
   // 问候语
   const greeting = useMemo(() => {
@@ -95,14 +98,30 @@ export default function MobileDashboardView({
               </h2>
             </div>
 
-            <button
-              type="button"
-              onClick={onOpenCheckin}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-200 text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer shrink-0"
-            >
-              <Coins className="w-3.5 h-3.5 text-amber-400" />
-              <span className="font-mono">{points.toFixed(1)} 积分</span>
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={toggleThemeStyle}
+                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer ${
+                  isVibrant
+                    ? 'bg-gradient-to-r from-pink-500/25 via-purple-500/25 to-indigo-500/25 border border-indigo-400/50 text-indigo-200'
+                    : 'bg-white/10 hover:bg-white/15 border border-white/20 text-slate-300'
+                }`}
+                title={isVibrant ? '当前为鲜艳活力风，点击切换为极简黑白风' : '当前为经典极简风，点击切换为鲜艳活力风'}
+              >
+                <Palette className={`w-3.5 h-3.5 ${isVibrant ? 'text-pink-400 animate-pulse' : 'text-slate-300'}`} />
+                <span>{isVibrant ? '🎨 鲜艳风' : '极简风'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={onOpenCheckin}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-200 text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer shrink-0"
+              >
+                <Coins className="w-3.5 h-3.5 text-amber-400" />
+                <span className="font-mono">{points.toFixed(1)} 积分</span>
+              </button>
+            </div>
           </div>
 
           {/* 倒计时主展示区 */}
@@ -153,7 +172,11 @@ export default function MobileDashboardView({
           {/* 408 计算机专区 */}
           <Link
             to="/quiz?domain=cs_408"
-            className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs active:scale-[0.98] transition-all flex flex-col justify-between"
+            className={`p-3.5 rounded-2xl border shadow-2xs active:scale-[0.98] transition-all flex flex-col justify-between ${
+              isVibrant
+                ? 'bg-gradient-to-br from-blue-50/90 via-white to-indigo-50/60 border-blue-200/90 shadow-blue-500/10'
+                : 'bg-white border-slate-200/90'
+            }`}
           >
             <div>
               <div className="flex items-center justify-between mb-1.5">
@@ -174,7 +197,11 @@ export default function MobileDashboardView({
           {/* 考研数学专区 */}
           <Link
             to="/quiz?domain=math"
-            className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs active:scale-[0.98] transition-all flex flex-col justify-between"
+            className={`p-3.5 rounded-2xl border shadow-2xs active:scale-[0.98] transition-all flex flex-col justify-between ${
+              isVibrant
+                ? 'bg-gradient-to-br from-purple-50/90 via-white to-violet-50/60 border-purple-200/90 shadow-purple-500/10'
+                : 'bg-white border-slate-200/90'
+            }`}
           >
             <div>
               <div className="flex items-center justify-between mb-1.5">
@@ -195,7 +222,11 @@ export default function MobileDashboardView({
           {/* 考研政治专区 */}
           <Link
             to="/politics"
-            className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs active:scale-[0.98] transition-all flex flex-col justify-between"
+            className={`p-3.5 rounded-2xl border shadow-2xs active:scale-[0.98] transition-all flex flex-col justify-between ${
+              isVibrant
+                ? 'bg-gradient-to-br from-rose-50/90 via-white to-amber-50/60 border-rose-200/90 shadow-rose-500/10'
+                : 'bg-white border-slate-200/90'
+            }`}
           >
             <div>
               <div className="flex items-center justify-between mb-1.5">
@@ -216,7 +247,11 @@ export default function MobileDashboardView({
           {/* 考研英语专区 */}
           <Link
             to="/english"
-            className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs active:scale-[0.98] transition-all flex flex-col justify-between"
+            className={`p-3.5 rounded-2xl border shadow-2xs active:scale-[0.98] transition-all flex flex-col justify-between ${
+              isVibrant
+                ? 'bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/60 border-emerald-200/90 shadow-emerald-500/10'
+                : 'bg-white border-slate-200/90'
+            }`}
           >
             <div>
               <div className="flex items-center justify-between mb-1.5">

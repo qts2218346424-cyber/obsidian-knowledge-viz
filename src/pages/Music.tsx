@@ -1,5 +1,8 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
+  ArrowLeft,
+  Home,
   AlertCircle,
   Cloud,
   ExternalLink,
@@ -32,6 +35,7 @@ const CATEGORY_ICONS: Record<RadioCategory, typeof Headphones> = {
 }
 
 export default function Music() {
+  const navigate = useNavigate()
   const { setQueue, play, state } = useAudioContext()
   // 纯前端本地音频文件导入状态（彻底解决远程 Linux 部署环境下网页用户无法访问服务端本地路径的问题）
   interface BrowserAudio {
@@ -170,11 +174,37 @@ export default function Music() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 animate-fade-in-up">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-warm-800">🎵 音乐电台</h1>
-          <p className="text-sm text-warm-500 mt-1">在线电台 + 本地音乐，学习时随心切换</p>
+      {/* Header 增加一目了然的退出返回导航 */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              if (window.history.length > 1) {
+                navigate(-1)
+              } else {
+                navigate('/dashboard')
+              }
+            }}
+            className="p-2 sm:px-3 sm:py-2 rounded-xl bg-white border border-warm-200/90 hover:bg-warm-100 text-warm-800 font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-2xs active:scale-95 transition-all cursor-pointer shrink-0"
+            title="退出音乐电台，返回上一页"
+          >
+            <ArrowLeft className="w-4 h-4 text-warm-700" />
+            <span>返回</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="p-2 rounded-xl bg-white border border-warm-200/90 hover:bg-warm-100 text-warm-600 font-medium text-xs flex items-center gap-1 shadow-2xs active:scale-95 transition-all cursor-pointer shrink-0"
+            title="返回首页仪表盘"
+          >
+            <Home className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">首页</span>
+          </button>
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-warm-800 truncate">🎵 音乐电台</h1>
+            <p className="text-xs sm:text-sm text-warm-500 mt-0.5 truncate">在线电台 + 本地音乐，学习时随心切换</p>
+          </div>
         </div>
         <div className="flex gap-2">
           <button

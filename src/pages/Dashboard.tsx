@@ -23,6 +23,7 @@ import {
   Tv,
   Search,
   Code2,
+  Palette,
 } from 'lucide-react'
 import { api, type FileListItem } from '../services/api'
 import { useVaultHealth, useVaultStats } from '../hooks/useVaultData'
@@ -70,7 +71,7 @@ interface MetricCardProps {
 }
 
 function MetricCard({ label, value, subtext, icon: Icon, to, colorTheme = 'amber' }: MetricCardProps) {
-  const { isVibrant } = useThemeStyle()
+  const { isVibrant, toggleThemeStyle } = useThemeStyle()
   
   const vibrantThemeMap = {
     amber: {
@@ -132,7 +133,7 @@ function MetricCard({ label, value, subtext, icon: Icon, to, colorTheme = 'amber
 export default function Dashboard() {
   const { isMobile } = useIsMobile()
   const { user, points } = useAuth()
-  const { isVibrant } = useThemeStyle()
+  const { isVibrant, toggleThemeStyle } = useThemeStyle()
   const { stats, loading: statsLoading, reload: reloadStats } = useVaultStats()
   const { report, loading: healthLoading, reload: reloadHealth } = useVaultHealth()
   const [recentFiles, setRecentFiles] = useState<FileListItem[]>([])
@@ -393,6 +394,21 @@ export default function Dashboard() {
           <span className="text-zinc-600 font-medium">{EXAM_TARGET_LABEL} 倒计时</span>
           <span className="font-mono font-extrabold text-sm text-rose-600">{daysToExam} 天</span>
         </div>
+
+        {/* Style Switcher Pill: 视觉风格鲜艳风 / 极简风一键切换 */}
+        <button
+          type="button"
+          onClick={toggleThemeStyle}
+          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.06)] border text-xs font-bold transition-all active:scale-95 cursor-pointer ${
+            isVibrant
+              ? 'border-indigo-300 text-indigo-700 bg-gradient-to-r from-indigo-50/90 via-purple-50/70 to-pink-50/90 hover:border-indigo-400'
+              : 'border-zinc-200/80 text-zinc-700 bg-white hover:bg-zinc-50'
+          }`}
+          title={isVibrant ? '当前风格：鲜艳活力风（点击切换为经典黑白极简风）' : '当前风格：经典黑白极简风（点击切换为鲜艳活力风）'}
+        >
+          <Palette className={`w-3.5 h-3.5 ${isVibrant ? 'text-indigo-600 animate-pulse' : 'text-zinc-500'}`} />
+          <span>{isVibrant ? '🎨 鲜艳风 (开启中)' : '极简风'}</span>
+        </button>
 
         {/* Top-Right Pill: Multi-AI Connection Icons + Avatar (Screen 3 Connect to code replica) */}
         <div className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-2xl bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-zinc-200/80">

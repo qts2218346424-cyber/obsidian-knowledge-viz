@@ -293,10 +293,15 @@ export default function Layout({ children }: LayoutProps) {
             <button
               type="button"
               onClick={toggleThemeStyle}
-              className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center active:scale-95 transition-transform"
+              className={`h-8 px-2 rounded-xl flex items-center gap-1 text-[11px] font-bold shadow-2xs active:scale-95 transition-all cursor-pointer shrink-0 ${
+                isVibrant
+                  ? 'bg-gradient-to-r from-pink-500/15 to-indigo-500/15 border border-indigo-300 text-indigo-700'
+                  : 'bg-slate-100 border border-slate-200 text-slate-600'
+              }`}
               title={isVibrant ? '当前鲜艳风（点击切回极简）' : '当前极简风（点击切鲜艳）'}
             >
-              <Palette className={`w-3.5 h-3.5 ${isVibrant ? 'text-indigo-600' : 'text-slate-500'}`} />
+              <Palette className={`w-3.5 h-3.5 ${isVibrant ? 'text-indigo-600 animate-pulse' : 'text-slate-500'}`} />
+              <span>{isVibrant ? '鲜艳' : '极简'}</span>
             </button>
 
             <button
