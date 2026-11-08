@@ -377,6 +377,23 @@ export default function Politics() {
     })
     return correct
   }, [quizAnswers])
+  // 地图城市点击联动历史事件
+  const handleMapCityClick = useCallback((cityName: string) => {
+    const match = ENHANCED_HISTORY_TIMELINE_ITEMS.find(
+      (item) => item.cityName?.includes(cityName) || item.location?.includes(cityName) || item.title.includes(cityName)
+    )
+    if (match) {
+      setActiveYear(match.year)
+    }
+  }, [])
+
+  // 计算滑块在轨道上的百分比位置用于浮动气泡跟随
+  const sliderPercent = useMemo(() => {
+    const currentIndex = availableYears.indexOf(activeYear)
+    if (currentIndex <= 0 || availableYears.length <= 1) return 0
+    return Math.min(100, Math.max(0, (currentIndex / (availableYears.length - 1)) * 100))
+  }, [availableYears, activeYear])
+
 
   return (
     <div
@@ -489,343 +506,397 @@ export default function Politics() {
       </section>
 
       {/* =========================================================================
-          TAB 1: 全屏史纲时空轴（高保真中国发光地图 + 历史配图画廊 + 拖动时空联动）
+          TAB 1: 全屏史纲时空轴（玄墨金辉科技指挥大屏 · 对标抖音实拍课件质感）
          ========================================================================= */}
       {activeTab === 'timeline' && (
-        <div className="space-y-4">
-          {/* 筛选与操作小工具条 */}
-          <div className="flex flex-wrap items-center justify-between gap-2.5 p-3 rounded-2xl bg-white/90 border border-slate-200/80 shadow-2xs">
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-              <button
-                type="button"
-                onClick={() => setSelectedCategory('all')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
-                  selectedCategory === 'all'
-                    ? 'bg-slate-900 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'
-                }`}
-              >
-                全部脉络 ({ENHANCED_HISTORY_TIMELINE_ITEMS.length})
-              </button>
-              {(Object.keys(CATEGORY_META) as ItemCategory[]).map((cat) => {
-                const meta = CATEGORY_META[cat]
-                const count = ENHANCED_HISTORY_TIMELINE_ITEMS.filter((i) => i.category === cat).length
-                return (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => setSelectedCategory(cat)}
-                    className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 border ${
-                      selectedCategory === cat
-                        ? 'bg-slate-900 text-white border-slate-900'
-                        : 'bg-white text-slate-700 border-slate-200/80 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span>{meta.emoji}</span>
-                    <span>{meta.label}</span>
-                    <span className="opacity-70 font-mono text-[11px]">({count})</span>
-                  </button>
-                )
-              })}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setOnlyAnniversary((v) => !v)}
-                className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                  onlyAnniversary
-                    ? 'bg-amber-500 text-white border-amber-500 shadow-xs'
-                    : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
-                }`}
-              >
-                <Flame className="w-3.5 h-3.5" />
-                <span>逢五逢十热点</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setOnlyPitfall((v) => !v)}
-                className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                  onlyPitfall
-                    ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
-                    : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
-                }`}
-              >
-                <AlertTriangle className="w-3.5 h-3.5" />
-                <span>易错陷阱</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setMaskMode((v) => !v)}
-                className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                  maskMode
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
-                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
-                }`}
-              >
-                {maskMode ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-indigo-600" />}
-                <span>{maskMode ? '背诵遮罩中' : '背诵遮罩'}</span>
-              </button>
-            </div>
-          </div>
-
-          {/* ── 核心全屏大屏：左侧事件背景 + 中间中国发光历史地图 + 右侧考点拆解与配图 ── */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
-            {/* 左侧：历史事件背景与核心决议 (4列) */}
-            <div className="lg:col-span-4 space-y-3.5">
-              <div className="bento-card rounded-3xl p-4 sm:p-5 h-full flex flex-col justify-between border-t-4" style={{ borderTopColor: currentEra.themeColor }}>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-xs font-bold text-slate-400">
-                      {currentEra.startYear}–{currentEra.key === 'reform_new_era' ? '至今' : currentEra.endYear}
+        <div className="space-y-3.5 bg-[#070b14] p-3.5 sm:p-5 rounded-3xl border border-amber-500/20 shadow-[0_0_50px_rgba(0,0,0,0.8)] text-slate-100">
+          {/* ── 顶部大屏标题与分类导航条 (深色玄墨科技风) ── */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-amber-500/20">
+            {/* 左侧：超大金色年份与时期副标题 */}
+            <div className="flex items-baseline gap-3.5">
+              <span className="text-4xl sm:text-5xl font-black font-mono tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-yellow-500 drop-shadow-[0_0_20px_rgba(245,158,11,0.5)]">
+                {activeYear}
+              </span>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs sm:text-sm font-extrabold text-amber-200 tracking-wide">
+                    {currentEra.name}
+                  </span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                    {currentEra.startYear}–{currentEra.key === 'reform_new_era' ? '至今' : currentEra.endYear}
+                  </span>
+                  {currentAnniv.matched && (
+                    <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-rose-500 text-white text-[10px] font-black animate-pulse">
+                      🔥 {currentAnniv.labels.join(' · ')}
                     </span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${currentEra.badgeClass}`}>
-                      {currentEra.name}
-                    </span>
-                  </div>
-
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xl sm:text-2xl font-black font-mono" style={{ color: currentEra.themeColor }}>
-                        {activeYear} 年
-                      </span>
-                      {currentAnniv.matched && (
-                        <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white text-[11px] font-extrabold animate-pulse-soft">
-                          🔥 {currentAnniv.labels.join(' · ')}
-                        </span>
-                      )}
-                    </div>
-                    <h2 className="text-base sm:text-lg font-extrabold text-slate-900 leading-snug">
-                      {activeItem?.title || `${activeYear}年历史概览`}
-                    </h2>
-                  </div>
-
-                  {/* 历史视觉图解插画徽章卡片 */}
-                  {activeItem?.illustration && (
-                    <div className="rounded-2xl p-3.5 bg-gradient-to-br from-slate-900 to-slate-800 text-white relative overflow-hidden shadow-sm">
-                      <div className="absolute right-2 -bottom-2 text-6xl opacity-15 select-none pointer-events-none">
-                        {activeItem.illustration.symbolIcon}
-                      </div>
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                        <span className="text-[11px] font-bold text-amber-300">
-                          {activeItem.illustration.subtitle}
-                        </span>
-                      </div>
-                      <div className="text-xs font-extrabold text-white leading-relaxed">
-                        🔑 {activeItem.illustration.tag}
-                      </div>
-                      <p className="text-[11px] text-slate-300 mt-1 line-clamp-2 leading-relaxed">
-                        {activeItem.illustration.figureQuote}
-                      </p>
-                    </div>
                   )}
-
-                  {/* 核心决议内容 */}
-                  <div className="rounded-2xl p-3.5 bg-slate-50 border border-slate-200/80">
-                    <div className="text-xs font-extrabold text-slate-800 mb-1 flex items-center gap-1.5">
-                      <BookOpen className="w-3.5 h-3.5 text-slate-600" />
-                      <span>📋 核心决议 / 重要文献</span>
-                    </div>
-                    {maskMode && !revealedIds[activeItem?.id || ''] ? (
-                      <button
-                        type="button"
-                        onClick={() => setRevealedIds((prev) => ({ ...prev, [activeItem?.id || '']: true }))}
-                        className="w-full text-left py-2 px-3 rounded-xl bg-indigo-50/70 border border-dashed border-indigo-200 text-xs font-bold text-indigo-700 cursor-pointer"
-                      >
-                        🙈 考点已遮罩，点击揭晓答案
-                      </button>
-                    ) : (
-                      <p className="text-xs sm:text-[13px] text-slate-700 leading-relaxed">
-                        {activeItem?.content || currentStage.summary}
-                      </p>
-                    )}
-                  </div>
                 </div>
-
-                {/* 底部本时期社会主要矛盾导读 */}
-                <div className="pt-3 border-t border-slate-100 mt-3 text-[11px] text-slate-500">
-                  <span className="font-bold text-slate-700">主要矛盾：</span>
-                  <span>{currentEra.coreContradiction.slice(0, 48)}...</span>
-                </div>
+                <span className="text-[11px] text-slate-400 font-mono mt-0.5">
+                  中国近现代史纲要指挥视窗 · 历史地理时空联动
+                </span>
               </div>
             </div>
 
-            {/* 中间：全屏中国历史地理发光地图 (5列) */}
-            <div className="lg:col-span-5 space-y-3.5">
-              <div className="bento-card rounded-3xl p-4 sm:p-5 h-full flex flex-col justify-between bg-[#0a0f1d] text-white border border-slate-800 relative overflow-hidden shadow-xl min-h-[360px] sm:min-h-[420px]">
-                {/* 地图顶部控制条 */}
-                <div className="flex items-center justify-between z-10">
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-2.5 w-2.5 relative">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500" />
-                    </span>
-                    <span className="text-xs font-extrabold text-slate-200">
-                      历史地理时空标绘 · {activeItem?.cityName || '中国全域'}
-                    </span>
-                  </div>
-                  <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
-                    经纬度定位模式
-                  </span>
-                </div>
-
-                {/* 阿里 DataV 阿里标准高精矢量发光中国地图 */}
-                <div className="relative my-2 flex-1 flex items-center justify-center min-h-[340px]">
-                  <ChinaHistoricalMap
-                    activeCoordinates={activeItem?.coordinates}
-                    activeCityName={activeItem?.cityName}
-                    activeDate={activeItem?.date}
-                  />
-                </div>
-
-                {/* 地图下方空间位置说明与肖秀荣千题直达按钮 */}
-                <div className="flex items-center justify-between z-10 pt-2 border-t border-slate-800 text-xs">
-                  <span className="text-slate-400">
-                    史实锚点：<strong className="text-amber-400">{activeItem?.location || activeItem?.cityName}</strong>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => jumpToXiaoByHistory(activeYear)}
-                    className="inline-flex items-center gap-1 text-xs font-bold text-sky-400 hover:text-sky-300 transition-colors cursor-pointer"
-                  >
-                    <span>刷当年真题 (肖秀荣1000题)</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* 右侧：考研一字千金定性 + 易错排雷 + 收藏按钮 (3列) */}
-            <div className="lg:col-span-3 space-y-3.5">
-              <div className="bento-card rounded-3xl p-4 sm:p-5 h-full flex flex-col justify-between border-t-4" style={{ borderTopColor: currentEra.themeColor }}>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-500">考研真题定性点</span>
+            {/* 右侧：分类药丸与控制工具组 */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* 分类筛选器 */}
+              <div className="inline-flex rounded-xl bg-[#0c1220] p-1 border border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategory('all')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    selectedCategory === 'all'
+                      ? 'bg-amber-500 text-slate-950 font-black shadow-[0_0_12px_rgba(245,158,11,0.4)]'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  全部 ({ENHANCED_HISTORY_TIMELINE_ITEMS.length})
+                </button>
+                {(Object.keys(CATEGORY_META) as ItemCategory[]).map((cat) => {
+                  const meta = CATEGORY_META[cat]
+                  const count = ENHANCED_HISTORY_TIMELINE_ITEMS.filter((i) => i.category === cat).length
+                  return (
                     <button
+                      key={cat}
                       type="button"
-                      onClick={() => toggleFavItem(activeItem?.id || '')}
-                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                        favItemIds[activeItem?.id || '']
-                          ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        selectedCategory === cat
+                          ? 'bg-amber-500 text-slate-950 font-black shadow-[0_0_12px_rgba(245,158,11,0.4)]'
+                          : 'text-slate-400 hover:text-white'
                       }`}
                     >
-                      {favItemIds[activeItem?.id || ''] ? (
-                        <BookmarkCheck className="w-3.5 h-3.5 text-amber-600" />
-                      ) : (
-                        <Bookmark className="w-3.5 h-3.5" />
-                      )}
-                      <span>{favItemIds[activeItem?.id || ''] ? '已收藏' : '收藏考点'}</span>
+                      <span>{meta.emoji}</span>
+                      <span>{meta.label}</span>
                     </button>
-                  </div>
+                  )
+                })}
+              </div>
 
-                  {/* 一字千金定性词 */}
-                  <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900">
-                    <div className="text-[11px] font-bold text-rose-600 uppercase tracking-wider mb-1">一字千金定性</div>
-                    <div className="text-xs sm:text-sm font-extrabold leading-snug">
-                      {activeItem?.keyTag || '历史转折与战略新开端'}
-                    </div>
-                  </div>
-
-                  {/* 考研标准历史地位 */}
-                  <div className="p-3 rounded-2xl bg-indigo-50/60 border border-indigo-200/70 text-slate-800">
-                    <div className="text-[11px] font-bold text-indigo-700 uppercase tracking-wider mb-1">考研标准历史意义</div>
-                    {maskMode && !revealedIds[activeItem?.id || ''] ? (
-                      <div className="text-xs text-indigo-500 font-medium py-1">（已打码，默背中...）</div>
-                    ) : (
-                      <p className="text-xs text-slate-700 leading-relaxed">
-                        {activeItem?.significance}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* 肖秀荣命题陷阱红框警告 */}
-                  {activeItem?.pitfall && (
-                    <div className="p-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-rose-900">
-                      <div className="flex items-center gap-1 text-[11px] font-extrabold text-red-600 mb-1">
-                        <AlertTriangle className="w-3.5 h-3.5" />
-                        <span>命题陷阱排雷</span>
-                      </div>
-                      <p className="text-xs leading-relaxed text-red-950 font-medium">
-                        {activeItem.pitfall}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* 底部前后节点推进与自动演进按钮 */}
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-1.5 mt-3">
-                  <button
-                    type="button"
-                    disabled={prevKeyYear === null}
-                    onClick={() => prevKeyYear !== null && setActiveYear(prevKeyYear)}
-                    className="flex-1 py-1.5 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold disabled:opacity-40 cursor-pointer"
-                  >
-                    ← 上一年
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsPlaying((v) => !v)}
-                    className={`py-1.5 px-3 rounded-xl text-xs font-bold border cursor-pointer ${
-                      isPlaying ? 'bg-rose-600 text-white border-rose-600' : 'bg-white border-slate-200 text-slate-800'
-                    }`}
-                  >
-                    {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 text-rose-600" />}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={nextKeyYear === null}
-                    onClick={() => nextKeyYear !== null && setActiveYear(nextKeyYear)}
-                    className="flex-1 py-1.5 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold disabled:opacity-40 cursor-pointer"
-                  >
-                    下一年 →
-                  </button>
-                </div>
+              {/* 功能操作按钮 */}
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setOnlyAnniversary((v) => !v)}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                    onlyAnniversary
+                      ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.4)]'
+                      : 'bg-[#0f172a] text-amber-400 border-amber-500/30 hover:border-amber-400'
+                  }`}
+                >
+                  <Flame className="w-3.5 h-3.5" />
+                  <span>逢五逢十</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOnlyPitfall((v) => !v)}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                    onlyPitfall
+                      ? 'bg-rose-600 text-white border-rose-500 shadow-[0_0_12px_rgba(225,29,72,0.4)]'
+                      : 'bg-[#0f172a] text-rose-400 border-rose-500/30 hover:border-rose-400'
+                  }`}
+                >
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  <span>陷阱</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMaskMode((v) => !v)}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                    maskMode
+                      ? 'bg-indigo-600 text-white border-indigo-400 shadow-[0_0_12px_rgba(99,102,241,0.4)]'
+                      : 'bg-[#0f172a] text-indigo-400 border-indigo-500/30 hover:border-indigo-400'
+                  }`}
+                >
+                  {maskMode ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  <span>{maskMode ? '遮罩中' : '背诵遮罩'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsPlaying((v) => !v)}
+                  className={`p-1.5 rounded-xl text-xs font-bold border cursor-pointer transition-all ${
+                    isPlaying
+                      ? 'bg-amber-500 text-slate-950 border-amber-400'
+                      : 'bg-[#0f172a] text-slate-300 border-slate-700 hover:border-amber-400'
+                  }`}
+                  title={isPlaying ? '暂停演进' : '自动播放演进'}
+                >
+                  {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 text-amber-400" />}
+                </button>
               </div>
             </div>
           </div>
 
-          {/* ── 底部沉浸式时间轴控制底座 ── */}
-          <div className="bento-card rounded-3xl p-4 sm:p-5 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-800 text-white shadow-xl">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2 text-xs">
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold text-amber-400">📅 考研史纲全编年轴 (1840–2024)</span>
-                <span className="text-slate-400 hidden sm:inline">| 拖动滑块或使用键盘左右方向键</span>
+          {/* ── 核心三栏指挥大屏：左侧事件背景 + 中间超大中国发光矢量地图 + 右侧考点速览 ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-stretch">
+            {/* 左侧：事件背景与主要决议 (3.5列) */}
+            <div className="lg:col-span-4 flex flex-col justify-between p-4 sm:p-5 rounded-2xl bg-[#0c1220]/95 border border-amber-500/20 shadow-lg relative overflow-hidden">
+              <div className="space-y-3">
+                {/* 标头区域 */}
+                <div>
+                  <div className="flex items-center justify-between text-xs text-amber-400/80 font-mono mb-1">
+                    <span>{activeItem?.date || `${activeYear}年`}</span>
+                    <span>📍 {activeItem?.location || activeItem?.cityName || '中国'}</span>
+                  </div>
+                  <h2 className="text-lg sm:text-xl font-black text-amber-300 leading-snug tracking-wide">
+                    {activeItem?.title || `${activeYear}年历史概览`}
+                  </h2>
+                </div>
+
+                {/* 视觉图解卡片 (金戈铁马符号与核心金句) */}
+                {activeItem?.illustration && (
+                  <div className="rounded-xl p-3 bg-gradient-to-br from-[#121b2d] to-[#0a0f1d] border border-amber-500/30 text-white relative overflow-hidden">
+                    <div className="absolute right-1 -bottom-2 text-5xl opacity-15 select-none pointer-events-none">
+                      {activeItem.illustration.symbolIcon}
+                    </div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                      <span className="text-[11px] font-bold text-amber-300">
+                        {activeItem.illustration.subtitle}
+                      </span>
+                    </div>
+                    <div className="text-xs font-black text-slate-100">
+                      🔑 {activeItem.illustration.tag}
+                    </div>
+                    <p className="text-[11px] text-slate-300 mt-1 line-clamp-2 leading-relaxed">
+                      {activeItem.illustration.figureQuote}
+                    </p>
+                  </div>
+                )}
+
+                {/* 核心决议 / 重要文献展开 */}
+                <div className="rounded-xl p-3 bg-[#0a0f1c] border border-slate-800 space-y-1.5">
+                  <div className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                    <BookOpen className="w-3.5 h-3.5 text-amber-400" />
+                    <span>📜 历史背景与核心决议文献</span>
+                  </div>
+                  {maskMode && !revealedIds[activeItem?.id || ''] ? (
+                    <button
+                      type="button"
+                      onClick={() => setRevealedIds((prev) => ({ ...prev, [activeItem?.id || '']: true }))}
+                      className="w-full text-left py-2 px-3 rounded-lg bg-indigo-950/60 border border-dashed border-indigo-500/50 text-xs font-bold text-indigo-300 cursor-pointer"
+                    >
+                      🙈 考点已遮罩，点击揭晓答案
+                    </button>
+                  ) : (
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      {activeItem?.content || currentStage.summary}
+                    </p>
+                  )}
+                </div>
+
+                {/* 历史局限性与主要矛盾说明 */}
+                <div className="rounded-xl p-2.5 bg-[#090d18] border border-slate-800/80 text-[11px] text-slate-400 space-y-1">
+                  <div className="font-bold text-slate-300 flex items-center gap-1">
+                    <span>⚖️ 历史矛盾与阶级局限：</span>
+                  </div>
+                  <p className="leading-relaxed line-clamp-3">
+                    {currentEra.coreContradiction}
+                  </p>
+                </div>
               </div>
-              <div className="font-mono text-slate-300">
-                当前焦点：<strong className="text-amber-400 text-sm">{activeYear}</strong> 年（收录 {currentYearItems.length} 项史实）
+
+              {/* 底部前后节点导航 */}
+              <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2 mt-3 text-xs">
+                <button
+                  type="button"
+                  disabled={prevKeyYear === null}
+                  onClick={() => prevKeyYear !== null && setActiveYear(prevKeyYear)}
+                  className="flex-1 py-1.5 px-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 font-bold disabled:opacity-30 cursor-pointer text-center"
+                >
+                  ← 上一节点
+                </button>
+                <button
+                  type="button"
+                  disabled={nextKeyYear === null}
+                  onClick={() => nextKeyYear !== null && setActiveYear(nextKeyYear)}
+                  className="flex-1 py-1.5 px-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-bold disabled:opacity-30 cursor-pointer text-center"
+                >
+                  下一节点 →
+                </button>
               </div>
             </div>
 
-            {/* 原生拖动进度条 */}
-            <input
-              type="range"
-              min={0}
-              max={Math.max(0, availableYears.length - 1)}
-              step={1}
-              value={Math.max(0, availableYears.indexOf(activeYear))}
-              onChange={(e) => {
-                const target = availableYears[Number(e.target.value)]
-                if (target !== undefined) setActiveYear(target)
-              }}
-              className="w-full h-2.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-rose-500"
-            />
+            {/* 中间：全屏黑金发光中国矢量地图 (5列) */}
+            <div className="lg:col-span-5 flex flex-col justify-between p-4 sm:p-5 rounded-2xl bg-[#090e1a] border border-amber-500/30 shadow-[inset_0_0_40px_rgba(0,0,0,0.8)] relative overflow-hidden min-h-[420px] sm:min-h-[460px]">
+              {/* 地图顶部控制条 */}
+              <div className="flex items-center justify-between z-10 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-2.5 w-2.5 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500" />
+                  </span>
+                  <span className="font-extrabold text-amber-300">
+                    时空标绘：{activeItem?.cityName || '中国全域'} · {activeYear}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800/90 text-slate-300 border border-slate-700">
+                    点击名城瞬时联动
+                  </span>
+                </div>
+              </div>
+
+              {/* 阿里 DataV 阿里标准高精矢量发光中国地图 */}
+              <div className="relative my-2 flex-1 flex items-center justify-center min-h-[360px]">
+                <ChinaHistoricalMap
+                  activeCoordinates={activeItem?.coordinates}
+                  activeCityName={activeItem?.cityName}
+                  activeDate={activeItem?.date}
+                  onCityClick={handleMapCityClick}
+                />
+              </div>
+
+              {/* 地图底部信息与肖秀荣真题直达 */}
+              <div className="flex items-center justify-between z-10 pt-2 border-t border-slate-800/80 text-xs">
+                <span className="text-slate-400">
+                  史实坐标：<strong className="text-amber-400">{activeItem?.location || activeItem?.cityName}</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => jumpToXiaoByHistory(activeYear)}
+                  className="inline-flex items-center gap-1 text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors cursor-pointer"
+                >
+                  <span>刷当年真题 (肖秀荣1000题)</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* 右侧：考点速览与肖秀荣真题定性 (3.5列) */}
+            <div className="lg:col-span-3 flex flex-col justify-between p-4 sm:p-5 rounded-2xl bg-[#0c1220]/95 border border-amber-500/20 shadow-lg relative overflow-hidden">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-extrabold text-amber-400/90 uppercase tracking-wider flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    <span>考点速览与真题定性</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => toggleFavItem(activeItem?.id || '')}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      favItemIds[activeItem?.id || '']
+                        ? 'bg-amber-500 text-slate-950 font-black shadow-[0_0_10px_rgba(245,158,11,0.4)]'
+                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                    }`}
+                  >
+                    {favItemIds[activeItem?.id || ''] ? (
+                      <BookmarkCheck className="w-3.5 h-3.5" />
+                    ) : (
+                      <Bookmark className="w-3.5 h-3.5" />
+                    )}
+                    <span>{favItemIds[activeItem?.id || ''] ? '已收藏' : '收藏'}</span>
+                  </button>
+                </div>
+
+                {/* 事件核心定性大标题 */}
+                <div className="p-3 rounded-xl bg-[#090e1a] border border-amber-500/30">
+                  <div className="text-[11px] font-bold text-amber-400/80 uppercase tracking-wider mb-1">
+                    {activeYear} 考研核心定性
+                  </div>
+                  <div className="text-xs sm:text-sm font-black text-amber-300 leading-snug">
+                    {activeItem?.keyTag || '历史转折与战略新开端'}
+                  </div>
+                </div>
+
+                {/* 考研标准历史地位 / 意义 */}
+                <div className="p-3 rounded-xl bg-[#0a0f1d] border border-slate-800 text-slate-200">
+                  <div className="text-[11px] font-bold text-sky-400 uppercase tracking-wider mb-1">
+                    🏛️ 考研标准历史意义
+                  </div>
+                  {maskMode && !revealedIds[activeItem?.id || ''] ? (
+                    <div className="text-xs text-indigo-400 font-medium py-1">（已遮罩，默背中...）</div>
+                  ) : (
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      {activeItem?.significance}
+                    </p>
+                  )}
+                </div>
+
+                {/* 肖秀荣命题陷阱红框排雷 */}
+                {activeItem?.pitfall && (
+                  <div className="p-3 rounded-xl bg-rose-950/40 border border-rose-500/40 text-rose-200">
+                    <div className="flex items-center gap-1 text-[11px] font-black text-rose-400 mb-1">
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                      <span>肖秀荣命题陷阱排雷</span>
+                    </div>
+                    <p className="text-xs leading-relaxed text-rose-200 font-medium">
+                      {activeItem.pitfall}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* 肖秀荣 1000 题直通大按钮 */}
+              <div className="pt-3 border-t border-slate-800/80 mt-3">
+                <button
+                  type="button"
+                  onClick={() => jumpToXiaoByHistory(activeYear)}
+                  className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-[0_0_15px_rgba(245,158,11,0.3)] transition-all cursor-pointer active:scale-98"
+                >
+                  <FileCheck2 className="w-4 h-4" />
+                  <span>立即刷当年肖秀荣 1000 题真题</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* ── 底部沉浸式时间轴控制底座（带跟随滑块的浮动事件徽章气泡） ── */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#090e1a] border border-amber-500/20 shadow-xl relative mt-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold text-amber-400">📅 考研史纲全编年轴 (1840–2024)</span>
+                <span className="text-slate-400 hidden sm:inline">| 拖动滑块查看当年发生的大事件或政治会议</span>
+              </div>
+              <div className="font-mono text-slate-300">
+                当前焦点：<strong className="text-amber-400 text-sm font-black">{activeYear}</strong> 年（收录 {currentYearItems.length} 项史实）
+              </div>
+            </div>
+
+            {/* 现代滑轨容器 (带绝对定位的浮动事件跟随标签) */}
+            <div className="relative pt-8 pb-3">
+              {/* 动态跟随滑块位移的悬浮事件气泡 (对标抖音视频核心亮点) */}
+              <div
+                className="absolute top-0 transition-all duration-100 pointer-events-none transform -translate-x-1/2 flex flex-col items-center z-20"
+                style={{ left: `${sliderPercent}%` }}
+              >
+                <div className="px-2.5 py-1 rounded-lg bg-[#080d1a] border border-amber-400/90 shadow-[0_0_15px_rgba(245,158,11,0.5)] text-[11px] font-black text-amber-300 whitespace-nowrap flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                  <span>{activeYear} {activeItem?.title || '历史节点'}</span>
+                </div>
+                <div className="w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[5px] border-t-amber-400/90" />
+              </div>
+
+              {/* 原生拖动进度条 */}
+              <input
+                type="range"
+                min={0}
+                max={Math.max(0, availableYears.length - 1)}
+                step={1}
+                value={Math.max(0, availableYears.indexOf(activeYear))}
+                onChange={(e) => {
+                  const target = availableYears[Number(e.target.value)]
+                  if (target !== undefined) setActiveYear(target)
+                }}
+                className="w-full h-2.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-400"
+              />
+            </div>
 
             {/* 刻度地标 */}
             <div className="flex justify-between text-[11px] font-mono text-slate-400 mt-1 select-none">
-              <span>1840 鸦片战争</span>
-              <span className="hidden sm:inline">1851 太平天国</span>
-              <span className="hidden md:inline">1911 辛亥革命</span>
-              <span>1921 中共建党</span>
-              <span className="hidden sm:inline">1935 遵义会议</span>
-              <span>1949 新中国诞生</span>
-              <span className="hidden md:inline">1978 改革开放</span>
-              <span>2024 二十届三中</span>
+              <span className="hover:text-amber-400 cursor-pointer" onClick={() => setActiveYear(1840)}>1840 鸦片战争</span>
+              <span className="hidden sm:inline hover:text-amber-400 cursor-pointer" onClick={() => setActiveYear(1851)}>1851 太平天国</span>
+              <span className="hidden md:inline hover:text-amber-400 cursor-pointer" onClick={() => setActiveYear(1911)}>1911 辛亥革命</span>
+              <span className="hover:text-amber-400 cursor-pointer" onClick={() => setActiveYear(1921)}>1921 中共建党</span>
+              <span className="hidden sm:inline hover:text-amber-400 cursor-pointer" onClick={() => setActiveYear(1935)}>1935 遵义会议</span>
+              <span className="hover:text-amber-400 cursor-pointer" onClick={() => setActiveYear(1949)}>1949 新中国诞生</span>
+              <span className="hidden md:inline hover:text-amber-400 cursor-pointer" onClick={() => setActiveYear(1978)}>1978 改革开放</span>
+              <span className="hover:text-amber-400 cursor-pointer" onClick={() => setActiveYear(2024)}>2024 二十届三中</span>
             </div>
 
             {/* 年份胶囊高频直达尺 */}
-            <div className="flex items-end gap-1.5 overflow-x-auto no-scrollbar pt-3 mt-2 border-t border-slate-800">
+            <div className="flex items-end gap-1.5 overflow-x-auto no-scrollbar pt-3 mt-2 border-t border-slate-800/80">
               {availableYears.map((yr) => {
                 const isCurr = yr === activeYear
                 const yrCount = filteredItems.filter((i) => i.year === yr).length
@@ -837,15 +908,15 @@ export default function Politics() {
                     key={yr}
                     type="button"
                     onClick={() => setActiveYear(yr)}
-                    className={`group flex flex-col items-center px-2 py-1.5 rounded-xl border transition-all shrink-0 cursor-pointer ${
+                    className={`group flex flex-col items-center px-2 py-1 rounded-lg border transition-all shrink-0 cursor-pointer ${
                       isCurr
-                        ? 'bg-rose-600 text-white border-rose-500 shadow-md scale-105'
-                        : 'bg-slate-800/80 text-slate-400 border-slate-700 hover:bg-slate-700 hover:text-white'
+                        ? 'bg-amber-500 text-slate-950 font-black border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.5)] scale-105'
+                        : 'bg-[#0c1220] text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-white'
                     }`}
                   >
                     <span
                       className={`w-1.5 rounded-full mb-1 transition-all ${
-                        isCurr ? 'bg-amber-300' : anniv.matched ? 'bg-amber-400' : 'bg-slate-500'
+                        isCurr ? 'bg-slate-950' : anniv.matched ? 'bg-amber-400' : 'bg-slate-600'
                       }`}
                       style={{ height: `${barHeight}px` }}
                     />
@@ -857,8 +928,7 @@ export default function Politics() {
           </div>
         </div>
       )}
-
-      {/* =========================================================================
+{/* =========================================================================
           TAB 2: 肖秀荣核心真题精炼 (15题)中心 (单选、多选、名师解析与一键收藏)
          ========================================================================= */}
       {activeTab === 'xiao1000' && (
