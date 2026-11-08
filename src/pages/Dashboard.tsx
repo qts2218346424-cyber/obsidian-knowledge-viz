@@ -20,8 +20,8 @@ import {
   Sigma,
   Sparkles,
   Tv,
-  MoreHorizontal,
   Search,
+  Code2,
 } from 'lucide-react'
 import { api, type FileListItem } from '../services/api'
 import { useVaultHealth, useVaultStats } from '../hooks/useVaultData'
@@ -66,8 +66,8 @@ function MetricCard({ label, value, subtext, icon: Icon, to }: MetricCardProps) 
     <div className="bento-card bento-card-hover rounded-xl p-4 sm:p-5 relative overflow-hidden group h-full flex flex-col justify-between active:scale-[0.99] transition-all">
       <div className="flex items-center justify-between gap-2 mb-3">
         <span className="text-xs font-medium text-neutral-500 truncate">{label}</span>
-        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center bg-neutral-100 text-neutral-600 border border-neutral-200/70 shrink-0">
-          <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-neutral-100 text-neutral-700 border border-neutral-200/80 shadow-2xs shrink-0 group-hover:scale-105 transition-transform">
+          <Icon className="h-4 w-4" />
         </div>
       </div>
       <div>
@@ -88,6 +88,7 @@ export default function Dashboard() {
   const [recentFiles, setRecentFiles] = useState<FileListItem[]>([])
   const [filesLoading, setFilesLoading] = useState(true)
   const [searchFilter, setSearchFilter] = useState('')
+  const [activeMode, setActiveMode] = useState<'cs' | 'math' | 'ai'>('cs')
 
   useEffect(() => {
     let cancelled = false
@@ -134,6 +135,54 @@ export default function Dashboard() {
     return recentFiles.filter(f => (f.title || f.path).toLowerCase().includes(q))
   }, [recentFiles, searchFilter])
 
+  // Subframe 3D Metallic Switcher 模式配置
+  const modeConfigs = {
+    cs: {
+      headline: '408 计算机学科专业基础',
+      subheadline: '统考四门数据结构 · 组成原理 · 操作系统 · 计算机网络',
+      badge: (
+        <>
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+          <span>当前激活：<strong>408 统考舱</strong> — 已就绪 {QUESTION_BANK.length} 道真题演练与算法推演</span>
+        </>
+      ),
+      actionPrimary: '/quiz?domain=cs_408',
+      actionPrimaryLabel: '开始 408 真题训练',
+      actionSecondary: '/study',
+      actionSecondaryLabel: '查阅专业课讲义',
+    },
+    math: {
+      headline: '考研数学 智能推导作战舱',
+      subheadline: '高等数学 / 微积分 · 线性代数 · 概率论与数理统计',
+      badge: (
+        <>
+          <span className="w-1.5 h-1.5 rounded-full bg-indigo-600" />
+          <span>当前激活：<strong>考研数学舱</strong> — KaTeX 学术级公式排版与步骤推导（{MATH_QUESTION_BANK.length} 题）</span>
+        </>
+      ),
+      actionPrimary: '/quiz?domain=math',
+      actionPrimaryLabel: '开始数学高频冲刺',
+      actionSecondary: '/chat',
+      actionSecondaryLabel: 'AI 严谨公式分步推导',
+    },
+    ai: {
+      headline: '研考 AI 导师多智能体伴学',
+      subheadline: '基于本地知识库的精准检索增强 (RAG) 与错题归因推理',
+      badge: (
+        <>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+          <span>当前激活：<strong>AI 伴学中心</strong> — 多智能体协同答疑、思维链推导与知识图谱溯源</span>
+        </>
+      ),
+      actionPrimary: '/chat',
+      actionPrimaryLabel: '进入 AI 导师答疑',
+      actionSecondary: '/history',
+      actionSecondaryLabel: '浏览政治史纲时空轴',
+    },
+  }
+
+  const currentModeData = modeConfigs[activeMode]
+
   if (!statsLoading && !hasConnectedVault) {
     return (
       <div className="mx-auto max-w-4xl py-6">
@@ -174,7 +223,7 @@ export default function Dashboard() {
           <div className="flex justify-end mt-6">
             <Link
               to="/settings"
-              className="subframe-btn-black text-xs font-medium"
+              className="px-4 py-2 rounded-[10px] bg-[#1c1c1f] hover:bg-[#2a2a2e] text-white text-xs font-medium shadow-[0_2px_6px_rgba(0,0,0,0.18)] transition-all active:scale-[0.99] inline-flex items-center gap-2"
             >
               配置知识库路径
               <ArrowRight className="h-3.5 w-3.5" />
@@ -186,59 +235,116 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="mx-auto max-w-[1560px] space-y-5 animate-fade-in-up">
-      {/* ── Subframe Workspace Top Banner ── */}
-      <section className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between pb-4 border-b border-neutral-200/80">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900">
-              {vaultName}
-            </h1>
-            <span className="subframe-pill text-xs">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              双核就绪
-            </span>
-            <span className="subframe-pill text-xs font-mono">
-              初试倒计时 {daysToExam} 天
-            </span>
-          </div>
-          <p className="mt-1 text-xs sm:text-sm text-neutral-500">
-            {getTimeGreeting()} · 已索引 {stats?.totalNotes ?? 0} 篇笔记与 {totalQuestions} 道专业真题
-          </p>
+    <div className="mx-auto max-w-[1560px] space-y-6 animate-fade-in-up">
+      {/* ── Subframe Top Workspace Status Bar ── */}
+      <div className="flex items-center justify-between pb-3 border-b border-neutral-200/80 text-xs text-neutral-500">
+        <div className="flex items-center gap-2">
+          <span className="font-semibold text-neutral-900 text-sm tracking-tight">{vaultName}</span>
+          <span className="text-neutral-300">/</span>
+          <span className="subframe-pill text-[11px]">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            双核知识网络就绪
+          </span>
+          <span className="hidden sm:inline-flex subframe-pill text-[11px] font-mono">
+            距 12.19 初试还有 {daysToExam} 天
+          </span>
         </div>
-
-        {/* Subframe Action Bar */}
-        <div className="flex items-center gap-2 flex-wrap shrink-0">
-          <Link
-            to="/quiz"
-            className="subframe-btn-black text-xs font-medium"
-          >
-            <Flame className="h-3.5 w-3.5 text-amber-400" />
-            <span>开始刷题</span>
-          </Link>
-          <Link
-            to="/chat"
-            className="subframe-btn-secondary text-xs font-medium"
-          >
-            <Sparkles className="h-3.5 w-3.5 text-neutral-500" />
-            <span>AI 导师</span>
-          </Link>
-          <Link
-            to="/history"
-            className="subframe-btn-secondary text-xs font-medium"
-          >
-            <Landmark className="h-3.5 w-3.5 text-neutral-500" />
-            <span>政治史纲</span>
-          </Link>
+        <div className="flex items-center gap-2">
+          <span className="hidden md:inline text-neutral-400">{getTimeGreeting()}</span>
           <button
             type="button"
             onClick={openQuickNote}
-            className="subframe-btn-secondary text-xs font-medium cursor-pointer"
+            className="subframe-btn-secondary h-7 px-2.5 text-xs font-medium cursor-pointer"
           >
-            <PenLine className="h-3.5 w-3.5 text-neutral-500" />
-            <span>随手记</span>
+            <PenLine className="h-3 w-3 text-neutral-500" />
+            <span>随手速记</span>
           </button>
         </div>
+      </div>
+
+      {/* ── Subframe Hero Studio Section with 3D Metallic Hardware Switcher ── */}
+      <section className="relative overflow-hidden rounded-2xl subframe-bg border border-black/10 py-10 sm:py-14 px-4 sm:px-8 text-center flex flex-col items-center justify-center shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
+        
+        {/* 3D Metallic Chrome Hardware Pill Switcher (Exact Replica from Subframe UI) */}
+        <div className="relative mb-7 select-none">
+          <div className="metallic-ambient-glow" />
+
+          <div className="metallic-housing relative z-10 scale-95 sm:scale-100">
+            <div className="metallic-bezel flex items-center gap-1 sm:gap-2">
+
+              {/* Tab 1: 408 计算机 */}
+              <button
+                type="button"
+                onClick={() => setActiveMode('cs')}
+                className={`relative flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-[12px] text-xs sm:text-[13px] font-medium transition-all duration-200 cursor-pointer ${
+                  activeMode === 'cs' ? 'metal-tab-active' : 'metal-tab-inactive'
+                }`}
+              >
+                <Cpu className={`h-3.5 w-3.5 ${activeMode === 'cs' ? 'text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.8)]' : ''}`} />
+                <span>408 计算机</span>
+              </button>
+
+              {/* Tab 2: 考研数学 */}
+              <button
+                type="button"
+                onClick={() => setActiveMode('math')}
+                className={`relative flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-[12px] text-xs sm:text-[13px] font-medium transition-all duration-200 cursor-pointer ${
+                  activeMode === 'math' ? 'metal-tab-active' : 'metal-tab-inactive'
+                }`}
+              >
+                <Sigma className={`h-3.5 w-3.5 ${activeMode === 'math' ? 'text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.8)]' : ''}`} />
+                <span>考研数学</span>
+              </button>
+
+              {/* Tab 3: AI 伴学 */}
+              <button
+                type="button"
+                onClick={() => setActiveMode('ai')}
+                className={`relative flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-[12px] text-xs sm:text-[13px] font-medium transition-all duration-200 cursor-pointer ${
+                  activeMode === 'ai' ? 'metal-tab-active' : 'metal-tab-inactive'
+                }`}
+              >
+                <Sparkles className={`h-3.5 w-3.5 ${activeMode === 'ai' ? 'text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.8)]' : ''}`} />
+                <span>AI 伴学</span>
+              </button>
+
+            </div>
+          </div>
+        </div>
+
+        {/* Hero Headline & Subtitle */}
+        <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight text-[#171719] mb-3 transition-all duration-300">
+          {currentModeData.headline}
+        </h1>
+
+        <p className="text-sm sm:text-base md:text-lg font-normal tracking-tight text-[#6e7178] max-w-[680px] mb-6 transition-all duration-300">
+          {currentModeData.subheadline}
+        </p>
+
+        {/* Dynamic Mode Live Status Pill */}
+        <div className="mb-7 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/[0.04] border border-black/[0.06] text-xs text-[#52525b] shadow-2xs">
+          {currentModeData.badge}
+        </div>
+
+        {/* Subframe CTA Button Pair */}
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <Link
+            to={currentModeData.actionPrimary}
+            className="px-5 py-2.5 rounded-[10px] bg-[#1c1c1f] hover:bg-[#2a2a2e] text-white text-xs sm:text-sm font-medium shadow-[0_2px_6px_rgba(0,0,0,0.18)] transition-all active:scale-[0.99] inline-flex items-center gap-2"
+          >
+            <Flame className="h-4 w-4 text-amber-400" />
+            <span>{currentModeData.actionPrimaryLabel}</span>
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+
+          <Link
+            to={currentModeData.actionSecondary}
+            className="px-5 py-2.5 rounded-[10px] bg-[#e3e4e7] hover:bg-[#d8d9dd] text-[#18181b] text-xs sm:text-sm font-medium border border-black/[0.05] transition-all active:scale-[0.99] inline-flex items-center gap-2"
+          >
+            <span>{currentModeData.actionSecondaryLabel}</span>
+          </Link>
+        </div>
+
       </section>
 
       {/* ── Subframe Metric Grid ── */}
@@ -253,7 +359,7 @@ export default function Dashboard() {
         <MetricCard
           label="双链知识网络"
           value={stats?.totalLinks ?? 0}
-          subtext="跨章节双向链接"
+          subtext="跨章节双向引用"
           icon={Link2}
           to="/graph"
         />
@@ -267,7 +373,7 @@ export default function Dashboard() {
         <MetricCard
           label="知识体系健康度"
           value={`${healthScore} 分`}
-          subtext={`${issueCount} 项结构建议`}
+          subtext={`${issueCount} 项结构优化建议`}
           icon={HeartPulse}
           to="/workflow"
         />
