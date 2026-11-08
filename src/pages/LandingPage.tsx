@@ -1464,26 +1464,29 @@ export default function LandingPage() {
       </section>
 
       {/*  */}
-      {authModalOpen && (
+      {authModalOpen && createPortal(
         <div
           onClick={(e) => {
             if (e.target === e.currentTarget) setAuthModalOpen(false)
           }}
-          className="fixed inset-0 z-50 bg-black/45 backdrop-blur-[2px] flex items-center justify-center p-4 sm:p-6 transition-all"
+          className="fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto modal-scroll-contain overscroll-contain animate-in fade-in duration-200"
+          role="dialog"
+          aria-modal="true"
         >
-          <div className="relative w-full max-w-[940px] rounded-[18px] bg-[#e3e3e6] p-2.5 sm:p-3 shadow-[0_28px_70px_rgba(0,0,0,0.45)] border border-white/60 grid grid-cols-1 lg:grid-cols-12 gap-3 overflow-hidden animate-fade-in-up">
-            {/* 关闭按钮 */}
+          <div className="relative w-full max-w-[940px] max-h-[calc(100dvh-1.5rem)] sm:max-h-[min(90dvh,720px)] rounded-[20px] bg-[#e3e3e6] p-2.5 sm:p-3 shadow-[0_28px_70px_rgba(0,0,0,0.5)] border border-white/60 grid grid-cols-1 lg:grid-cols-12 gap-3 overflow-hidden my-auto animate-in zoom-in-95 duration-200">
+            {/* 固定的关闭按钮（右上角常驻、大点击热区） */}
             <button
               type="button"
               onClick={() => setAuthModalOpen(false)}
-              className="absolute top-4 right-4 z-40 w-7 h-7 rounded-full bg-black/10 hover:bg-black/20 text-zinc-700 flex items-center justify-center transition-colors cursor-pointer"
-              title="关闭弹窗"
+              className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 z-50 w-8 h-8 rounded-full bg-black/15 hover:bg-black/25 active:scale-90 text-zinc-800 flex items-center justify-center transition-all cursor-pointer border border-white/40 shadow-xs"
+              title="关闭弹窗 (ESC)"
+              aria-label="关闭登录弹窗"
             >
               <X className="w-4 h-4" />
             </button>
 
-            {/* 左栏：身份认证、注册与找回密码 */}
-            <div className="lg:col-span-5 bg-[#efefef] rounded-[14px] p-6 sm:p-7 flex flex-col justify-between text-left border border-white/70">
+            {/* 左栏：身份认证、注册与找回密码 (手机端独立纵向滚动，高度自适应) */}
+            <div className="lg:col-span-5 bg-[#efefef] rounded-[14px] p-5 sm:p-7 flex flex-col justify-between text-left border border-white/70 overflow-y-auto max-h-[calc(100dvh-3.5rem)] lg:max-h-none modal-scroll-contain overscroll-contain">
               <div>
                 <div className="w-8 h-8 rounded-lg bg-[#18181b] text-white flex items-center justify-center shadow-sm mb-5">
                   <svg className="w-5 h-5 text-white" viewBox="0 0 28 28" fill="none">
@@ -1798,7 +1801,7 @@ export default function LandingPage() {
             </div>
 
             {/* 右栏：工作台实景画板微型预览 */}
-            <div className="lg:col-span-7 flex items-center justify-center p-2 overflow-hidden">
+            <div className="hidden lg:flex lg:col-span-7 items-center justify-center p-2 overflow-hidden">
               <div className="w-full bg-white rounded-[12px] shadow-[0_8px_24px_rgba(0,0,0,0.08)] border border-black/[0.08] p-3 text-left">
                 <div className="flex items-center justify-between border-b border-zinc-200 pb-2 mb-3 text-[10px] text-zinc-500">
                   <span className="font-semibold text-zinc-800">研核工作台 · 实时画板</span>
@@ -1832,7 +1835,8 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/*  */}
