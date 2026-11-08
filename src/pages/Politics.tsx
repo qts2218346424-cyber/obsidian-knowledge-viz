@@ -404,7 +404,7 @@ export default function Politics() {
       className={`mx-auto ${
         isFullscreen
           ? 'fixed inset-0 z-50 bg-[#080c14] text-slate-100 p-3 sm:p-5 overflow-y-auto no-scrollbar'
-          : 'max-w-[1520px] space-y-4 sm:space-y-5 animate-fade-in-up text-slate-900'
+          : 'max-w-[1520px] w-full min-w-0 space-y-4 sm:space-y-5 pb-28 sm:pb-8 animate-fade-in-up text-slate-900'
       }`}
     >
       {/* ── 顶部统一政治专区导航驾驶舱 (Linear 极简微阴影与克制色阶) ── */}

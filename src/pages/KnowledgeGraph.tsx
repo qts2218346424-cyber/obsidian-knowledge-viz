@@ -840,7 +840,7 @@ export default function KnowledgeGraph() {
             ref={containerRef}
             className="relative flex-1 min-h-0 overflow-hidden sm:rounded-xl sm:border sm:border-neutral-200/80 bg-neutral-50/50 shadow-xs select-none"
           >
-            <svg ref={svgRef} width={dimensions.width} height={dimensions.height} className="block h-full w-full" />
+            <svg ref={svgRef} width={dimensions.width} height={dimensions.height} className="block h-full w-full touch-none select-none" style={{ touchAction: 'none' }} />
 
             {/* Floating on-canvas controls (top-left) */}
             <div className="absolute top-3 left-3 z-10 flex flex-col gap-1 rounded-lg border border-neutral-200/80 bg-white/95 p-1 shadow-xs backdrop-blur-md">

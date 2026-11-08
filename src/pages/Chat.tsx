@@ -124,7 +124,7 @@ function getUserChatStorageKey(userId?: string): string {
 }
 
 export default function Chat() {
-  const { user } = useAuth()
+  const { user, isAdmin } = useAuth()
   // 项目工作区管理状态
   const [workspace, setWorkspace] = useState(() => loadWorkspace())
   const activeProject = useMemo(() => {
@@ -2795,18 +2795,20 @@ export default function Chat() {
                       {m}
                     </option>
                   ))}
-                  <option value="__custom__">⚙️ 自定义模型名称...</option>
+                  {isAdmin && <option value="__custom__">⚙️ 自定义模型名称...</option>}
                 </select>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMobileConfigOpen(false)
-                    setShowModelManagerModal(true)
-                  }}
-                  className="p-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-600"
-                >
-                  <Settings className="w-4 h-4" />
-                </button>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileConfigOpen(false)
+                      setShowModelManagerModal(true)
+                    }}
+                    className="p-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-600"
+                  >
+                    <Settings className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -2832,7 +2834,7 @@ export default function Chat() {
                 className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl text-xs font-semibold bg-purple-50 border border-purple-200 text-purple-800"
               >
                 <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-                <span>本机技能 (98+)</span>
+                <span>自带技能库</span>
               </button>
             </div>
 

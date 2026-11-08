@@ -372,9 +372,9 @@ ${essayInput.trim()}
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 pb-16 animate-fade-in font-sans">
+    <div className="max-w-7xl mx-auto w-full min-w-0 space-y-5 sm:space-y-6 pb-28 sm:pb-16 animate-fade-in font-sans">
       {/* ── 顶部头图看板 ── */}
-      <section className="relative overflow-hidden rounded-3xl border border-slate-200/90 bg-gradient-to-br from-white via-indigo-50/20 to-slate-50 p-6 sm:p-8 shadow-xs">
+      <section className="relative overflow-hidden rounded-3xl border border-slate-200/90 bg-gradient-to-br from-white via-indigo-50/20 to-slate-50 p-4 sm:p-8 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200/80 text-[11px] font-semibold text-indigo-700 shadow-2xs">
@@ -854,7 +854,7 @@ ${essayInput.trim()}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
             {/* 左侧：输入工作台 (6列) */}
             <div className="lg:col-span-6 space-y-4">
-              <div className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xs space-y-4">
+              <div className="rounded-2xl sm:rounded-3xl border border-slate-200/90 bg-white p-3.5 sm:p-6 shadow-xs space-y-3.5 sm:space-y-4">
                 <input
                   type="file"
                   ref={handwritingInputRef}

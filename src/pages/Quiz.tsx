@@ -733,7 +733,7 @@ export default function Quiz() {
     const effectiveCount = Math.min(questionCount, Math.max(1, maxQuestions))
 
     return (
-      <div className="mx-auto max-w-[1520px] space-y-4 sm:space-y-6 pb-16 md:pb-0 animate-fade-in-up">
+      <div className="mx-auto max-w-[1520px] w-full min-w-0 space-y-4 sm:space-y-6 pb-36 md:pb-0 animate-fade-in-up">
         {/* Subframe Workspace Header */}
         <div className="bento-card rounded-2xl border border-neutral-200/85 bg-white p-5 sm:p-7 shadow-xs">
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
@@ -1307,7 +1307,7 @@ export default function Quiz() {
     const currentScratchpad = scratchpads[currentQ.id] || ''
 
     return (
-      <div className="mx-auto max-w-[1560px] space-y-3 sm:space-y-4 pb-16 lg:pb-0 animate-fade-in-up">
+      <div className="mx-auto max-w-[1560px] w-full min-w-0 space-y-3 sm:space-y-4 pb-28 lg:pb-0 animate-fade-in-up">
         {/* ── 📱 移动端专属微型刷题控制条 (专为手机单手设计) ── */}
         <div className="sm:hidden bento-card rounded-2xl bg-white px-3 py-2 flex items-center justify-between gap-1.5 shadow-xs border border-slate-200/90 relative">
           <div className="flex items-center gap-1.5 min-w-0">
@@ -1448,7 +1448,7 @@ export default function Quiz() {
         <div className="grid grid-cols-1 lg:grid-cols-[1.22fr_0.78fr] gap-5 items-start">
           {/* ───────────────── LEFT PANEL: Question & Solution ───────────────── */}
           <div className="space-y-3.5 sm:space-y-4 min-w-0">
-            <div className="rounded-3xl border border-slate-200/60 bg-white shadow-[0_2px_16px_rgba(0,0,0,0.03)] p-5 sm:p-8 space-y-5 relative">
+            <div className="rounded-2xl sm:rounded-3xl border border-slate-200/60 bg-white shadow-xs p-3.5 sm:p-8 space-y-3.5 sm:space-y-5 relative">
               {/* Floating Canvas Action Pill (Subframe Screen 5 Replica) */}
               <div className="absolute right-4 top-4 z-10 hidden sm:inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-neutral-50/90 border border-neutral-200/80 text-neutral-600 text-[11px] shadow-2xs">
                 <button
@@ -1526,7 +1526,7 @@ export default function Quiz() {
               {/* Answering Area */}
               {hasOptions ? (
                 /* Choice Options (选择题选项) */
-                <div className="space-y-3 pt-2">
+                <div className="space-y-2 sm:space-y-3 pt-1.5">
                   {optionKeys.map((key) => {
                     const optionText = currentQ.options![key]
                     if (!optionText) return null
@@ -1551,7 +1551,7 @@ export default function Quiz() {
                         onClick={() => handleOptionSelect(key)}
                         disabled={mode === 'practice' && showFeedback}
                         aria-label={`选项 ${key}: ${optionText}`}
-                        className={`w-full text-left rounded-2xl border px-4 py-3.5 transition-all duration-150 group flex items-start gap-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${btnStyle} ${
+                        className={`w-full text-left rounded-xl sm:rounded-2xl border px-3 py-2.5 sm:px-4 sm:py-3.5 transition-all duration-150 group flex items-start gap-2.5 sm:gap-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${btnStyle} ${
                           mode === 'practice' && showFeedback
                             ? 'cursor-default'
                             : 'cursor-pointer hover:scale-[1.006] active:scale-[0.99] hover:shadow-sm'
@@ -1674,7 +1674,7 @@ export default function Quiz() {
 
             {/* Explanation & Step-by-Step Derivation (Notion / Brilliant Style) */}
             {mode === 'practice' && showFeedback && (
-              <div className="rounded-3xl border border-slate-200/60 bg-white shadow-[0_2px_16px_rgba(0,0,0,0.03)] p-5 sm:p-7 space-y-4 animate-fade-in-up leading-[1.75]">
+              <div className="rounded-2xl sm:rounded-3xl border border-slate-200/60 bg-white shadow-xs p-3.5 sm:p-7 space-y-3 sm:space-y-4 animate-fade-in-up leading-[1.75]">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
                     <span className="text-base">💡</span>
@@ -2379,9 +2379,9 @@ export default function Quiz() {
     const gradeEmoji = percentage >= 80 ? '🎉' : percentage >= 60 ? '💪' : '📚'
 
     return (
-      <div className="mx-auto max-w-[1280px] space-y-6 animate-fade-in-up">
+      <div className="mx-auto max-w-[1280px] w-full min-w-0 space-y-5 sm:space-y-6 pb-28 lg:pb-0 animate-fade-in-up">
         {/* Results Hero Header */}
-        <div className="bento-card rounded-xl border border-neutral-200/80 bg-white shadow-xs p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="bento-card rounded-2xl border border-neutral-200/80 bg-white shadow-xs p-4 sm:p-8 flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6">
           <div>
             <div className="text-xs font-semibold uppercase tracking-wider text-slate-400">做题测评结算</div>
             <h1 className="mt-1 text-2xl font-bold text-slate-900 flex items-center gap-2">
@@ -2392,7 +2392,7 @@ export default function Quiz() {
             </p>
           </div>
 
-          <div className="flex items-center gap-8 bg-neutral-50 px-6 py-4 rounded-xl border border-neutral-200/80">
+          <div className="flex items-center justify-center gap-4 sm:gap-8 bg-neutral-50 px-4 sm:px-6 py-3 sm:py-4 rounded-xl border border-neutral-200/80 w-full sm:w-auto">
             <div className="text-center">
               <div className="text-xs text-slate-400">总得分率</div>
               <div className={`text-4xl font-extrabold ${gradeColor}`}>{percentage}%</div>

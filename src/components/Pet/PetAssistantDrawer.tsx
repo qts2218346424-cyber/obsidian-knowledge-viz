@@ -1,3 +1,4 @@
+import { useAuth } from '../../contexts/AuthContext'
 import * as authService from '../../services/auth'
 import { useState, useEffect, useRef, useMemo } from 'react'
 import {
@@ -78,6 +79,7 @@ export default function PetAssistantDrawer({
   onTokenConsumed,
   onSetMood,
 }: PetAssistantDrawerProps) {
+  const { isAdmin } = useAuth()
   const [provider, setProvider] = useState<ProviderType>(() => {
     return (localStorage.getItem('coreforge_active_provider') as ProviderType) || 'codex'
   })
@@ -649,33 +651,39 @@ export default function PetAssistantDrawer({
             </div>
           ))}
 
-          {/* Model Manager Launcher */}
-          <button
-            onClick={() => setShowModelManagerModal(true)}
-            title="管理模型仓库（可删除不需要的模型）"
-            className="px-2 py-0.5 rounded-lg text-[10px] font-medium bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shrink-0 flex items-center gap-1 cursor-pointer"
-          >
-            <Settings className="w-3 h-3 text-orange-500" />
-            <span>管理</span>
-          </button>
+          {/* Model Manager Launcher - 仅超级管理员可见 */}
+          {isAdmin && (
+            <button
+              onClick={() => setShowModelManagerModal(true)}
+              title="管理模型仓库（可删除不需要的模型）"
+              className="px-2 py-0.5 rounded-lg text-[10px] font-medium bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shrink-0 flex items-center gap-1 cursor-pointer"
+            >
+              <Settings className="w-3 h-3 text-orange-500" />
+              <span>管理</span>
+            </button>
+          )}
 
           {/* Custom model entry */}
           <div className="flex items-center gap-1 shrink-0">
-            <input
-              type="text"
-              placeholder="自定义模型..."
-              value={customModelInput}
-              onChange={e => setCustomModelInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleCustomModelApply()}
-              className="w-24 text-[11px] font-mono px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 outline-none focus:border-indigo-400"
-            />
-            {customModelInput.trim() && (
-              <button
-                onClick={handleCustomModelApply}
-                className="px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold hover:bg-indigo-100"
-              >
-                应用
-              </button>
+            {isAdmin && (
+              <>
+                <input
+                  type="text"
+                  placeholder="自定义模型..."
+                  value={customModelInput}
+                  onChange={e => setCustomModelInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleCustomModelApply()}
+                  className="w-24 text-[11px] font-mono px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 outline-none focus:border-indigo-400"
+                />
+                {customModelInput.trim() && (
+                  <button
+                    onClick={handleCustomModelApply}
+                    className="px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold hover:bg-indigo-100"
+                  >
+                    应用
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>

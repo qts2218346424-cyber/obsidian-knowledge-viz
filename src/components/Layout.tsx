@@ -256,48 +256,49 @@ export default function Layout({ children }: LayoutProps) {
   ]
 
   return (
-    <div className="min-h-dvh aurora-mesh text-slate-900 selection:bg-accent-orange/20 selection:text-accent-orange font-sans antialiased">
+    <div className="min-h-dvh aurora-mesh w-full max-w-full text-slate-900 selection:bg-accent-orange/20 selection:text-accent-orange font-sans antialiased relative">
       {/* Top Global Header */}
       <header className="sticky top-0 z-40 bg-white/90 glass-header border-b border-slate-200/80 pt-[env(safe-area-inset-top,0px)]">
         {/* ── 📱 移动端专属精炼 Header (防挤压、高审美、大单手热区) ── */}
-        <div className="flex md:hidden w-full h-12 items-center justify-between gap-2 px-3">
+        <div className="flex md:hidden w-full h-12 items-center justify-between gap-1.5 px-3 max-w-full">
           {/* 左侧：Logo + 考研倒计时金牌 */}
-          <Link to="/dashboard" className="flex items-center gap-2 select-none shrink-0 min-w-0">
+          <Link to="/dashboard" className="flex items-center gap-1.5 select-none shrink min-w-0">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-neutral-950 p-1 shadow-2xs shrink-0">
               <img src="/favicon.svg" alt="研核" className="h-full w-full object-contain" />
             </div>
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-[14px] font-extrabold tracking-tight text-neutral-900 truncate">
-                研核考研
+            <div className="flex items-center gap-1 min-w-0">
+              <span className="text-[13.5px] font-extrabold tracking-tight text-neutral-900 truncate">
+                研核
               </span>
-              <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-800 border border-amber-300/80 shadow-2xs shrink-0">
+              <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-800 border border-amber-300/80 shadow-2xs shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                 {countdownDays}天
               </span>
             </div>
           </Link>
 
-          {/* 右侧：风格切换 + 积分打卡小胶囊 + 搜索 + 更多工具箱抽屉 */}
-          <div className="flex items-center gap-1.5 shrink-0">
+          {/* 右侧：精炼工具胶囊阵列 (杜绝小屏撑爆换行) */}
+          <div className="flex items-center gap-1 shrink-0">
             <button
               type="button"
               onClick={toggleThemeStyle}
-              className="p-1.5 rounded-xl bg-slate-100 text-slate-700 active:scale-95 transition-transform"
+              className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center active:scale-95 transition-transform"
               title={isVibrant ? '当前鲜艳风（点击切回极简）' : '当前极简风（点击切鲜艳）'}
             >
               <Palette className={`w-3.5 h-3.5 ${isVibrant ? 'text-indigo-600' : 'text-slate-500'}`} />
             </button>
+
             <button
               type="button"
               onClick={() => {
                 setCheckinTab('checkin')
                 setCheckinOpen(true)
               }}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200/90 text-amber-800 text-[11px] font-bold shadow-2xs active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-1 px-2 py-1 rounded-xl bg-amber-50 border border-amber-200/90 text-amber-800 text-[11px] font-bold shadow-2xs active:scale-95 cursor-pointer"
               title="签到打卡领积分"
             >
               <Coins className="w-3.5 h-3.5 text-amber-600" />
-              <span className="font-mono">{points.toFixed(1)}分</span>
+              <span className="font-mono">{points.toFixed(1)}</span>
             </button>
 
             <button
@@ -909,10 +910,10 @@ export default function Layout({ children }: LayoutProps) {
       )}
 
       {/* Main Content Area */}
-      <main className={`mx-auto max-w-[1600px] ${
+      <main className={`mx-auto max-w-[1600px] w-full min-w-0 ${
         isFullHeightPage
-          ? 'h-[calc(100dvh-3.25rem-env(safe-area-inset-top,0px))] sm:h-[calc(100dvh-3.5rem-env(safe-area-inset-top,0px))] overflow-hidden flex flex-col pb-[calc(3.75rem+env(safe-area-inset-bottom,0px))] xl:pb-0'
-          : 'min-h-[calc(100dvh-3.25rem)] pb-[calc(5.25rem+env(safe-area-inset-bottom,0px))] xl:pb-8'
+          ? 'h-[calc(100dvh-3.25rem-env(safe-area-inset-top,0px))] sm:h-[calc(100dvh-3.5rem-env(safe-area-inset-top,0px))] overflow-hidden flex flex-col pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] xl:pb-0'
+          : 'min-h-[calc(100dvh-3.25rem)] pb-[calc(6.5rem+env(safe-area-inset-bottom,0px))] xl:pb-8'
       }`}>
         {syncNotice && (
           <div className="fixed right-3 sm:right-5 top-[4rem] z-30 flex items-center gap-2 rounded-full border border-emerald-200 bg-white/95 px-3.5 py-1.5 text-xs font-medium text-emerald-700 shadow-lg backdrop-blur-xl animate-fade-in-up">

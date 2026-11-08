@@ -12,6 +12,7 @@ import {
   X,
   Utensils,
   Award,
+  Eye,
   EyeOff,
 } from 'lucide-react'
 import LuluAvatar, { NAILONG_PERSONA } from './LuluAvatar'
@@ -182,6 +183,15 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
   const lastLineIdxRef = useRef<number>(-1)
   const bubbleTimerRef = useRef<number | null>(null)
 
+  // ===== 长时间用眼与护眼健康机制 (Eye Care System) =====
+  // 保持当前奶龙正版音源 (nailong_5.mp3 打瞌睡揉眼版 / nailong_6.mp3 学习超久夸夸舞版)
+  const [eyeCareActive, setEyeCareActive] = useState(false)
+  const [eyeCareSecondsLeft, setEyeCareSecondsLeft] = useState(20)
+  const [continuousStudySeconds, setContinuousStudySeconds] = useState(0)
+  const lastInteractionTimeRef = useRef<number>(Date.now())
+  const lastEyeReminderTimeRef = useRef<number>(0)
+  const eyeCareCountdownTimerRef = useRef<number | null>(null)
+
   // 角色形象：奶龙专属
   const persona = NAILONG_PERSONA
 
@@ -273,6 +283,9 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
       if (idleSleepTimerRef.current) {
         window.clearTimeout(idleSleepTimerRef.current)
       }
+      if (eyeCareCountdownTimerRef.current) {
+        window.clearInterval(eyeCareCountdownTimerRef.current)
+      }
     }
   }, [])
 
@@ -291,6 +304,124 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
     })
     return unsub
   }, [])
+
+  // 用户交互活跃监听（用于精准评估连续用眼时长）
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const updateInteraction = () => {
+      lastInteractionTimeRef.current = Date.now()
+    }
+    window.addEventListener("pointerdown", updateInteraction, { passive: true })
+    window.addEventListener("keydown", updateInteraction, { passive: true })
+    window.addEventListener("scroll", updateInteraction, { passive: true })
+    return () => {
+      window.removeEventListener("pointerdown", updateInteraction)
+      window.removeEventListener("keydown", updateInteraction)
+      window.removeEventListener("scroll", updateInteraction)
+    }
+  }, [])
+
+  // 开启 20 秒科学闭目护眼倒计时 (20-20-20 护眼法则)
+  const startEyeCareBreak = useCallback(() => {
+    if (eyeCareCountdownTimerRef.current) {
+      window.clearInterval(eyeCareCountdownTimerRef.current)
+    }
+    setEyeCareActive(true)
+    setEyeCareSecondsLeft(20)
+    setMood("sleepy")
+    setShowMobileMenu(false)
+    playPetSynthSound("boing", voiceMuted)
+
+    setBubbleAction(null)
+    setBubbleText("🌿 正在闭目远眺中... 剩余 20 秒，放松眼眶与睫状肌~")
+    setBubbleSubtext("科学护眼 20-20-20 · 奶龙陪你一起闭眼养神 🫧")
+
+    let left = 20
+    eyeCareCountdownTimerRef.current = window.setInterval(() => {
+      left -= 1
+      setEyeCareSecondsLeft(left)
+      if (left > 0) {
+        setBubbleText(`🌿 正在闭目远眺中... 剩余 ${left} 秒，放松眼眶与睫状肌~`)
+      } else {
+        if (eyeCareCountdownTimerRef.current) {
+          window.clearInterval(eyeCareCountdownTimerRef.current)
+          eyeCareCountdownTimerRef.current = null
+        }
+        setEyeCareActive(false)
+        setContinuousStudySeconds(0)
+        setMood("happy")
+        playPetSynthSound("cheer", voiceMuted)
+        const doneLine = NAILONG_DIALOGUES.eyeCareDone?.[0] || {
+          text: "芜湖！20 秒眼部放松完成！眼睛亮晶晶，奶龙元气满满陪你继续冲刺高分！💪",
+          subtext: "视力充能完毕 · 状态拉满 ✨",
+        }
+        showBubbleWithVoice(doneLine.text, "/pets/voices/nailong_6.mp3?v=3", 6000, false, doneLine.subtext)
+        setTimeout(() => {
+          setMood(focusActive ? "focus" : "idle")
+        }, 2500)
+      }
+    }, 1000)
+  }, [voiceMuted, showBubbleWithVoice, focusActive])
+
+  // 触发长时间用眼护眼提醒（保持当前正版奶龙原声音源）
+  const triggerEyeCareReminder = useCallback(
+    (force = false) => {
+      setMood("sleepy")
+      playPetSynthSound("pat", voiceMuted)
+      const list = NAILONG_DIALOGUES.eyeCare || []
+      const line = list[Math.floor(Math.random() * list.length)] || {
+        mood: "sleepy",
+        text: "👀 学了这么久，眼睛酸酸了吧！快揉揉眼睛，跟奶龙一起闭眼 20 秒、看看窗外绿植放松一下~",
+        subtext: "长时间用眼警报 · 闭目远眺 20 秒 🌿",
+      }
+
+      // 保持当前音源：轮换使用闭目揉眼 (nailong_5.mp3) 与学了这么久夸夸 (nailong_6.mp3)
+      const eyeAudios = [
+        "/pets/voices/nailong_5.mp3?v=3",
+        "/pets/voices/nailong_6.mp3?v=3",
+      ]
+      const chosenAudio = eyeAudios[Math.floor(Math.random() * eyeAudios.length)]
+
+      setBubbleAction({
+        label: "👀 陪奶龙闭眼远眺 20 秒",
+        onClick: () => startEyeCareBreak(),
+      })
+      showBubbleWithVoice(line.text, chosenAudio, 8000, force, line.subtext)
+    },
+    [voiceMuted, showBubbleWithVoice, startEyeCareBreak]
+  )
+
+  // 护眼检查时钟：每 10 秒评估一次连续活跃时间
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const interval = window.setInterval(() => {
+      const now = Date.now()
+      const idleTime = now - lastInteractionTimeRef.current
+      // 如果超过 8 分钟没有任何交互，说明用户已离席休息，将连续用眼时间重置
+      if (idleTime > 8 * 60 * 1000) {
+        setContinuousStudySeconds(0)
+        return
+      }
+
+      setContinuousStudySeconds(prev => {
+        const next = prev + 10
+        // 当连续用眼达到 30 分钟 (1800 秒)，且距离上次提醒超过 20 分钟 (1200 秒)
+        const EYE_REMINDER_THRESHOLD = 30 * 60
+        const MIN_INTERVAL_BETWEEN_REMINDERS = 20 * 60 * 1000
+        if (
+          next >= EYE_REMINDER_THRESHOLD &&
+          !eyeCareActive &&
+          now - lastEyeReminderTimeRef.current > MIN_INTERVAL_BETWEEN_REMINDERS
+        ) {
+          lastEyeReminderTimeRef.current = now
+          triggerEyeCareReminder()
+        }
+        return next
+      })
+    }, 10000)
+
+    return () => window.clearInterval(interval)
+  }, [eyeCareActive, triggerEyeCareReminder])
 
   // Token 统计
   const [dailyTokens, setDailyTokens] = useState<number>(() => {
@@ -684,6 +815,11 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
               <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-1.5 font-extrabold text-amber-600 dark:text-amber-400">
                   <span>{persona.emoji} {persona.name}</span>
+            {eyeCareActive && (
+              <span className="text-[10px] text-sky-600 font-mono">
+                (👀 {eyeCareSecondsLeft}s)
+              </span>
+            )}
                 </div>
                 <div className="mt-1 leading-relaxed font-medium break-words text-slate-800 dark:text-slate-100">
                   {bubbleText}
@@ -754,6 +890,13 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
               landingBounce={landingBounce}
               onZoneTrigger={handleZoneTrigger}
             />
+
+            {/* 护眼闭目倒计时徽章 */}
+            {eyeCareActive && (
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-sky-500 text-white font-mono text-[10px] font-bold shadow-md whitespace-nowrap animate-bounce border border-white/40 pointer-events-none">
+                👀 闭目 {eyeCareSecondsLeft}s
+              </div>
+            )}
 
             {/* 番茄钟专注药丸徽章 */}
             {focusActive && (
@@ -849,6 +992,38 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                 title={voiceMuted ? '点击开启奶龙语音与Q弹音效' : '语音与音效已开启（点击切换静音自习模式）'}
               >
                 {voiceMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              </button>
+
+              {/* 长时间用眼科学护眼提醒 / 一键开启 20 秒放松 */}
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation()
+                  if (eyeCareActive) {
+                    if (eyeCareCountdownTimerRef.current) {
+                      window.clearInterval(eyeCareCountdownTimerRef.current)
+                      eyeCareCountdownTimerRef.current = null
+                    }
+                    setEyeCareActive(false)
+                    setMood(focusActive ? "focus" : "idle")
+                    showBubbleWithVoice("已提前结束闭目休息~ 眼睛也要继续注意放松哟！", undefined, 3000)
+                  } else {
+                    triggerEyeCareReminder(true)
+                  }
+                  setShowMobileMenu(false)
+                }}
+                className={`w-8 h-8 rounded-full shadow-lg border flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer select-none ${
+                  eyeCareActive
+                    ? "bg-sky-500 text-white border-sky-400 animate-pulse"
+                    : "bg-white/95 dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-lg border border-sky-200 dark:border-slate-700 hover:bg-sky-50"
+                }`}
+                title={
+                  eyeCareActive
+                    ? `正在闭目护眼倒计时（剩余 ${eyeCareSecondsLeft} 秒）`
+                    : `长时间用眼护眼助手（已连续用眼 ${Math.floor(continuousStudySeconds / 60)} 分钟，点击开启 20 秒闭目远眺）`
+                }
+              >
+                <Eye className="w-4 h-4" />
               </button>
 
               {/* 番茄钟开关 */}

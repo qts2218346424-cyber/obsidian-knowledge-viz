@@ -167,7 +167,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
   onOpenMobileConfig,
   onOpenAgentPicker,
 }: ChatStudioHeaderProps) {
-  const { points, canCheckinToday } = useAuth()
+  const { points, canCheckinToday, isAdmin } = useAuth()
   const [hubPopoverOpen, setHubPopoverOpen] = useState(false)
   const [skillsDropdownOpen, setSkillsDropdownOpen] = useState(false)
   const [modelPopoverOpen, setModelPopoverOpen] = useState(false)
@@ -308,7 +308,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                     </option>
                   ))}
             </optgroup>
-            <option value="__custom__">⚙️ 更多引擎与技能设置...</option>
+            {isAdmin && <option value="__custom__">⚙️ 更多引擎与技能设置...</option>}
           </select>
         </div>
 
@@ -559,16 +559,18 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                             切换模型
                           </span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setModelPopoverOpen(false)
-                              onOpenModelManager()
-                            }}
-                            className="text-[11px] text-slate-500 hover:text-slate-800 cursor-pointer"
-                          >
-                            管理模型列表
-                          </button>
+                          {isAdmin && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setModelPopoverOpen(false)
+                                onOpenModelManager()
+                              }}
+                              className="text-[11px] text-slate-500 hover:text-slate-800 cursor-pointer"
+                            >
+                              管理模型列表
+                            </button>
+                          )}
                         </div>
 
                         <div className="max-h-52 overflow-y-auto space-y-1 pr-0.5">
@@ -637,37 +639,39 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                         </div>
                       </div>
 
-                      {/* 3. 自定义模型名快捷输入 */}
-                      <div className="pt-2.5 border-t border-slate-100">
-                        <div className="flex items-center gap-1.5">
-                          <input
-                            type="text"
-                            placeholder="手动输入自定义模型名称..."
-                            value={customModelInput}
-                            onChange={e => {
-                              if (!isCustomModel) onModelSelect('__custom__')
-                              onCustomModelInputChange(e.target.value)
-                            }}
-                            className="flex-1 h-8 text-xs bg-slate-50 border border-slate-200 rounded-xl px-2.5 text-slate-800 font-mono focus:outline-hidden focus:border-indigo-500"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              onCustomModelConfirm()
-                              setModelPopoverOpen(false)
-                            }}
-                            disabled={!customModelInput.trim()}
-                            className="h-8 px-3 rounded-xl bg-slate-900 text-white text-xs font-semibold disabled:opacity-40 cursor-pointer"
-                          >
-                            应用
-                          </button>
+                      {/* 3. 自定义模型名快捷输入 - 仅超级管理员可见 */}
+                      {isAdmin && (
+                        <div className="pt-2.5 border-t border-slate-100">
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="text"
+                              placeholder="手动输入自定义模型名称..."
+                              value={customModelInput}
+                              onChange={e => {
+                                if (!isCustomModel) onModelSelect('__custom__')
+                                onCustomModelInputChange(e.target.value)
+                              }}
+                              className="flex-1 h-8 text-xs bg-slate-50 border border-slate-200 rounded-xl px-2.5 text-slate-800 font-mono focus:outline-hidden focus:border-indigo-500"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onCustomModelConfirm()
+                                setModelPopoverOpen(false)
+                              }}
+                              disabled={!customModelInput.trim()}
+                              className="h-8 px-3 rounded-xl bg-slate-900 text-white text-xs font-semibold disabled:opacity-40 cursor-pointer"
+                            >
+                              应用
+                            </button>
+                          </div>
+                          {modelSyncFeedback && (
+                            <p className="mt-1.5 text-[11px] text-emerald-600 font-medium">
+                              {modelSyncFeedback}
+                            </p>
+                          )}
                         </div>
-                        {modelSyncFeedback && (
-                          <p className="mt-1.5 text-[11px] text-emerald-600 font-medium">
-                            {modelSyncFeedback}
-                          </p>
-                        )}
-                      </div>
+                      )}
                     </div>
                   </>
                 )}
@@ -724,7 +728,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                   ? 'bg-purple-50 text-purple-800 border-purple-300 shadow-2xs'
                   : 'bg-white text-slate-600 border-slate-200/85 hover:bg-slate-50 hover:text-slate-900'
               }`}
-              title="调用考研自动化技能或本机技能库"
+              title="调用考研自动化技能或系统自带技能库"
             >
               <Sparkles className="w-3.5 h-3.5 text-purple-600" />
               <span className="hidden xl:inline truncate max-w-[92px]">
@@ -757,7 +761,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                       className="text-[11px] font-bold text-purple-600 hover:underline cursor-pointer flex items-center gap-1"
                     >
                       <Sparkles className="w-3 h-3" />
-                      <span>本机技能库</span>
+                      <span>系统自带技能库</span>
                     </button>
                   </div>
                   {STUDY_SKILLS.map(skill => (
@@ -839,39 +843,41 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                       className="mt-1.5 w-full flex items-center justify-center gap-1.5 p-2 rounded-xl text-xs font-semibold bg-purple-50/90 hover:bg-purple-100/80 border border-purple-200/80 text-purple-900 cursor-pointer transition-colors"
                     >
                       <Sparkles className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                      <span>打开本机 Agent 技能库</span>
+                      <span>打开系统自带技能库</span>
                     </button>
                   </div>
 
-                  {/* 2. 模型治理 */}
-                  <div className="pt-2.5 border-t border-slate-100">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                      模型探测与列表治理
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setHubPopoverOpen(false)
-                          onOpenModelManager()
-                        }}
-                        className="flex-1 py-1.5 px-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-slate-700 flex items-center justify-center gap-1.5 cursor-pointer"
-                      >
-                        <Settings className="w-3.5 h-3.5 text-slate-600" />
-                        <span>管理已配置模型列表</span>
-                      </button>
-                      {selectedModel && !isCustomModel && (
+                  {/* 2. 模型治理 - 仅超级管理员可见 */}
+                  {isAdmin && (
+                    <div className="pt-2.5 border-t border-slate-100">
+                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                        模型探测与列表治理
+                      </div>
+                      <div className="flex items-center gap-1.5">
                         <button
                           type="button"
-                          onClick={onDeleteCurrentModel}
-                          title={`删除当前模型「${selectedModel}」`}
-                          className="p-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:border-red-300 hover:bg-red-50 text-slate-400 hover:text-red-600 cursor-pointer"
+                          onClick={() => {
+                            setHubPopoverOpen(false)
+                            onOpenModelManager()
+                          }}
+                          className="flex-1 py-1.5 px-2.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-slate-700 flex items-center justify-center gap-1.5 cursor-pointer"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Settings className="w-3.5 h-3.5 text-slate-600" />
+                          <span>管理已配置模型列表</span>
                         </button>
-                      )}
+                        {selectedModel && !isCustomModel && (
+                          <button
+                            type="button"
+                            onClick={onDeleteCurrentModel}
+                            title={`删除当前模型「${selectedModel}」`}
+                            className="p-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:border-red-300 hover:bg-red-50 text-slate-400 hover:text-red-600 cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* 3. 作答语调风格 */}
                   <div className="pt-2.5 border-t border-slate-100">

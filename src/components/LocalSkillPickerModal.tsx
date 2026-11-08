@@ -1,3 +1,4 @@
+import { useAuth } from '../contexts/AuthContext'
 import { useState, useEffect, useMemo } from 'react'
 import {
   X,
@@ -29,6 +30,7 @@ export default function LocalSkillPickerModal({
   onSelectSkill,
   currentSkillId,
 }: LocalSkillPickerModalProps) {
+  const { isAdmin } = useAuth()
   const [skills, setSkills] = useState<LocalSkill[]>([])
   const [loading, setLoading] = useState(false)
   const [syncing, setSyncing] = useState(false)
@@ -110,11 +112,11 @@ export default function LocalSkillPickerModal({
   const getSourceBadge = (source: LocalSkill['source']) => {
     switch (source) {
       case 'claude':
-        return { label: 'Claude Code 本机', color: 'bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300 border-orange-200' }
+        return { label: '系统内置 (Claude)', color: 'bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300 border-orange-200' }
       case 'agents':
-        return { label: '.agents 全局', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200' }
+        return { label: '全局自带技能', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200' }
       case 'codex':
-        return { label: 'Codex 本机', color: 'bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border-blue-200' }
+        return { label: '系统内置 (Codex)', color: 'bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border-blue-200' }
       case 'antigravity':
         return { label: 'Antigravity 内置', color: 'bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border-purple-200' }
       case 'plugin':
@@ -122,7 +124,7 @@ export default function LocalSkillPickerModal({
       case 'builtin':
         return { label: 'CoreForge 研学', color: 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200' }
       default:
-        return { label: '本地技能', color: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200' }
+        return { label: '自带技能', color: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200' }
     }
   }
 
@@ -155,27 +157,30 @@ export default function LocalSkillPickerModal({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  本机 Agent 技能矩阵 (Skills Hub)
+                  系统自带技能库 (Skills Hub)
                 </h3>
                 <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-xs font-semibold border border-amber-300">
-                  共已发现 {skills.length} 个本地技能
+                  共收录 {skills.length} 项自带技能
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                实时同步扫描自 ~/.claude/skills, ~/.agents/skills, ~/.codex 与 Antigravity，免插件一键调用
+                系统内置深度研学开箱即用 Agent 专项技能，涵盖考研推导、外刊文献精读、长难句剖析与算法仿真
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2.5">
-            <button
-              onClick={handleSyncSkills}
-              disabled={syncing}
-              className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-amber-400 dark:hover:border-amber-500 text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 text-amber-500 ${syncing ? 'animate-spin' : ''}`} />
-              <span>{syncing ? '正在扫描本机...' : '🔄 重新同步本机技能'}</span>
-            </button>
+            {isAdmin && (
+              <button
+                onClick={handleSyncSkills}
+                disabled={syncing}
+                title="管理员专属：扫描并增添最新 Agent 技能"
+                className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-amber-400 dark:hover:border-amber-500 text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 text-amber-500 ${syncing ? 'animate-spin' : ''}`} />
+                <span>{syncing ? '正在同步技能...' : '增添与同步系统技能'}</span>
+              </button>
+            )}
             <button
               onClick={onClose}
               className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"

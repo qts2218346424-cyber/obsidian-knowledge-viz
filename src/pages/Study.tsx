@@ -75,7 +75,7 @@ function MasteryPaletteSection({ onSelectTopic }: { onSelectTopic: (topic: strin
   }
 
   return (
-    <div className="space-y-4 pb-8 animate-fade-in-up">
+    <div className="space-y-4 pb-28 sm:pb-8 animate-fade-in-up w-full min-w-0">
       {/* Top Floating Action Bar (Subframe Screen 4 Replica) */}
       <div className="flex flex-wrap items-center justify-between gap-2 py-1">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white shadow-xs border border-zinc-200/70 text-xs font-semibold text-[#18181b]">
