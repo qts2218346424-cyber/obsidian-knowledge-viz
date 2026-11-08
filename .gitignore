@@ -20,6 +20,7 @@ release/
 
 # Temporary upload files
 uploads/
+scratch/
 
 # Server config — contains API keys and local paths, NEVER commit
 server/config.json

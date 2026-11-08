@@ -13,6 +13,7 @@ import {
   getDeletedModels,
 } from '../local-model-scanner.js'
 
+import { database } from '../db/database.js'
 export const localAgentsRouter = Router()
 
 localAgentsRouter.get('/local-agents/status', async (_req, res) => {
@@ -167,6 +168,25 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
       return
     }
 
+    // 伴学积分校验与扣除：单次提问消耗 0.1 积分（学生/编辑者用户扣除，管理员免受阻断）
+    let deductInfo = null
+    if (req.user) {
+      const deductRes = database.deductUserPoints(
+        req.user.id,
+        0.1,
+        `AI 伴学提问 (${body.model || body.provider || 'default'})`
+      )
+      if (!deductRes.success) {
+        res.status(402).json({
+          error: 'INSUFFICIENT_POINTS',
+          message: deductRes.message || '伴学积分不足（当前单次对话需 0.1 积分），请每日签到领取或联系管理员分配。',
+          currentPoints: deductRes.points,
+        })
+        return
+      }
+      deductInfo = { points: deductRes.points, deducted: deductRes.deducted }
+    }
+
     const requestedCwd = body.cwd || config.localAgents?.defaultCwd || config.vaultPath
     const cwd = fs.existsSync(requestedCwd) && fs.statSync(requestedCwd).isDirectory()
       ? path.resolve(requestedCwd)
@@ -201,6 +221,15 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
 
   const sendEvent = (event: unknown) => {
     res.write(`data: ${JSON.stringify(event)}\n\n`)
+  }
+
+  // 立即向下游下发最新的积分余额事件，供前端实时更新
+  if (deductInfo) {
+    sendEvent({
+      type: 'points_updated',
+      points: deductInfo.points,
+      deducted: deductInfo.deducted,
+    })
   }
   const abortController = new AbortController()
   const abortRun = () => abortController.abort()

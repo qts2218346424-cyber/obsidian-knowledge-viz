@@ -215,20 +215,103 @@ body {
 }
 
 .glass-header {
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(229, 231, 235, 0.85);
 }
 
 .aurora-mesh {
-  background-color: #F8FAFC;
+  background-color: #FAFAFA;
   background-image: 
-    radial-gradient(at 15% 15%, rgba(0, 113, 227, 0.07) 0px, transparent 50%),
-    radial-gradient(at 85% 10%, rgba(99, 102, 241, 0.06) 0px, transparent 45%),
-    radial-gradient(at 50% 90%, rgba(236, 72, 153, 0.05) 0px, transparent 50%),
-    radial-gradient(at 85% 80%, rgba(16, 185, 129, 0.05) 0px, transparent 40%);
+    radial-gradient(at 0% 0%, rgba(243, 244, 246, 0.85) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(243, 244, 246, 0.65) 0px, transparent 50%);
   background-attachment: fixed;
+}
+
+/* Subframe 规范微质感系统 (Subframe Design System Primitives) */
+.subframe-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  background-color: #F3F4F6;
+  border: 1px solid rgba(229, 231, 235, 0.85);
+  font-size: 11px;
+  font-weight: 500;
+  color: #4B5563;
+  line-height: 1;
+}
+
+.subframe-btn-black {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  background-color: #111827;
+  color: #FFFFFF;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.subframe-btn-black:hover {
+  background-color: #1F2937;
+  color: #FFFFFF;
+}
+.subframe-btn-black:active {
+  transform: scale(0.98);
+}
+
+.subframe-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  background-color: #FFFFFF;
+  color: #374151;
+  border: 1px solid rgba(229, 231, 235, 0.95);
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.subframe-btn-secondary:hover {
+  background-color: #F9FAFB;
+  border-color: #D1D5DB;
+  color: #111827;
+}
+.subframe-btn-secondary:active {
+  transform: scale(0.98);
+}
+
+.subframe-search-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 2rem;
+  padding: 0 0.75rem;
+  background-color: #F3F4F6;
+  border: 1px solid transparent;
+  border-radius: 0.625rem;
+  color: #6B7280;
+  font-size: 0.75rem;
+  transition: all 0.15s ease;
+}
+.subframe-search-pill:hover {
+  background-color: #E5E7EB;
+  color: #374151;
+}
+.subframe-search-pill:focus-within {
+  background-color: #FFFFFF;
+  border-color: #D1D5DB;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  color: #111827;
 }
 
 .text-gradient-brand {
@@ -701,19 +784,19 @@ body {
 
 /* Bento Card 精致层次表面 */
 .bento-card {
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(226, 232, 240, 0.88);
-  box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.22s ease;
+  background: #FFFFFF;
+  border: 1px solid rgba(229, 231, 235, 0.9);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s ease;
 }
 
 @media (hover: hover) {
   .bento-card-hover:hover {
-    transform: translateY(-2px);
-    border-color: rgba(99, 102, 241, 0.28);
-    box-shadow: 0 14px 32px -8px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(79, 70, 229, 0.05);
+    transform: translateY(-1.5px);
+    border-color: rgba(209, 213, 219, 1);
+    box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.02);
   }
 }
 

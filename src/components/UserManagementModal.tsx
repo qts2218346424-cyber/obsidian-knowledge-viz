@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import {
   X,
+  Coins,
+  PlusCircle,
   Users,
   UserPlus,
   ShieldAlert,
@@ -38,6 +40,12 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
   // 重置密码状态
   const [resettingUserId, setResettingUserId] = useState<string | null>(null)
   const [resetPasswordText, setResetPasswordText] = useState('')
+
+  // 伴学积分分配状态
+  const [grantingUserId, setGrantingUserId] = useState<string | null>(null)
+  const [grantAmountText, setGrantAmountText] = useState('10')
+  const [grantRemarkText, setGrantRemarkText] = useState('')
+  const [isGranting, setIsGranting] = useState(false)
 
   const fetchUsers = async () => {
     try {
@@ -92,6 +100,34 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
       fetchUsers()
     } catch (err: any) {
       setError(err.message || '更新角色失败')
+    }
+  }
+
+  const handleGrantPoints = async (userId: string) => {
+    const amount = Number(grantAmountText)
+    if (isNaN(amount) || amount === 0) {
+      setError('请输入有效的积分调整数值（如 +10、+50 或 -5）')
+      return
+    }
+    setError(null)
+    setIsGranting(true)
+    try {
+      const res = await authService.adminGrantPoints(
+        userId,
+        amount,
+        grantRemarkText.trim() || undefined
+      )
+      if (res.success) {
+        setSuccess(`成功为用户分配积分 (${amount > 0 ? '+' : ''}${amount})，当前余额: ${res.points.toFixed(1)}`)
+        setGrantingUserId(null)
+        setGrantAmountText('10')
+        setGrantRemarkText('')
+        fetchUsers()
+      }
+    } catch (err: any) {
+      setError(err.message || '分配积分失败')
+    } finally {
+      setIsGranting(false)
     }
   }
 
@@ -315,6 +351,10 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
                       </div>
                       <div className="mt-1 flex items-center gap-2">
                         {getRoleBadge(u.role)}
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold font-mono px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                          <Coins className="h-3 w-3 text-amber-600" />
+                          {(u.points ?? 5.0).toFixed(1)} 积分
+                        </span>
                         <span className="text-[10px] text-slate-400">
                           创建于 {new Date(u.createdAt || '').toLocaleDateString()}
                         </span>
@@ -335,6 +375,20 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
                       <option value="editor">研学编辑</option>
                       <option value="admin">超级管理员</option>
                     </select>
+
+                    {/* Grant Points Button */}
+                    <button
+                      onClick={() => {
+                        setGrantingUserId(grantingUserId === u.id ? null : u.id)
+                        setResettingUserId(null)
+                        setGrantAmountText('10')
+                        setGrantRemarkText('')
+                      }}
+                      title="为用户分配/充值伴学积分"
+                      className="p-1.5 rounded-lg text-amber-600 hover:text-amber-700 hover:bg-amber-50 transition-colors cursor-pointer"
+                    >
+                      <Coins className="h-4 w-4" />
+                    </button>
 
                     {/* Reset Password Button */}
                     <button

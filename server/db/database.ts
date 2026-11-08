@@ -57,6 +57,19 @@ export interface DbSM2Flashcard {
   historyJson: string
 }
 
+export interface DbChatConversation {
+  id: string
+  userId: string
+  projectId?: string
+  title: string
+  provider?: string
+  model?: string
+  agentId?: string
+  messages: any[]
+  createdAt: string
+  updatedAt: string
+}
+
 export interface DbMasteryRecord {
   syllabusId: string
   domain: string
@@ -74,6 +87,24 @@ export interface DbMasteryRecord {
 
 export type UserRole = 'admin' | 'editor' | 'student'
 
+export type PointLogType =
+  | 'checkin'
+  | 'chat_deduct'
+  | 'admin_grant'
+  | 'admin_deduct'
+  | 'initial_grant'
+
+export interface DbPointLog {
+  id: string
+  userId: string
+  type: PointLogType
+  amount: number
+  balanceAfter: number
+  remark?: string
+  operatorId?: string
+  createdAt: string
+}
+
 export interface DbUser {
   id: string
   username: string
@@ -81,6 +112,8 @@ export interface DbUser {
   passwordHash: string
   salt: string
   role: UserRole
+  points: number
+  lastCheckinAt?: string
   createdAt: string
   updatedAt: string
 }
@@ -225,17 +258,84 @@ class CoreForgeDatabase {
       CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
       CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
     `)
+
+    // 6. 考生专属 AI 对话历史记录表 (chat_conversations)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS chat_conversations (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        project_id TEXT,
+        title TEXT NOT NULL,
+        provider TEXT,
+        model TEXT,
+        agent_id TEXT,
+        messages_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_chat_conv_user ON chat_conversations(user_id);
+      CREATE INDEX IF NOT EXISTS idx_chat_conv_updated ON chat_conversations(updated_at);
+    `)
+
+    // 7. 伴学积分变动明细流水表 (point_logs)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS point_logs (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        type TEXT NOT NULL,
+        amount REAL NOT NULL,
+        balance_after REAL NOT NULL,
+        remark TEXT,
+        operator_id TEXT,
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_point_logs_user ON point_logs(user_id);
+      CREATE INDEX IF NOT EXISTS idx_point_logs_created ON point_logs(created_at);
+    `)
+
+    // 8. 多租户数据隔离字段与积分字段自动补齐 (向后兼容)
+    this.ensureColumn('quiz_records', 'user_id', "TEXT DEFAULT 'default'")
+    this.ensureColumn('error_questions', 'user_id', "TEXT DEFAULT 'default'")
+    this.ensureColumn('sm2_flashcards', 'user_id', "TEXT DEFAULT 'default'")
+    this.ensureColumn('users', 'points', 'REAL DEFAULT 5.0')
+    this.ensureColumn('users', 'last_checkin_at', 'TEXT')
+
+    // 平滑修复旧用户可能为 null 的积分值
+    try {
+      this.db.exec('UPDATE users SET points = 5.0 WHERE points IS NULL')
+    } catch {}
+
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_quiz_user ON quiz_records(user_id);
+      CREATE INDEX IF NOT EXISTS idx_err_user ON error_questions(user_id);
+      CREATE INDEX IF NOT EXISTS idx_sm2_user ON sm2_flashcards(user_id);
+    `)
+  }
+
+  private ensureColumn(tableName: string, columnName: string, columnDef: string) {
+    if (!this.db) return
+    try {
+      const columns = this.db.prepare(`PRAGMA table_info(${tableName})`).all()
+      const exists = columns.some((col) => col.name === columnName)
+      if (!exists) {
+        this.db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDef}`)
+        console.log(`[Database Migration] 为表 ${tableName} 成功补齐租户字段: ${columnName}`)
+      }
+    } catch (err) {
+      console.warn(`[Database Migration] 检查列 ${tableName}.${columnName} 异常:`, err.message)
+    }
   }
 
   // ===== Quiz Records Operations =====
   insertQuizRecord(record: DbQuizRecord): void {
     if (!this.db) return
     const stmt = this.db.prepare(`
-      INSERT INTO quiz_records (id, mode, total_questions, correct_count, wrong_count, time_taken, score, domain, created_at, details_json)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO quiz_records (id, user_id, mode, total_questions, correct_count, wrong_count, time_taken, score, domain, created_at, details_json)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     stmt.run(
       record.id,
+      record.userId || 'default',
       record.mode,
       record.totalQuestions,
       record.correctCount,
@@ -248,12 +348,16 @@ class CoreForgeDatabase {
     )
   }
 
-  getQuizRecords(limit = 50, domain?: string): DbQuizRecord[] {
+  getQuizRecords(limit = 50, domain?: string, userId?: string): DbQuizRecord[] {
     if (!this.db) return []
-    let query = 'SELECT * FROM quiz_records'
+    let query = 'SELECT * FROM quiz_records WHERE 1=1'
     const params: any[] = []
+    if (userId) {
+      query += ' AND user_id = ?'
+      params.push(userId)
+    }
     if (domain) {
-      query += ' WHERE domain = ?'
+      query += ' AND domain = ?'
       params.push(domain)
     }
     query += ' ORDER BY created_at DESC LIMIT ?'
@@ -263,6 +367,7 @@ class CoreForgeDatabase {
     const rows = stmt.all(...params)
     return rows.map((r: any) => ({
       id: r.id,
+      userId: r.user_id,
       mode: r.mode,
       totalQuestions: r.total_questions,
       correctCount: r.correct_count,
@@ -280,10 +385,10 @@ class CoreForgeDatabase {
     if (!this.db) return
     const stmt = this.db.prepare(`
       INSERT INTO error_questions (
-        id, domain, subject, chapter, syllabus_id, question, options_json,
+        id, user_id, domain, subject, chapter, syllabus_id, question, options_json,
         user_answer, correct_answer, explanation, error_type, difficulty,
         source_note, status, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         user_answer = excluded.user_answer,
         error_type = excluded.error_type,
@@ -292,6 +397,7 @@ class CoreForgeDatabase {
     `)
     stmt.run(
       item.id,
+      item.userId || 'default',
       item.domain,
       item.subject,
       item.chapter,
@@ -310,10 +416,14 @@ class CoreForgeDatabase {
     )
   }
 
-  getErrorQuestions(filter?: { subject?: string; status?: string; syllabusId?: string }): DbErrorQuestion[] {
+  getErrorQuestions(filter?: { subject?: string; status?: string; syllabusId?: string; userId?: string }): DbErrorQuestion[] {
     if (!this.db) return []
     let query = 'SELECT * FROM error_questions WHERE 1=1'
     const params: any[] = []
+    if (filter?.userId) {
+      query += ' AND user_id = ?'
+      params.push(filter.userId)
+    }
     if (filter?.subject) {
       query += ' AND subject = ?'
       params.push(filter.subject)
@@ -332,6 +442,7 @@ class CoreForgeDatabase {
     const rows = stmt.all(...params)
     return rows.map((r: any) => ({
       id: r.id,
+      userId: r.user_id,
       domain: r.domain,
       subject: r.subject,
       chapter: r.chapter,
@@ -513,6 +624,8 @@ class CoreForgeDatabase {
       passwordHash: row.password_hash,
       salt: row.salt,
       role: row.role as UserRole,
+      points: typeof row.points === 'number' ? row.points : 5.0,
+      lastCheckinAt: row.last_checkin_at || undefined,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }
@@ -529,6 +642,8 @@ class CoreForgeDatabase {
       passwordHash: row.password_hash,
       salt: row.salt,
       role: row.role as UserRole,
+      points: typeof row.points === 'number' ? row.points : 5.0,
+      lastCheckinAt: row.last_checkin_at || undefined,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }
@@ -536,12 +651,14 @@ class CoreForgeDatabase {
 
   listUsers(): Omit<DbUser, 'passwordHash' | 'salt'>[] {
     if (!this.db) return []
-    const rows = this.db.prepare('SELECT id, username, display_name, role, created_at, updated_at FROM users ORDER BY created_at ASC').all() as any[]
+    const rows = this.db.prepare('SELECT id, username, display_name, role, points, last_checkin_at, created_at, updated_at FROM users ORDER BY created_at ASC').all() as any[]
     return rows.map(r => ({
       id: r.id,
       username: r.username,
       displayName: r.display_name,
       role: r.role as UserRole,
+      points: typeof r.points === 'number' ? r.points : 5.0,
+      lastCheckinAt: r.last_checkin_at || undefined,
       createdAt: r.created_at,
       updatedAt: r.updated_at,
     }))
@@ -550,8 +667,8 @@ class CoreForgeDatabase {
   insertUser(user: DbUser): void {
     if (!this.db) return
     const stmt = this.db.prepare(`
-      INSERT INTO users (id, username, display_name, password_hash, salt, role, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO users (id, username, display_name, password_hash, salt, role, points, last_checkin_at, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     stmt.run(
       user.id,
@@ -560,6 +677,8 @@ class CoreForgeDatabase {
       user.passwordHash,
       user.salt,
       user.role,
+      user.points !== undefined ? user.points : 5.0,
+      user.lastCheckinAt || null,
       user.createdAt,
       user.updatedAt
     )
@@ -613,7 +732,7 @@ class CoreForgeDatabase {
     const query = `
       SELECT 
         s.token, s.user_id, s.created_at as session_created_at, s.expires_at,
-        u.id, u.username, u.display_name, u.password_hash, u.salt, u.role, u.created_at as user_created_at, u.updated_at
+        u.id, u.username, u.display_name, u.password_hash, u.salt, u.role, u.points, u.last_checkin_at, u.created_at as user_created_at, u.updated_at
       FROM sessions s
       JOIN users u ON s.user_id = u.id
       WHERE s.token = ?
@@ -641,9 +760,181 @@ class CoreForgeDatabase {
         passwordHash: row.password_hash,
         salt: row.salt,
         role: row.role as UserRole,
+        points: typeof row.points === 'number' ? row.points : 5.0,
+        lastCheckinAt: row.last_checkin_at || undefined,
         createdAt: row.user_created_at,
         updatedAt: row.updated_at,
       },
+    }
+  }
+
+  // ===== AI 伴学积分与每日签到操作 =====
+  private getTodayDateString(): string {
+    // 强制基于东八区（UTC+8）中国标准时间计算当日日期字符串 YYYY-MM-DD
+    const nowUtc = Date.now()
+    const chinaTime = new Date(nowUtc + 8 * 3600 * 1000)
+    return chinaTime.toISOString().slice(0, 10)
+  }
+
+  getUserPoints(userId: string): { points: number; lastCheckinAt?: string; canCheckinToday: boolean } | null {
+    if (!this.db || !userId) return null
+    const row = this.db.prepare('SELECT points, last_checkin_at FROM users WHERE id = ?').get(userId) as any
+    if (!row) return null
+    const today = this.getTodayDateString()
+    const points = typeof row.points === 'number' ? row.points : 5.0
+    const lastCheckinAt = row.last_checkin_at || undefined
+    return {
+      points,
+      lastCheckinAt,
+      canCheckinToday: lastCheckinAt !== today,
+    }
+  }
+
+  checkinUser(userId: string): { success: boolean; points: number; earned: number; message: string; lastCheckinAt: string } {
+    if (!this.db || !userId) {
+      return { success: false, points: 0, earned: 0, message: '数据库不可用或用户未登录', lastCheckinAt: '' }
+    }
+    const user = this.findUserById(userId)
+    if (!user) {
+      return { success: false, points: 0, earned: 0, message: '用户不存在', lastCheckinAt: '' }
+    }
+    const today = this.getTodayDateString()
+    if (user.lastCheckinAt === today) {
+      return {
+        success: false,
+        points: user.points,
+        earned: 0,
+        message: '今日已完成签到，请明天再来领取！',
+        lastCheckinAt: today,
+      }
+    }
+
+    const earned = 1.0
+    const newPoints = Math.round((user.points + earned) * 100) / 100
+    const now = new Date().toISOString()
+
+    this.db.prepare('UPDATE users SET points = ?, last_checkin_at = ?, updated_at = ? WHERE id = ?')
+      .run(newPoints, today, now, userId)
+
+    const logId = `pl_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+    this.db.prepare(`
+      INSERT INTO point_logs (id, user_id, type, amount, balance_after, remark, operator_id, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(logId, userId, 'checkin', earned, newPoints, '每日签到赠送 1.0 积分', null, now)
+
+    return {
+      success: true,
+      points: newPoints,
+      earned,
+      message: '签到成功！已获得 1 积分，助力 AI 伴学研考提分',
+      lastCheckinAt: today,
+    }
+  }
+
+  deductUserPoints(
+    userId: string,
+    amount: number = 0.1,
+    remark: string = 'AI 伴学单次对话'
+  ): { success: boolean; points: number; deducted: number; message?: string } {
+    if (!this.db || !userId) {
+      return { success: false, points: 0, deducted: 0, message: '服务不可用' }
+    }
+    const user = this.findUserById(userId)
+    if (!user) {
+      return { success: false, points: 0, deducted: 0, message: '用户不存在' }
+    }
+
+    // 超级管理员免受阻断
+    const isAdmin = user.role === 'admin'
+    if (!isAdmin && user.points < amount) {
+      return {
+        success: false,
+        points: user.points,
+        deducted: 0,
+        message: `伴学积分不足（当前剩余 ${user.points.toFixed(1)} 积分，单次提问消耗 ${amount} 积分）。每日签到可领 1 积分，或请管理员分配积分。`,
+      }
+    }
+
+    const deducted = amount
+    const newPoints = Math.max(0, Math.round((user.points - deducted) * 100) / 100)
+    const now = new Date().toISOString()
+
+    this.db.prepare('UPDATE users SET points = ?, updated_at = ? WHERE id = ?')
+      .run(newPoints, now, userId)
+
+    const logId = `pl_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+    this.db.prepare(`
+      INSERT INTO point_logs (id, user_id, type, amount, balance_after, remark, operator_id, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(logId, userId, 'chat_deduct', -deducted, newPoints, remark, null, now)
+
+    return {
+      success: true,
+      points: newPoints,
+      deducted,
+    }
+  }
+
+  grantUserPoints(
+    userId: string,
+    amount: number,
+    operatorId?: string,
+    remark?: string
+  ): { success: boolean; points: number; delta: number; message?: string } {
+    if (!this.db || !userId) {
+      return { success: false, points: 0, delta: 0, message: '服务不可用' }
+    }
+    const user = this.findUserById(userId)
+    if (!user) {
+      return { success: false, points: 0, delta: 0, message: '目标用户不存在' }
+    }
+
+    const delta = Math.round(amount * 100) / 100
+    const newPoints = Math.max(0, Math.round((user.points + delta) * 100) / 100)
+    const now = new Date().toISOString()
+
+    this.db.prepare('UPDATE users SET points = ?, updated_at = ? WHERE id = ?')
+      .run(newPoints, now, userId)
+
+    const logType: PointLogType = delta >= 0 ? 'admin_grant' : 'admin_deduct'
+    const note = remark || (delta >= 0 ? `管理员分配增加 ${delta} 积分` : `管理员调整扣减 ${Math.abs(delta)} 积分`)
+    const logId = `pl_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+    this.db.prepare(`
+      INSERT INTO point_logs (id, user_id, type, amount, balance_after, remark, operator_id, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(logId, userId, logType, delta, newPoints, note, operatorId || null, now)
+
+    return {
+      success: true,
+      points: newPoints,
+      delta,
+      message: `已成功为用户分配积分，当前余额: ${newPoints}`,
+    }
+  }
+
+  listPointLogs(userId: string, limit: number = 20): DbPointLog[] {
+    if (!this.db || !userId) return []
+    try {
+      const rows = this.db.prepare(`
+        SELECT id, user_id, type, amount, balance_after, remark, operator_id, created_at
+        FROM point_logs
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+        LIMIT ?
+      `).all(userId, limit) as any[]
+
+      return rows.map((r: any) => ({
+        id: r.id,
+        userId: r.user_id,
+        type: r.type as PointLogType,
+        amount: r.amount,
+        balanceAfter: r.balance_after,
+        remark: r.remark || '',
+        operatorId: r.operator_id || undefined,
+        createdAt: r.created_at,
+      }))
+    } catch {
+      return []
     }
   }
 
@@ -660,6 +951,86 @@ class CoreForgeDatabase {
   cleanExpiredSessions(): void {
     if (!this.db) return
     this.db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(new Date().toISOString())
+  }
+
+  // ===== 考生专属 AI 对话历史持久化操作 =====
+  getUserChatConversations(userId: string): DbChatConversation[] {
+    if (!this.db || !userId) return []
+    try {
+      const rows = this.db.prepare(
+        'SELECT * FROM chat_conversations WHERE user_id = ? ORDER BY updated_at DESC'
+      ).all(userId) as any[]
+
+      return rows.map(r => {
+        let messages: any[] = []
+        try {
+          messages = JSON.parse(r.messages_json || '[]')
+        } catch {
+          messages = []
+        }
+        return {
+          id: r.id,
+          userId: r.user_id,
+          projectId: r.project_id || 'default',
+          title: r.title,
+          provider: r.provider,
+          model: r.model,
+          agentId: r.agent_id,
+          messages,
+          createdAt: r.created_at,
+          updatedAt: r.updated_at,
+        }
+      })
+    } catch (e: any) {
+      console.error('[Database] 读取用户对话历史失败:', e.message)
+      return []
+    }
+  }
+
+  saveUserChatConversations(userId: string, conversations: any[]): void {
+    if (!this.db || !userId || !Array.isArray(conversations)) return
+    const now = new Date().toISOString()
+    const stmt = this.db.prepare(`
+      INSERT INTO chat_conversations (id, user_id, project_id, title, provider, model, agent_id, messages_json, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        title = excluded.title,
+        provider = excluded.provider,
+        model = excluded.model,
+        agent_id = excluded.agent_id,
+        messages_json = excluded.messages_json,
+        updated_at = excluded.updated_at
+    `)
+
+    for (const c of conversations) {
+      if (!c.id) continue
+      try {
+        stmt.run(
+          c.id,
+          userId,
+          c.projectId || 'default',
+          c.title || '新会话',
+          c.provider || 'deepseek',
+          c.model || '',
+          c.agentId || 'coreforge-ai',
+          JSON.stringify(c.messages || []),
+          c.createdAt ? new Date(c.createdAt).toISOString() : now,
+          c.updatedAt ? new Date(c.updatedAt).toISOString() : now
+        )
+      } catch (err: any) {
+        console.error('[Database] 保存单条会话失败:', err.message)
+      }
+    }
+  }
+
+  deleteChatConversation(userId: string, conversationId: string): boolean {
+    if (!this.db) return false
+    try {
+      this.db.prepare('DELETE FROM chat_conversations WHERE user_id = ? AND id = ?').run(userId, conversationId)
+      return true
+    } catch {
+      return false
+    }
   }
 }
 

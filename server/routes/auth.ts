@@ -7,6 +7,7 @@ import {
   generateUserId,
 } from '../utils/auth-crypto.js'
 import { requireAuth, requireRole } from '../middleware/auth.js'
+import { ensureUserSandboxSync } from '../services/user-sandbox.js'
 
 export const authRouter = Router()
 
@@ -24,6 +25,8 @@ authRouter.get('/auth/status', (req, res) => {
           username: req.user.username,
           displayName: req.user.displayName,
           role: req.user.role,
+          points: req.user.points ?? 5.0,
+          lastCheckinAt: req.user.lastCheckinAt,
         }
       : null,
   })
@@ -58,11 +61,13 @@ authRouter.post('/auth/init-admin', async (req, res) => {
     passwordHash: hash,
     salt,
     role: 'admin' as UserRole,
+    points: 100.0, // 超级管理员初始赠送 100 积分
     createdAt: now,
     updatedAt: now,
   }
 
   database.insertUser(user)
+  ensureUserSandboxSync(user.id, user.username)
 
   // 颁发初始登录 Token（有效期 7 天）
   const token = generateSecureToken()
@@ -83,6 +88,7 @@ authRouter.post('/auth/init-admin', async (req, res) => {
       username: user.username,
       displayName: user.displayName,
       role: user.role,
+      points: user.points,
     },
   })
 })
@@ -117,7 +123,7 @@ authRouter.post('/auth/register', async (req, res) => {
   const now = new Date().toISOString()
   const { hash, salt } = await hashPassword(password.trim())
   
-  // 严格强制默认角色为 student（学生只读），杜绝越权提权
+  // 严格强制默认角色为 student（学生只读），杜绝越权提权；新注册赠送 5.0 积分
   const user = {
     id: generateUserId(),
     username: cleanUsername,
@@ -125,11 +131,13 @@ authRouter.post('/auth/register', async (req, res) => {
     passwordHash: hash,
     salt,
     role: 'student' as UserRole,
+    points: 5.0,
     createdAt: now,
     updatedAt: now,
   }
 
   database.insertUser(user)
+  ensureUserSandboxSync(user.id, user.username)
 
   // 注册完成后自动颁发 7 天会话令牌，无缝登入
   const token = generateSecureToken()
@@ -150,6 +158,7 @@ authRouter.post('/auth/register', async (req, res) => {
       username: user.username,
       displayName: user.displayName,
       role: user.role,
+      points: user.points,
     },
   })
 })
@@ -196,6 +205,8 @@ authRouter.post('/auth/login', async (req, res) => {
       username: user.username,
       displayName: user.displayName,
       role: user.role,
+      points: user.points ?? 5.0,
+      lastCheckinAt: user.lastCheckinAt,
     },
   })
 })
@@ -215,12 +226,16 @@ authRouter.post('/auth/logout', (req, res) => {
  */
 authRouter.get('/auth/me', requireAuth, (req, res) => {
   const user = req.user!
+  // 获取最新积分状态
+  const pointInfo = database.getUserPoints(user.id)
   res.json({
     user: {
       id: user.id,
       username: user.username,
       displayName: user.displayName,
       role: user.role,
+      points: pointInfo?.points ?? user.points ?? 5.0,
+      lastCheckinAt: pointInfo?.lastCheckinAt ?? user.lastCheckinAt,
       createdAt: user.createdAt,
     },
     permissions: {
@@ -313,6 +328,7 @@ authRouter.post('/auth/users', requireAuth, requireRole('admin'), async (req, re
   }
 
   database.insertUser(newUser)
+  ensureUserSandboxSync(newUser.id, newUser.username)
 
   res.status(201).json({
     message: '用户创建成功',
@@ -415,4 +431,78 @@ authRouter.delete('/auth/users/:id', requireAuth, requireRole('admin'), (req, re
 
   database.deleteUser(id)
   res.json({ message: `用户 "${target.username}" 已成功注销删除` })
+})
+
+// ==========================================
+// ===== 积分体系与每日签到接口 =====
+// ==========================================
+
+/**
+ * 获取当前登录用户的积分资产信息与今日签到状态
+ */
+authRouter.get('/user/points', requireAuth, (req, res) => {
+  const userId = req.user!.id
+  const pointInfo = database.getUserPoints(userId)
+  if (!pointInfo) {
+    res.status(404).json({ error: '用户不存在' })
+    return
+  }
+  const logs = database.listPointLogs(userId, 20)
+  res.json({
+    points: pointInfo.points,
+    lastCheckinAt: pointInfo.lastCheckinAt,
+    canCheckinToday: pointInfo.canCheckinToday,
+    logs,
+  })
+})
+
+/**
+ * 每日签到接口：每天赠送 1.0 积分
+ */
+authRouter.post('/user/checkin', requireAuth, (req, res) => {
+  const userId = req.user!.id
+  const result = database.checkinUser(userId)
+  if (!result.success) {
+    res.status(400).json(result)
+    return
+  }
+  res.json(result)
+})
+
+/**
+ * 管理员为指定用户分配/增减积分
+ */
+authRouter.post('/admin/users/:id/points', requireAuth, requireRole('admin'), (req, res) => {
+  const { id } = req.params
+  const { amount, remark } = req.body || {}
+
+  const numAmount = Number(amount)
+  if (isNaN(numAmount) || numAmount === 0) {
+    res.status(400).json({ error: '请提供有效的积分调整数值（可为正数或负数）' })
+    return
+  }
+
+  const result = database.grantUserPoints(
+    id,
+    numAmount,
+    req.user!.id,
+    typeof remark === 'string' ? remark.trim() : undefined
+  )
+
+  if (!result.success) {
+    res.status(400).json(result)
+    return
+  }
+
+  res.json(result)
+})
+
+/**
+ * 管理员查看指定用户的积分流水
+ */
+authRouter.get('/admin/users/:id/point-logs', requireAuth, requireRole('admin'), (req, res) => {
+  const { id } = req.params
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 30))
+  const logs = database.listPointLogs(id, limit)
+  res.json({ logs })
 })

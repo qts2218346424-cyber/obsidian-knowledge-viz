@@ -4,6 +4,10 @@ import type {
   AuthStatusResponse,
   LoginResponse,
   UserPermissions,
+  UserPointsInfo,
+  CheckinResult,
+  AdminGrantResult,
+  PointLogItem,
 } from '../types/auth'
 
 const TOKEN_KEY = 'coreforge_auth_token'
@@ -182,4 +186,38 @@ export async function deleteUser(id: string): Promise<{ message: string }> {
   return requestJSON<{ message: string }>(`${BASE}/users/${id}`, {
     method: 'DELETE',
   })
+}
+
+// ===== 伴学积分体系与签到 API =====
+
+/** 获取当前用户积分信息与今日签到状态 */
+export async function getUserPoints(): Promise<UserPointsInfo> {
+  return requestJSON<UserPointsInfo>('/api/user/points')
+}
+
+/** 每日签到领 1 积分 */
+export async function checkin(): Promise<CheckinResult> {
+  return requestJSON<CheckinResult>('/api/user/checkin', {
+    method: 'POST',
+  })
+}
+
+/** 管理员为用户增减/分配积分 */
+export async function adminGrantPoints(
+  userId: string,
+  amount: number,
+  remark?: string
+): Promise<AdminGrantResult> {
+  return requestJSON<AdminGrantResult>(`/api/admin/users/${userId}/points`, {
+    method: 'POST',
+    body: JSON.stringify({ amount, remark }),
+  })
+}
+
+/** 管理员查看用户积分变动流水 */
+export async function adminListPointLogs(
+  userId: string,
+  limit = 30
+): Promise<{ logs: PointLogItem[] }> {
+  return requestJSON<{ logs: PointLogItem[] }>(`/api/admin/users/${userId}/point-logs?limit=${limit}`)
 }

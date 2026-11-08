@@ -1,3 +1,5 @@
+import * as authService from '../services/auth'
+import { useAuth } from '../contexts/AuthContext'
 import { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
 import {
   Loader2,
@@ -117,7 +119,13 @@ function buildWelcomeMessage(agent: StudyAgent, projectName?: string): AgentMess
   }
 }
 
+
+function getUserChatStorageKey(userId?: string): string {
+  return userId ? `coreforge_study_conversations_${userId}` : 'coreforge_study_conversations_guest'
+}
+
 export default function Chat() {
+  const { user } = useAuth()
   // 项目工作区管理状态
   const [workspace, setWorkspace] = useState(() => loadWorkspace())
   const activeProject = useMemo(() => {
@@ -255,7 +263,8 @@ export default function Chat() {
 
   const [conversations, setConversations] = useState<Conversation[]>(() => {
     try {
-      const saved = localStorage.getItem('coreforge_study_conversations')
+      const key = getUserChatStorageKey(user?.id)
+      const saved = localStorage.getItem(key)
       if (saved) {
         const parsed = JSON.parse(saved)
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -275,16 +284,79 @@ export default function Chat() {
     return []
   })
 
-  const [activeConvId, setActiveConvId] = useState<string>(() => {
+
+  const [activeConvId, setActiveConvId] = useState<string>('')
+  const [isHistoryLoaded, setIsHistoryLoaded] = useState(false)
+
+  // 核心：当账号加载或切换时，严格隔离并拉取属于当前账号独享的聊天历史与会话，严禁竞态覆盖
+  useEffect(() => {
+    let isCancelled = false
+    setIsHistoryLoaded(false)
+    const key = getUserChatStorageKey(user?.id)
+
+    // 1. 优先读取当前账号本地缓存，实现极致首屏秒开体验
+    let localConvs: Conversation[] = []
     try {
-      const saved = localStorage.getItem('coreforge_study_conversations')
+      const saved = localStorage.getItem(key)
       if (saved) {
         const parsed = JSON.parse(saved)
-        if (Array.isArray(parsed) && parsed[0]?.id) return parsed[0].id
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          localConvs = parsed.map((c: any) => ({
+            ...c,
+            projectId: c.projectId || DEFAULT_PROJECT_ID,
+            createdAt: new Date(c.createdAt || Date.now()),
+            messages: (c.messages || []).map((m: any) => ({
+              ...m,
+              streaming: false,
+              timestamp: new Date(m.timestamp || Date.now()),
+            })),
+          }))
+        }
       }
     } catch {}
-    return ''
-  })
+
+    if (localConvs.length > 0) {
+      setConversations(localConvs)
+      setActiveConvId(prev => (prev && localConvs.some(c => c.id === prev) ? prev : localConvs[0].id))
+    } else {
+      setConversations([])
+      setActiveConvId('')
+    }
+
+    // 2. 从云端 SQLite 强持久化中心精准同步该用户历史
+    api.getAiConversations().then(cloudConvs => {
+      if (isCancelled) return
+      if (Array.isArray(cloudConvs) && cloudConvs.length > 0) {
+        const mapped = cloudConvs.map((c: any) => ({
+          ...c,
+          projectId: c.projectId || DEFAULT_PROJECT_ID,
+          createdAt: new Date(c.createdAt || Date.now()),
+          messages: (c.messages || []).map((m: any) => ({
+            ...m,
+            streaming: false,
+            timestamp: new Date(m.timestamp || Date.now()),
+          })),
+        }))
+        setConversations(mapped)
+        setActiveConvId(prev => (prev && mapped.some((c: any) => c.id === prev) ? prev : mapped[0].id))
+        try {
+          localStorage.setItem(key, JSON.stringify(mapped.slice(0, 40)))
+        } catch {}
+      } else if (localConvs.length > 0 && user?.id) {
+        // 云端没有但本地有历史，自动将本地历史回填同步上云
+        api.saveAiConversations(localConvs.slice(0, 40)).catch(() => {})
+      }
+      setIsHistoryLoaded(true)
+    }).catch(err => {
+      if (isCancelled) return
+      console.warn('[Chat] 拉取云端对话历史失败，使用本地缓存:', err)
+      setIsHistoryLoaded(true)
+    })
+
+    return () => {
+      isCancelled = true
+    }
+  }, [user?.id])
 
   const [input, setInput] = useState('')
   const [stagedImages, setStagedImages] = useState<string[]>([])
@@ -1165,28 +1237,35 @@ export default function Chat() {
     [activeAgent, provider, selectedModel, activeProject]
   )
 
-  // 核心性能优化 1：流式生成期间严禁同步写 localStorage，仅在流结束后 500ms 防抖异步持久化！
+  // 核心性能与可靠性：仅在云端历史加载完毕且无流式生成时防抖持久化，坚决防止覆盖历史
   useEffect(() => {
-    if (isAnyStreaming) return
+    if (!isHistoryLoaded || isAnyStreaming) return
     const timer = setTimeout(() => {
+      const key = getUserChatStorageKey(user?.id)
       try {
         localStorage.setItem(
-          'coreforge_study_conversations',
+          key,
           JSON.stringify(conversations.slice(0, 40))
         )
       } catch {
         try {
           localStorage.setItem(
-            'coreforge_study_conversations',
+            key,
             JSON.stringify(conversations.slice(0, 12))
           )
         } catch {}
       }
-    }, 500)
+      // 异步同步到云端沙箱与 SQLite 数据库
+      if (user?.id && conversations.length > 0) {
+        api.saveAiConversations(conversations.slice(0, 40)).catch(() => {})
+      }
+    }, 600)
     return () => clearTimeout(timer)
-  }, [conversations, isAnyStreaming])
+  }, [conversations, isAnyStreaming, user?.id, isHistoryLoaded])
 
   useEffect(() => {
+    // 必须等待云端历史同步完成后，再决定是否新建默认空会话，杜绝竞态覆盖已存在的历史记录
+    if (!isHistoryLoaded) return
     const prefilled = sessionStorage.getItem('prefilled_chat_prompt')
     if (prefilled) {
       sessionStorage.removeItem('prefilled_chat_prompt')
@@ -1197,11 +1276,12 @@ export default function Chat() {
     } else if (conversations.length === 0) {
       createConversation()
     }
-  }, [conversations.length, createConversation])
+  }, [conversations.length, createConversation, isHistoryLoaded])
 
   const deleteConversation = useCallback(
     (convId: string) => {
       handleStopConversation(convId)
+      api.deleteAiConversation(convId).catch(() => {})
       setConversations(prev => {
         const next = prev.filter(c => c.id !== convId)
         if (activeConvId === convId && next.length > 0) {
@@ -1411,12 +1491,20 @@ export default function Chat() {
 
           const res = await fetch(endpoint, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              ...authService.getAuthHeaders(),
+            },
             body: JSON.stringify(body),
             signal: convController.signal,
           })
 
           if (!res.ok) {
+            if (res.status === 402) {
+              const errData = await res.json().catch(() => ({}))
+              window.dispatchEvent(new CustomEvent('open-checkin-modal'))
+              throw new Error(errData.message || '伴学积分不足（单次对话消耗 0.1 积分），请每日签到领取或联系管理员分配。')
+            }
             throw new Error(`服务响应异常: HTTP ${res.status}`)
           }
 
@@ -1441,7 +1529,9 @@ export default function Chat() {
 
               try {
                 const event = JSON.parse(jsonStr)
-                if (event.type === 'text' && event.content) {
+                if (event.type === 'points_updated' && typeof event.points === 'number') {
+                  window.dispatchEvent(new CustomEvent('points-updated', { detail: { points: event.points } }))
+                } else if (event.type === 'text' && event.content) {
                   scheduleFlush(event.content)
                 } else if (event.type === 'status' && event.content) {
                   onStatus?.(event.content)
@@ -1924,12 +2014,22 @@ export default function Chat() {
 
         const res = await fetch('/api/local-agents/chat', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...authService.getAuthHeaders(),
+          },
           body: JSON.stringify(body),
           signal: convController.signal,
         })
 
-        if (!res.ok) throw new Error(`服务响应异常: HTTP ${res.status}`)
+        if (!res.ok) {
+          if (res.status === 402) {
+            const errData = await res.json().catch(() => ({}))
+            window.dispatchEvent(new CustomEvent('open-checkin-modal'))
+            throw new Error(errData.message || '伴学积分不足（单次对话消耗 0.1 积分），请每日签到领取或联系管理员分配。')
+          }
+          throw new Error(`服务响应异常: HTTP ${res.status}`)
+        }
 
         const reader = res.body?.getReader()
         if (!reader) throw new Error('流式传输不可用')
@@ -2244,7 +2344,12 @@ export default function Chat() {
 
             {/* 会话列表 */}
             <div className="flex-1 overflow-y-auto py-1 space-y-1">
-              {projectConversations.length === 0 ? (
+              {!isHistoryLoaded ? (
+                <div className="p-5 text-center text-xs text-slate-400 flex flex-col items-center justify-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
+                  <span>同步云端历史记录...</span>
+                </div>
+              ) : projectConversations.length === 0 ? (
                 <div className="p-5 text-center text-xs text-slate-400">
                   <p>当前项目暂无对话</p>
                   <button

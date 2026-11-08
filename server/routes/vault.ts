@@ -25,34 +25,39 @@ import {
 import { buildGraph } from '../graph-builder.js'
 import { checkHealth } from '../health-checker.js'
 import { organizeDocumentIntoWiki } from '../services/wiki-organizer.js'
+import { getRequestVaultPath, resolveSafeUserVaultPath } from '../services/user-sandbox.js'
+import { getUserNotes } from '../context.js'
 
 export const vaultRouter = Router()
 
 // ===== Vault Stats & Health =====
 
-vaultRouter.get('/vault/stats', (_req, res) => {
+vaultRouter.get('/vault/stats', (req, res) => {
   try {
-    const notes = getNotes()
-    const health = checkHealth(notes, config.vaultPath)
-    res.json({ vaultPath: config.vaultPath, connected: notes.length > 0, ...health.stats })
+    const vaultPath = getRequestVaultPath(req)
+    const notes = getUserNotes(req.user?.id, vaultPath)
+    const health = checkHealth(notes, vaultPath)
+    res.json({ vaultPath, connected: notes.length > 0, ...health.stats })
   } catch (err: any) {
     res.status(500).json({ error: err.message })
   }
 })
 
-vaultRouter.get('/vault/graph', (_req, res) => {
+vaultRouter.get('/vault/graph', (req, res) => {
   try {
-    const notes = getNotes()
+    const vaultPath = getRequestVaultPath(req)
+    const notes = getUserNotes(req.user?.id, vaultPath)
     res.json(buildGraph(notes))
   } catch (err: any) {
     res.status(500).json({ error: err.message })
   }
 })
 
-vaultRouter.get('/vault/health', (_req, res) => {
+vaultRouter.get('/vault/health', (req, res) => {
   try {
-    const notes = getNotes()
-    res.json(checkHealth(notes, config.vaultPath))
+    const vaultPath = getRequestVaultPath(req)
+    const notes = getUserNotes(req.user?.id, vaultPath)
+    res.json(checkHealth(notes, vaultPath))
   } catch (err: any) {
     res.status(500).json({ error: err.message })
   }
@@ -62,7 +67,8 @@ vaultRouter.get('/vault/health', (_req, res) => {
 
 vaultRouter.get('/vault/files', (req, res) => {
   try {
-    const notes = getNotes()
+    const vaultPath = getRequestVaultPath(req)
+    const notes = getUserNotes(req.user?.id, vaultPath)
     const query = String(req.query.q || '').toLowerCase().trim()
     if (!query) {
       res.json(notes.map(n => ({ path: n.path, title: n.title, tags: n.tags, modified: n.modified, wordCount: n.wordCount })))
@@ -123,7 +129,11 @@ vaultRouter.get('/vault/file', (req, res) => {
       res.status(400).json({ error: 'Missing path parameter' })
       return
     }
-    const note = getFile(config.vaultPath, filePath)
+    const vaultPath = getRequestVaultPath(req)
+    if (req.user?.id) {
+      resolveSafeUserVaultPath(req.user, filePath)
+    }
+    const note = getFile(vaultPath, filePath)
     if (!note) {
       res.status(404).json({ error: 'File not found' })
       return
@@ -134,9 +144,10 @@ vaultRouter.get('/vault/file', (req, res) => {
   }
 })
 
-vaultRouter.get('/vault/tree', (_req, res) => {
+vaultRouter.get('/vault/tree', (req, res) => {
   try {
-    res.json(getTree(config.vaultPath))
+    const vaultPath = getRequestVaultPath(req)
+    res.json(getTree(vaultPath))
   } catch (err: any) {
     res.status(500).json({ error: err.message })
   }
@@ -155,9 +166,13 @@ vaultRouter.post('/vault/file', (req, res) => {
       res.status(400).json({ error: 'Missing path or content' })
       return
     }
-    const note = createFile(config.vaultPath, filePath, content, frontmatter)
+    const vaultPath = getRequestVaultPath(req)
+    if (req.user?.id) {
+      resolveSafeUserVaultPath(req.user, filePath)
+    }
+    const note = createFile(vaultPath, filePath, content, frontmatter)
     markSelfWrite(filePath)
-    invalidateCache()
+    invalidateCache(req.user?.id)
     res.json(note)
   } catch (err: any) {
     res.status(400).json({ error: err.message })
@@ -175,9 +190,19 @@ vaultRouter.put('/vault/file', (req, res) => {
       res.status(400).json({ error: 'Missing path or content' })
       return
     }
-    const note = updateFile(config.vaultPath, filePath, content, frontmatter)
+    const vaultPath = getRequestVaultPath(req)
+    if (req.user?.id) {
+      resolveSafeUserVaultPath(req.user, filePath)
+    }
+    const targetFullPath = path.resolve(vaultPath, filePath)
+    let note
+    if (fs.existsSync(targetFullPath)) {
+      note = updateFile(vaultPath, filePath, content, frontmatter)
+    } else {
+      note = createFile(vaultPath, filePath, content, frontmatter)
+    }
     markSelfWrite(filePath)
-    invalidateCache()
+    invalidateCache(req.user?.id)
     res.json(note)
   } catch (err: any) {
     res.status(400).json({ error: err.message })
@@ -191,8 +216,12 @@ vaultRouter.delete('/vault/file', async (req, res) => {
       res.status(400).json({ error: 'Missing path' })
       return
     }
-    const result = await deleteFile(config.vaultPath, filePath)
-    invalidateCache()
+    const vaultPath = getRequestVaultPath(req)
+    if (req.user?.id) {
+      resolveSafeUserVaultPath(req.user, filePath)
+    }
+    const result = await deleteFile(vaultPath, filePath)
+    invalidateCache(req.user?.id)
     res.json(result)
   } catch (err: any) {
     res.status(400).json({ error: err.message })
@@ -206,8 +235,13 @@ vaultRouter.patch('/vault/file/rename', (req, res) => {
       res.status(400).json({ error: 'Missing oldPath or newPath' })
       return
     }
-    const result = renameFile(config.vaultPath, oldPath, newPath)
-    invalidateCache()
+    const vaultPath = getRequestVaultPath(req)
+    if (req.user?.id) {
+      resolveSafeUserVaultPath(req.user, oldPath)
+      resolveSafeUserVaultPath(req.user, newPath)
+    }
+    const result = renameFile(vaultPath, oldPath, newPath)
+    invalidateCache(req.user?.id)
     res.json(result)
   } catch (err: any) {
     res.status(400).json({ error: err.message })

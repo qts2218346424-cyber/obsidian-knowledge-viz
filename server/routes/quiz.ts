@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import matter from 'gray-matter'
 import { config, anthropic, markSelfWrite, invalidateCache } from '../context.js'
+import { getRequestVaultPath } from '../services/user-sandbox.js'
 import { createFile, updateFile } from '../vault-parser.js'
 import { generateQuizSummary } from '../quiz-summary.js'
 import { database } from '../db/database.js'
@@ -294,7 +295,7 @@ ${question.steps ? `### 详细步骤：\n${question.steps.join('\n\n')}` : ''}
       updated: dateStr
     }
 
-    createFile(config.vaultPath, targetPath, content, fm)
+    createFile(getRequestVaultPath(req), targetPath, content, fm)
     markSelfWrite(targetPath)
     invalidateCache()
 
@@ -304,6 +305,7 @@ ${question.steps ? `### 详细步骤：\n${question.steps.join('\n\n')}` : ''}
     try {
       database.upsertErrorQuestion({
         id: errorId,
+        userId: req.user?.id || 'default',
         domain,
         subject: question.subject,
         chapter: question.chapter || '',
@@ -325,6 +327,7 @@ ${question.steps ? `### 详细步骤：\n${question.steps.join('\n\n')}` : ''}
       const sm2Initial = calculateSM2({ cardId: errorId }, 2) // 错题默认给 2 分触发强化记忆
       database.upsertSM2Flashcard({
         cardId: errorId,
+        userId: req.user?.id || 'default',
         title: `错题复盘 · ${question.subject}`,
         subject: question.subject,
         syllabusId: syllabusNode?.id || '',
@@ -472,6 +475,7 @@ quizRouter.post('/quiz/submit', (req, res) => {
     try {
       database.insertQuizRecord({
         id: quizId,
+        userId: req.user?.id || 'default',
         mode: mode || 'practice',
         totalQuestions: questions.length,
         correctCount: summary.correctCount,
@@ -543,9 +547,32 @@ quizRouter.post('/quiz/submit', (req, res) => {
   }
 })
 
-quizRouter.get('/quiz/history', (_req, res) => {
+quizRouter.get('/quiz/records', (req, res) => {
   try {
-    const quizDir = path.resolve(config.vaultPath, '做题记录')
+    const limit = parseInt(req.query.limit as string) || 50
+    const domain = req.query.domain as string | undefined
+    const records = database.getQuizRecords(limit, domain, req.user?.id)
+    res.json({ success: true, records })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+quizRouter.get('/quiz/errors', (req, res) => {
+  try {
+    const subject = req.query.subject as string | undefined
+    const status = req.query.status as string | undefined
+    const errors = database.getErrorQuestions({ subject, status, userId: req.user?.id })
+    res.json({ success: true, errors })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+quizRouter.get('/quiz/history', (req, res) => {
+  try {
+    const userVault = getRequestVaultPath(req)
+    const quizDir = path.resolve(userVault, '做题记录')
     if (!fs.existsSync(quizDir)) {
       res.json({ files: [] })
       return

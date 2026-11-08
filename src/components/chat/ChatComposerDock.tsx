@@ -1,6 +1,8 @@
+import { useAuth } from '../../contexts/AuthContext'
 import { memo, useRef, useEffect, useState } from 'react'
 import {
   Send,
+  Coins,
   Square,
   Loader2,
   Image as ImageIcon,
@@ -97,6 +99,7 @@ export const ChatComposerDock = memo(function ChatComposerDock({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const docFileInputRef = useRef<HTMLInputElement>(null)
+  const { points, isAdmin } = useAuth()
   const [isExpandedEditor, setIsExpandedEditor] = useState(false)
 
   // 自动调节 Textarea 高度，舒展自然呼吸感
@@ -480,6 +483,17 @@ export const ChatComposerDock = memo(function ChatComposerDock({
 
             {/* 右侧：清空输入 + 快捷键提示 + 发送/停止按钮 */}
             <div className="flex items-center gap-2.5 shrink-0">
+              {/* 伴学积分余额与单次扣除提示 */}
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent('open-checkin-modal'))}
+                className="hidden sm:inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-lg border border-amber-200/80 bg-amber-50/70 hover:bg-amber-100 text-amber-800 transition-colors cursor-pointer"
+                title="单次提问消耗 0.1 积分 · 每日签到免费领 1 积分"
+              >
+                <Coins className="w-3 h-3 text-amber-600" />
+                <span className="font-mono font-bold">{points.toFixed(1)}</span>
+                <span className="text-[10px] text-amber-700">分 (-0.1/次)</span>
+              </button>
               {input.length > 0 && (
                 <button
                   type="button"
@@ -518,6 +532,16 @@ export const ChatComposerDock = memo(function ChatComposerDock({
                     </button>
                   )}
                 </div>
+              ) : (!isAdmin && points < 0.1) ? (
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent('open-checkin-modal'))}
+                  className="h-8 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold transition-all shadow-xs active:scale-95 flex items-center gap-1.5 cursor-pointer animate-pulse"
+                  title="伴学积分不足（单次需 0.1 积分），点击每日签到免费领取"
+                >
+                  <Coins className="w-3.5 h-3.5" />
+                  <span>积分不足 · 去签到</span>
+                </button>
               ) : (
                 <button
                   type="button"

@@ -186,9 +186,13 @@ interface CacheEntry {
 const userNotesCache = new Map<string, CacheEntry>()
 const CACHE_TTL = 10_000
 
+function normalizeUserCacheKey(userId: string): string {
+  return userId.startsWith('usr_') ? userId : `usr_${userId}`
+}
+
 export function getUserNotes(userId?: string, vaultDir?: string): VaultNote[] {
   const targetDir = vaultDir || config.vaultPath
-  const key = userId ? `usr_${userId}` : (targetDir || '__default__')
+  const key = userId ? normalizeUserCacheKey(userId) : (targetDir || '__default__')
   const now = Date.now()
 
   const entry = userNotesCache.get(key)
@@ -211,8 +215,10 @@ export function getNotes(vaultPath?: string): VaultNote[] {
 
 export function invalidateCache(key?: string) {
   if (key) {
-    userNotesCache.delete(key.startsWith('usr_') ? key : `usr_${key}`)
+    const normKey = normalizeUserCacheKey(key)
+    userNotesCache.delete(normKey)
     userNotesCache.delete(key)
+    userNotesCache.delete(`usr_${normKey}`)
   } else {
     userNotesCache.clear()
   }

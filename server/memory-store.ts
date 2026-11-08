@@ -120,13 +120,16 @@ const DEFAULT_DIRECTIVES: AgentDirective[] = [
  */
 export function getAgentMemoryPath(vaultPath?: string): string {
   const vPath = vaultPath || config.vaultPath
-  if (vPath && fs.existsSync(vPath)) {
-    // If wiki exists, prefer wiki/agent.md or vault root agent.md
-    const wikiAgent = path.join(vPath, 'wiki', 'agent.md')
-    if (fs.existsSync(wikiAgent)) return wikiAgent
+  if (vPath) {
+    if (vPath.endsWith('.md')) return vPath
+    if (fs.existsSync(vPath)) {
+      // If wiki exists, prefer wiki/agent.md or vault root agent.md
+      const wikiAgent = path.join(vPath, 'wiki', 'agent.md')
+      if (fs.existsSync(wikiAgent)) return wikiAgent
 
-    const rootAgent = path.join(vPath, 'agent.md')
-    return rootAgent
+      const rootAgent = path.join(vPath, 'agent.md')
+      return rootAgent
+    }
   }
 
   // Fallback to local server data dir
@@ -228,6 +231,7 @@ export function parseAgentMarkdown(raw: string): AgentMemoryConfig {
     const weakPoints: string[] = []
     const customPreferences: string[] = []
     const directives: AgentDirective[] = []
+    const userProfile: UserProfileContext = { ...DEFAULT_USER_PROFILE }
 
     // Section parser
     const lines = content.split('\n')
@@ -261,6 +265,22 @@ export function parseAgentMarkdown(raw: string): AgentMemoryConfig {
           rules.push(trimmed.slice(2).trim())
         }
       } else if (currentSection === 'userProfile') {
+        if (trimmed.startsWith('- **目标考向**：')) {
+          userProfile.targetExam = trimmed.replace('- **目标考向**：', '').trim()
+          continue
+        }
+        if (trimmed.startsWith('- **目标院校**：')) {
+          userProfile.targetSchool = trimmed.replace('- **目标院校**：', '').trim()
+          continue
+        }
+        if (trimmed.startsWith('- **考生背景**：')) {
+          userProfile.userBackground = trimmed.replace('- **考生背景**：', '').trim()
+          continue
+        }
+        if (trimmed.startsWith('- **当前阶段**：')) {
+          userProfile.currentStage = trimmed.replace('- **当前阶段**：', '').trim()
+          continue
+        }
         if (trimmed.startsWith('- **薄弱考点预警**：') || trimmed.startsWith('- **学习偏好**：')) {
           continue
         }
@@ -293,9 +313,9 @@ export function parseAgentMarkdown(raw: string): AgentMemoryConfig {
       persona,
       rules: rules.length > 0 ? rules : DEFAULT_RULES,
       userProfile: {
-        ...DEFAULT_USER_PROFILE,
-        weakPoints: weakPoints.length > 0 ? weakPoints : DEFAULT_USER_PROFILE.weakPoints,
-        customPreferences: customPreferences.length > 0 ? customPreferences : DEFAULT_USER_PROFILE.customPreferences,
+        ...userProfile,
+        weakPoints: weakPoints.length > 0 ? weakPoints : userProfile.weakPoints,
+        customPreferences: customPreferences.length > 0 ? customPreferences : userProfile.customPreferences,
       },
       directives: directives.length > 0 ? directives : DEFAULT_DIRECTIVES,
       lastUpdated: (fm.lastUpdated as string) || new Date().toISOString().split('T')[0],

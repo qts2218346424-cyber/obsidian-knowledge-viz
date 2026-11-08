@@ -213,7 +213,7 @@ studyRouter.post('/study/sm2/grade', (req, res) => {
       return
     }
 
-    const existing = database.getSM2Flashcard(cardId)
+    const existing = database.getSM2Flashcard(cardId, req.user?.id)
     const updatedState = calculateSM2(
       existing || { cardId },
       grade
@@ -233,6 +233,7 @@ studyRouter.post('/study/sm2/grade', (req, res) => {
     const finalSyllabusId = syllabusId || existing?.syllabusId || ''
     database.upsertSM2Flashcard({
       cardId,
+      userId: req.user?.id || 'default',
       title: title || existing?.title || '知识卡片',
       subject: subject || existing?.subject || '综合',
       syllabusId: finalSyllabusId,
@@ -269,7 +270,7 @@ studyRouter.get('/study/sm2/due', (req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0]
     const subject = req.query.subject ? String(req.query.subject) : undefined
-    const dueCards = database.getDueFlashcards(today, subject)
+    const dueCards = database.getDueSM2Flashcards(today, subject, req.user?.id)
 
     const mapped = dueCards.map(c => {
       const retention = estimateRetentionRate(c.lastReviewAt, c.intervalDays)

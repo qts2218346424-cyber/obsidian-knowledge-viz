@@ -6,7 +6,7 @@ import {
   useCallback,
   type ReactNode,
 } from 'react'
-import type { UserProfile, UserRole } from '../types/auth'
+import type { UserProfile, UserRole, CheckinResult } from '../types/auth'
 import * as authService from '../services/auth'
 
 export interface AuthContextValue {
@@ -19,6 +19,12 @@ export interface AuthContextValue {
   isEditor: boolean
   isStudent: boolean
   canWriteVault: boolean
+  points: number
+  canCheckinToday: boolean
+  lastCheckinAt?: string
+  checkin: () => Promise<CheckinResult>
+  refreshPoints: () => Promise<void>
+  updatePointsDirectly: (newPoints: number) => void
   login: (username: string, password: string) => Promise<void>
   register: (username: string, password: string, displayName?: string) => Promise<void>
   initAdmin: (username: string, password: string, displayName?: string) => Promise<void>
@@ -34,6 +40,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(authService.getStoredToken())
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [initialized, setInitialized] = useState<boolean>(true)
+  const [points, setPoints] = useState<number>(5.0)
+  const [lastCheckinAt, setLastCheckinAt] = useState<string | undefined>(undefined)
+  const [canCheckinToday, setCanCheckinToday] = useState<boolean>(true)
+
+  const refreshPoints = useCallback(async () => {
+    if (!authService.getStoredToken()) return
+    try {
+      const data = await authService.getUserPoints()
+      setPoints(data.points)
+      setLastCheckinAt(data.lastCheckinAt)
+      setCanCheckinToday(data.canCheckinToday)
+    } catch {
+      // ignore
+    }
+  }, [])
 
   const refreshUser = useCallback(async () => {
     const currentToken = authService.getStoredToken()
@@ -46,12 +67,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await authService.getCurrentUser()
       setUser(data.user)
       setToken(currentToken)
+      if (typeof data.user.points === 'number') {
+        setPoints(data.user.points)
+      }
+      setLastCheckinAt(data.user.lastCheckinAt)
+      await refreshPoints()
     } catch {
       setUser(null)
       setToken(null)
       authService.setStoredToken(null)
     }
-  }, [])
+  }, [refreshPoints])
 
   const checkStatus = useCallback(async () => {
     try {
@@ -81,11 +107,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       authService.setStoredToken(null)
     }
 
+    const onPointsUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<{ points: number }>
+      if (customEvent.detail && typeof customEvent.detail.points === 'number') {
+        setPoints(customEvent.detail.points)
+      }
+    }
+
     window.addEventListener('auth-unauthorized', onUnauthorized)
+    window.addEventListener('points-updated', onPointsUpdated)
     return () => {
       window.removeEventListener('auth-unauthorized', onUnauthorized)
+      window.removeEventListener('points-updated', onPointsUpdated)
     }
   }, [checkStatus])
+
+  const updatePointsDirectly = useCallback((newPoints: number) => {
+    setPoints(newPoints)
+  }, [])
+
+  const handleCheckin = useCallback(async (): Promise<CheckinResult> => {
+    const res = await authService.checkin()
+    if (res.success) {
+      setPoints(res.points)
+      setLastCheckinAt(res.lastCheckinAt)
+      setCanCheckinToday(false)
+    }
+    return res
+  }, [])
 
   const handleLogin = async (username: string, password: string) => {
     setIsLoading(true)
@@ -93,6 +142,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await authService.login({ username, password })
       setUser(res.user)
       setToken(res.token)
+      if (typeof res.user.points === 'number') {
+        setPoints(res.user.points)
+      }
+      setLastCheckinAt(res.user.lastCheckinAt)
+      await refreshPoints()
     } finally {
       setIsLoading(false)
     }
@@ -104,6 +158,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await authService.register({ username, password, displayName })
       setUser(res.user)
       setToken(res.token)
+      if (typeof res.user.points === 'number') {
+        setPoints(res.user.points)
+      }
+      setLastCheckinAt(res.user.lastCheckinAt)
+      await refreshPoints()
     } finally {
       setIsLoading(false)
     }
@@ -116,6 +175,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(res.user)
       setToken(res.token)
       setInitialized(true)
+      if (typeof res.user.points === 'number') {
+        setPoints(res.user.points)
+      }
+      await refreshPoints()
     } finally {
       setIsLoading(false)
     }
@@ -149,6 +212,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isEditor,
         isStudent,
         canWriteVault,
+        points,
+        canCheckinToday,
+        lastCheckinAt,
+        checkin: handleCheckin,
+        refreshPoints,
+        updatePointsDirectly,
         login: handleLogin,
         register: handleRegister,
         initAdmin: handleInitAdmin,

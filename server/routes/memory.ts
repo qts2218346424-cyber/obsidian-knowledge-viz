@@ -18,15 +18,23 @@ import {
   type AgentDirective,
 } from '../memory-store.js'
 import { createFile } from '../vault-parser.js'
+import { getUserAgentMemoryPath } from '../services/user-sandbox.js'
+
+function getRequestMemoryPath(req: any): string {
+  if (req.user?.id) {
+    return getUserAgentMemoryPath(req.user.id)
+  }
+  return config.vaultPath
+}
 
 export const memoryRouter = Router()
 
 /**
  * 获取三层认知记忆架构状态 (Global, Project, Session)
  */
-memoryRouter.get('/memory/tier', (_req, res) => {
+memoryRouter.get('/memory/tier', (req, res) => {
   try {
-    const agentConfig = loadAgentMemoryConfig(config.vaultPath)
+    const agentConfig = loadAgentMemoryConfig(getRequestMemoryPath(req))
     res.json({
       success: true,
       tiers: {
@@ -57,9 +65,9 @@ memoryRouter.get('/memory/tier', (_req, res) => {
 /**
  * Get AI Agent Memory Config & agent.md
  */
-memoryRouter.get('/memory/agent-config', (_req, res) => {
+memoryRouter.get('/memory/agent-config', (req, res) => {
   try {
-    const data = loadAgentMemoryConfig(config.vaultPath)
+    const data = loadAgentMemoryConfig(getRequestMemoryPath(req))
     res.json({
       success: true,
       config: data.config,
@@ -82,7 +90,7 @@ memoryRouter.post('/memory/agent-config', (req, res) => {
     }
 
     if (rawMarkdown !== undefined) {
-      const result = saveRawAgentMarkdown(rawMarkdown, config.vaultPath)
+      const result = saveRawAgentMarkdown(rawMarkdown, getRequestMemoryPath(req))
       invalidateCache()
       res.json({
         success: true,
@@ -95,11 +103,27 @@ memoryRouter.post('/memory/agent-config', (req, res) => {
     }
 
     if (newConfig) {
-      const result = saveAgentMemoryConfig(newConfig, config.vaultPath)
+      const memoryPath = getRequestMemoryPath(req)
+      const { config: currentConfig } = loadAgentMemoryConfig(memoryPath)
+      const mergedConfig: AgentMemoryConfig = {
+        ...currentConfig,
+        ...newConfig,
+        persona: {
+          ...currentConfig.persona,
+          ...(newConfig.persona || {}),
+        },
+        userProfile: {
+          ...currentConfig.userProfile,
+          ...(newConfig.userProfile || {}),
+        },
+        rules: newConfig.rules || currentConfig.rules,
+        directives: newConfig.directives || currentConfig.directives,
+      }
+      const result = saveAgentMemoryConfig(mergedConfig, memoryPath)
       invalidateCache()
       res.json({
         success: true,
-        config: newConfig,
+        config: mergedConfig,
         rawMarkdown: result.rawMarkdown,
         filePath: result.filePath,
         message: '智能体设定已更新并保存至 agent.md！',
@@ -135,7 +159,7 @@ memoryRouter.post('/memory/directive', (req, res) => {
       content,
       category: category || 'behavior',
       enabled: enabled ?? true,
-    }, config.vaultPath)
+    }, getRequestMemoryPath(req))
 
     invalidateCache()
     res.json({ success: true, directive: result.directive })
@@ -151,7 +175,7 @@ memoryRouter.put('/memory/directive/:id', (req, res) => {
   try {
     const { id } = req.params
     const patch = req.body as Partial<AgentDirective>
-    const result = updateAgentDirective(id, patch, config.vaultPath)
+    const result = updateAgentDirective(id, patch, getRequestMemoryPath(req))
     if (!result.success || !result.directive) {
       res.status(404).json({ error: '未找到该记忆条目' })
       return
@@ -169,7 +193,7 @@ memoryRouter.put('/memory/directive/:id', (req, res) => {
 memoryRouter.delete('/memory/directive/:id', (req, res) => {
   try {
     const { id } = req.params
-    const ok = deleteAgentDirective(id, config.vaultPath)
+    const ok = deleteAgentDirective(id, getRequestMemoryPath(req))
     if (!ok) {
       res.status(404).json({ error: '未找到该记忆条目' })
       return
@@ -190,7 +214,7 @@ memoryRouter.post('/memory/reset-default', (_req, res) => {
     if (fs.existsSync(filePath)) {
       try { fs.unlinkSync(filePath) } catch {}
     }
-    const data = loadAgentMemoryConfig(config.vaultPath)
+    const data = loadAgentMemoryConfig(getRequestMemoryPath(req))
     invalidateCache()
     res.json({
       success: true,
@@ -206,10 +230,10 @@ memoryRouter.post('/memory/reset-default', (_req, res) => {
 
 // ===== Legacy Compatibility Endpoints =====
 
-memoryRouter.get('/memory/all', (_req, res) => {
+memoryRouter.get('/memory/all', (req, res) => {
   try {
-    const memories = loadAllMemories(config.vaultPath)
-    const stats = getMemoryStats(config.vaultPath)
+    const memories = loadAllMemories(getRequestMemoryPath(req))
+    const stats = getMemoryStats(getRequestMemoryPath(req))
     res.json({
       success: true,
       memories,
@@ -227,7 +251,7 @@ memoryRouter.post('/memory/item', (req, res) => {
       res.status(400).json({ error: 'Title and content are required' })
       return
     }
-    const created = addMemory(item, config.vaultPath)
+    const created = addMemory(item, getRequestMemoryPath(req))
     res.json({ success: true, item: created })
   } catch (err: any) {
     res.status(500).json({ error: err.message })
@@ -238,7 +262,7 @@ memoryRouter.put('/memory/item/:id', (req, res) => {
   try {
     const { id } = req.params
     const patch = req.body
-    const updated = updateMemory(id, patch, config.vaultPath)
+    const updated = updateMemory(id, patch, getRequestMemoryPath(req))
     if (!updated) {
       res.status(404).json({ error: 'Memory item not found' })
       return
@@ -252,7 +276,7 @@ memoryRouter.put('/memory/item/:id', (req, res) => {
 memoryRouter.delete('/memory/item/:id', (req, res) => {
   try {
     const { id } = req.params
-    const ok = deleteMemory(id, config.vaultPath)
+    const ok = deleteMemory(id, getRequestMemoryPath(req))
     if (!ok) {
       res.status(404).json({ error: 'Memory item not found' })
       return

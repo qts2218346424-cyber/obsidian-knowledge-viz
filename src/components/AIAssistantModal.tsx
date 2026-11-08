@@ -1,3 +1,4 @@
+import * as authService from '../services/auth'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Bot,
@@ -315,7 +316,10 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath }: AIAssist
         activeProvider === 'web' ? '/api/agent/chat' : '/api/local-agents/chat',
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...authService.getAuthHeaders(),
+          },
           body: JSON.stringify(
             activeProvider === 'web'
               ? { message: agentMessage, history }

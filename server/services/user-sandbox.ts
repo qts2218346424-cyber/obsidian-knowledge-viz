@@ -16,39 +16,73 @@ if (!fs.existsSync(USERS_ROOT_DIR)) {
 }
 
 /**
+ * 过滤文件名安全字符，具备强大的类型防御
+ */
+export function sanitizeId(rawId: any): string {
+  let id = ''
+  if (typeof rawId === 'string') {
+    id = rawId
+  } else if (rawId && typeof rawId === 'object') {
+    id = String(rawId.id || rawId.username || '')
+  } else {
+    id = String(rawId || 'default')
+  }
+  return id.replace(/[^a-zA-Z0-9_-]/g, '_')
+}
+
+/**
  * 获取指定用户的专属根沙箱目录
  */
-export function getUserSpaceDir(userId: string): string {
-  const safeId = sanitizeId(userId)
+export function getUserSpaceDir(userOrId: any): string {
+  const safeId = sanitizeId(userOrId)
   return path.join(USERS_ROOT_DIR, safeId)
 }
 
 /**
  * 获取指定用户的独享笔记空间 (Vault) 目录
  */
-export function getUserVaultDir(userId: string): string {
-  return path.join(getUserSpaceDir(userId), 'vault')
+export function getUserVaultDir(userOrId: any): string {
+  return path.join(getUserSpaceDir(userOrId), 'vault')
 }
 
 /**
  * 获取指定用户的独享 AI 记忆空间 (Memory) 目录
  */
-export function getUserMemoryDir(userId: string): string {
-  return path.join(getUserSpaceDir(userId), 'memory')
+export function getUserMemoryDir(userOrId: any): string {
+  return path.join(getUserSpaceDir(userOrId), 'memory')
 }
 
 /**
  * 获取指定用户的独享 agent.md 记忆文件绝对路径
  */
-export function getUserAgentMemoryPath(userId: string): string {
-  return path.join(getUserMemoryDir(userId), 'agent.md')
+export function getUserAgentMemoryPath(userOrId: any): string {
+  return path.join(getUserMemoryDir(userOrId), 'agent.md')
 }
 
 /**
- * 从当前 Express 请求中解析当前用户的独立 Vault 目录
- * 若当前已登录，返回其私有专属沙箱；若未登录，回退到全局公共路径 (向后兼容)
+ * 获取指定用户的独享 AI 对话历史文件绝对路径
+ */
+export function getUserChatConversationsPath(userOrId: any): string {
+  return path.join(getUserMemoryDir(userOrId), 'conversations.json')
+}
+
+/**
+ * 从当前 Express 请求中解析适用的 Vault 目录
+ * 1. 超级管理员 (admin) 默认统领系统核心主知识库 (即电脑本地同步的全部 446 篇核心考研笔记与资料)
+ * 2. 客户端通过 query 或 header 显式请求 scope=public / shared / global，返回系统核心主知识库
+ * 3. 普通注册学生或编辑者，登录后进入其独享的个人沙箱
+ * 4. 若未登录，回退至核心主知识库保证向后兼容
  */
 export function getRequestVaultPath(req: Request): string {
+  if (req.user?.role === 'admin') {
+    return config.vaultPath
+  }
+
+  const scope = (req.query?.scope as string) || (req.headers?.['x-vault-scope'] as string)
+  if (scope === 'public' || scope === 'shared' || scope === 'global') {
+    return config.vaultPath
+  }
+
   if (req.user?.id) {
     const userVault = getUserVaultDir(req.user.id)
     if (!fs.existsSync(userVault)) {
@@ -60,9 +94,15 @@ export function getRequestVaultPath(req: Request): string {
 }
 
 /**
- * 从当前 Express 请求中解析当前用户的独立 AI 记忆文件路径
+ * 从当前 Express 请求中解析适用的独立 AI 记忆文件路径 (agent.md)
+ * 1. 超级管理员直接管理系统核心根目录的 agent.md (即电脑本地的 AI 导师总设)
+ * 2. 普通学生访问其独立沙箱内的 agent.md (个性化目标院校、薄弱点与指令)
  */
 export function getRequestAgentMemoryPath(req: Request): string {
+  if (req.user?.role === 'admin') {
+    return path.join(config.vaultPath, 'agent.md')
+  }
+
   if (req.user?.id) {
     const memPath = getUserAgentMemoryPath(req.user.id)
     if (!fs.existsSync(memPath)) {
@@ -70,25 +110,56 @@ export function getRequestAgentMemoryPath(req: Request): string {
     }
     return memPath
   }
-  // 未登录时回退到全局 agent.md
   return path.join(config.vaultPath, 'agent.md')
 }
 
 /**
+ * 从当前 Express 请求中解析适用的 AI 聊天会话存储文件路径
+ */
+export function getRequestChatConversationsPath(req: Request): string {
+  if (req.user?.role === 'admin') {
+    return path.join(USERS_ROOT_DIR, 'admin_conversations.json')
+  }
+
+  if (req.user?.id) {
+    const memDir = getUserMemoryDir(req.user.id)
+    if (!fs.existsSync(memDir)) {
+      ensureUserSandboxSync(req.user.id, req.user.username)
+    }
+    return path.join(memDir, 'conversations.json')
+  }
+  return path.join(USERS_ROOT_DIR, 'guest_conversations.json')
+}
+
+/**
  * 高安全级别沙箱路径解析与防穿透防御 (Path Traversal Protection)
- * 严格确保目标路径必须落在指定用户的 vault 目录内，任何尝试以 `../` 越权的操作直接拦截并抛出异常
+ * 严格确保目标路径必须落在当前请求用户的合法根目录内：
+ * - 超级管理员：合法根目录为系统核心主知识库 (config.vaultPath)
+ * - 普通学生/编辑者：合法根目录为其个人专属沙箱 (getUserVaultDir(userId))
+ * 任何尝试以 `../` 越权的非法操作直接拦截并抛出异常
  */
 export function resolveSafeUserVaultPath(
-  userId: string,
+  userOrId: any,
   relativePath: string
 ): { safeVaultDir: string; safeFullPath: string; safeRelative: string } {
-  const safeVaultDir = path.resolve(getUserVaultDir(userId))
+  let userId = ''
+  let isAdmin = false
+
+  if (typeof userOrId === 'string') {
+    userId = userOrId
+  } else if (userOrId && typeof userOrId === 'object') {
+    userId = String(userOrId.id || userOrId.username || '')
+    isAdmin = userOrId.role === 'admin'
+  }
+
+  // 超级管理员操作的是主知识库，普通学生操作的是个人沙箱
+  const safeVaultDir = path.resolve(isAdmin ? config.vaultPath : getUserVaultDir(userId))
   
   // 规范化相对路径
   const normalizedRelative = relativePath.replace(/^[/\\]+/, '')
   const safeFullPath = path.resolve(safeVaultDir, normalizedRelative)
 
-  // 严格安全守卫：完整路径必须以安全沙箱目录开头
+  // 严格安全守卫：完整路径必须以安全目录开头
   if (!safeFullPath.startsWith(safeVaultDir)) {
     throw new Error(`安全违规拦截：检测到非法路径穿越攻击 [${relativePath}]`)
   }
@@ -174,17 +245,10 @@ lastUpdated: "${new Date().toISOString().split('T')[0]}"
   - 高数：泰勒公式未定式极限展开
   - 数据结构：图的拓扑排序与关键路径
 
-# 🧭 考生专属指导指令集 (Directives)
+# 📋 考生专属指导指令集 (Directives)
 - [dir-01] 遇到算法题时优先给出示意图与复杂度分析。
 - [dir-02] 针对错题主动提醒进行四维归因诊断。
 `
     fs.writeFileSync(agentMemoryPath, defaultAgentMarkdown, 'utf-8')
   }
-}
-
-/**
- * 过滤文件名安全字符
- */
-function sanitizeId(id: string): string {
-  return id.replace(/[^a-zA-Z0-9_-]/g, '_')
 }

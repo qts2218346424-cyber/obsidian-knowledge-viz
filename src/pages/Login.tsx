@@ -298,6 +298,27 @@ export default function Login() {
                 </>
               )}
             </button>
+
+            {/* 超级管理员快捷通道提示 */}
+            {!isInitMode && activeTab === 'login' && (
+              <div className="mt-4 pt-3.5 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+                <span className="flex items-center gap-1.5 text-slate-300">
+                  <ShieldCheck className="h-4 w-4 text-amber-400 shrink-0" />
+                  <span>站长特权：<code className="text-amber-300 font-mono px-1 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">admin</code></span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUsername('admin')
+                    setPassword('AdminPassword123!')
+                    setError(null)
+                  }}
+                  className="text-xs font-bold text-amber-400 hover:text-amber-300 underline underline-offset-2 cursor-pointer transition-colors"
+                >
+                  一键填入超级管理员
+                </button>
+              </div>
+            )}
           </form>
 
           {/* 权限说明 */}

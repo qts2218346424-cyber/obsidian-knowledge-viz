@@ -75,7 +75,7 @@ export function generateQuizSummary(params: QuizSummaryParams): QuizSummaryResul
   // Group wrong answers by tags (weak topic analysis)
   const tagErrors: Record<string, number> = {}
   for (const item of wrongItems) {
-    for (const tag of item.question.tags) {
+    for (const tag of (item.question.tags || [])) {
       tagErrors[tag] = (tagErrors[tag] || 0) + 1
     }
   }
@@ -134,7 +134,7 @@ export function generateQuizSummary(params: QuizSummaryParams): QuizSummaryResul
       md += `- 正确答案: **${q.answer}**\n`
       md += `- 难度: ${q.difficulty || '未知'}\n\n`
       md += `**解析**: ${q.explanation}\n\n`
-      if (q.tags.length > 0) {
+      if (q.tags && q.tags.length > 0) {
         md += `标签: ${q.tags.map(t => `\`${t}\``).join(', ')}\n\n`
       }
       md += `---\n\n`

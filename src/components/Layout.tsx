@@ -23,6 +23,7 @@ import {
   Database,
   Smartphone,
   Sparkles,
+  Coins,
 } from 'lucide-react'
 import { useVaultStats, useApiHealth } from '../hooks/useVaultData'
 import { useVaultEvents } from '../hooks/useVaultEvents'
@@ -30,6 +31,7 @@ import DesktopPet from './Pet/DesktopPet'
 import { useAuth } from '../contexts/AuthContext'
 import UserManagementModal from './UserManagementModal'
 import UserGuideModal from './UserGuideModal'
+import CheckinModal from './CheckinModal'
 import { HelpCircle } from 'lucide-react'
 import { LogOut, Users as UsersIcon, ShieldAlert as ShieldAlertIcon } from 'lucide-react'
 import { prefetchRoute } from '../App'
@@ -75,10 +77,10 @@ interface LayoutProps {
 }
 
 function navClass(isActive: boolean) {
-  return `relative inline-flex items-center gap-1.5 rounded-xl px-2.5 2xl:px-3 py-1.5 text-[13px] font-medium transition-all duration-200 whitespace-nowrap shrink-0 cursor-pointer select-none active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-orange ${
+  return `relative inline-flex items-center gap-1.5 rounded-lg px-2.5 2xl:px-3 py-1.5 text-xs font-medium transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer select-none active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 ${
     isActive
-      ? 'bg-slate-900 text-white shadow-sm shadow-slate-900/20'
-      : 'text-slate-600 hover:bg-slate-100/90 hover:text-slate-900'
+      ? 'bg-neutral-900 text-white shadow-xs'
+      : 'text-neutral-600 hover:bg-neutral-100/90 hover:text-neutral-900'
   }`
 }
 
@@ -96,10 +98,11 @@ export default function Layout({ children }: LayoutProps) {
   const [mobileModalOpen, setMobileModalOpen] = useState(false)
   const [syncNotice, setSyncNotice] = useState<string | null>(null)
   const [quickNoteOpen, setQuickNoteOpen] = useState(false)
-  const { user, isAdmin, isStudent, logout } = useAuth()
+  const { user, isAdmin, isStudent, logout, points, canCheckinToday } = useAuth()
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [userManagementOpen, setUserManagementOpen] = useState(false)
   const [guideOpen, setGuideOpen] = useState(false)
+  const [checkinOpen, setCheckinOpen] = useState(false)
 
   const noteCount = stats?.totalNotes ?? null
   const connected = apiHealthy === true
@@ -116,6 +119,8 @@ export default function Layout({ children }: LayoutProps) {
     window.addEventListener('open-quick-note', onOpenQuickNote)
     const onOpenGuide = () => setGuideOpen(true)
     window.addEventListener('open-user-guide', onOpenGuide)
+    const onOpenCheckin = () => setCheckinOpen(true)
+    window.addEventListener('open-checkin-modal', onOpenCheckin)
 
     // 新用户首次登录智能唤起指引
     try {
@@ -140,6 +145,7 @@ export default function Layout({ children }: LayoutProps) {
       window.removeEventListener('keydown', handler)
       window.removeEventListener('open-quick-note', onOpenQuickNote)
       window.removeEventListener('open-user-guide', onOpenGuide)
+      window.removeEventListener('open-checkin-modal', onOpenCheckin)
     }
   }, [])
 
@@ -184,31 +190,26 @@ export default function Layout({ children }: LayoutProps) {
     <div className="min-h-dvh aurora-mesh text-slate-900 selection:bg-accent-orange/20 selection:text-accent-orange font-sans antialiased">
       {/* Top Global Header */}
       <header className="sticky top-0 z-40 bg-white/90 glass-header border-b border-slate-200/80 pt-[env(safe-area-inset-top,0px)]">
-        <div className="mx-auto flex h-13 sm:h-14 max-w-[1520px] items-center gap-2 sm:gap-3 px-3 sm:px-6">
-          {/* Logo & Brand */}
-          <Link to="/dashboard" className="flex min-w-0 items-center gap-2 sm:gap-2.5 rounded-xl outline-none group select-none">
-            <div className="relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl bg-slate-950 p-1 shadow-sm shadow-indigo-500/20 ring-1 ring-slate-900/10 transition-all group-hover:scale-105 shrink-0">
+        <div className="mx-auto flex h-13 sm:h-14 max-w-[1560px] items-center gap-2 sm:gap-3 px-3 sm:px-6">
+          {/* Logo & Subframe Pill */}
+          <Link to="/dashboard" className="flex min-w-0 items-center gap-2.5 rounded-xl outline-none group select-none">
+            <div className="relative flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center overflow-hidden rounded-lg bg-neutral-950 p-1 shadow-2xs ring-1 ring-neutral-900/10 transition-transform group-hover:scale-105 shrink-0">
               <img src="/favicon.svg" alt="研核图标" className="h-full w-full object-contain" />
             </div>
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-[15px] font-extrabold tracking-tight text-slate-900 whitespace-nowrap">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-[14px] sm:text-[15px] font-bold tracking-tight text-neutral-900 whitespace-nowrap">
                 CoreForge
               </span>
-              <span className="text-xs font-bold text-indigo-600 whitespace-nowrap">研核</span>
-              {currentPage && currentPage.to !== '/dashboard' ? (
-                <span className="xl:hidden inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200/80 truncate max-w-[96px]">
-                  {currentPage.shortLabel || currentPage.label}
-                </span>
-              ) : (
-                <span className="hidden sm:inline-flex text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200/70 whitespace-nowrap shrink-0">
-                  408+数学 双核
-                </span>
-              )}
+              <span className="text-xs font-semibold text-neutral-500 whitespace-nowrap">研核</span>
+              <div className="hidden sm:inline-flex items-center gap-1.5 subframe-pill text-[10.5px]">
+                <span className={`h-1.5 w-1.5 rounded-full ${connected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                <span className="truncate max-w-[110px]">{connected ? `${noteCount ?? ''} 篇在线` : '离线'}</span>
+              </div>
             </div>
           </Link>
 
-          {/* Desktop Primary Navigation */}
-          <nav className="ml-2 2xl:ml-4 hidden flex-1 items-center justify-center gap-0.5 2xl:gap-1 xl:flex shrink-0 min-w-0" aria-label="主导航">
+          {/* Subframe Pill Primary Navigation */}
+          <nav className="ml-2 2xl:ml-4 hidden flex-1 items-center justify-center gap-1 xl:flex shrink-0 min-w-0" aria-label="主导航">
             {primaryNavItems.map(item => (
               <NavLink
                 key={item.to}
@@ -219,11 +220,11 @@ export default function Layout({ children }: LayoutProps) {
               >
                 {({ isActive }) => (
                   <>
-                    <item.icon className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                    <item.icon className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'text-white' : 'text-neutral-400'}`} />
                     <span className="whitespace-nowrap shrink-0">{item.label}</span>
                     {item.badge && (
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider whitespace-nowrap shrink-0 ${
-                        isActive ? 'bg-indigo-500 text-white' : 'bg-indigo-50 text-indigo-600'
+                      <span className={`text-[9.5px] px-1.5 py-0.2 rounded-md font-medium tracking-tight whitespace-nowrap shrink-0 ${
+                        isActive ? 'bg-neutral-800 text-neutral-200' : 'bg-neutral-100 text-neutral-600 border border-neutral-200/80'
                       }`}>
                         {item.badge}
                       </span>
@@ -241,13 +242,13 @@ export default function Layout({ children }: LayoutProps) {
                 aria-expanded={moreOpen}
               >
                 <span className="whitespace-nowrap shrink-0">更多工具</span>
-                <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition-transform ${moreOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`h-3 w-3 shrink-0 transition-transform ${moreOpen ? 'rotate-180' : ''}`} />
               </button>
               {moreOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
-                  <div className="absolute left-0 top-full z-50 mt-2 w-64 rounded-2xl border border-slate-200/80 bg-white/98 p-2 shadow-[0_20px_45px_rgba(15,23,42,0.14)] backdrop-blur-xl animate-fade-in-up">
-                    <p className="px-3 pb-1.5 pt-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">研学辅助工具</p>
+                  <div className="absolute left-0 top-full z-50 mt-1.5 w-60 rounded-xl border border-neutral-200/90 bg-white/98 p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.08)] backdrop-blur-xl animate-fade-in-up">
+                    <p className="px-2.5 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">研学辅助工具</p>
                     {moreNavItems.map(item => (
                       <NavLink
                         key={item.to}
@@ -255,14 +256,14 @@ export default function Layout({ children }: LayoutProps) {
                         onPointerEnter={() => prefetchRoute(item.to)}
                         onTouchStart={() => prefetchRoute(item.to)}
                         onClick={() => setMoreOpen(false)}
-                        className={({ isActive }) => `flex items-center gap-3 rounded-xl px-3 py-2 text-xs transition-colors whitespace-nowrap ${
-                          isActive ? 'bg-indigo-50 font-semibold text-indigo-700' : 'text-slate-600 hover:bg-slate-50'
+                        className={({ isActive }) => `flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs transition-colors whitespace-nowrap ${
+                          isActive ? 'bg-neutral-100 font-semibold text-neutral-900' : 'text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900'
                         }`}
                       >
-                        <span className="text-base shrink-0">{item.emoji}</span>
+                        <span className="text-sm shrink-0">{item.emoji}</span>
                         <div className="min-w-0">
-                          <div className="font-medium text-slate-800">{item.label}</div>
-                          {item.desc && <div className="text-[10px] text-slate-400 truncate">{item.desc}</div>}
+                          <div className="font-medium text-neutral-800">{item.label}</div>
+                          {item.desc && <div className="text-[10px] text-neutral-400 truncate">{item.desc}</div>}
                         </div>
                       </NavLink>
                     ))}
@@ -272,122 +273,103 @@ export default function Layout({ children }: LayoutProps) {
             </div>
           </nav>
 
-          {/* Right Utility Toolbar */}
+          {/* Right Utility Toolbar (Subframe Style) */}
           <div className="ml-auto flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* User Guide Showcase Trigger */}
+            {/* Subframe Search Pill Input Trigger */}
+            <button
+              onClick={() => setSearchOpen(true)}
+              aria-label="全局检索"
+              title="搜索知识库（Ctrl+K）"
+              className="subframe-search-pill cursor-pointer select-none"
+            >
+              <Search className="h-3.5 w-3.5 text-neutral-400 shrink-0" />
+              <span className="hidden sm:inline text-xs text-neutral-500 font-normal">搜索知识与笔记...</span>
+              <kbd className="hidden sm:inline-flex items-center text-[9.5px] font-mono text-neutral-400 bg-neutral-200/60 border border-neutral-300/60 rounded px-1.5 py-0.2">Ctrl K</kbd>
+            </button>
+
+            {/* Quick Actions in Subframe Secondary Button Style */}
             <button
               onClick={() => setGuideOpen(true)}
               aria-label="新手使用指引"
-              title="查看研核全景使用指南与视频巡礼"
-              className="inline-flex h-10 w-10 sm:h-8 sm:w-auto items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-50 to-blue-50 hover:from-indigo-100 hover:to-blue-100 border border-indigo-200/80 sm:px-2.5 text-indigo-700 text-xs font-bold transition-all cursor-pointer active:scale-95 shrink-0 shadow-2xs"
+              title="查看研核全景使用指南"
+              className="subframe-btn-secondary h-8 px-2.5 text-xs cursor-pointer select-none"
             >
-              <HelpCircle className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
-              <span className="hidden sm:inline">新手指引</span>
+              <HelpCircle className="h-3.5 w-3.5 text-neutral-500 shrink-0" />
+              <span className="hidden sm:inline">指引</span>
             </button>
+
             <button
               onClick={() => setQuickNoteOpen(true)}
               aria-label="随手记"
               title="极速随手记入库"
-              className="inline-flex h-10 w-10 sm:h-8 sm:w-auto items-center justify-center gap-1.5 rounded-xl bg-indigo-50/90 hover:bg-indigo-100/90 border border-indigo-200/80 sm:px-2.5 text-indigo-700 text-xs font-semibold transition-all cursor-pointer active:scale-95 shrink-0"
+              className="subframe-btn-secondary h-8 px-2.5 text-xs cursor-pointer select-none"
             >
-              <PenLine className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
+              <PenLine className="h-3.5 w-3.5 text-neutral-500 shrink-0" />
               <span className="hidden sm:inline">随手记</span>
-            </button>
-
-            <button
-              onClick={() => setMobileModalOpen(true)}
-              aria-label="多端连线"
-              title="手机/平板连线 (扫码/PWA)"
-              className="hidden lg:inline-flex h-8 items-center gap-1.5 rounded-xl bg-emerald-50/80 border border-emerald-200/80 px-2.5 text-emerald-700 text-xs font-semibold hover:bg-emerald-100/80 transition-all cursor-pointer whitespace-nowrap shrink-0 active:scale-95"
-            >
-              <Smartphone className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-              <span className="hidden 2xl:inline">多端连线</span>
             </button>
 
             <button
               onClick={() => setImportModalOpen(true)}
               aria-label="导入资料与题库"
               title="导入资料与题库 (PDF/教材/真题)"
-              className="hidden lg:inline-flex h-8 items-center gap-1.5 rounded-xl bg-slate-100/90 border border-slate-200/80 px-2.5 text-slate-700 text-xs font-semibold hover:bg-slate-200/70 transition-all cursor-pointer whitespace-nowrap shrink-0 active:scale-95"
+              className="hidden lg:inline-flex subframe-btn-secondary h-8 px-2.5 text-xs cursor-pointer select-none"
             >
-              <Database className="h-3.5 w-3.5 text-slate-600 shrink-0" />
-              <span className="hidden 2xl:inline">导入资料</span>
+              <Database className="h-3.5 w-3.5 text-neutral-500 shrink-0" />
+              <span className="hidden 2xl:inline">导入</span>
             </button>
-
-            <button
-              onClick={() => setSearchOpen(true)}
-              aria-label="全局检索"
-              title="搜索知识库（Ctrl+K）"
-              className="inline-flex h-10 w-10 sm:h-8 sm:w-auto items-center justify-center gap-1.5 rounded-xl border border-slate-200/90 bg-white/90 sm:px-2.5 2xl:px-3 text-slate-600 transition-all hover:border-indigo-300 hover:bg-white hover:text-slate-900 shadow-2xs cursor-pointer active:scale-95 whitespace-nowrap shrink-0"
-            >
-              <Search className="h-4 w-4 sm:h-3.5 sm:w-3.5 text-slate-500 shrink-0" />
-              <span className="hidden 2xl:inline text-xs text-slate-600">搜索知识...</span>
-              <kbd className="hidden rounded bg-slate-100 border border-slate-200/90 px-1.5 py-0.5 font-mono text-[9px] font-semibold text-slate-500 md:inline shrink-0">Ctrl K</kbd>
-            </button>
-
-            {/* Live Vault Status Beacon (Desktop) */}
-            <div className="hidden items-center gap-1.5 rounded-xl border border-slate-200/80 bg-white/80 px-2.5 py-1 text-xs text-slate-600 shadow-2xs md:flex whitespace-nowrap shrink-0" title={vaultName}>
-              <span className="relative flex h-2 w-2 shrink-0">
-                {connected && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />}
-                <span className={`relative inline-flex rounded-full h-2 w-2 ${connected ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-              </span>
-              <span className="hidden max-w-28 truncate font-medium text-[11px] text-slate-700 2xl:inline">
-                {connected ? `${noteCount ?? ''} 篇在线` : '离线'}
-              </span>
-            </div>
 
             <Link
               to="/settings"
               aria-label="系统设置"
               title="系统设置"
-              className="hidden h-8 w-8 items-center justify-center rounded-xl border border-slate-200/80 bg-white/80 text-slate-500 transition-all hover:bg-slate-100 hover:text-slate-900 shadow-2xs xl:inline-flex cursor-pointer active:scale-95 shrink-0"
+              className="hidden h-8 w-8 items-center justify-center rounded-lg border border-neutral-200/90 bg-white text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900 shadow-2xs xl:inline-flex cursor-pointer active:scale-95 shrink-0"
             >
-              <Settings className="h-4 w-4 shrink-0" />
+              <Settings className="h-3.5 w-3.5 shrink-0" />
             </Link>
 
-            {/* User Profile & Role Dropdown */}
+            {/* AI 伴学积分胶囊与签到入口 */}
+            {user && (
+              <button
+                onClick={() => setCheckinOpen(true)}
+                className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-amber-200/90 bg-amber-50/80 px-2.5 text-amber-900 shadow-2xs hover:bg-amber-100/90 transition-all cursor-pointer active:scale-95 shrink-0"
+                title="AI 伴学积分中心 (点击每日签到领积分)"
+              >
+                <Coins className="h-3.5 w-3.5 text-amber-600 animate-bounce shrink-0" />
+                <span className="text-xs font-bold font-mono text-amber-950">
+                  {points.toFixed(1)}
+                </span>
+                <span className="hidden sm:inline text-[11px] text-amber-700 font-medium">积分</span>
+                {canCheckinToday && (
+                  <span className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-amber-500 text-white animate-pulse">
+                    签到+1
+                  </span>
+                )}
+              </button>
+            )}
+
+            {/* User Profile (Subframe Round Avatar) */}
             {user && (
               <div className="relative shrink-0">
                 <button
                   onClick={() => setUserMenuOpen(prev => !prev)}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white/90 px-2 text-slate-700 shadow-2xs hover:bg-slate-100 transition-all cursor-pointer active:scale-95"
-                  title={`${user.displayName || user.username} (${user.role === 'admin' ? '管理员' : user.role === 'editor' ? '助教编辑' : '学生只读'})`}
+                  className="flex items-center gap-1.5 rounded-full p-0.5 border border-neutral-200/80 hover:ring-2 hover:ring-neutral-200 transition-all cursor-pointer active:scale-95"
+                  title={`${user.displayName || user.username} (${user.role === 'admin' ? '管理员' : '编辑者'})`}
                 >
-                  <div className={`flex h-5 w-5 items-center justify-center rounded-lg text-[10px] font-bold text-white ${
-                    user.role === 'admin' ? 'bg-indigo-600' : user.role === 'editor' ? 'bg-amber-600' : 'bg-emerald-600'
-                  }`}>
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold text-white bg-emerald-600 shadow-2xs">
                     {user.displayName ? user.displayName.slice(0, 1).toUpperCase() : user.username.slice(0, 1).toUpperCase()}
                   </div>
-                  <span className="hidden sm:inline text-xs font-semibold max-w-[80px] truncate text-slate-800">
-                    {user.displayName || user.username}
-                  </span>
-                  <span className={`hidden md:inline-flex text-[9px] font-bold px-1.5 py-0.2 rounded-full ${
-                    user.role === 'admin'
-                      ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-                      : user.role === 'editor'
-                      ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                      : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                  }`}>
-                    {user.role === 'admin' ? '管理员' : user.role === 'editor' ? '编辑者' : '只读'}
-                  </span>
                 </button>
 
                 {userMenuOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
-                    <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-2xl border border-slate-200/90 bg-white p-2 shadow-xl animate-fade-in-up">
-                      <div className="px-3 py-2 border-b border-slate-100 mb-1">
-                        <div className="text-xs font-bold text-slate-900 truncate">{user.displayName || user.username}</div>
-                        <div className="text-[10px] text-slate-400 font-mono truncate">@{user.username}</div>
-                        <div className="mt-1.5">
-                          <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                            user.role === 'admin'
-                              ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-                              : user.role === 'editor'
-                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                              : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          }`}>
-                            {user.role === 'admin' ? '👑 超级管理员' : user.role === 'editor' ? '✍️ 研学编辑者' : '🎓 学生只读模式'}
+                    <div className="absolute right-0 top-full z-50 mt-1.5 w-56 rounded-xl border border-neutral-200/90 bg-white p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.08)] animate-fade-in-up">
+                      <div className="px-3 py-2 border-b border-neutral-100 mb-1">
+                        <div className="text-xs font-semibold text-neutral-900 truncate">{user.displayName || user.username}</div>
+                        <div className="text-[10px] text-neutral-400 font-mono truncate">@{user.username}</div>
+                        <div className="mt-1">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700 border border-neutral-200/80">
+                            {user.role === 'admin' ? '👑 超级管理员' : user.role === 'editor' ? '✍️ 研学编辑者' : '🎓 学生模式'}
                           </span>
                         </div>
                       </div>
@@ -398,36 +380,11 @@ export default function Layout({ children }: LayoutProps) {
                             setUserMenuOpen(false)
                             setUserManagementOpen(true)
                           }}
-                          className="w-full flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors cursor-pointer"
+                          className="w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900 transition-colors cursor-pointer"
                         >
-                          <UsersIcon className="h-4 w-4" />
-                          <span>多用户权限管理</span>
+                          <UsersIcon className="h-3.5 w-3.5 text-neutral-500" />
+                          <span>用户权限管理</span>
                         </button>
-                      )}
-
-                      {/* 空间与沙箱归属状态指示 */}
-                      <div className="px-3 py-2 my-1 rounded-xl bg-slate-50/90 border border-slate-200/80 text-[10px] space-y-1.5">
-                        <div className="flex items-center justify-between text-slate-600 font-medium">
-                          <span className="flex items-center gap-1.5 font-semibold text-slate-700">📁 笔记工作空间</span>
-                          {isAdmin ? (
-                            <span className="inline-flex items-center gap-1 text-[9px] font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded-full border border-indigo-200">● 系统核心主库 (本地同步)</span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-200">● 个人独立沙箱</span>
-                          )}
-                        </div>
-                        <div className="flex items-center justify-between text-slate-600 font-medium">
-                          <span className="flex items-center gap-1.5 font-semibold text-slate-700">🧠 专属 AI 记忆</span>
-                          <span className="inline-flex items-center gap-1 text-[9px] font-bold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded-full border border-indigo-200">
-                            {isAdmin ? '● 全局导师 agent.md' : '● 私人独立 agent.md'}
-                          </span>
-                        </div>
-                      </div>
-
-                      {isStudent && (
-                        <div className="px-3 py-1.5 my-1 rounded-xl bg-amber-50/80 border border-amber-200/60 text-[10px] text-amber-800 flex items-center gap-1.5">
-                          <ShieldAlertIcon className="h-3.5 w-3.5 shrink-0 text-amber-600" />
-                          <span>公共考研核心库开启防篡改只读守卫</span>
-                        </div>
                       )}
 
                       <button
@@ -435,9 +392,9 @@ export default function Layout({ children }: LayoutProps) {
                           setUserMenuOpen(false)
                           logout()
                         }}
-                        className="w-full flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                        className="w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                       >
-                        <LogOut className="h-4 w-4" />
+                        <LogOut className="h-3.5 w-3.5" />
                         <span>退出当前账号</span>
                       </button>
                     </div>
@@ -450,16 +407,16 @@ export default function Layout({ children }: LayoutProps) {
             <button
               onClick={() => setMobileNavOpen(true)}
               aria-label="打开全站工具抽屉"
-              className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/90 bg-white text-slate-700 transition-all hover:bg-slate-50 active:scale-95 xl:hidden shadow-2xs cursor-pointer"
+              className="relative inline-flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200/90 bg-white text-neutral-700 hover:bg-neutral-50 active:scale-95 xl:hidden shadow-2xs cursor-pointer"
             >
-              <LayoutGrid className="h-4 w-4" />
-              <span className={`absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full ${connected ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+              <LayoutGrid className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
       </header>
       <UserManagementModal isOpen={userManagementOpen} onClose={() => setUserManagementOpen(false)} />
       <UserGuideModal isOpen={guideOpen} onClose={() => setGuideOpen(false)} />
+      <CheckinModal isOpen={checkinOpen} onClose={() => setCheckinOpen(false)} />
 
       {/* Mobile Full-Featured Bottom Sheet Navigation */}
       {mobileNavOpen && (
@@ -634,10 +591,10 @@ export default function Layout({ children }: LayoutProps) {
             {({ isActive }) => (
               <>
                 <div
-                  className={`relative flex items-center justify-center w-12 h-7 rounded-2xl transition-all duration-200 ${
+                  className={`relative flex items-center justify-center w-12 h-7 rounded-lg transition-all duration-150 ${
                     isActive
-                      ? 'bg-slate-900 text-white shadow-xs'
-                      : 'text-slate-500 group-active:scale-90'
+                      ? 'bg-neutral-900 text-white shadow-xs'
+                      : 'text-neutral-500 group-active:scale-95'
                   }`}
                 >
                   <tab.icon className="h-[18px] w-[18px]" />

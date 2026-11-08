@@ -598,6 +598,11 @@ export interface MusicScanResult {
 // ===== API Functions =====
 
 export const api = {
+  // ===== 多租户专属 AI 对话历史云端同步 =====
+  getAiConversations: () => fetchJSON<{ success: boolean; conversations: any[] }>('/ai/conversations').then(r => r.conversations || []),
+  saveAiConversations: (conversations: any[]) => postJSON<{ success: boolean; count: number }>('/ai/conversations', { conversations }),
+  deleteAiConversation: (id: string) => delJSON<{ success: boolean; id: string }>(`/ai/conversations/${encodeURIComponent(id)}`, {}),
+
   getGraph: () => fetchJSON<GraphData>('/vault/graph'),
 
   getHealth: () => fetchJSON<HealthReport>('/vault/health'),

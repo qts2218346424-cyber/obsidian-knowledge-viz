@@ -12,10 +12,18 @@ import {
   getAiClientForModel,
 } from '../context.js'
 import { createAiClient, type AiConfig, type CloudEndpoint } from '../ai-client.js'
+import { getEffectiveSystemPrompt } from '../memory-store.js'
+import {
+  getRequestAgentMemoryPath,
+  getRequestChatConversationsPath,
+  getRequestVaultPath,
+} from '../services/user-sandbox.js'
+import { getUserNotes } from '../context.js'
 import { createFile, type VaultNote } from '../vault-parser.js'
 import { checkHealth } from '../health-checker.js'
 import { runAgentLoop, type AgentEvent } from '../agent.js'
 import { runStepTutor, type TutorMode } from '../services/step-tutor.js'
+import { database } from '../db/database.js'
 
 
 export const aiRouter = Router()
@@ -313,7 +321,8 @@ aiRouter.post('/chat', async (req, res) => {
     return
   }
 
-  const notes = getNotes()
+  const vaultPath = getRequestVaultPath(req)
+  const notes = getUserNotes(req.user?.id, vaultPath)
   const relevantNotes = findRelevantNotes(message, notes)
 
   const citedNotes = relevantNotes.slice(0, 3).map(note => ({
@@ -340,7 +349,10 @@ aiRouter.post('/chat', async (req, res) => {
   }
 
   try {
-    const systemPrompt = buildSystemPrompt(relevantNotes, notes.length)
+    const userMemoryPath = getRequestAgentMemoryPath(req)
+    const agentMemoryPrompt = getEffectiveSystemPrompt(userMemoryPath)
+    const baseSystemPrompt = buildSystemPrompt(relevantNotes, notes.length)
+    const systemPrompt = `${agentMemoryPrompt}\n\n====================\n${baseSystemPrompt}`
 
     const messages: { role: 'user' | 'assistant'; content: string }[] = []
     if (history) {
@@ -958,3 +970,86 @@ aiRouter.post('/ai/tutor/step', async (req, res) => {
   }
 })
 
+
+// ===== 多租户聊天会话与历史持久化 (SQLite 关系表 + 物理沙箱双重持久化) =====
+aiRouter.get('/ai/conversations', (req, res) => {
+  try {
+    const userId = req.user?.id || 'default'
+    // 1. 优先从 SQLite 数据库获取当前用户的全部持久化会话
+    let conversations = database.getUserChatConversations(userId)
+
+    // 2. 如果数据库暂无（向后兼容旧文件存储），尝试从沙箱文件加载并自动回填数据库
+    if (!conversations || conversations.length === 0) {
+      const convPath = getRequestChatConversationsPath(req)
+      if (fs.existsSync(convPath)) {
+        try {
+          const raw = fs.readFileSync(convPath, 'utf-8')
+          const parsed = JSON.parse(raw)
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            conversations = parsed
+            database.saveUserChatConversations(userId, conversations)
+          }
+        } catch {}
+      }
+    }
+
+    res.json({ success: true, conversations: conversations || [] })
+  } catch (err: any) {
+    console.error('[AI Router] 获取会话历史异常:', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+aiRouter.post('/ai/conversations', (req, res) => {
+  try {
+    const { conversations } = req.body as { conversations: any[] }
+    if (!Array.isArray(conversations)) {
+      res.status(400).json({ error: 'Missing conversations array' })
+      return
+    }
+
+    const userId = req.user?.id || 'default'
+
+    // 1. 存入 SQLite 数据库 (WAL 模式强持久化，绝不因页面刷新或重启丢失)
+    database.saveUserChatConversations(userId, conversations)
+
+    // 2. 双写物理沙箱文件 (做灾备)
+    try {
+      const convPath = getRequestChatConversationsPath(req)
+      fs.mkdirSync(path.dirname(convPath), { recursive: true })
+      fs.writeFileSync(convPath, JSON.stringify(conversations.slice(0, 50), null, 2), 'utf-8')
+    } catch (e: any) {
+      console.warn('[AI Router] 沙箱文件双写告警 (SQLite 已安全持久化):', e.message)
+    }
+
+    res.json({ success: true, count: conversations.length })
+  } catch (err: any) {
+    console.error('[AI Router] 保存会话历史异常:', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+aiRouter.delete('/ai/conversations/:id', (req, res) => {
+  try {
+    const { id } = req.params
+    const userId = req.user?.id || 'default'
+    database.deleteChatConversation(userId, id)
+
+    // 同步更新沙箱文件
+    try {
+      const convPath = getRequestChatConversationsPath(req)
+      if (fs.existsSync(convPath)) {
+        const raw = fs.readFileSync(convPath, 'utf-8')
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed)) {
+          const updated = parsed.filter((c: any) => c.id !== id)
+          fs.writeFileSync(convPath, JSON.stringify(updated, null, 2), 'utf-8')
+        }
+      }
+    } catch {}
+
+    res.json({ success: true, id })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
+})
