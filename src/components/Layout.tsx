@@ -9,7 +9,6 @@ import {
   GraduationCap,
   Home,
   Landmark,
-  Languages,
   LayoutGrid,
   MessageCircle,
   Music,
@@ -70,7 +69,6 @@ const primaryNavItems: NavItem[] = [
 
 const moreNavItems: NavItem[] = [
   { to: '/workflow', label: '知识库整理', shortLabel: '整理', icon: Workflow, emoji: '🧭', desc: '质检、标签治理与结构优化' },
-  { to: '/english', label: '考研英语专区', shortLabel: '英语', icon: Languages, emoji: '📖', desc: '作文模板、AI批改、真题与大纲词汇' },
   { to: '/pomodoro', label: '专注番茄钟', shortLabel: '番茄钟', icon: Timer, emoji: '🍅', desc: '心流沉浸与时间切片' },
   { to: '/music', label: '声学专注氛围', shortLabel: '白噪音', icon: Music, emoji: '🎵', desc: '双耳节拍与白噪音音频' },
   { to: '/settings', label: '全局系统设置', shortLabel: '设置', icon: Settings, emoji: '⚙️', desc: '知识库路径与 AI 服务模型' },
