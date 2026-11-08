@@ -1236,3 +1236,50 @@ input[type="range"].history-range-slider:focus-visible {
 .theme-vibrant .bento-card-hover:hover {
   box-shadow: 0 10px 24px -4px rgba(99, 102, 241, 0.12), 0 2px 4px 0 rgba(0, 0, 0, 0.03);
 }
+
+/* ==========================================================================
+   移动端专属视觉与触控交互规范 (Mobile-First Native App Rules)
+   ========================================================================== */
+@media (max-width: 767px) {
+  /* 移动端安全边距适配 */
+  .mobile-safe-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  /* 消除移动端横向溢出抖动 */
+  html, body {
+    overflow-x: hidden;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* 移动端轻触按压反馈 */
+  .mobile-active-scale {
+    transition: transform 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .mobile-active-scale:active {
+    transform: scale(0.96);
+  }
+
+  /* 移动端平滑滚动与隐藏原生滚动条 */
+  .mobile-no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .mobile-no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 移动端大拇指触控友好的大热区 */
+  .mobile-touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* 移动端卡片紧凑模式，消除无效冗长留白 */
+  .mobile-compact-card {
+    padding: 0.875rem !important;
+    border-radius: 1rem !important;
+  }
+}

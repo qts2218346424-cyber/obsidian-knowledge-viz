@@ -1046,8 +1046,45 @@ export default function Quiz() {
 
     return (
       <div className="mx-auto max-w-[1560px] space-y-3 sm:space-y-4 pb-16 lg:pb-0 animate-fade-in-up">
-        {/* Top Slim Progress Header */}
-        <div className="bento-card rounded-xl border border-neutral-200/80 bg-white shadow-xs px-3.5 sm:px-5 py-2.5 flex items-center justify-between gap-2 shadow-sm border border-slate-200/90 relative overflow-hidden">
+        {/* ── 📱 移动端专属微型刷题控制条 (专为手机单手设计) ── */}
+        <div className="sm:hidden bento-card rounded-2xl bg-white px-3 py-2 flex items-center justify-between gap-1.5 shadow-xs border border-slate-200/90 relative">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <button
+              onClick={() => setIsExitModalOpen(true)}
+              className="text-[11px] text-slate-600 hover:text-slate-900 flex items-center gap-0.5 font-bold cursor-pointer active:scale-95 shrink-0"
+              title="退出当前做题"
+            >
+              <ArrowLeft size={13} />
+              <span>退出</span>
+            </button>
+            <span className="text-slate-300 text-xs shrink-0">|</span>
+            <span className="text-xs font-bold text-slate-800 truncate">
+              {currentQ.subject}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-[11px] font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+              {currentIndex + 1}/{questions.length}
+            </span>
+            <button
+              onClick={() => setMobileDrawerOpen(true)}
+              className="text-[11px] font-bold px-2 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer active:scale-95 transition-colors"
+            >
+              🧮 卡
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsSubmitModalOpen(true)}
+              className="text-[11px] font-bold px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer active:scale-95 shadow-2xs transition-colors"
+            >
+              交卷
+            </button>
+          </div>
+        </div>
+
+        {/* ── 💻 电脑端 / 平板端专属双栏工作台进度条 ── */}
+        <div className="hidden sm:flex bento-card rounded-xl border border-neutral-200/80 bg-white shadow-xs px-3.5 sm:px-5 py-2.5 items-center justify-between gap-2 shadow-sm border border-slate-200/90 relative overflow-hidden">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
               onClick={() => setIsExitModalOpen(true)}

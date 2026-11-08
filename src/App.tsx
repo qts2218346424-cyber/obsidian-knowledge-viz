@@ -70,18 +70,63 @@ export function prefetchRoute(routePath: string) {
   } catch {}
 }
 
-const KnowledgeGraph = lazy(routeLoaders.knowledgeGraph)
-const Workflow = lazy(routeLoaders.workflow)
-const Editor = lazy(routeLoaders.editor)
-const Study = lazy(routeLoaders.study)
-const Settings = lazy(routeLoaders.settings)
-const Quiz = lazy(routeLoaders.quiz)
-const Vocabulary = lazy(routeLoaders.vocabulary)
-const HistoryOutline = lazy(routeLoaders.historyOutline)
-const Politics = lazy(routeLoaders.politics)
-const Music = lazy(routeLoaders.music)
-const Pomodoro = lazy(routeLoaders.pomodoro)
-const English = lazy(routeLoaders.english)
+/**
+ * 具有自愈机制的安全懒加载器 (Safe Lazy with Chunk Auto-recovery)
+ * 彻底解决单页应用构建更新后旧 chunk 404 或网络波动导致的动态 import 失败，
+ * 避免 React.lazy 永久缓存 rejected Promise 导致用户反复点击路由持续崩溃。
+ */
+function safeLazy<T extends React.ComponentType<any>>(
+  loader: () => Promise<{ default: T }>,
+  name: string
+) {
+  return lazy(async () => {
+    try {
+      const module = await loader()
+      try {
+        sessionStorage.removeItem(`safe_lazy_retry_${name}`)
+      } catch {}
+      return module
+    } catch (err: any) {
+      console.warn(`[SafeLazy] 动态加载模块 "${name}" 遇到异常，尝试自动恢复:`, err)
+      const isChunkError =
+        err?.message?.includes('Failed to fetch dynamically imported module') ||
+        err?.message?.includes('Importing a module script failed') ||
+        err?.message?.includes('Loading chunk') ||
+        err?.name === 'ChunkLoadError' ||
+        err?.message?.includes('Unexpected token')
+
+      const retryKey = `safe_lazy_retry_${name}`
+      let hasRetried = false
+      try {
+        hasRetried = Boolean(sessionStorage.getItem(retryKey))
+      } catch {}
+
+      if (isChunkError && !hasRetried) {
+        try {
+          sessionStorage.setItem(retryKey, 'true')
+        } catch {}
+        // 自动强制重载拉取最新构建资源
+        window.location.reload()
+        return new Promise<{ default: T }>(() => {})
+      }
+
+      throw err
+    }
+  })
+}
+
+const KnowledgeGraph = safeLazy(routeLoaders.knowledgeGraph, 'knowledgeGraph')
+const Workflow = safeLazy(routeLoaders.workflow, 'workflow')
+const Editor = safeLazy(routeLoaders.editor, 'editor')
+const Study = safeLazy(routeLoaders.study, 'study')
+const Settings = safeLazy(routeLoaders.settings, 'settings')
+const Quiz = safeLazy(routeLoaders.quiz, 'quiz')
+const Vocabulary = safeLazy(routeLoaders.vocabulary, 'vocabulary')
+const HistoryOutline = safeLazy(routeLoaders.historyOutline, 'historyOutline')
+const Politics = safeLazy(routeLoaders.politics, 'politics')
+const Music = safeLazy(routeLoaders.music, 'music')
+const Pomodoro = safeLazy(routeLoaders.pomodoro, 'pomodoro')
+const English = safeLazy(routeLoaders.english, 'english')
 
 function PageFallback() {
   return (

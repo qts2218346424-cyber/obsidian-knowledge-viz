@@ -27,6 +27,8 @@ import {
 } from 'lucide-react'
 import { useVaultStats, useApiHealth } from '../hooks/useVaultData'
 import { useThemeStyle } from '../hooks/useThemeStyle'
+import { useIsMobile } from '../hooks/useIsMobile'
+import { getExamCountdownDays } from '../utils/examDate'
 import { useVaultEvents } from '../hooks/useVaultEvents'
 import DesktopPet from './Pet/DesktopPet'
 import { useAuth } from '../contexts/AuthContext'
@@ -90,6 +92,8 @@ function navClass(isActive: boolean) {
 
 export default function Layout({ children }: LayoutProps) {
   const { isVibrant, toggleThemeStyle } = useThemeStyle()
+  const { isMobile } = useIsMobile()
+  const countdownDays = getExamCountdownDays()
   const location = useLocation()
   const currentPage = allNavItems.find(item => location.pathname === item.to)
   const isFullHeightPage = ['/chat', '/editor', '/graph'].includes(location.pathname)
@@ -219,17 +223,80 @@ export default function Layout({ children }: LayoutProps) {
 
   const mobileBottomTabs = [
     { to: '/dashboard', label: '首页', icon: Home },
-    { to: '/quiz', label: '刷题', icon: ClipboardList },
-    { to: '/study', label: '学习', icon: GraduationCap },
-    { to: '/editor', label: '笔记', icon: FileEdit },
-    { to: '/chat', label: '伴学', icon: MessageCircle },
+    { to: '/quiz', label: '做题', icon: ClipboardList },
+    { to: '/politics', label: '政治', icon: Landmark },
+    { to: '/english', label: '英语', icon: BookOpen },
+    { to: '/study', label: '讲义', icon: GraduationCap },
   ]
 
   return (
     <div className="min-h-dvh aurora-mesh text-slate-900 selection:bg-accent-orange/20 selection:text-accent-orange font-sans antialiased">
       {/* Top Global Header */}
       <header className="sticky top-0 z-40 bg-white/90 glass-header border-b border-slate-200/80 pt-[env(safe-area-inset-top,0px)]">
-        <div className="mx-auto flex h-13 sm:h-14 max-w-[1600px] items-center gap-2 2xl:gap-3 px-3 sm:px-5">
+        {/* ── 📱 移动端专属精炼 Header (防挤压、高审美、大单手热区) ── */}
+        <div className="flex md:hidden w-full h-12 items-center justify-between gap-2 px-3">
+          {/* 左侧：Logo + 考研倒计时金牌 */}
+          <Link to="/dashboard" className="flex items-center gap-2 select-none shrink-0 min-w-0">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-neutral-950 p-1 shadow-2xs shrink-0">
+              <img src="/favicon.svg" alt="研核" className="h-full w-full object-contain" />
+            </div>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-[14px] font-extrabold tracking-tight text-neutral-900 truncate">
+                研核考研
+              </span>
+              <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-800 border border-amber-300/80 shadow-2xs shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                {countdownDays}天
+              </span>
+            </div>
+          </Link>
+
+          {/* 右侧：积分打卡小胶囊 + 搜索 + 更多工具箱抽屉 */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setCheckinTab('checkin')
+                setCheckinOpen(true)
+              }}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200/90 text-amber-800 text-[11px] font-bold shadow-2xs active:scale-95 cursor-pointer"
+              title="签到打卡领积分"
+            >
+              <Coins className="w-3.5 h-3.5 text-amber-600" />
+              <span className="font-mono">{points.toFixed(1)}分</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setSearchOpen(true)
+                openModal('search')
+              }}
+              aria-label="搜索"
+              className="w-8 h-8 inline-flex items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:text-slate-900 active:scale-95 cursor-pointer"
+            >
+              <Search className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setMobileNavOpen(true)}
+              aria-label="全站工具箱"
+              className="w-8 h-8 inline-flex items-center justify-center rounded-xl bg-neutral-900 text-white shadow-xs active:scale-95 cursor-pointer"
+            >
+              {user ? (
+                <span className="text-xs font-bold font-mono">
+                  {user.displayName ? user.displayName.slice(0, 1).toUpperCase() : user.username.slice(0, 1).toUpperCase()}
+                </span>
+              ) : (
+                <LayoutGrid className="w-3.5 h-3.5" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* ── 💻 平板与桌面端专属全景 Header (保持原电脑端多栏工作台架构) ── */}
+        <div className="hidden md:flex mx-auto h-13 sm:h-14 max-w-[1600px] items-center gap-2 2xl:gap-3 px-3 sm:px-5">
           {/* Logo & Subframe Pill */}
           <Link to="/dashboard" className="flex min-w-0 items-center gap-2 rounded-xl outline-none group select-none shrink-0">
             <div className="relative flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center overflow-hidden rounded-lg bg-neutral-950 p-1 shadow-2xs ring-1 ring-neutral-900/10 transition-transform group-hover:scale-105 shrink-0">
@@ -756,10 +823,10 @@ export default function Layout({ children }: LayoutProps) {
         </div>
       </main>
 
-      {/* Mobile Native-Grade Bottom Tab Bar */}
+      {/* ── 📱 移动端专属吸底 TabBar 导航 (5大考研核心专区，原生级手势与触控响应) ── */}
       <nav
         aria-label="移动端底部导航"
-        className="xl:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/92 border-t border-slate-200/85 px-1.5 pt-1 flex items-center justify-around shadow-[0_-4px_24px_rgba(15,23,42,0.05)] backdrop-blur-2xl pb-[max(0.4rem,env(safe-area-inset-bottom))]"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 border-t border-slate-200/90 px-1.5 pt-1 flex items-center justify-around shadow-[0_-4px_24px_rgba(15,23,42,0.06)] backdrop-blur-2xl pb-[max(0.45rem,env(safe-area-inset-bottom))]"
       >
         {mobileBottomTabs.map(tab => (
           <NavLink
@@ -767,22 +834,22 @@ export default function Layout({ children }: LayoutProps) {
             to={tab.to}
             onPointerEnter={() => prefetchRoute(tab.to)}
             onTouchStart={() => prefetchRoute(tab.to)}
-            className="flex flex-col items-center justify-center flex-1 min-w-[56px] py-0.5 select-none group cursor-pointer"
+            className="flex flex-col items-center justify-center flex-1 py-1 select-none group cursor-pointer"
           >
             {({ isActive }) => (
               <>
                 <div
-                  className={`relative flex items-center justify-center w-12 h-7 rounded-lg transition-all duration-150 ${
+                  className={`relative flex items-center justify-center w-12 h-7 rounded-xl transition-all duration-150 ${
                     isActive
-                      ? 'bg-neutral-900 text-white shadow-xs'
+                      ? 'bg-neutral-900 text-white shadow-xs scale-105'
                       : 'text-neutral-500 group-active:scale-95'
                   }`}
                 >
-                  <tab.icon className="h-[18px] w-[18px]" />
+                  <tab.icon className="h-4 w-4" />
                 </div>
                 <span
                   className={`text-[10.5px] tracking-tight mt-0.5 transition-colors ${
-                    isActive ? 'text-slate-900 font-bold' : 'text-slate-500 font-medium'
+                    isActive ? 'text-neutral-900 font-extrabold' : 'text-neutral-500 font-medium'
                   }`}
                 >
                   {tab.label}

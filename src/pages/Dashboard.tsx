@@ -27,6 +27,9 @@ import {
 import { api, type FileListItem } from '../services/api'
 import { useVaultHealth, useVaultStats } from '../hooks/useVaultData'
 import { useThemeStyle } from '../hooks/useThemeStyle'
+import { useIsMobile } from '../hooks/useIsMobile'
+import { useAuth } from '../contexts/AuthContext'
+import MobileDashboardView from '../components/mobile/MobileDashboardView'
 import { QUESTION_BANK } from '../data/questions'
 import { MATH_QUESTION_BANK } from '../data/questions/math'
 import { XIAO_1000_POLITICS_QUESTIONS } from '../data/politicsQuestions'
@@ -127,6 +130,8 @@ function MetricCard({ label, value, subtext, icon: Icon, to, colorTheme = 'amber
 }
 
 export default function Dashboard() {
+  const { isMobile } = useIsMobile()
+  const { user, points } = useAuth()
   const { isVibrant } = useThemeStyle()
   const { stats, loading: statsLoading, reload: reloadStats } = useVaultStats()
   const { report, loading: healthLoading, reload: reloadHealth } = useVaultHealth()
@@ -338,6 +343,24 @@ export default function Dashboard() {
           </div>
         </section>
       </div>
+    )
+  }
+
+  if (isMobile) {
+    return (
+      <MobileDashboardView
+        stats={stats}
+        statsLoading={statsLoading}
+        healthScore={healthScore}
+        totalQuestions={totalQuestions}
+        csQuestionsCount={QUESTION_BANK.length}
+        mathQuestionsCount={MATH_QUESTION_BANK.length}
+        politicsQuestionsCount={XIAO_1000_POLITICS_QUESTIONS.length}
+        user={user}
+        points={points}
+        onOpenCheckin={() => window.dispatchEvent(new CustomEvent('open-checkin-modal'))}
+        onOpenQuickNote={() => window.dispatchEvent(new CustomEvent('open-quick-note'))}
+      />
     )
   }
 

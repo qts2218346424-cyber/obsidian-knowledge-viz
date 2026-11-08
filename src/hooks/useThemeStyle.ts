@@ -7,29 +7,35 @@ const EVENT_KEY = 'coreforge_ui_style_change'
 
 function getInitialStyle(): ThemeStyle {
   if (typeof window === 'undefined') return 'vibrant'
-  const saved = localStorage.getItem(STORAGE_KEY)
-  if (saved === 'minimal' || saved === 'vibrant') {
-    return saved
-  }
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (saved === 'minimal' || saved === 'vibrant') {
+      return saved
+    }
+  } catch {}
   // 默认启用鲜艳活力风，赋予界面丰富多彩的研学色彩
   return 'vibrant'
 }
 
 function applyStyleToDOM(style: ThemeStyle) {
   if (typeof document === 'undefined') return
-  const root = document.documentElement
-  if (style === 'vibrant') {
-    root.classList.add('theme-vibrant')
-    root.classList.remove('theme-minimal')
-  } else {
-    root.classList.remove('theme-vibrant')
-    root.classList.add('theme-minimal')
-  }
+  try {
+    const root = document.documentElement
+    if (style === 'vibrant') {
+      root.classList.add('theme-vibrant')
+      root.classList.remove('theme-minimal')
+    } else {
+      root.classList.remove('theme-vibrant')
+      root.classList.add('theme-minimal')
+    }
+  } catch {}
 }
 
-// 立即在模块加载时应用一次，防止页面初次渲染时闪烁
+// 立即在模块加载时安全应用一次，防止页面初次渲染时闪烁
 if (typeof window !== 'undefined') {
-  applyStyleToDOM(getInitialStyle())
+  try {
+    applyStyleToDOM(getInitialStyle())
+  } catch {}
 }
 
 export function useThemeStyle() {
@@ -64,9 +70,13 @@ export function useThemeStyle() {
 
   const setThemeStyle = useCallback((newStyle: ThemeStyle) => {
     setThemeStyleState(newStyle)
-    localStorage.setItem(STORAGE_KEY, newStyle)
+    try {
+      localStorage.setItem(STORAGE_KEY, newStyle)
+    } catch {}
     applyStyleToDOM(newStyle)
-    window.dispatchEvent(new CustomEvent(EVENT_KEY, { detail: newStyle }))
+    try {
+      window.dispatchEvent(new CustomEvent(EVENT_KEY, { detail: newStyle }))
+    } catch {}
   }, [])
 
   const toggleThemeStyle = useCallback(() => {

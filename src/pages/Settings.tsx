@@ -63,16 +63,32 @@ export default function Settings() {
 
   // 考生个性化备考偏好（本地与账号隔离）
   const [targetSubject, setTargetSubject] = useState<'408' | 'math' | 'all'>(() => {
-    return (localStorage.getItem('coreforge_pref_target_subject') as any) || 'all'
+    try {
+      return (localStorage.getItem('coreforge_pref_target_subject') as any) || 'all'
+    } catch {
+      return 'all'
+    }
   })
   const [dailyQuizGoal, setDailyQuizGoal] = useState<number>(() => {
-    return Number(localStorage.getItem('coreforge_pref_daily_quiz_goal')) || 20
+    try {
+      return Number(localStorage.getItem('coreforge_pref_daily_quiz_goal')) || 20
+    } catch {
+      return 20
+    }
   })
   const [dailyVocabGoal, setDailyVocabGoal] = useState<number>(() => {
-    return Number(localStorage.getItem('coreforge_pref_daily_vocab_goal')) || 30
+    try {
+      return Number(localStorage.getItem('coreforge_pref_daily_vocab_goal')) || 30
+    } catch {
+      return 30
+    }
   })
   const [defaultEditorMode, setDefaultEditorMode] = useState<'write' | 'markdown'>(() => {
-    return (localStorage.getItem('coreforge_pref_editor_mode') as any) || 'write'
+    try {
+      return (localStorage.getItem('coreforge_pref_editor_mode') as any) || 'write'
+    } catch {
+      return 'write'
+    }
   })
   const [adminTab, setAdminTab] = useState<'student' | 'system'>('student')
   const { themeStyle, isVibrant, setThemeStyle } = useThemeStyle()
@@ -452,15 +468,6 @@ export default function Settings() {
   const aiModelSet = (settings?.ai?.endpoints && settings.ai.endpoints.some(e => (e.models && e.models.length > 0) || e.defaultModel)) ||
     (!!settings?.ai?.model && settings.ai.model.length > 0)
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <RefreshCw className="w-6 h-6 text-warm-500 animate-spin" />
-      </div>
-    )
-  }
-
-
   const handleSaveStudentPref = () => {
     try {
       localStorage.setItem('coreforge_pref_target_subject', targetSubject)
@@ -508,6 +515,14 @@ export default function Settings() {
           </div>
         )}
       </div>
+
+      {loading ? (
+        <div className="flex flex-col items-center justify-center h-64 bg-white/60 border border-slate-200/80 rounded-2xl p-8 space-y-3 shadow-2xs">
+          <RefreshCw className="w-6 h-6 text-indigo-600 animate-spin" />
+          <span className="text-xs text-slate-500 font-medium">正在同步研学偏好与系统配置...</span>
+        </div>
+      ) : (
+        <>
 
       {/* 考生专属研学偏好面板（无任何服务器底层物理路径与端口噪音） */}
       {(!isAdmin || adminTab === 'student') && (
@@ -866,8 +881,8 @@ export default function Settings() {
               <StatusCard
                 label="AI 模型"
                 configured={aiModelSet}
-                detail={aiModelSet ? settings!.ai!.model! : '未选择'}
-                configuredText="已选择"
+                detail={settings?.ai?.model || currentEp?.defaultModel || (aiModelSet ? '已就绪' : '未选择')}
+                configuredText={settings?.ai?.model || currentEp?.defaultModel || '已就绪'}
               />
             </div>
           </section>
@@ -1462,6 +1477,8 @@ export default function Settings() {
         </button>
       </div>
         </div>
+      )}
+        </>
       )}
 
       {/* Folder Picker Modal */}

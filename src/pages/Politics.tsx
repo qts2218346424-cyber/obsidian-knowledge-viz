@@ -1,6 +1,7 @@
 import ChinaHistoricalMap from '../components/ChinaHistoricalMap'
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { useIsMobile } from '../hooks/useIsMobile'
 import {
   Landmark,
   MapPin,
@@ -70,6 +71,8 @@ function getAnniversaryInfo(year: number, mode: AnniversaryMode): { matched: boo
 }
 
 export default function Politics() {
+  const { isMobile } = useIsMobile()
+  const [showMobileMap, setShowMobileMap] = useState(false)
   const [activeTab, setActiveTab] = useState<PoliticsTab>('timeline')
   const [isFullscreen, setIsFullscreen] = useState(false)
   const fullScreenContainerRef = useRef<HTMLDivElement | null>(null)
@@ -432,7 +435,7 @@ export default function Politics() {
 
           {/* 顶部功能快捷切页与全屏按钮 */}
           <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <div className="inline-flex rounded-2xl bg-slate-100/90 p-1 border border-slate-200/80 shadow-2xs">
+            <div className="inline-flex max-w-full overflow-x-auto mobile-no-scrollbar rounded-2xl bg-slate-100/90 p-1 border border-slate-200/80 shadow-2xs shrink-0">
               <button
                 type="button"
                 onClick={() => setActiveTab('timeline')}
@@ -737,8 +740,22 @@ export default function Politics() {
                 </div>
               </div>
 
+              {/* 移动端地图快速折叠/展开条 */}
+              <div className="sm:hidden py-1">
+                <button
+                  type="button"
+                  onClick={() => setShowMobileMap(prev => !prev)}
+                  className="w-full py-2 px-3 rounded-xl bg-slate-900 border border-amber-500/30 text-amber-300 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer active:scale-98 transition-all"
+                >
+                  <MapPin className="w-3.5 h-3.5 text-amber-400" />
+                  <span>{showMobileMap ? '收起历史地理地图' : '展开中国历史发光地图 (名城联动)'}</span>
+                </button>
+              </div>
+
               {/* 阿里 DataV 阿里标准高精矢量发光中国地图 */}
-              <div className="relative my-2 flex-1 flex items-center justify-center min-h-[360px]">
+              <div className={`relative my-2 flex-1 flex items-center justify-center ${
+                !showMobileMap ? 'hidden sm:flex min-h-[360px]' : 'flex min-h-[280px]'
+              }`}>
                 <ChinaHistoricalMap
                   activeCoordinates={activeItem?.coordinates}
                   activeCityName={activeItem?.cityName}
