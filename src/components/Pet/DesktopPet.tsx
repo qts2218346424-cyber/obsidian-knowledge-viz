@@ -1,9 +1,6 @@
+import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import {
-  EyeOff, useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
-import {
-  EyeOff, useLocation, useNavigate } from 'react-router-dom'
-import {
-  EyeOff,
   Clock,
   MessageSquare,
   Maximize2,
@@ -14,12 +11,11 @@ import {
   X,
   Utensils,
   Award,
+  EyeOff,
 } from 'lucide-react'
 import LuluAvatar, { NAILONG_PERSONA } from './LuluAvatar'
+import { getExamCountdownDays, EXAM_DATE_DISPLAY } from '../../utils/examDate'
 import {
-  EyeOff, getExamCountdownDays, EXAM_DATE_DISPLAY } from '../../utils/examDate'
-import {
-  EyeOff,
   playPetSynthSound,
   NAILONG_DIALOGUES,
   type PetMood,
@@ -71,6 +67,14 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
   const navigate = useNavigate()
 
   const isChatPage = location.pathname === '/chat'
+  const isQuizPage = location.pathname.startsWith('/quiz')
+  const [petHidden, setPetHidden] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('coreforge_pet_hidden') === '1'
+    } catch {
+      return false
+    }
+  })
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
 
   const petSize = isMobile ? 68 : 88
@@ -150,6 +154,13 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
   const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(null)
   const [bubbleAction, setBubbleAction] = useState<{ label: string; onClick: () => void } | null>(null)
   const [minimized, setMinimized] = useState(false)
+
+  // 📱 移动端做题中心自动微缩贴边，避免遮挡科目卡片右上角或做题正文
+  useEffect(() => {
+    if (isMobile && isQuizPage) {
+      setMinimized(true)
+    }
+  }, [isMobile, isQuizPage])
   const [isSquishing, setIsSquishing] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [bellyJiggle, setBellyJiggle] = useState(false)
@@ -609,6 +620,25 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
     return null
   }
 
+  if (petHidden) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setPetHidden(false)
+          try {
+            localStorage.removeItem('coreforge_pet_hidden')
+          } catch {}
+        }}
+        className="fixed right-0 bottom-24 z-40 px-2 py-1.5 rounded-l-xl bg-amber-400/90 hover:bg-amber-400 text-amber-950 text-xs font-bold shadow-md backdrop-blur-xs flex items-center gap-1 transition-all cursor-pointer border border-amber-300"
+        title="点击唤出奶龙伴学小助手"
+      >
+        <span>🐲</span>
+        <span className="text-[10px]">奶龙</span>
+      </button>
+    )
+  }
+
   const isRightSide = position.x > (typeof window !== 'undefined' ? window.innerWidth / 2 : 200)
   const isNearTop = position.y < 110
 
@@ -856,6 +886,23 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                 <Minimize2 className="w-3.5 h-3.5" />
               </button>
 
+              {/* 一键隐藏到屏幕边缘 */}
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation()
+                  setPetHidden(true)
+                  try {
+                    localStorage.setItem('coreforge_pet_hidden', '1')
+                  } catch {}
+                  setShowMobileMenu(false)
+                }}
+                className="w-8 h-8 rounded-full bg-white/95 dark:bg-slate-800 text-slate-400 hover:text-rose-500 shadow-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer select-none"
+                title="暂时隐藏（可在屏幕右侧边缘随时点开）"
+              >
+                <EyeOff className="w-3.5 h-3.5" />
+              </button>
+
               {showMobileMenu && (
                 <button
                   type="button"
@@ -897,6 +944,20 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
               </span>
             )}
             <Maximize2 className="w-3 h-3 text-amber-600 ml-0.5" />
+            <button
+              type="button"
+              onClick={e => {
+                e.stopPropagation()
+                setPetHidden(true)
+                try {
+                  localStorage.setItem('coreforge_pet_hidden', '1')
+                } catch {}
+              }}
+              className="p-0.5 rounded-full hover:bg-amber-100 dark:hover:bg-slate-800 text-amber-700/60 hover:text-rose-500 transition-colors ml-1 cursor-pointer"
+              title="收起为边缘萌爪"
+            >
+              <X className="w-3 h-3" />
+            </button>
           </div>
         )}
       </div>

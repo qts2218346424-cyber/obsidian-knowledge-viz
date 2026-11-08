@@ -180,7 +180,7 @@ export default function UserGuideModal({ isOpen, onClose, onStartInteractiveTour
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/40 backdrop-blur-sm animate-fade-in font-sans"
+      className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-5 bg-black/40 backdrop-blur-sm animate-fade-in font-sans"
       onClick={handleClose}
       role="dialog"
       aria-modal="true"

@@ -155,7 +155,7 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
     return (
       <aside 
         aria-label="新手教程导航快捷胶囊"
-        className="fixed bottom-6 right-6 z-50 animate-fade-in"
+        className="fixed bottom-6 right-6 z-[55] animate-fade-in"
       >
         <button
           onClick={() => setIsMinimized(false)}
@@ -173,7 +173,7 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
   return (
     <aside 
       aria-label="新手交互体验向导"
-      className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-50 w-[calc(100vw-2.5rem)] sm:w-[420px] rounded-2xl border border-neutral-200/90 bg-white/95 p-4 sm:p-5 shadow-[0_20px_48px_rgba(0,0,0,0.12)] backdrop-blur-xl animate-fade-in text-neutral-900 font-sans select-none"
+      className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-[55] w-[calc(100vw-2.5rem)] sm:w-[420px] rounded-2xl border border-neutral-200/90 bg-white/95 p-4 sm:p-5 shadow-[0_20px_48px_rgba(0,0,0,0.12)] backdrop-blur-xl animate-fade-in text-neutral-900 font-sans select-none"
     >
       {/* 顶部指示条与控制项 */}
       <div className="flex items-center justify-between pb-3 border-b border-neutral-100">

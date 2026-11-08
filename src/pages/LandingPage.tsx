@@ -289,9 +289,9 @@ export default function LandingPage() {
       </header>
 
       {/*  */}
-      <section className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 sm:px-6 pt-10 sm:pt-14 pb-16 text-center my-auto">
+      <section className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 sm:px-6 pt-5 sm:pt-14 pb-8 sm:pb-16 text-center my-auto">
         {/* Subframe 标志性 3D 镀铬金属硬件药丸切换器 (3D Metallic Chrome Switcher) */}
-        <div className="relative mb-10 sm:mb-12 select-none">
+        <div className="relative mb-6 sm:mb-12 select-none">
           <div className="metallic-ambient-glow" />
 
           <div className="metallic-housing relative z-10">
@@ -350,18 +350,56 @@ export default function LandingPage() {
         </h1>
 
         {/* 细腻质感副标题 */}
-        <p className="text-[16px] sm:text-[24px] md:text-[30px] font-normal tracking-[-0.025em] leading-[1.25] text-[#8d9096] max-w-[720px] mb-8">
+        <p className="text-[15px] sm:text-[24px] md:text-[30px] font-normal tracking-[-0.025em] leading-[1.25] text-[#8d9096] max-w-[720px] mb-4 sm:mb-8">
           {modeConfigs[activeMode].subtitle}
         </p>
 
         {/* Subframe 动态模式状态胶囊 (mode-live-pill) */}
-        <div className="mb-9 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/[0.04] border border-black/[0.06] text-[12px] text-[#52525b] max-w-2xl backdrop-blur-xs">
+        <div className="mb-6 sm:mb-9 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-black/[0.04] border border-black/[0.06] text-[12px] text-[#52525b] max-w-2xl backdrop-blur-xs">
           <span className="w-1.5 h-1.5 rounded-full bg-zinc-800 shrink-0" />
           <span className="truncate">{modeConfigs[activeMode].badge}</span>
         </div>
 
-        {/* Subframe 风格经典 CTA 按钮行 */}
-        <div className="flex flex-wrap items-center justify-center gap-3">
+        {/* 📱 移动端专属自适应 CTA 按钮组（免安装网页版置为最显眼主按钮） */}
+        <div className="w-full max-w-sm sm:hidden space-y-2.5 px-2">
+          <button
+            type="button"
+            onClick={() => {
+              if (isAuthenticated) {
+                navigate('/dashboard')
+              } else {
+                setAuthModalOpen(true)
+              }
+            }}
+            className="w-full py-3.5 px-5 rounded-xl bg-[#1c1c1f] hover:bg-black text-white text-[15px] font-bold flex items-center justify-center gap-2.5 shadow-lg shadow-black/15 active:scale-[0.98] transition-all cursor-pointer"
+          >
+            <Globe className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>立即开启研学 (免安装网页版)</span>
+            <ArrowRight className="w-4 h-4 shrink-0" />
+          </button>
+
+          <div className="flex items-center justify-center gap-2 pt-1 text-xs text-zinc-500">
+            <button
+              type="button"
+              onClick={handleDownloadDesktop}
+              disabled={downloading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-medium transition-all"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>下载电脑客户端 ({downloadInfo?.desktop?.size || '109 MB'})</span>
+            </button>
+            <a
+              href="#download"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-medium transition-all"
+            >
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>扫码说明</span>
+            </a>
+          </div>
+        </div>
+
+        {/* 💻 桌面端 / 平板端 CTA 按钮组（保持电脑端下载为第一视觉） */}
+        <div className="hidden sm:flex flex-wrap items-center justify-center gap-3">
           <button
             type="button"
             onClick={handleDownloadDesktop}
@@ -400,19 +438,19 @@ export default function LandingPage() {
       <section id="preview" className="max-w-[1280px] mx-auto px-4 sm:px-8 pb-20">
         <div className="rounded-[18px] bg-[#e3e3e6] p-2.5 sm:p-3 shadow-[0_24px_64px_rgba(0,0,0,0.12)] border border-white/60">
           <div className="w-full bg-white rounded-[13px] shadow-[0_8px_30px_rgba(0,0,0,0.06)] border border-black/[0.08] overflow-hidden text-left select-none">
-            {/* 工作台顶部仿 Chrome 导航条 */}
-            <div className="h-9 px-4 bg-[#fafafa] border-b border-zinc-200/80 flex items-center justify-between text-[11px] text-zinc-500">
-              <div className="flex items-center gap-3.5">
-                <span className="font-semibold text-zinc-900">408与考研数学工作台</span>
-                <span className="text-zinc-400">·</span>
-                <span>知识拓扑</span>
-                <span className="text-zinc-800 font-medium">+ 真题导入</span>
+            {/* 工作台顶部仿 Chrome 导航条（移动端自适应防挤压） */}
+            <div className="h-9 px-3 sm:px-4 bg-[#fafafa] border-b border-zinc-200/80 flex items-center justify-between text-[11px] text-zinc-500 overflow-hidden">
+              <div className="flex items-center gap-2 sm:gap-3.5 truncate">
+                <span className="font-semibold text-zinc-900 truncate">408与考研数学工作台</span>
+                <span className="text-zinc-400 hidden sm:inline">·</span>
+                <span className="hidden sm:inline">知识拓扑</span>
+                <span className="text-zinc-800 font-medium hidden sm:inline">+ 真题导入</span>
               </div>
-              <div className="flex items-center gap-2 font-medium text-zinc-800">
+              <div className="flex items-center gap-1.5 font-medium text-zinc-800 shrink-0">
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                <span>{modeConfigs[activeMode].heroSubject}</span>
+                <span className="text-[10px] sm:text-[11px]">{modeConfigs[activeMode].heroSubject}</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="hidden md:flex items-center gap-2 shrink-0">
                 <span className="px-2 py-0.5 rounded bg-zinc-200/70 text-zinc-900 font-medium text-[10px]">
                   沉浸研学
                 </span>
@@ -479,13 +517,13 @@ export default function LandingPage() {
                     <p className="text-zinc-700 leading-relaxed text-[11px]">
                       LL 旋转只需顺时针单旋一次，关键在于将被破坏平衡的根结点右子树挂接为调整后根结点的左孩子。
                     </p>
-                    <div className="p-2 rounded bg-zinc-900 text-emerald-300 font-mono text-[10.5px]">
+                    <div className="p-2 rounded bg-zinc-900 text-emerald-300 font-mono text-[10px] sm:text-[10.5px] overflow-x-auto whitespace-nowrap">
                       {'平衡因子 BF = 左子树高度 - 右子树高度 ∈ {-1, 0, 1}'}
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-zinc-100 flex items-center justify-between text-zinc-400 text-[11px]">
+                <div className="mt-4 pt-3 border-t border-zinc-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-zinc-400 text-[11px]">
                   <span>按 ⌘+Enter 提交作答并执行 AI 批改</span>
                   <button
                     onClick={() => setAuthModalOpen(true)}

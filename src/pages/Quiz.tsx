@@ -909,10 +909,10 @@ export default function Quiz() {
             type="button"
             onClick={startQuiz}
             disabled={availableCount === 0}
-            className="shrink-0 inline-flex items-center gap-1.5 rounded-xl bg-neutral-900 hover:bg-black disabled:opacity-40 px-4 py-2 text-xs font-medium text-white shadow-xs active:scale-95 transition-all cursor-pointer rounded-lg"
+            className="shrink-0 inline-flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-indigo-600/30 active:scale-95 transition-all cursor-pointer whitespace-nowrap min-w-[96px]"
           >
             <Flame className="h-3.5 w-3.5 text-amber-300" />
-            <span>立即开始</span>
+            <span className="whitespace-nowrap font-bold">立即开始</span>
             <ArrowRight className="h-3.5 w-3.5" />
           </button>
         </div>
