@@ -555,33 +555,33 @@ export default function Study() {
 
   return (
     <div className="min-h-full xl:h-full flex flex-col gap-3 sm:gap-4 overflow-visible xl:overflow-hidden pb-4 xl:pb-0">
-      {/* Top Banner / Hero - 响应式智能收拢 */}
-      <div className="bg-surface border border-neutral-200/80 rounded-xl p-3.5 sm:p-5 shadow-2xs shrink-0 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-bold bg-accent-orange/15 text-warm-800 border border-accent-orange/20">
+      {/* Top Banner / Hero - 响应式智能收拢 (严防手机端文字折行溢出格子) */}
+      <div className="bg-surface border border-neutral-200/80 rounded-xl p-3 sm:p-5 shadow-2xs shrink-0 flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-4">
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+            <span className="px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-bold bg-accent-orange/15 text-warm-800 border border-accent-orange/20 whitespace-nowrap leading-tight">
               COREFORGE 研学中心
             </span>
-            <span className="text-[11px] sm:text-xs text-warm-400">
+            <span className="text-[10.5px] sm:text-xs text-warm-400 whitespace-nowrap leading-tight">
               408 统考 & 考研数学权威教研
             </span>
           </div>
-          <h1 className="text-base sm:text-lg md:text-xl font-bold text-warm-800 mt-1 flex items-center gap-2">
+          <h1 className="text-sm sm:text-lg md:text-xl font-bold text-warm-800 mt-1 sm:mt-1.5 flex items-center gap-1.5 sm:gap-2 leading-snug">
             <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-accent-orange shrink-0" />
-            <span>讲义 · 教材 · 交互课件工作台</span>
+            <span className="truncate">讲义 · 教材 · 交互课件工作台</span>
           </h1>
           <p className="text-xs text-warm-500 mt-1 max-w-2xl hidden sm:block">
             精选官方核心讲义、PDF 电子参考书与直观的 HTML 交互仿真课件，即学即练。
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0 self-stretch sm:self-auto justify-between sm:justify-end">
-          {/* 视图切换：讲义列表 vs 全景图谱 */}
-          <div className="inline-flex items-center rounded-xl bg-neutral-100 p-1 border border-neutral-200/80 shadow-2xs">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 self-auto justify-end">
+          {/* 桌面端专属切换条：讲义列表 vs 全景图谱（移动端下方已有全量 TabBar，避免顶部挤压超出格子） */}
+          <div className="hidden md:inline-flex items-center rounded-xl bg-neutral-100 p-1 border border-neutral-200/80 shadow-2xs">
             <button
               type="button"
               onClick={() => handleTabChange('handouts')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 tab !== 'graph'
                   ? 'bg-white text-neutral-900 shadow-2xs'
                   : 'text-neutral-500 hover:text-neutral-900'
@@ -592,7 +592,7 @@ export default function Study() {
             <button
               type="button"
               onClick={() => handleTabChange('graph')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 tab === 'graph'
                   ? 'bg-neutral-900 text-white shadow-2xs'
                   : 'text-neutral-500 hover:text-neutral-900'
@@ -605,25 +605,26 @@ export default function Study() {
           <button
             type="button"
             onClick={() => window.dispatchEvent(new CustomEvent('open-quick-note'))}
-            className="subframe-btn-secondary h-8 px-3 text-xs font-semibold cursor-pointer"
+            className="subframe-btn-secondary h-7 sm:h-8 px-2 sm:px-3 text-[11px] sm:text-xs font-semibold cursor-pointer whitespace-nowrap flex items-center gap-1 leading-none shrink-0"
             title="一键呼出考点批注，随时记下心得并归档进知识库"
           >
-            <Edit3 className="w-3.5 h-3.5 text-neutral-600" />
-            <span>✏️ 考点随手批注</span>
+            <Edit3 className="w-3.5 h-3.5 text-neutral-600 shrink-0" />
+            <span className="hidden xs:inline">考点批注</span>
+            <span className="xs:hidden">批注</span>
           </button>
           <button
             type="button"
             onClick={() => setImportModalOpen(true)}
-            className="subframe-btn-black h-8 px-3.5 text-xs font-medium cursor-pointer"
+            className="subframe-btn-black h-7 sm:h-8 px-2 sm:px-3.5 text-[11px] sm:text-xs font-medium cursor-pointer whitespace-nowrap flex items-center gap-1 leading-none shrink-0"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-3.5 h-3.5 shrink-0" />
             <span>导入资料</span>
           </button>
           <button
             type="button"
             onClick={loadMaterials}
             disabled={loadingBooks}
-            className="h-8 w-8 rounded-lg border border-neutral-200/90 bg-white text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900 transition-colors disabled:opacity-50 flex items-center justify-center shrink-0 cursor-pointer shadow-2xs"
+            className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg border border-neutral-200/90 bg-white text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900 transition-colors disabled:opacity-50 flex items-center justify-center shrink-0 cursor-pointer shadow-2xs"
             title="刷新资料库"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loadingBooks ? 'animate-spin' : ''}`} />
@@ -633,31 +634,32 @@ export default function Study() {
 
       {/* Subframe Navigation Tabs & Search Bar */}
       <div className="bento-card rounded-xl px-3 py-2 sm:px-4 sm:py-2.5 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-2 sm:gap-3 shrink-0">
-        {/* Navigation tabs - Subframe Pill Design */}
+        {/* Navigation tabs - Subframe Pill Design (自适应移动端标签，防止徽标撑破格子) */}
         <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 scroll-smooth shrink-0">
           {[
-            { key: 'graph' as Tab, label: '🕸️ 全景知识图谱', count: null },
-            { key: 'handouts' as Tab, label: '📖 核心讲义', count: allHandouts.length },
-            { key: 'topology' as Tab, label: '🔥 考点掌握度热力图', count: null },
-            { key: 'mastery' as Tab, label: '🎨 考点色谱', count: 22 },
-            { key: 'flashcards' as Tab, label: '🎴 易忘闪卡', count: null },
-            { key: 'pdfs' as Tab, label: '📑 PDF 教材与真题', count: pdfBooks.length },
-            { key: 'coursewares' as Tab, label: '🌐 仿真课件', count: INTERACTIVE_COURSEWARES.length },
-            { key: 'errors' as Tab, label: '📝 每日错题', count: null },
-            { key: 'progress' as Tab, label: '📊 研学进度', count: null },
+            { key: 'graph' as Tab, label: '🕸️ 全景知识图谱', shortLabel: '🕸️ 知识图谱', count: null },
+            { key: 'handouts' as Tab, label: '📖 核心讲义', shortLabel: '📖 讲义', count: allHandouts.length },
+            { key: 'topology' as Tab, label: '🔥 考点掌握度热力图', shortLabel: '🔥 掌握度', count: null },
+            { key: 'mastery' as Tab, label: '🎨 考点色谱', shortLabel: '🎨 色谱', count: 22 },
+            { key: 'flashcards' as Tab, label: '🎴 易忘闪卡', shortLabel: '🎴 闪卡', count: null },
+            { key: 'pdfs' as Tab, label: '📑 PDF 教材与真题', shortLabel: '📑 教材真题', count: pdfBooks.length },
+            { key: 'coursewares' as Tab, label: '🌐 仿真课件', shortLabel: '🌐 课件', count: INTERACTIVE_COURSEWARES.length },
+            { key: 'errors' as Tab, label: '📝 每日错题', shortLabel: '📝 错题', count: null },
+            { key: 'progress' as Tab, label: '📊 研学进度', shortLabel: '📊 进度', count: null },
           ].map(t => (
             <button
               key={t.key}
               onClick={() => handleTabChange(t.key)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap shrink-0 transition-all cursor-pointer active:scale-95 ${
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap shrink-0 transition-all cursor-pointer active:scale-95 leading-normal ${
                 tab === t.key
                   ? 'bg-neutral-900 text-white shadow-xs font-semibold'
                   : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100/80'
               }`}
             >
-              <span>{t.label}</span>
+              <span className="hidden sm:inline">{t.label}</span>
+              <span className="sm:hidden">{t.shortLabel}</span>
               {t.count !== null && (
-                <span className={`text-[9.5px] px-1.5 py-0.2 rounded-md font-mono ${
+                <span className={`text-[9.5px] px-1.5 py-0.5 rounded-md font-mono leading-none inline-flex items-center justify-center shrink-0 ${
                   tab === t.key ? 'bg-neutral-800 text-neutral-200' : 'bg-neutral-100 text-neutral-500 border border-neutral-200/60'
                 }`}>
                   {t.count}

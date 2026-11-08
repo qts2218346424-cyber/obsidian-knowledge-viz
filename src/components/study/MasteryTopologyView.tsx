@@ -208,7 +208,7 @@ export default function MasteryTopologyView() {
           <div className="text-2xl font-bold text-rose-700 mt-1">
             {currentSummary?.weakCount || 0} <span className="text-xs font-normal text-rose-600">个 (🔴)</span>
           </div>
-          <div className="text-[11px] text-rose-600/80 mt-1">掌握度 &lt; 50% 或高频错题</div>
+          <div className="text-[10.5px] sm:text-[11px] text-rose-600/80 mt-1 truncate">掌握度 &lt; 50% · 错题</div>
         </div>
 
         <div className="bg-surface border border-cream-200 rounded-2xl p-4 shadow-xs col-span-2 md:col-span-1">

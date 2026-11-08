@@ -739,9 +739,9 @@ export default function Quiz() {
         <div className="bento-card rounded-2xl border border-neutral-200/85 bg-white p-5 sm:p-7 shadow-xs">
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
             <div>
-              <div className="subframe-pill mb-2.5">
-                <Flame className="h-3.5 w-3.5 text-amber-500" />
-                <span>全真题库 · 分步推导 · 错题闭环</span>
+              <div className="subframe-pill mb-2 whitespace-nowrap leading-normal inline-flex items-center">
+                <Flame className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                <span className="truncate">全真题库 · 分步推导 · 错题闭环</span>
               </div>
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900">
                 研考做题中心（408 专业课 + 考研数学）
