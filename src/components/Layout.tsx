@@ -290,15 +290,19 @@ export default function Layout({ children }: LayoutProps) {
 
           {/* 右侧：精炼工具胶囊阵列 (直达 AI 伴学 + 全站功能入口) */}
           <div className="flex items-center gap-1.5 shrink-0">
-            {/* 顶栏快速进入 AI 伴学胶囊 */}
-            <Link
-              to="/chat"
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-[11px] font-extrabold shadow-2xs active:scale-95 transition-all shrink-0"
-              title="一键进入 AI 伴学导师"
+            {/* 顶栏快速随手记笔记胶囊 */}
+            <button
+              type="button"
+              onClick={() => {
+                setQuickNoteOpen(true)
+                openModal('quick-note')
+              }}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[11px] font-extrabold shadow-2xs active:scale-95 transition-all shrink-0 cursor-pointer"
+              title="随手记笔记 · 极速入库"
             >
-              <Bot className="w-3.5 h-3.5" />
-              <span>伴学</span>
-            </Link>
+              <PenLine className="w-3.5 h-3.5" />
+              <span>随手记</span>
+            </button>
 
             <button
               type="button"
