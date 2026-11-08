@@ -13,6 +13,7 @@ interface AudioContextValue {
   setQueue: (tracks: AudioTrack[], startIdx?: number) => void
   toggleShuffle: () => void
   cycleRepeat: () => void
+  stop: () => void
 }
 
 const AudioPlayerContext = createContext<AudioContextValue | null>(null)

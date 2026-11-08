@@ -13,6 +13,7 @@ import {
   SkipForward,
   Volume2,
   VolumeX,
+  X,
 } from 'lucide-react'
 import { useAudioContext } from '../../contexts/AudioContext'
 
@@ -27,6 +28,7 @@ export default function MiniPlayer() {
     toggleShuffle,
     cycleRepeat,
     setQueue,
+    stop,
   } = useAudioContext()
   const [expanded, setExpanded] = useState(false)
   const {
@@ -154,39 +156,56 @@ export default function MiniPlayer() {
           </button>
         </div>
 
-        <div className="hidden md:flex w-48 shrink-0 items-center justify-end gap-3">
-          {status === 'error' ? (
-            <span
-              title={error || undefined}
-              className="flex min-w-0 items-center gap-1 truncate text-[10px] text-rose-500"
+        {/* 右侧：电脑端音量控制 + 全平台常驻一键退出关闭按钮 */}
+        <div className="flex shrink-0 items-center justify-end gap-2 sm:gap-3">
+          <div className="hidden md:flex items-center gap-3">
+            {status === 'error' ? (
+              <span
+                title={error || undefined}
+                className="flex min-w-0 items-center gap-1 truncate text-[10px] text-rose-500"
+              >
+                <AlertCircle className="h-3 w-3 shrink-0" />
+                <span className="truncate">{error || '播放失败'}</span>
+              </span>
+            ) : (
+              <span className="font-mono text-[10px] text-slate-400">
+                {isLive ? '实时电台' : `${formatTime(progress)} / ${formatTime(duration)}`}
+              </span>
+            )}
+            <button
+              onClick={() => setVolume(volume > 0 ? 0 : 0.7)}
+              className="p-1 text-slate-400 transition-colors hover:text-slate-600 cursor-pointer"
+              title={volume === 0 ? '恢复音量' : '静音'}
             >
-              <AlertCircle className="h-3 w-3 shrink-0" />
-              <span className="truncate">{error || '播放失败'}</span>
-            </span>
-          ) : (
-            <span className="font-mono text-[10px] text-slate-400">
-              {isLive ? '实时电台' : `${formatTime(progress)} / ${formatTime(duration)}`}
-            </span>
-          )}
+              {volume === 0
+                ? <VolumeX className="h-3.5 w-3.5" />
+                : <Volume2 className="h-3.5 w-3.5" />}
+            </button>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={volume}
+              onChange={event => setVolume(Number(event.target.value))}
+              className="h-1 w-20 cursor-pointer accent-indigo-600"
+              aria-label="音量"
+            />
+          </div>
+
+          {/* 关闭/退出播放器悬浮条按钮 (大热区、防误触、支持手机与桌面端) */}
           <button
-            onClick={() => setVolume(volume > 0 ? 0 : 0.7)}
-            className="p-1 text-slate-400 transition-colors hover:text-slate-600 cursor-pointer"
-            title={volume === 0 ? '恢复音量' : '静音'}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              stop()
+            }}
+            className="flex h-8 w-8 sm:h-8.5 sm:w-8.5 items-center justify-center rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-500 hover:text-rose-600 border border-slate-200/80 active:scale-90 transition-all cursor-pointer shrink-0"
+            title="关闭播放器并退出电台"
+            aria-label="退出电台播放"
           >
-            {volume === 0
-              ? <VolumeX className="h-3.5 w-3.5" />
-              : <Volume2 className="h-3.5 w-3.5" />}
+            <X className="h-4 w-4" />
           </button>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.01}
-            value={volume}
-            onChange={event => setVolume(Number(event.target.value))}
-            className="h-1 w-20 cursor-pointer accent-indigo-600"
-            aria-label="音量"
-          />
         </div>
       </div>
 

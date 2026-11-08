@@ -14,6 +14,7 @@ import {
   Award,
   Eye,
   EyeOff,
+  GripVertical,
 } from 'lucide-react'
 import LuluAvatar, { NAILONG_PERSONA } from './LuluAvatar'
 import { useExamCountdown, EXAM_DATE_DISPLAY } from '../../utils/examDate'
@@ -70,6 +71,78 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
 
   const isChatPage = location.pathname === '/chat'
   const isQuizPage = location.pathname.startsWith('/quiz')
+  // 📱 边缘隐藏萌爪形态自由拖动位置管理
+  const [hiddenPos, setHiddenPos] = useState<{ y: number; side: 'left' | 'right' }>(() => {
+    let y = typeof window !== 'undefined' ? window.innerHeight - 150 : 300
+    let side: 'left' | 'right' = 'right'
+    try {
+      const savedY = localStorage.getItem('coreforge_pet_hidden_y')
+      if (savedY) y = Math.max(70, Math.min(window.innerHeight - 90, Number(savedY)))
+      const savedSide = localStorage.getItem('coreforge_pet_hidden_side')
+      if (savedSide === 'left' || savedSide === 'right') side = savedSide
+    } catch {}
+    return { y, side }
+  })
+  const hiddenDragRef = useRef<{ startX: number; startY: number; origY: number; moved: boolean } | null>(null)
+  const [isHiddenDragging, setIsHiddenDragging] = useState(false)
+
+  const handleHiddenPointerDown = (e: React.PointerEvent) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return
+    hiddenDragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      origY: hiddenPos.y,
+      moved: false,
+    }
+    try {
+      ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+    } catch {}
+  }
+
+  const handleHiddenPointerMove = (e: React.PointerEvent) => {
+    if (!hiddenDragRef.current) return
+    const dx = e.clientX - hiddenDragRef.current.startX
+    const dy = e.clientY - hiddenDragRef.current.startY
+    if (!hiddenDragRef.current.moved && Math.hypot(dx, dy) > 6) {
+      hiddenDragRef.current.moved = true
+      setIsHiddenDragging(true)
+    }
+    if (hiddenDragRef.current.moved) {
+      const nextY = Math.max(60, Math.min(window.innerHeight - 90, hiddenDragRef.current.origY + dy))
+      const side: 'left' | 'right' = e.clientX < window.innerWidth / 2 ? 'left' : 'right'
+      setHiddenPos({ y: nextY, side })
+    }
+  }
+
+  const handleHiddenPointerUp = (e: React.PointerEvent) => {
+    try {
+      ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
+    } catch {}
+    const moved = hiddenDragRef.current?.moved
+    hiddenDragRef.current = null
+    setIsHiddenDragging(false)
+    if (moved) {
+      try {
+        localStorage.setItem('coreforge_pet_hidden_y', String(hiddenPos.y))
+        localStorage.setItem('coreforge_pet_hidden_side', hiddenPos.side)
+      } catch {}
+    } else {
+      // 未发生明显位移判定为轻触点击，唤起展开伴学奶龙
+      setPetHidden(false)
+      try {
+        localStorage.removeItem('coreforge_pet_hidden')
+      } catch {}
+    }
+  }
+
+  const handleHiddenPointerCancel = (e: React.PointerEvent) => {
+    try {
+      ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
+    } catch {}
+    hiddenDragRef.current = null
+    setIsHiddenDragging(false)
+  }
+
   const [petHidden, setPetHidden] = useState<boolean>(() => {
     try {
       return localStorage.getItem('coreforge_pet_hidden') === '1'
@@ -604,9 +677,12 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
       setIsDragging(true)
       hasDraggedRef.current = true
       if (showMobileMenu) setShowMobileMenu(false)
-      playPetSynthSound('lift', voiceMuted)
-      const liftLine = NAILONG_DIALOGUES.dragLift[0]
-      showBubbleWithVoice(liftLine.text, undefined, 2600, false, liftLine.subtext)
+      // 仅在非胶囊形态下才弹出台词气泡，避免最小化拖动时气泡DOM突变导致手势被意外取消
+      if (!minimized) {
+        playPetSynthSound('lift', voiceMuted)
+        const liftLine = NAILONG_DIALOGUES.dragLift[0]
+        showBubbleWithVoice(liftLine.text, undefined, 2600, false, liftLine.subtext)
+      }
     }
 
     if (isDragging || Math.hypot(dx, dy) > 8) {
@@ -764,20 +840,31 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
 
   if (petHidden) {
     return (
-      <button
-        type="button"
-        onClick={() => {
-          setPetHidden(false)
-          try {
-            localStorage.removeItem('coreforge_pet_hidden')
-          } catch {}
+      <div
+        style={{
+          top: `${hiddenPos.y}px`,
+          left: hiddenPos.side === 'left' ? '0px' : 'auto',
+          right: hiddenPos.side === 'right' ? '0px' : 'auto',
+          touchAction: 'none',
+          userSelect: 'none',
         }}
-        className="fixed right-0 bottom-24 z-40 px-2 py-1.5 rounded-l-xl bg-amber-400/90 hover:bg-amber-400 text-amber-950 text-xs font-bold shadow-md backdrop-blur-xs flex items-center gap-1 transition-all cursor-pointer border border-amber-300"
-        title="点击唤出奶龙伴学小助手"
+        className={`fixed z-50 select-none cursor-grab active:cursor-grabbing ${
+          hiddenPos.side === 'left'
+            ? 'rounded-r-2xl border-l-0 pl-1.5 pr-2.5'
+            : 'rounded-l-2xl border-r-0 pl-2.5 pr-1.5'
+        } py-1.5 bg-gradient-to-r from-amber-400 to-amber-500 text-amber-950 font-bold shadow-xl border border-amber-300 flex items-center gap-1 active:scale-95 transition-transform ${
+          isHiddenDragging ? 'scale-105 shadow-2xl opacity-90' : ''
+        }`}
+        onPointerDown={handleHiddenPointerDown}
+        onPointerMove={handleHiddenPointerMove}
+        onPointerUp={handleHiddenPointerUp}
+        onPointerCancel={handleHiddenPointerCancel}
+        title="点击唤出奶龙伴学小助手（可按住沿边缘自由拖动位置）"
       >
-        <span>🐲</span>
-        <span className="text-[10px]">奶龙</span>
-      </button>
+        <GripVertical className="w-3 h-3 text-amber-900/40 shrink-0" />
+        <span className="text-sm">🐲</span>
+        <span className="text-[10px] font-extrabold">奶龙</span>
+      </div>
     )
   }
 
@@ -1106,9 +1193,10 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
           </div>
         ) : (
           <div
+            style={{ touchAction: 'none' }}
             onClick={e => {
               e.stopPropagation()
-              if (!hasDraggedRef.current) {
+              if (!hasDraggedRef.current && !isDragging) {
                 setMinimized(false)
                 setIsSquishing(true)
                 playPetSynthSound('boing', voiceMuted)
@@ -1119,9 +1207,10 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                 showBubbleWithVoice(line.text, line.audio, 4800)
               }
             }}
-            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-full bg-white/95 dark:bg-slate-900/95 text-amber-900 dark:text-amber-300 text-[11px] sm:text-xs font-bold shadow-xl border border-amber-300 dark:border-amber-700/60 hover:scale-105 active:scale-95 transition-all cursor-pointer whitespace-nowrap select-none backdrop-blur-md max-w-[min(200px,calc(100vw-3rem))]"
-            title="点击展开伴学奶龙（可按住自由拖拽）"
+            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-full bg-white/95 dark:bg-slate-900/95 text-amber-900 dark:text-amber-300 text-[11px] sm:text-xs font-bold shadow-xl border border-amber-300 dark:border-amber-700/60 hover:scale-105 active:scale-95 transition-all cursor-grab active:cursor-grabbing whitespace-nowrap select-none backdrop-blur-md max-w-[min(200px,calc(100vw-3rem))] touch-none"
+            title="按住自由拖拽位置，轻点展开伴学奶龙"
           >
+            <GripVertical className="w-3 h-3 text-amber-500/70 shrink-0" />
             <LuluAvatar size="xs" showAccessories={false} />
             <span>{persona.name}</span>
             {focusActive && (

@@ -381,6 +381,29 @@ export function useAudioPlayer() {
     }))
   }, [updateState])
 
+  const stop = useCallback(() => {
+    playRequestRef.current += 1
+    wantsPlaybackRef.current = false
+    stopProgress()
+    try {
+      ambientSynthesizer.stop()
+    } catch {}
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current.removeAttribute('src')
+      audioRef.current.load()
+    }
+    activeTrackRef.current = null
+    updateState(current => ({
+      ...current,
+      currentTrack: null,
+      isPlaying: false,
+      status: 'idle',
+      error: null,
+      progress: 0,
+    }))
+  }, [stopProgress, updateState])
+
   useEffect(() => {
     return () => {
       playRequestRef.current += 1
@@ -407,5 +430,6 @@ export function useAudioPlayer() {
     setQueue,
     toggleShuffle,
     cycleRepeat,
+    stop,
   }
 }
