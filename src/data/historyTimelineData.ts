@@ -14,11 +14,23 @@ export interface HistoryEra {
   historicalTask: string
 }
 
+export interface HistoryIllustration {
+  title: string
+  subtitle: string
+  tag: string
+  accentColor: string
+  symbolIcon: string
+  figureQuote?: string
+}
+
 export interface HistoryItem {
   id: string
   year: number
   date: string
   location?: string
+  /** 地理坐标点 [经度 lng, 纬度 lat]，用于全屏历史大地图发光标绘 */
+  coordinates?: [number, number]
+  cityName?: string
   title: string
   category: ItemCategory
   era: EraKey
@@ -32,6 +44,8 @@ export interface HistoryItem {
   pitfall?: string
   /** 重要程度：5 为必背超核心，4 为高频考点，3 为基础脉络 */
   importance: 5 | 4 | 3
+  /** 考研历史视觉配图卡片 */
+  illustration?: HistoryIllustration
 }
 
 export interface ComparisonMatrix {
@@ -1043,6 +1057,96 @@ export const COMPARISON_MATRICES: ComparisonMatrix[] = [
     ],
   },
 ]
+
+export const HISTORICAL_GEO_POINTS: Record<string, { city: string; coords: [number, number] }> = {
+  '1840-opium-war': { city: '广州·虎门', coords: [113.6, 22.8] },
+  '1842-nanjing-treaty': { city: '南京', coords: [118.8, 32.0] },
+  '1851-taiping': { city: '广西桂平金田', coords: [110.1, 23.4] },
+  '1853-land-system': { city: '天京(南京)', coords: [118.8, 32.0] },
+  '1861-yangwu': { city: '上海/天津', coords: [121.5, 31.2] },
+  '1894-jiawu': { city: '檀香山/黄海', coords: [123.5, 39.8] },
+  '1895-maguan': { city: '北京', coords: [116.4, 39.9] },
+  '1898-wuxu': { city: '北京', coords: [116.4, 39.9] },
+  '1900-yihetuan': { city: '天津/北京', coords: [117.2, 39.1] },
+  '1901-xinchou': { city: '北京', coords: [116.4, 39.9] },
+  '1905-tongmenghui': { city: '东京/上海', coords: [121.5, 31.2] },
+  '1911-xinhai': { city: '湖北武昌', coords: [114.3, 30.6] },
+  '1912-roc-law': { city: '南京', coords: [118.8, 32.0] },
+  '1915-new-culture': { city: '北京北大红楼', coords: [116.4, 39.9] },
+  '1917-october-rev': { city: '北京', coords: [116.4, 39.9] },
+  '1919-may-fourth': { city: '北京天安门', coords: [116.4, 39.9] },
+  '1920-manifesto': { city: '上海渔阳里', coords: [121.5, 31.2] },
+  '1921-cpc-1st': { city: '上海/嘉兴南湖', coords: [120.7, 30.7] },
+  '1922-cpc-2nd': { city: '上海辅德里', coords: [121.5, 31.2] },
+  '1923-cpc-3rd': { city: '广州东山', coords: [113.3, 23.1] },
+  '1924-kmt-1st': { city: '广州黄埔', coords: [113.4, 23.1] },
+  '1925-cpc-4th': { city: '上海', coords: [121.5, 31.2] },
+  '1926-northern-exp': { city: '武汉/武昌', coords: [114.3, 30.6] },
+  '1927-nanchang-baqi': { city: '南昌/汉口', coords: [114.2, 30.6] },
+  '1927-autumn-jinggang': { city: '井冈山茨坪', coords: [114.2, 26.6] },
+  '1928-cpc-6th-jinggang': { city: '井冈山', coords: [114.2, 26.6] },
+  '1929-gutian-xingguo': { city: '福建古田', coords: [116.8, 25.2] },
+  '1930-spark-bookism': { city: '江西寻乌', coords: [115.6, 24.9] },
+  '1931-918-ruijin': { city: '沈阳/瑞金', coords: [116.0, 25.9] },
+  '1934-long-march-start': { city: '江西于都', coords: [115.4, 25.9] },
+  '1935-zunyi': { city: '贵州遵义', coords: [106.9, 27.7] },
+  '1935-129-wayaobao': { city: '陕北瓦窑堡', coords: [109.6, 37.1] },
+  '1936-longmarch-xian': { city: '甘肃会宁/西安', coords: [108.9, 34.3] },
+  '1937-lugouqiao-luochuan': { city: '北平卢沟桥/洛川', coords: [109.4, 35.8] },
+  '1938-protracted-6th6': { city: '延安桥儿沟', coords: [109.5, 36.6] },
+  '1939-three-magic-weapons': { city: '延安杨家岭', coords: [109.5, 36.6] },
+  '1940-new-democracy-100reg': { city: '延安/太行山', coords: [109.5, 36.6] },
+  '1941-1942-zhengfeng': { city: '延安杨家岭', coords: [109.5, 36.6] },
+  '1945-cpc-7th-victory': { city: '延安/重庆', coords: [106.5, 29.5] },
+  '1946-civil-war-54': { city: '延安/中原', coords: [109.5, 36.6] },
+  '1947-strategic-offense-land-law': { city: '大别山/西柏坡', coords: [114.2, 38.3] },
+  '1948-mayday-campaigns': { city: '西柏坡', coords: [114.2, 38.3] },
+  '1949-7th2-prc': { city: '西柏坡/北京天安门', coords: [116.4, 39.9] },
+  '1950-land-korea': { city: '北京/丹东', coords: [124.4, 40.1] },
+  '1953-general-line-1st5': { city: '北京', coords: [116.4, 39.9] },
+  '1954-1st-npc-constitution': { city: '北京中南海', coords: [116.4, 39.9] },
+  '1956-ten-relations-8th-transform': { city: '北京政协礼堂', coords: [116.4, 39.9] },
+  '1957-contradictions': { city: '北京', coords: [116.4, 39.9] },
+  '1964-four-mod-atom': { city: '新疆罗布泊/北京', coords: [90.3, 40.5] },
+  '1971-un-seat': { city: '北京大会堂', coords: [116.4, 39.9] },
+  '1978-truth-11th3': { city: '北京京西宾馆', coords: [116.3, 39.9] },
+  '1981-11th6-resolution': { city: '北京人民大会堂', coords: [116.4, 39.9] },
+  '1982-cpc-12th': { city: '北京', coords: [116.4, 39.9] },
+  '1987-cpc-13th': { city: '北京', coords: [116.4, 39.9] },
+  '1992-south-talk-14th': { city: '深圳国贸/北京', coords: [114.1, 22.5] },
+  '1997-hk-15th': { city: '香港会展/北京', coords: [114.1, 22.3] },
+  '2001-wto-16th': { city: '北京', coords: [116.4, 39.9] },
+  '2012-cpc-18th': { city: '北京国家博物馆', coords: [116.4, 39.9] },
+  '2013-18th3': { city: '北京', coords: [116.4, 39.9] },
+  '2017-cpc-19th': { city: '北京人民大会堂', coords: [116.4, 39.9] },
+  '2021-centenary-19th6': { city: '北京天安门广场', coords: [116.4, 39.9] },
+  '2022-cpc-20th': { city: '北京人民大会堂', coords: [116.4, 39.9] },
+  '2024-20th3': { city: '北京京西宾馆', coords: [116.3, 39.9] },
+}
+
+/** 注入地理信息与插图数据的史纲考点全集 */
+export const ENHANCED_HISTORY_TIMELINE_ITEMS: HistoryItem[] = HISTORY_TIMELINE_ITEMS.map((item) => {
+  const geo = HISTORICAL_GEO_POINTS[item.id]
+  const coordinates: [number, number] = geo ? (geo.coords as [number, number]) : [116.4, 39.9]
+  const cityName = geo ? geo.city : item.location || '全国'
+
+  // 为每个关键节点生成高保真插画元数据
+  const illustration: HistoryIllustration = {
+    title: item.title,
+    subtitle: `${item.year} · ${cityName}`,
+    tag: item.keyTag,
+    accentColor: item.era === 'old_democratic' ? '#d97706' : item.era === 'new_democratic' ? '#dc2626' : item.era === 'socialist_revolution' ? '#4f46e5' : '#0284c7',
+    symbolIcon: item.category === 'meeting' ? '🏛️' : item.category === 'work' ? '📜' : item.category === 'policy' ? '🌾' : '🔥',
+    figureQuote: item.content.slice(0, 52) + '...',
+  }
+
+  return {
+    ...item,
+    coordinates,
+    cityName,
+    illustration,
+  }
+})
 
 /** 当用户在「全编年连续拖动模式 (1840–2026)」拖到非独立大事件年份时，提供阶段历史背景导读 */
 export function getYearStageContext(year: number): { stageTitle: string; summary: string } {

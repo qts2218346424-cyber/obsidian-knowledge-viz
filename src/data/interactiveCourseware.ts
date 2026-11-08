@@ -1,24 +1,3 @@
-import { avlTreeCourseware } from './coursewares/avlTree'
-import { dijkstraGraphCourseware } from './coursewares/dijkstraGraph'
-import { kmpMatchCourseware } from './coursewares/kmpMatch'
-import { tcpHandshakeCourseware } from './coursewares/tcpHandshake'
-import { csmaCdCourseware } from './coursewares/csmaCd'
-import { tcpCongestionCourseware } from './coursewares/tcpCongestion'
-import { cacheMappingCourseware } from './coursewares/cacheMapping'
-import { cpuPipelineCourseware } from './coursewares/cpuPipeline'
-import { ieee754FloatCourseware } from './coursewares/ieee754Float'
-import { memoryExpansionCourseware } from './coursewares/memoryExpansion'
-import { bankerAlgorithmCourseware } from './coursewares/bankerAlgorithm'
-import { pvSyncMutexCourseware } from './coursewares/pvSyncMutex'
-import { twoLevelPagingCourseware } from './coursewares/twoLevelPaging'
-import { matrixEigenCourseware } from './coursewares/matrixEigen'
-import { taylorApproxCourseware } from './coursewares/taylorApprox'
-import { doubleIntegralPolarCourseware } from './coursewares/doubleIntegralPolar'
-import { normalDistribution2DCourseware } from './coursewares/normalDistribution2D'
-import { solidRevolutionCourseware } from './coursewares/solidRevolution'
-import { gramSchmidtCourseware } from './coursewares/gramSchmidt'
-import { historyTimelineCourseware } from './coursewares/historyTimeline'
-
 export interface InteractiveCoursewareItem {
   id: string
   title: string
@@ -30,509 +9,239 @@ export interface InteractiveCoursewareItem {
   embedHtml?: string
   rawPath?: string
   learningPoints: string[]
-}
-
-const pageReplacementCourseware: InteractiveCoursewareItem = {
-  id: 'cw-page-replacement',
-  title: '🔄 虚拟内存页面置换算法实验室 (FIFO / LRU / OPT 与 Belady 异常)',
-  domain: 'cs_408',
-  subject: '操作系统',
-  difficulty: '真题必考',
-  tags: ['408', '操作系统', '虚拟内存', 'LRU', 'FIFO', 'OPT', 'Belady异常', '缺页中断'],
-  summary: '同台动态演练 FIFO、LRU、OPT 三大页面置换算法在任意物理块数与页面访问串下的分配轨迹矩阵，高亮命中与淘汰路径，一键复现经典的 Belady 异常。',
-  embedHtml: `<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-  :root {
-    --bg-color: #0b0f19;
-    --card-bg: #121827;
-    --border-color: #1f293d;
-    --text-primary: #f1f5f9;
-    --text-secondary: #94a3b8;
-    --accent: #38bdf8;
-    --green: #10b981;
-    --red: #ef4444;
-    --amber: #f59e0b;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: var(--bg-color);
-    color: var(--text-primary);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    padding: 16px;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-  header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--border-color);
-    margin-bottom: 12px;
-    flex-shrink: 0;
-  }
-  h1 { font-size: 16px; font-weight: 700; color: var(--accent); display: flex; align-items: center; gap: 8px; }
-  .badge { background: rgba(56,189,248,0.15); color: #38bdf8; font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid rgba(56,189,248,0.3); }
-  .layout {
-    display: grid;
-    grid-template-columns: 300px 1fr;
-    gap: 12px;
-    flex: 1;
-    min-height: 0;
-  }
-  .panel {
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    overflow-y: auto;
-  }
-  .sim-panel {
-    background: radial-gradient(circle at 50% 40%, #151e32 0%, #0b0f1b 100%);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    overflow-y: auto;
-  }
-  .label { font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-  .seg-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-  button {
-    background: #1e293b;
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
-    padding: 8px 10px;
-    border-radius: 8px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-  button:hover { background: #334155; border-color: var(--accent); }
-  button.active { background: rgba(56,189,248,0.2); border-color: #38bdf8; color: #38bdf8; }
-  button.primary { background: #0284c7; border-color: #38bdf8; color: #fff; }
-  button.primary:hover { background: #0369a1; }
-  input[type="text"] {
-    width: 100%;
-    background: #080c14;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    color: #38bdf8;
-    padding: 8px 10px;
-    font-family: monospace;
-    font-size: 13px;
-    font-weight: 700;
-    outline: none;
-  }
-  .frames-stage {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    flex-wrap: wrap;
-    background: rgba(8, 12, 20, 0.7);
-    border: 1px solid var(--border-color);
-    border-radius: 10px;
-    padding: 12px 14px;
-  }
-  .frame-card {
-    width: 68px;
-    height: 68px;
-    border-radius: 10px;
-    border: 2px solid #334155;
-    background: #0f172a;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    transition: all 0.2s ease;
-  }
-  .frame-card .f-idx { font-size: 10px; color: #64748b; position: absolute; top: 4px; left: 6px; }
-  .frame-card .f-val { font-size: 22px; font-weight: 800; color: #e2e8f0; margin-top: 6px; }
-  .frame-card.hit { border-color: var(--green); background: rgba(16,185,129,0.16); box-shadow: 0 0 14px rgba(16,185,129,0.25); }
-  .frame-card.hit .f-val { color: #34d399; }
-  .frame-card.miss { border-color: var(--red); background: rgba(239,68,68,0.16); box-shadow: 0 0 14px rgba(239,68,68,0.25); }
-  .frame-card.miss .f-val { color: #fca5a5; }
-  .matrix-wrap { overflow-x: auto; border: 1px solid var(--border-color); border-radius: 10px; background: #080c14; }
-  table.matrix { width: 100%; border-collapse: collapse; text-align: center; font-family: monospace; font-size: 12px; }
-  table.matrix th, table.matrix td { border: 1px solid #1a2436; padding: 6px 8px; min-width: 34px; }
-  table.matrix th { background: #101726; color: #94a3b8; font-weight: 700; }
-  table.matrix th.cur { background: rgba(56,189,248,0.25); color: #fff; }
-  td.cell-hit { color: #34d399; font-weight: 800; background: rgba(16,185,129,0.1); }
-  td.cell-miss { color: #f87171; font-weight: 800; background: rgba(239,68,68,0.1); }
-  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .stat-box { background: #0b111e; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 10px; text-align: center; }
-  .stat-box .v { font-size: 18px; font-weight: 800; color: var(--accent); margin-top: 2px; }
-  .tips-card {
-    background: rgba(245, 158, 11, 0.08);
-    border: 1px solid rgba(245, 158, 11, 0.25);
-    border-radius: 8px;
-    padding: 10px;
-    font-size: 11px;
-    color: #fcd34d;
-    line-height: 1.6;
-  }
-</style>
-</head>
-<body>
-<header>
-  <h1><span>🔄</span> 虚拟内存页面置换算法动态实验室</h1>
-  <div style="display:flex; gap:8px; align-items:center;">
-    <span class="badge">408 操作系统必考</span>
-    <span style="font-size:11px; color:var(--text-secondary);">FIFO · LRU · OPT 与 Belady 异常全景对比</span>
-  </div>
-</header>
-
-<div class="layout">
-  <div class="panel">
-    <div>
-      <div class="label">1. 选择置换算法</div>
-      <div class="seg-row">
-        <button id="alg-LRU" class="active" onclick="setAlgo('LRU')">LRU (最久未用)</button>
-        <button id="alg-FIFO" onclick="setAlgo('FIFO')">FIFO (队列)</button>
-        <button id="alg-OPT" onclick="setAlgo('OPT')">OPT (理想最优)</button>
-      </div>
-    </div>
-
-    <div>
-      <div class="label">2. 分配物理块数 (页框 M)</div>
-      <div class="seg-row">
-        <button id="fr-3" class="active" onclick="setFrameCount(3)">3 个物理块</button>
-        <button id="fr-4" onclick="setFrameCount(4)">4 个物理块</button>
-        <button id="fr-5" onclick="setFrameCount(5)">5 个物理块</button>
-      </div>
-    </div>
-
-    <div>
-      <div class="label">3. 页面访问序列 (逗号分隔)</div>
-      <input type="text" id="seqInput" value="7, 0, 1, 2, 0, 3, 0, 4, 2, 3, 0, 3, 2" onchange="rebuildSim()">
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:6px;">
-        <button onclick="loadClassic()">📘 教材经典序列</button>
-        <button onclick="loadBelady()" style="color:#fbbf24; border-color:rgba(245,158,11,0.4);">⚡ Belady 异常序列</button>
-      </div>
-    </div>
-
-    <div>
-      <div class="label">4. 演练控制</div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
-        <button class="primary" onclick="stepNext()">▶ 单步推进</button>
-        <button onclick="runAll()">⏭ 一键跑完</button>
-      </div>
-      <button onclick="resetSim()" style="width:100%; margin-top:6px;">↺ 重置回起点</button>
-    </div>
-
-    <div class="tips-card">
-      <b>💡 408 考场秒杀铁律：</b><br>
-      • <b>OPT</b> 向后看（淘汰未来最迟访问页），缺页最少但无法实际实现，用作性能上界基准。<br>
-      • <b>LRU</b> 向前看（淘汰过去最久未访问页），属于栈类算法，<b>绝不会出现 Belady 异常</b>！<br>
-      • 点击上方【⚡ Belady 异常序列】切换 3块/4块：见证 <b>FIFO</b> 在 3 块缺页 9 次，增至 4 块反而缺页 10 次！
-    </div>
-  </div>
-
-  <div class="sim-panel">
-    <div class="stat-grid">
-      <div class="stat-box">
-        <div style="font-size:11px; color:var(--text-secondary);">当前访问进度</div>
-        <div class="v" id="stStep">0 / 13</div>
-      </div>
-      <div class="stat-box">
-        <div style="font-size:11px; color:var(--text-secondary);">缺页中断次数</div>
-        <div class="v" id="stMiss" style="color:#f87171;">0</div>
-      </div>
-      <div class="stat-box">
-        <div style="font-size:11px; color:var(--text-secondary);">缺页率 / 命中率</div>
-        <div class="v" id="stRate" style="color:#34d399;">0% / 0%</div>
-      </div>
-    </div>
-
-    <div>
-      <div class="label">当前物理内存页框状态 & 置换诊断</div>
-      <div class="frames-stage">
-        <div id="framesRow" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
-        <div id="stepExplain" style="font-size:12px; color:#cbd5e1; line-height:1.6; flex:1; min-width:180px;">
-          点击【▶ 单步推进】或【⏭ 一键跑完】观察物理页框装入与淘汰全过程。
-        </div>
-      </div>
-    </div>
-
-    <div>
-      <div class="label">时空分配轨迹表（考场大题标准作答表格）</div>
-      <div class="matrix-wrap">
-        <table class="matrix" id="traceTable"></table>
-      </div>
-    </div>
-
-    <div id="compareBar" style="background:#080c14; border:1px solid var(--border-color); border-radius:10px; padding:10px 12px; font-size:12px; color:#94a3b8; display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-    </div>
-  </div>
-</div>
-
-<script>
-let algo = 'LRU';
-let frameCount = 3;
-let seq = [];
-let history = [];
-let curStep = 0;
-
-function parseSeq() {
-  const raw = document.getElementById('seqInput').value;
-  const arr = raw.split(/[,，\\s]+/).map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
-  return arr.length > 0 ? arr : [7, 0, 1, 2, 0, 3, 0, 4];
-}
-
-function simulate(sequence, m, mode) {
-  const steps = [];
-  const frames = new Array(m).fill(null);
-  const fifoQueue = [];
-  const lastUsed = new Map();
-  let misses = 0;
-
-  for (let i = 0; i < sequence.length; i++) {
-    const p = sequence[i];
-    const hitIdx = frames.indexOf(p);
-    let evicted = null;
-    let targetIdx = hitIdx;
-    const hit = hitIdx !== -1;
-
-    if (!hit) {
-      misses++;
-      const emptyIdx = frames.indexOf(null);
-      if (emptyIdx !== -1) {
-        targetIdx = emptyIdx;
-        frames[targetIdx] = p;
-        fifoQueue.push(p);
-      } else {
-        let victimPage = null;
-        if (mode === 'FIFO') {
-          victimPage = fifoQueue.shift();
-          fifoQueue.push(p);
-        } else if (mode === 'LRU') {
-          let oldestTime = Infinity;
-          frames.forEach(fp => {
-            const t = lastUsed.has(fp) ? lastUsed.get(fp) : -1;
-            if (t < oldestTime) { oldestTime = t; victimPage = fp; }
-          });
-        } else {
-          let farthest = -1;
-          frames.forEach(fp => {
-            let nextPos = sequence.slice(i + 1).indexOf(fp);
-            if (nextPos === -1) nextPos = Infinity;
-            if (nextPos > farthest) { farthest = nextPos; victimPage = fp; }
-          });
-        }
-        evicted = victimPage;
-        targetIdx = frames.indexOf(victimPage);
-        frames[targetIdx] = p;
-      }
-    }
-    lastUsed.set(p, i);
-    steps.push({
-      step: i + 1,
-      page: p,
-      hit,
-      targetIdx,
-      evicted,
-      frames: [...frames],
-      misses
-    });
-  }
-  return steps;
-}
-
-function rebuildSim(keepProgress) {
-  seq = parseSeq();
-  history = simulate(seq, frameCount, algo);
-  if (!keepProgress) curStep = history.length;
-  else curStep = Math.min(curStep, history.length);
-  render();
-}
-
-function setAlgo(a) {
-  algo = a;
-  ['LRU', 'FIFO', 'OPT'].forEach(k => {
-    document.getElementById('alg-' + k).classList.toggle('active', k === a);
-  });
-  rebuildSim(true);
-}
-
-function setFrameCount(m) {
-  frameCount = m;
-  [3, 4, 5].forEach(k => {
-    document.getElementById('fr-' + k).classList.toggle('active', k === m);
-  });
-  rebuildSim(true);
-}
-
-function loadClassic() {
-  document.getElementById('seqInput').value = '7, 0, 1, 2, 0, 3, 0, 4, 2, 3, 0, 3, 2';
-  setAlgo('LRU');
-  setFrameCount(3);
-  curStep = 6;
-  rebuildSim(true);
-}
-
-function loadBelady() {
-  document.getElementById('seqInput').value = '1, 2, 3, 4, 1, 2, 5, 1, 2, 3, 4, 5';
-  algo = 'FIFO';
-  ['LRU', 'FIFO', 'OPT'].forEach(k => document.getElementById('alg-' + k).classList.toggle('active', k === 'FIFO'));
-  seq = parseSeq();
-  history = simulate(seq, frameCount, algo);
-  curStep = history.length;
-  render();
-}
-
-function resetSim() {
-  curStep = 0;
-  render();
-}
-
-function stepNext() {
-  if (curStep < history.length) curStep++;
-  render();
-}
-
-function runAll() {
-  curStep = history.length;
-  render();
-}
-
-function render() {
-  const cur = curStep > 0 ? history[curStep - 1] : null;
-  const misses = cur ? cur.misses : 0;
-  const missRate = curStep > 0 ? Math.round((misses / curStep) * 100) : 0;
-  const hitRate = curStep > 0 ? (100 - missRate) : 0;
-
-  document.getElementById('stStep').innerText = curStep + ' / ' + seq.length;
-  document.getElementById('stMiss').innerText = misses + ' 次';
-  document.getElementById('stRate').innerText = missRate + '% / ' + hitRate + '%';
-
-  // 渲染当前页框卡片
-  const fRow = document.getElementById('framesRow');
-  fRow.innerHTML = '';
-  const curFrames = cur ? cur.frames : new Array(frameCount).fill(null);
-  for (let r = 0; r < frameCount; r++) {
-    const div = document.createElement('div');
-    let cls = 'frame-card';
-    if (cur && cur.targetIdx === r) cls += cur.hit ? ' hit' : ' miss';
-    div.className = cls;
-    div.innerHTML = '<span class="f-idx">块#' + r + '</span><span class="f-val">' + (curFrames[r] !== null ? curFrames[r] : '-') + '</span>';
-    fRow.appendChild(div);
-  }
-
-  const exp = document.getElementById('stepExplain');
-  if (!cur) {
-    exp.innerHTML = '已就绪：共 <b>' + seq.length + '</b> 次页面访问请求，点击【▶ 单步推进】开始演示。';
-  } else if (cur.hit) {
-    exp.innerHTML = '第 <b>' + cur.step + '</b> 步访问页 <b>[' + cur.page + ']</b>：<span style="color:#34d399;font-weight:700;">✅ 命中物理块 #' + cur.targetIdx + '</span>，无需访盘置换！';
-  } else if (cur.evicted === null) {
-    exp.innerHTML = '第 <b>' + cur.step + '</b> 步访问页 <b>[' + cur.page + ']</b>：<span style="color:#f87171;font-weight:700;">❌ 缺页中断</span>，存在空闲块，直接装入物理块 #' + cur.targetIdx + '。';
-  } else {
-    exp.innerHTML = '第 <b>' + cur.step + '</b> 步访问页 <b>[' + cur.page + ']</b>：<span style="color:#f87171;font-weight:700;">❌ 缺页置换</span>（' + algo + ' 策略淘汰页 <b style="color:#fbbf24;">[' + cur.evicted + ']</b>，装入块 #' + cur.targetIdx + '）。';
-  }
-
-  // 渲染轨迹矩阵表
-  const tbl = document.getElementById('traceTable');
-  let html = '<thead><tr><th>访问页</th>';
-  for (let i = 0; i < seq.length; i++) {
-    html += '<th class="' + (i === curStep - 1 ? 'cur' : '') + '">' + seq[i] + '</th>';
-  }
-  html += '</tr></thead><tbody>';
-  for (let r = 0; r < frameCount; r++) {
-    html += '<tr><td style="color:#64748b;font-weight:700;">物理块' + r + '</td>';
-    for (let i = 0; i < seq.length; i++) {
-      if (i >= curStep) {
-        html += '<td style="color:#334155;">·</td>';
-      } else {
-        const st = history[i];
-        const val = st.frames[r] !== null ? st.frames[r] : '';
-        const activeCell = st.targetIdx === r ? (st.hit ? 'cell-hit' : 'cell-miss') : '';
-        html += '<td class="' + activeCell + '">' + val + '</td>';
-      }
-    }
-    html += '</tr>';
-  }
-  html += '<tr><td style="color:#94a3b8;font-weight:700;">缺页?</td>';
-  for (let i = 0; i < seq.length; i++) {
-    if (i >= curStep) html += '<td></td>';
-    else {
-      const st = history[i];
-      html += st.hit
-        ? '<td style="color:#10b981;font-weight:700;">✓</td>'
-        : '<td style="color:#ef4444;font-weight:700;" title="' + (st.evicted !== null ? '淘汰 ' + st.evicted : '冷启动装入') + '">F' + (st.evicted !== null ? '(-' + st.evicted + ')' : '') + '</td>';
-    }
-  }
-  html += '</tr></tbody>';
-  tbl.innerHTML = html;
-
-  // 同序列三算法完整缺页横评对比
-  const fMiss = simulate(seq, frameCount, 'FIFO').slice(-1)[0]?.misses || 0;
-  const lMiss = simulate(seq, frameCount, 'LRU').slice(-1)[0]?.misses || 0;
-  const oMiss = simulate(seq, frameCount, 'OPT').slice(-1)[0]?.misses || 0;
-  const f3 = simulate(seq, 3, 'FIFO').slice(-1)[0]?.misses || 0;
-  const f4 = simulate(seq, 4, 'FIFO').slice(-1)[0]?.misses || 0;
-  const beladyTag = f4 > f3 ? '<span style="color:#fbbf24;font-weight:700;">⚡ 检测到 Belady 异常：FIFO 在 3块缺页 ' + f3 + ' 次 < 4块缺页 ' + f4 + ' 次！</span>' : '<span>当前序列在 ' + frameCount + ' 个物理块下三算法完整总缺页对比：</span>';
-  document.getElementById('compareBar').innerHTML =
-    beladyTag +
-    '<div style="display:flex;gap:14px;">' +
-    '<span>FIFO: <b style="color:#f87171;">' + fMiss + '次</b></span>' +
-    '<span>LRU: <b style="color:#38bdf8;">' + lMiss + '次</b></span>' +
-    '<span>OPT(最优): <b style="color:#34d399;">' + oMiss + '次</b></span>' +
-    '</div>';
-}
-
-loadClassic();
-</script>
-</body>
-</html>`,
-  learningPoints: [
-    'OPT（最佳置换）淘汰未来最长时间不再访问的页面，缺页率最低，作为理论性能基准',
-    'FIFO（先进先出）队列实现最简单，但存在著名的 Belady 异常（分配物理块增多，缺页次数反而上升）',
-    'LRU（最近最久未使用）基于局部性原理，属于栈类算法，绝不会发生 Belady 异常，工程近似实现为 CLOCK 时钟算法',
-  ],
+  loadHtml?: () => Promise<string>
 }
 
 export const INTERACTIVE_COURSEWARES: InteractiveCoursewareItem[] = [
-  // 408 数据结构
-  avlTreeCourseware,
-  dijkstraGraphCourseware,
-  kmpMatchCourseware,
-
-  // 408 计算机网络
-  tcpHandshakeCourseware,
-  csmaCdCourseware,
-  tcpCongestionCourseware,
-
-  // 408 计算机组成原理
-  cacheMappingCourseware,
-  cpuPipelineCourseware,
-  ieee754FloatCourseware,
-  memoryExpansionCourseware,
-
-  // 408 操作系统
-  bankerAlgorithmCourseware,
-  pvSyncMutexCourseware,
-  twoLevelPagingCourseware,
-  pageReplacementCourseware,
-
-  // 考研数学
-  matrixEigenCourseware,
-  taylorApproxCourseware,
-  doubleIntegralPolarCourseware,
-  normalDistribution2DCourseware,
-  solidRevolutionCourseware,
-  gramSchmidtCourseware,
-
-  // 考研政治
-  historyTimelineCourseware,
+  {
+    id: "cw-avl-tree",
+    title: "🌳 AVL 平衡二叉树四种自平衡旋转 (LL/RR/LR/RL) 动态实验室",
+    domain: "cs_408",
+    subject: "数据结构",
+    difficulty: "每年必考大题",
+    tags: ["408","数据结构","树","AVL树","平衡二叉树","LL旋转","RR旋转","LR旋转","RL旋转"],
+    summary: "单步仿真 AVL 树节点插入与自平衡调整全过程。动态计算每个节点的平衡因子 (BF=hL-hR)，高亮寻找“最小不平衡子树的根”，可视化演示 LL 单右旋、RR 单左旋、LR 先左后右双旋、RL 先右后左双旋。",
+    learningPoints: ["平衡因子 BF = 左子树高度 - 右子树高度，合法取值为 -1, 0, 1","插入节点后，从插入点向根回溯，第一个 |BF| > 1 的节点即为“最小不平衡子树的根 A”","旋转前后二叉排序树的【中序遍历次序恒定不变】","LL 型在 A 处做右单旋；RR 型在 A 处做左单旋；LR 型先对左孩子做左旋，再对 A 做右旋；RL 型先对右孩子做右旋，再对 A 做左旋"],
+    loadHtml: () => import('./coursewares/avlTree').then(m => m.avlTreeCourseware.embedHtml || ''),
+  },
+  {
+    id: "cw-dijkstra-graph",
+    title: "🗺️ Dijkstra 最短路径算法与松弛过程动态实验室",
+    domain: "cs_408",
+    subject: "数据结构",
+    difficulty: "每年必考大题",
+    tags: ["408","数据结构","图","最短路径","Dijkstra","贪心算法","Dist数组","Path前驱"],
+    summary: "单步仿真 Dijkstra 单源最短路径求解全过程。可视化展示集合 S（已确定）与 V-S（未确定）的迁移，动态更新 Dist[] 距离数组与 Path[] 前驱指针，直观演示对相邻顶点的“松弛 (Relaxation)”操作。",
+    learningPoints: ["核心贪心思想：每次从未确定集合 V-S 中挑选当前 Dist 最小的顶点 u 加入已确定集合 S","松弛准则：对于 u 的所有邻接点 v，若 Dist[u] + w(u, v) < Dist[v]，则更新 Dist[v] = Dist[u] + w(u, v) 并将 Path[v] 置为 u","考场必考避坑：Dijkstra 算法【绝对不能处理含负权边的图】（贪心选择不可撤回，负权边会推翻之前的最优解）","时间复杂度：普通邻接矩阵为 O(V²)，使用小顶堆/优先队列优化邻接表可达 O((V+E)logV)"],
+    loadHtml: () => import('./coursewares/dijkstraGraph').then(m => m.dijkstraGraphCourseware.embedHtml || ''),
+  },
+  {
+    id: "cw-kmp-match",
+    title: "🔍 KMP 算法：模式匹配与 next / nextval 动态推导实验室",
+    domain: "cs_408",
+    subject: "数据结构",
+    difficulty: "高频核心难点",
+    tags: ["408","数据结构","串","KMP算法","模式匹配","next数组","nextval数组","前缀表"],
+    summary: "数据结构经典难点 KMP 算法全景动态仿真。可视化推导最长公共前后缀、next 数组与 nextval 修正数组；支持真题经典用例单步对比匹配过程，直观呈现“主串指针永不回溯，模式串依据前缀自动滑动”的精妙机理。",
+    learningPoints: ["传统朴素模式匹配时间复杂度 O(n×m)，KMP 消除主串指针回溯，时间复杂度降至 O(n+m)","next[j] 的本质：模式串第 j 个字符失配时，模式串应该回退到的位置，取决于已匹配子串的最大公共前后缀长度","408 考卷标准：next 数组通常下标从 1 开始，next[1]=0, next[2]=1；考题中若有不同基准需注意下标约定","nextval 优化：当模式串失配跳转位置的字符与当前失配字符相同时（T[j] == T[next[j]]），必然会再次失配，因此递归继承 nextval[next[j]]，避免无谓比较"],
+    loadHtml: () => import('./coursewares/kmpMatch').then(m => m.kmpMatchCourseware.embedHtml || ''),
+  },
+  {
+    id: "cw-tcp-protocol",
+    title: "🌐 TCP 三次握手与四次挥手状态机全景时序仿真器",
+    domain: "cs_408",
+    subject: "计算机网络",
+    difficulty: "每年必考大题",
+    tags: ["408","计网","TCP","三次握手","四次挥手","TIME_WAIT","seq/ack","状态机"],
+    summary: "交互式仿真 TCP 连接建立（三次握手）与连接释放（四次挥手）全流程。动态模拟报文飞行、标志位 (SYN/ACK/FIN)、序号 seq 与确认号 ack 的严格数学计算，以及双方 11 种状态迁移变化。",
+    learningPoints: ["握手 seq 与 ack 准则：SYN 报文不携带数据但消耗 1 个序号；ack = 对方 seq + 1","四次挥手 FIN 报文同样消耗 1 个序号；服务器确认后进入 CLOSE_WAIT，仍可继续单向传输剩余数据","TIME_WAIT 状态必须停留 2MSL：确保最后的 ACK 能到达服务端，并使本连接产生的所有网络残存报文消逝","考场失分陷阱：第三次握手报文可以携带应用层数据，且若不带数据则不消耗序号"],
+    loadHtml: () => import('./coursewares/tcpHandshake').then(m => m.tcpHandshakeCourseware.embedHtml || ''),
+  },
+  {
+    id: "cw-csma-cd",
+    title: "📡 CSMA/CD 协议碰撞检测与二进制指数退避算法仿真器",
+    domain: "cs_408",
+    subject: "计算机网络",
+    difficulty: "每年必考大题",
+    tags: ["408","计网","以太网","CSMA/CD","争用期","碰撞检测","退避算法","最小帧长"],
+    summary: "以太网总线型介质访问控制核心仿真。动态模拟主机 A 与 B 发送信号在总线上的双向电磁波传播、冲突碰撞产生与强化碰撞 Jam 信号；单步演练截断二进制指数退避算法的时间槽选择与重传计时。",
+    learningPoints: ["争用期（冲突窗口）= 2τ（两倍端到端单程传播时延），在争用期内未检测到碰撞方可保证本次发送不发生冲突","最小帧长公式：L_min = 2τ * 数据传输速率 C。若帧长小于 L_min，则发送完毕前无法检测到远端冲突","截断二进制指数退避算法：基本退避时间为 2τ，退避次数 k = min(重传次数, 10)，从 [0, 2^k - 1] 随机选取整数 r，等待 r * 2τ","当重传达 16 次仍不成功时，判定网络故障并抛弃此帧向上层报错"],
+    loadHtml: () => import('./coursewares/csmaCd').then(m => m.csmaCdCourseware.embedHtml || ''),
+  },
+  {
+    id: "cw-tcp-congestion",
+    title: "📈 TCP 拥塞控制：慢开始、拥塞避免、快重传与快恢复全周期仿真器",
+    domain: "cs_408",
+    subject: "计算机网络",
+    difficulty: "每年必考大题",
+    tags: ["408","计算机网络","传输层","TCP","拥塞控制","慢开始","拥塞避免","快重传","快恢复","cwnd"],
+    summary: "TCP Reno 经典拥塞控制算法动态全景仿真。以传输轮次 (RTT) 为驱动，实时绘制 cwnd 动态曲线与 ssthresh 门限变动；支持注入“网络超时 (Timeout)”与“3个重复 ACK”突发事件，直观揭示 Reno 算法乘法减小与加法增大机制。",
+    learningPoints: ["慢开始 (Slow Start)：每经过一个 RTT，拥塞窗口 cwnd 翻倍（指数级增长），直到达到慢开始门限 ssthresh","拥塞避免 (Congestion Avoidance)：当 cwnd >= ssthresh 时，每个 RTT 仅增加 1 MSS（线性增长，加法增大）","超时重传 (Timeout)：表明网络严重拥塞，ssthresh 减半为 cwnd/2，且 cwnd 骤降为 1 MSS，重新进入慢开始","收到 3 个重复 ACK (快重传与快恢复)：表明个别报文丢失但网络并未完全瘫痪，ssthresh 减半为 cwnd/2，cwnd 设为新的 ssthresh，直接进入拥塞避免（加法增大）"],
+    loadHtml: () => import('./coursewares/tcpCongestion').then(m => m.tcpCongestionCourseware.embedHtml || ''),
+  },
+  {
+    id: "cw-cache-mapping",
+    title: "⚡ Cache 高速缓存映射机制与主存地址拆解仿真器",
+    domain: "cs_408",
+    subject: "计算机组成原理",
+    difficulty: "每年必考大题",
+    tags: ["408","计组","Cache","直接映射","组相联","全相联","Tag","命中率","地址拆解"],
+    summary: "深度仿真主存地址拆解（主存字块标记 Tag、Cache 组号 Index、块内偏移 Offset）与 Cache 命中比对过程。支持直接映射、2路组相联、4路组相联与全相联映射动态切换，可视化高亮 Valid 有效位、Tag 比对与替换。",
+    learningPoints: ["主存地址三段式：[Tag 主存字块标记] + [Index Cache 组号] + [Offset 块内字节偏移]","直接映射：每块只能放在固定行号 i = 主存块号 mod Cache行数，容易发生同组抖动","组相联映射：组号 = 主存块号 mod Cache组数；每组内可以存放 r 个块，组内采用 LRU 或 FIFO 替换","全相联映射：没有 Index 字段，可以放入 Cache 任意空闲行，灵活但查找需要昂贵的相联比较器"],
+    loadHtml: () => import('./coursewares/cacheMapping').then(m => m.cacheMappingCourseware.embedHtml || ''),
+  },
+  {
+    id: "cw-cpu-pipeline",
+    title: "💻 CPU 五级指令流水线冲突与冒险动态仿真",
+    domain: "cs_408",
+    subject: "计算机组成原理",
+    difficulty: "高频重难点",
+    tags: ["408","计组","流水线","RAW冒险","Forwarding","仿真"],
+    summary: "单步仿真 MIPS 五级指令流水线（IF-ID-EX-MEM-WB），动态观察 RAW 数据冲突、Stall 气泡插入与数据旁路 (Forwarding) 消除延迟效果。",
+    learningPoints: ["RAW (写后读) 是真实数据依赖，必须保证写回或转发后才能读到正确的新值","无 Forwarding 旁路时硬件必须在 ID 级插入 2 拍 Stall 气泡暂停后续指令","开启 Forwarding (数据旁路) 后，ALU 运算结果可直接从 EX 或 MEM 级旁路输入下一指令的 ALU，彻底消除 RAW 停顿（Load-Use 仍需 1 拍停顿）"],
+    loadHtml: () => import('./coursewares/cpuPipeline').then(m => m.cpuPipelineCourseware.embedHtml || ''),
+  },
+  {
+    id: "cw-ieee754-float",
+    title: "🧮 IEEE 754 浮点数格式拆解与对阶加法运算仿真器",
+    domain: "cs_408",
+    subject: "计算机组成原理",
+    difficulty: "每年必考大题",
+    tags: ["408","计组","IEEE754","浮点数","阶码","尾数","规格化","对阶","浮点加法"],
+    summary: "单精度 32 位 IEEE 754 浮点数底层二进制彩虹映射与运算仿真。实时拆解数符 S (1位)、阶码 E (8位，偏置值127) 与尾数 M (23位，隐藏前导1)；步进演示浮点数加法五步曲：对阶（小阶向大阶看齐）、尾数求和、规格化、舍入与溢出判定。",
+    learningPoints: ["真值公式：(-1)^S * (1.M) * 2^(E - 127)。尾数最高位默认隐藏一个 1","对阶准则：“小阶向大阶看齐”。求阶差 ΔE = E_A - E_B，小阶尾数右移 ΔE 位，阶码增大到大阶","对阶只能右移不能左移：尾数右移丢失低位精度，但若左移则高位有效数丢失且无法恢复","右规判定：尾数相加产生进位（如 1X.XXXX）时，尾数右移 1 位，阶码加 1"],
+    loadHtml: () => import('./coursewares/ieee754Float').then(m => m.ieee754FloatCourseware.embedHtml || ''),
+  },
+  {
+    id: "cw-memory-expansion",
+    title: "💾 存储器扩展：字位扩展与 74LS138 译码器片选逻辑实验室",
+    domain: "cs_408",
+    subject: "计算机组成原理",
+    difficulty: "高频大题与核心设计",
+    tags: ["408","计算机组成原理","存储系统","存储器扩展","位扩展","字扩展","74LS138","译码器","片选信号"],
+    summary: "计算机硬件经典设计题存储器扩展与 74LS138 译码器电路全景动态仿真。直观演示位扩展数据线拼接、字扩展高位地址线片选译码、使能端 G1/G2A/G2B 逻辑与芯片矩阵阵列实时寻址点亮，攻克 408 计组芯片连接图终极难关。",
+    learningPoints: ["位扩展：芯片字数相同但位数不足，数据线分别连接（如两片 4 位芯片并联接 D0~D3 和 D4~D7），地址线和片选线并联","字扩展：芯片位数相同但字数不足，高位地址线通过译码器（如 74LS138）产生片选信号 CS，分时选通不同芯片组","74LS138 译码器工作条件：使能端 G1=1，~G2A=0，~G2B=0；由 C,B,A 三位二进制输入译出 8 选 1 低电平有效输出 (~Y0 ~ ~Y7)","芯片总数计算法则：总片数 = (目标容量 / 芯片容量) = (目标字数/芯片字数) × (目标位数/芯片位数)"],
+    loadHtml: () => import('./coursewares/memoryExpansion').then(m => m.memoryExpansionCourseware.embedHtml || ''),
+  },
+  {
+    id: "cw-banker-algorithm",
+    title: "🏦 死锁避免：银行家算法 (Banker) 安全性检查仿真器",
+    domain: "cs_408",
+    subject: "操作系统",
+    difficulty: "每年必考大题",
+    tags: ["408","操作系统","死锁","银行家算法","安全性检查","Need矩阵","Allocation","安全序列"],
+    summary: "经典 5 进程 (P0-P4) 与 3 类资源 (A,B,C) 的资源分配与死锁避免全流程仿真。动态展示 Max、Allocation、Need 与 Available 矩阵计算，支持单步执行安全性检查算法（Safety Check），推导安全进程序列。",
+    learningPoints: ["核心矩阵恒等式：Need[i][j] = Max[i][j] - Allocation[i][j]","申请资源三关核验：① Request <= Need（需求合法性）；② Request <= Available（系统现存能力）；③ 试探性分配后系统必须处于安全状态","安全状态定义：存在至少一个安全序列 <P_1, P_2, ..., P_n>，使得每个进程在获得所需剩余资源后都能顺利执行完毕并释放已占资源","不安全状态并不等于死锁，但死锁一定源于不安全状态"],
+    loadHtml: () => import('./coursewares/bankerAlgorithm').then(m => m.bankerAlgorithmCourseware.embedHtml || ''),
+  },
+  {
+    id: "cw-pv-sync-mutex",
+    title: "🚦 进程同步与互斥：经典 PV 操作与信号量死锁仿真器",
+    domain: "cs_408",
+    subject: "操作系统",
+    difficulty: "每年必考大题",
+    tags: ["408","操作系统","进程管理","同步互斥","PV操作","信号量","生产者消费者","死锁"],
+    summary: "经典有界缓冲区生产者-消费者模型动态仿真。可视化展示互斥信号量 mutex 与资源信号量 empty、full 的动态增减；支持切换“正序（安全）”与“逆序（颠倒 P 操作死锁）”模式，直观揭秘 408 考场大题核心致命陷阱。",
+    learningPoints: ["互斥信号量 mutex 初始值为 1，保护临界资源缓冲区独占访问","资源信号量 empty 初始为 N（空闲槽位），full 初始为 0（已填充产品数）","考场一票否决陷阱：P(empty) 与 P(mutex) 的顺序绝对不能颠倒！若先 P(mutex) 后 P(empty)，缓冲区满时生产者占有互斥锁进入等待，消费者无法获取互斥锁取货，瞬间发生死锁！","V 操作释放资源的顺序通常可以任意，不会引发死锁"],
+    loadHtml: () => import('./coursewares/pvSyncMutex').then(m => m.pvSyncMutexCourseware.embedHtml || ''),
+  },
+  {
+    id: "cw-two-level-paging",
+    title: "📑 虚拟内存：两级页表、TLB快表与缺页中断全流程仿真器",
+    domain: "cs_408",
+    subject: "操作系统",
+    difficulty: "每年必考大题",
+    tags: ["408","操作系统","内存管理","虚拟内存","两级页表","TLB","快表","缺页中断","地址转换"],
+    summary: "32位虚拟内存两级分页管理与地址翻译全景动态仿真。可视化展示 10-10-12 位虚拟地址二进制切分、TLB 快表命中/缺失判定、两级页表分级查找、缺页异常与物理地址合成全链路，彻底突破 408 综合大题最硬核瓶颈。",
+    learningPoints: ["32位系统4KB页面标准划分：顶级页号 P1 (10位) + 二级页号 P2 (10位) + 页内偏移 W (12位)","TLB 快表基于相联存储器，按内容并行高速查找，命中只需 1 次内存访问（访存读取物理数据）","TLB 缺失时需遍历多级页表：一级页目录表 (1次访存) -> 二级页表 (1次访存) -> 物理内存 (1次访存)，总共 3 次访存","缺页异常：若页表项有效位 Present=0，触发缺页中断陷入内核态，从磁盘调入页后更新页表并刷新 TLB","物理地址合成公式：物理地址 PA = (物理页框号 PFN << 12) | 页内偏移 W"],
+    loadHtml: () => import('./coursewares/twoLevelPaging').then(m => m.twoLevelPagingCourseware.embedHtml || ''),
+  },
+  {
+    id: "cw-page-replacement",
+    title: "🔄 虚拟内存页面置换算法实验室 (FIFO / LRU / OPT 与 Belady 异常)",
+    domain: "cs_408",
+    subject: "操作系统",
+    difficulty: "真题必考",
+    tags: ["408","操作系统","虚拟内存","LRU","FIFO","OPT","Belady异常","缺页中断"],
+    summary: "同台动态演练 FIFO、LRU、OPT 三大页面置换算法在任意物理块数与页面访问串下的分配轨迹矩阵，高亮命中与淘汰路径，一键复现经典的 Belady 异常。",
+    learningPoints: ["OPT（最佳置换）淘汰未来最长时间不再访问的页面，缺页率最低，作为理论性能基准","FIFO（先进先出）队列实现最简单，但存在著名的 Belady 异常（分配物理块增多，缺页次数反而上升）","LRU（最近最久未使用）基于局部性原理，属于栈类算法，绝不会发生 Belady 异常，工程近似实现为 CLOCK 时钟算法"],
+    loadHtml: () => import('./coursewares/pageReplacement').then(m => m.pageReplacementCourseware.embedHtml || ''),
+  },
+  {
+    id: "cw-matrix-eigen",
+    title: "📐 矩阵特征值、特征向量与二维空间几何变换动态实验室",
+    domain: "math",
+    subject: "线性代数",
+    difficulty: "核心考点",
+    tags: ["考研数学","线性代数","特征值","特征向量","空间变换","几何意义","对角化"],
+    summary: "互动探究 Ax = λx 的几何物理内涵！通过调节 2x2 变换矩阵参数，Canvas 实时动态展示二维网格空间的拉伸、剪切与旋转，高亮标出特征向量所在的特征主轴方向与特征值缩放倍数。",
+    learningPoints: ["特征向量的几何直观：经过矩阵 A 空间变换后，【空间指向保持在同一直线上不发生偏转】的特殊方向即为特征向量 v","特征值的几何直观：该特征向量在变换后的【长度伸缩比例】即为特征值 λ（若 λ < 0 则反向拉伸）","实对称矩阵必可正交对角化：两个特征向量方向在空间中严格正交垂直（夹角 90°）","若 det(A) = 0 则空间被压缩降维到一条直线或原点，至少有一个特征值为 0"],
+    loadHtml: () => import('./coursewares/matrixEigen').then(m => m.matrixEigenCourseware.embedHtml || ''),
+  },
+  {
+    id: "cw-taylor-approx",
+    title: "📐 考研高等数学 · 麦克劳林/泰勒多项式局部动态逼近",
+    domain: "math",
+    subject: "高等数学",
+    difficulty: "核心考点",
+    tags: ["考研数学","高等数学","泰勒公式","麦克劳林","局部逼近","佩亚诺余项","极限"],
+    summary: "调节多项式阶数 n（1 到 9 阶），在 Canvas 上实时对比 sin(x)、cos(x)、e^x 真实函数曲线与泰勒近似曲线，深刻直观理解佩亚诺余项 o(x^n) 的局部有效收敛半径与上下同阶展开做题准则。",
+    learningPoints: ["泰勒公式本质：用多项式在局部点 x0 处逼近复杂函数的极限工具","阶数 n 越高，拟合曲线与真实函数重合的区间越宽广","考研求极限上下同阶原则：“分子分母展开到第一非零最低同阶项”","经典易错点：差式中若首项相减抵消（如 x - sin(x)），必须向后展开到 x^3/6 方可保证精度"],
+    loadHtml: () => import('./coursewares/taylorApprox').then(m => m.taylorApproxCourseware.embedHtml || ''),
+  },
+  {
+    id: "cw-double-integral-polar",
+    title: "📐 二重积分极坐标变换面积微元 (r dr dθ) 几何实验室",
+    domain: "math",
+    subject: "高等数学",
+    difficulty: "每年必考大题",
+    tags: ["考研数学","高等数学","二重积分","极坐标","面积微元","rdrdθ","对称性"],
+    summary: "交互式探究二重积分极坐标下 dxdy = r dr dθ 的几何物理内涵。通过在 Canvas 上动态调节扇形环微元的极角 dθ 与极径 dr，直观展现弧长为 r·dθ、微元面积矩形化为 (dr) × (r dθ) = r dr dθ，彻底告别公式死记硬背！",
+    learningPoints: ["为什么必须多乘一个 r？因为极坐标下角度微元 dθ 对应的弧长是 r * dθ，半径越大弧长越长，因此面积微元 dA = (dr) * (r dθ) = r dr dθ","适用场景：积分区域含有圆、圆环、扇形或被积函数含有 x^2 + y^2 时，首选极坐标变换","极坐标穿线法：“射线穿入为下限 r_1(θ)，穿出为上限 r_2(θ)”；θ 的范围由区域包含的夹角确定","对称性简化：若被积函数关于 x 或 y 具有奇偶性，或区域关于原点对称，善用二重积分奇偶对称性直接将结果降维或化为 0"],
+    loadHtml: () => import('./coursewares/doubleIntegralPolar').then(m => m.doubleIntegralPolarCourseware.embedHtml || ''),
+  },
+  {
+    id: "cw-normal-2d",
+    title: "📊 二维正态分布等高线与相关系数 (ρ) 动态实验室",
+    domain: "math",
+    subject: "概率论与数理统计",
+    difficulty: "核心大题考点",
+    tags: ["考研数学","概率论","二维正态分布","相关系数","独立性","等高线","协方差"],
+    summary: "直观揭开二维正态分布 N(μ1, μ2, σ1², σ2², ρ) 的几何投影图景！通过滑块动态调节相关系数 ρ（-0.95 到 +0.95），Canvas 实时绘制概率密度曲面的等高线倾斜椭圆族，直观验证当且仅当 ρ=0 时椭圆主轴垂直于坐标轴、两随机变量相互独立！",
+    learningPoints: ["核心几何对应：ρ > 0 时等高线椭圆主轴沿一三象限倾斜（正相关）；ρ < 0 时沿二四象限倾斜（负相关）","二维正态分布独特性质：对于二维正态分布而言，【X 与 Y 相互独立】充要等价于【X 与 Y 不相关 (ρ = 0)】！","当 ρ = 0 且 σ1 = σ2 时，等高线由椭圆退化为完美的同心圆，代表全向同性无偏独立分布","边缘分布性质：二维正态分布的边缘分布必定是一维正态分布 X ~ N(μ1, σ1²)，反之不成立（边缘正态不代表联合正态）"],
+    loadHtml: () => import('./coursewares/normalDistribution2D').then(m => m.normalDistribution2DCourseware.embedHtml || ''),
+  },
+  {
+    id: "cw-solid-revolution",
+    title: "🌀 定积分几何应用：旋转体体积（圆盘法 vs 柱壳法）动态实验室",
+    domain: "math",
+    subject: "高等数学",
+    difficulty: "每年必考大题",
+    tags: ["考研数学","高等数学","定积分应用","旋转体体积","圆盘法","柱壳法","微元法","切片积分"],
+    summary: "考研高数必考大题“旋转体体积与侧面积”全景动态仿真。可视化展示绕 x 轴或绕 y 轴旋转生成的立体形状；支持在“圆盘切片微元法 (Disc Method)”与“同心柱壳微元法 (Shell Method)”之间平滑切换与动画剖切，直观透析微元 dV 的几何本质。",
+    learningPoints: ["微元法思想：以直代曲、无限分割、积分求和","圆盘切片法（微元垂直于旋转轴）：绕 x 轴旋转时，微元体积 dV = π [f(x)]² dx；绕 y 轴旋转时，dV = π [g(y)]² dy","柱壳法（微元平行于旋转轴）：绕 y 轴旋转但被积函数为 y = f(x) 时，展开后底面周长 2πx、高 f(x)、厚度 dx，微元 dV = 2πx f(x) dx","考场选法秘诀：如果函数改写为反函数 x = g(y) 极其困难（如 y = x·sin(x) 或三次方程），果断采用柱壳法！"],
+    loadHtml: () => import('./coursewares/solidRevolution').then(m => m.solidRevolutionCourseware.embedHtml || ''),
+  },
+  {
+    id: "cw-gram-schmidt",
+    title: "📐 施密特正交化：向量正交投影与规范正交基几何实验室",
+    domain: "math",
+    subject: "线性代数",
+    difficulty: "每年必考大题",
+    tags: ["考研数学","线性代数","施密特正交化","正交基","向量投影","内积","规范正交化","实对称矩阵对角化"],
+    summary: "考研线代二次型与实对称矩阵正交相似对角化核心工具“施密特正交化 (Gram-Schmidt)”全景动态仿真。直观演示从线性无关向量组通过投影消除分量、构造两两正交基（内积为0）并最终单位化的完整几何过程。",
+    learningPoints: ["正交投影本质：将向量 α 沿已有正交基 β 投影，减去投影分量后剩下的残差向量必与基底垂直","二步公式：β₁ = α₁；β₂ = α₂ - [(α₂, β₁) / (β₁, β₁)] β₁","三步公式：β₃ = α₃ - [(α₃, β₁) / (β₁, β₁)] β₁ - [(α₃, β₂) / (β₂, β₂)] β₂","单位化规范正交基：ηᵢ = βᵢ / ‖βᵢ‖，组成的正交矩阵 Q 满足 QᵀQ = E，其行列式 |Q| = ±1"],
+    loadHtml: () => import('./coursewares/gramSchmidt').then(m => m.gramSchmidtCourseware.embedHtml || ''),
+  },
+  {
+    id: "cw-history-timeline",
+    title: "🏛️ 考研政治史纲编年时空轴 (1840–2024 重要会议与重大事件动态演进)",
+    domain: "politics",
+    subject: "政治史纲",
+    difficulty: "大纲核心必背",
+    tags: ["考研政治","史纲","重要会议","中共党史","近代史","土地政策","时间轴","逢五逢十周年"],
+    summary: "拖动历史时空轴进度条逐年透视 1840–2024 近代以来所有重要政治会议、核心著作文献、重大历史事件与土地统战路线。内置四大历史分期导航、考点吸附双模式、逢五逢十周年命题热点雷达、主动回忆背诵遮罩自测及横向易混对比表。",
+    learningPoints: ["掌握旧民主、新民主、社革建设、改革开放与新时代四大时期的社会主要矛盾与核心历史任务转变","熟记中共一大至二十届三中全会历次重要政治会议的“首次提出、历史标志、根本转折”核心定性","精准区分近代土地政策演变：太平天国《天朝田亩制度》→ 土地革命《井冈山/兴国土地法》→ 抗战减租减息 → 解放战争《中国土地法大纲》→ 建国初期《土地改革法》（保存富农经济）","牢记党史三个历史决议、马克思主义中国化理论飞跃与单多选命题易混陷阱排雷"],
+    loadHtml: () => import('./coursewares/historyTimeline').then(m => m.historyTimelineCourseware.embedHtml || ''),
+  }
 ]

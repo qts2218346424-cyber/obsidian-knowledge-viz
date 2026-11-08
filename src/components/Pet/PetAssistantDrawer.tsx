@@ -488,7 +488,7 @@ export default function PetAssistantDrawer({
       <div className="px-5 py-3 border-b border-cream-200 dark:border-slate-800 bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-transparent flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 flex items-center justify-center">
-            <LuluAvatar size="sm" mood="idle" showAccessories={false} />
+            <LuluAvatar size="sm" mood={loading ? 'thinking' : 'idle'} isSpeaking={loading} showAccessories={false} />
           </div>
           <div>
             <div className="flex items-center gap-2">

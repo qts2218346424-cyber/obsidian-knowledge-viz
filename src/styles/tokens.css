@@ -1,0 +1,65 @@
+/* CoreForge Design System · Semantic Tokens */
+
+@theme {
+  /* 基础字型 (Primitives) */
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", system-ui, sans-serif;
+
+  /* 基础核心调色板 (Core Palette) */
+  --color-blue-600: #0071E3;
+  --color-blue-500: #0A84FF;
+  --color-blue-50: #E8F2FF;
+  --color-emerald-500: #22C55E;
+  --color-emerald-50: #ECFDF5;
+  --color-amber-500: #F59E0B;
+  --color-amber-50: #FFFBEB;
+  --color-rose-500: #EF4444;
+  --color-rose-50: #FEF2F2;
+
+  /* 语义化表面与画布 Token (Semantic Surfaces) */
+  --color-bg-canvas: #F5F5F7;
+  --color-bg-surface: #FFFFFF;
+  --color-bg-elevated: #FFFFFF;
+  --color-bg-muted: #F1F5F9;
+
+  /* 语义化文字 Token (Semantic Text) */
+  --color-text-primary: #0F172A;
+  --color-text-secondary: #475569;
+  --color-text-muted: #94A3B8;
+
+  /* 语义化边框 Token (Semantic Borders) */
+  --color-border-subtle: #E2E8F0;
+  --color-border-strong: #CBD5E1;
+
+  /* 品牌与主交互 (Brand & Primary Action) */
+  --color-brand-primary: #0071E3;
+  --color-brand-subtle: #E8F2FF;
+  --color-brand-midnight: #0F172A;
+  --color-brand-green: #22C55E;
+
+  /* 向下兼容历史 token 映射 */
+  --color-accent-orange: #0071E3;
+  --color-accent-peach: #F4F4F5;
+  --color-accent-sage: #34C759;
+  --color-accent-mint: #D9F7E2;
+  --color-accent-amber: #FF9F0A;
+  --color-accent-rose: #FF3B30;
+  --color-surface: #FFFFFF;
+  --color-surface-elevated: #FFFFFF;
+}
+
+/* 深色模式语义变量覆写 */
+.dark {
+  --color-bg-canvas: #090D16;
+  --color-bg-surface: #111827;
+  --color-bg-elevated: #1E293B;
+  --color-bg-muted: #1E293B;
+  --color-text-primary: #F8FAFC;
+  --color-text-secondary: #CBD5E1;
+  --color-text-muted: #64748B;
+  --color-border-subtle: #1E293B;
+  --color-border-strong: #334155;
+  --color-brand-primary: #38BDF8;
+  --color-surface: #111827;
+  --color-surface-elevated: #1E293B;
+}

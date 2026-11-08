@@ -27,6 +27,7 @@ import { api, type FileListItem } from '../services/api'
 import { useVaultHealth, useVaultStats } from '../hooks/useVaultData'
 import { QUESTION_BANK } from '../data/questions'
 import { MATH_QUESTION_BANK } from '../data/questions/math'
+import { XIAO_1000_POLITICS_QUESTIONS } from '../data/politicsQuestions'
 
 function getVaultName(vaultPath?: string) {
   if (!vaultPath) return '研核知识库'
@@ -176,8 +177,8 @@ export default function Dashboard() {
       ),
       actionPrimary: '/chat',
       actionPrimaryLabel: '进入 AI 导师答疑',
-      actionSecondary: '/history',
-      actionSecondaryLabel: '浏览政治史纲时空轴',
+      actionSecondary: '/politics',
+      actionSecondaryLabel: '考研政治史纲与1000题',
     },
   }
 
@@ -404,7 +405,7 @@ export default function Dashboard() {
       </section>
 
       {/* ── Subframe Project Showcase: Dual-Core Stations ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {/* 408 Computer Science Station Card */}
         <div className="bento-card bento-card-hover rounded-xl p-5 relative overflow-hidden group">
           {/* Top Canvas Cover */}
@@ -462,6 +463,61 @@ export default function Dashboard() {
                 className="subframe-btn-black h-7 px-2.5 text-[11px]"
               >
                 刷 408 →
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Politics Station Card */}
+        <div className="bento-card bento-card-hover rounded-xl p-5 relative overflow-hidden group">
+          <div className="rounded-lg bg-neutral-100/70 p-4 border border-neutral-200/60 mb-4 transition-colors group-hover:bg-neutral-100">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-white border border-neutral-200/80 flex items-center justify-center text-neutral-800 shadow-2xs">
+                  <Landmark className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-neutral-900">考研政治 作战舱</h3>
+                  <p className="text-[11px] text-neutral-400">全屏史纲时空轴 · 肖秀荣 1000 题</p>
+                </div>
+              </div>
+              <span className="subframe-pill text-[10.5px]">
+                {XIAO_1000_POLITICS_QUESTIONS.length} 道真题精选
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="bg-white/90 rounded-md py-2 px-1 border border-neutral-200/50">
+                <div className="text-[10px] text-neutral-400 font-medium">全屏时空轴</div>
+                <div className="text-xs font-semibold text-neutral-800 mt-0.5">发光地图·配图</div>
+              </div>
+              <div className="bg-white/90 rounded-md py-2 px-1 border border-neutral-200/50">
+                <div className="text-[10px] text-neutral-400 font-medium">肖秀荣1000题</div>
+                <div className="text-xs font-semibold text-neutral-800 mt-0.5">单选/多选判分</div>
+              </div>
+              <div className="bg-white/90 rounded-md py-2 px-1 border border-neutral-200/50">
+                <div className="text-[10px] text-neutral-400 font-medium">考点收藏夹</div>
+                <div className="text-xs font-semibold text-neutral-800 mt-0.5">遮罩背诵自测</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-neutral-500">
+              全屏时空大地图 · 历次会议对比
+            </div>
+            <div className="flex items-center gap-2">
+              <Link
+                to="/politics"
+                className="subframe-btn-secondary h-7 px-2.5 text-[11px]"
+              >
+                看时空轴
+              </Link>
+              <Link
+                to="/politics"
+                className="subframe-btn-black h-7 px-2.5 text-[11px]"
+              >
+                刷 1000 题 →
               </Link>
             </div>
           </div>

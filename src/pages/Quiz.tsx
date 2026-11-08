@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import WarmButton from '../components/ui/WarmButton'
 import MarkdownRenderer from '../components/MarkdownRenderer'
+import MathScratchpadCanvas from '../features/quiz/components/MathScratchpadCanvas'
 import { QUESTION_BANK, type QuizQuestion } from '../data/questions'
 import { MATH_QUESTION_BANK } from '../data/questions/math'
 import type { MathCategory, MathSubject, CsSubject, UnifiedQuestion } from '../types/subject'
@@ -1434,39 +1435,11 @@ export default function Quiz() {
                   <span className="text-[11px] text-slate-400">自动绑定第 {currentIndex + 1} 题</span>
                 </div>
 
-                {/* Math Symbol Quick Insert Bar */}
-                <div className="flex flex-wrap gap-1 p-2 rounded-xl bg-slate-100 border border-slate-200">
-                  {SCRATCHPAD_MATH_SYMBOLS.map((s, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => insertScratchpadSymbol(s.code)}
-                      className="px-2 py-1 rounded-lg bg-white hover:bg-accent-orange/10 hover:text-accent-orange border border-slate-200 text-xs font-mono font-medium transition-colors shadow-2xs"
-                    >
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Scratchpad Textarea */}
-                <textarea
-                  ref={scratchpadRef}
+                <MathScratchpadCanvas
                   value={currentScratchpad}
-                  onChange={(e) => setScratchpads({ ...scratchpads, [currentQ.id]: e.target.value })}
-                  placeholder="在此随手推演公式、草拟计算步骤，无需切换草稿本..."
-                  rows={9}
-                  className="w-full text-xs font-mono bg-white border border-slate-200 rounded-xl p-3 text-slate-900 outline-none focus:border-accent-orange leading-relaxed"
+                  onChange={(val) => setScratchpads({ ...scratchpads, [currentQ.id]: val })}
+                  onClear={() => setScratchpads({ ...scratchpads, [currentQ.id]: '' })}
                 />
-
-                <div className="flex items-center justify-between text-[11px] text-slate-400">
-                  <span>草稿在本次练习中自动保存</span>
-                  <button
-                    onClick={() => setScratchpads({ ...scratchpads, [currentQ.id]: '' })}
-                    className="text-rose-500 hover:underline"
-                  >
-                    清空本题草稿
-                  </button>
-                </div>
               </div>
             )}
 

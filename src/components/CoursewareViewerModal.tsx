@@ -173,19 +173,32 @@ export default function CoursewareViewerModal({
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showGuide, setShowGuide] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
+  const [asyncHtml, setAsyncHtml] = useState<string>('')
+  const [isLoadingHtml, setIsLoadingHtml] = useState<boolean>(false)
 
   // 每次切换打开新课件时重置状态，默认将 100% 视野留给交互画布
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && item) {
       setShowGuide(false)
       setReloadKey(k => k + 1)
+      setAsyncHtml('')
+      if (item.embedHtml) {
+        setAsyncHtml(item.embedHtml)
+      } else if (item.loadHtml) {
+        setIsLoadingHtml(true)
+        item.loadHtml()
+          .then(html => setAsyncHtml(html))
+          .catch(err => console.error('加载课件失败:', err))
+          .finally(() => setIsLoadingHtml(false))
+      }
     }
   }, [isOpen, item?.id])
 
   const enhancedHtml = useMemo(() => {
-    if (!item?.embedHtml) return ''
-    return enhanceCoursewareHtml(item.embedHtml)
-  }, [item?.embedHtml])
+    const raw = item?.embedHtml || asyncHtml
+    if (!raw) return ''
+    return enhanceCoursewareHtml(raw)
+  }, [item?.embedHtml, asyncHtml])
 
   if (!isOpen || !item) return null
 
@@ -285,7 +298,12 @@ export default function CoursewareViewerModal({
         {/* 主体区：100% 释放仿真画布视野 + 按需呼出考点精讲面板 */}
         <div className="flex-1 flex overflow-hidden relative">
           <div className="flex-1 h-full bg-[#0b0f19] relative overflow-hidden">
-            {srcUrl ? (
+            {isLoadingHtml ? (
+              <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
+                <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+                <span className="text-xs font-mono tracking-wider text-slate-400">正在按需装载交互课件核心仿真引擎...</span>
+              </div>
+            ) : srcUrl ? (
               <iframe
                 key={`${item.id}-${reloadKey}`}
                 src={srcUrl}

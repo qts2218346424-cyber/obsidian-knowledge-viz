@@ -10,12 +10,20 @@ import {
   Volume2,
   VolumeX,
   X,
+  Utensils,
+  Award,
 } from 'lucide-react'
 import LuluAvatar, { PET_PERSONAS, getSavedPetTheme, type LuluTheme } from './LuluAvatar'
+import {
+  playPetSynthSound,
+  NAILONG_DIALOGUES,
+  type PetMood,
+  type HitZone,
+} from './NailongRigAvatar'
+
+export type { PetMood }
 
 const PetAssistantDrawer = lazy(() => import('./PetAssistantDrawer'))
-
-export type PetMood = 'idle' | 'focus' | 'thinking' | 'happy' | 'sleepy'
 
 interface DesktopPetProps {
   onOpenQuickPractice?: () => void
@@ -29,28 +37,28 @@ interface PetVoiceItem {
 const PET_VOICE_PACKS: Record<LuluTheme, PetVoiceItem[]> = {
   yellow: [
     {
-      text: '嘿嘿嘿……别戳我大肚皮啦，好痒呀哈哈哈！再戳我就要变成黄色小皮球滚走咯~ 🐲✨',
-      audio: '/pets/voices/nailong_1.mp3?v=2',
+      text: '哈哈哈好痒呀！别戳俺的大肚皮，再戳俺就要变成小黄球滚走咯~ 🐲✨',
+      audio: '/pets/voices/nailong_1.mp3?v=3',
     },
     {
-      text: '咦——？一加一等于几来着？呃……等于两个大鸡腿！嘿嘿，反正跟着奶龙混，高数408全都稳过哟！🍗',
-      audio: '/pets/voices/nailong_2.mp3?v=2',
+      text: '我是奶龙！咦——？一加一等于几来着？等于两个大鸡腿！跟着奶龙混，高数408全都稳过哟！🍗',
+      audio: '/pets/voices/nailong_2.mp3?v=3',
     },
     {
-      text: '哎呀妈呀……我肚子饿得咕咕叫啦！你是不是偷偷藏好吃的啦？快喂我吃两道真题，啊呜一口吞掉！😋',
-      audio: '/pets/voices/nailong_3.mp3?v=2',
+      text: '啊呜——！香迷糊了！大鸡腿配高数真题，越啃越有劲，啊呜一口全吃掉！😋',
+      audio: '/pets/voices/nailong_3.mp3?v=3',
     },
     {
-      text: '哼哼，我才是真的奶龙！你看我圆滚滚的大肚子，里面装的可全是红烧肉和一战成硕的秘籍哟！💪',
-      audio: '/pets/voices/nailong_4.mp3?v=2',
+      text: '哼哼，我才是真的奶龙！你看我圆滚滚的大肚子，里面装的全是一战成硕的秘籍哟！💪',
+      audio: '/pets/voices/nailong_4.mp3?v=3',
     },
     {
-      text: '呼噜噜……啊？我没睡着，我才没流口水呢！我刚刚是在闭着眼睛帮你想这道难题呢，信奶龙一回嘛~ 🫧',
-      audio: '/pets/voices/nailong_5.mp3?v=2',
+      text: '呼噜噜……啊？我没睡着，我才没流口水呢！我刚刚是在闭着眼睛帮你想难题呢，信奶龙一回嘛~ 🫧',
+      audio: '/pets/voices/nailong_5.mp3?v=3',
     },
     {
-      text: '哇哦——！你居然学了这么久，太酷啦！快看奶龙给你跳个扭屁股舞，12月19号咱们妥妥考上岸，耶！🌟',
-      audio: '/pets/voices/nailong_6.mp3?v=2',
+      text: '芜湖！你居然学了这么久，太酷啦！快看奶龙给你跳个扭屁股舞，12月19号咱们妥妥考上岸，耶！🌟',
+      audio: '/pets/voices/nailong_6.mp3?v=3',
     },
   ],
   pink: [
@@ -82,7 +90,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
   const isChatPage = location.pathname === '/chat'
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
 
-  const petSize = isMobile ? 66 : 84
+  const petSize = isMobile ? 68 : 88
   const bottomOffset = isMobile ? 84 : 28
 
   const getClampedPosition = useCallback(
@@ -109,7 +117,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
   const [position, setPosition] = useState<{ x: number; y: number }>(() => {
     if (typeof window === 'undefined') return { x: 100, y: 100 }
     const mobile = window.innerWidth < 768
-    const size = mobile ? 66 : 84
+    const size = mobile ? 68 : 88
     const offset = mobile ? 84 : 28
     const maxX = Math.max(8, window.innerWidth - size - 10)
     const maxY = Math.max(8, window.innerHeight - size - offset)
@@ -138,21 +146,38 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
     }
   })
 
-  // 拖拽手势状态
+  // 拖拽手势状态与物理摆角
   const [isDragging, setIsDragging] = useState(false)
-  const dragStartRef = useRef<{ startX: number; startY: number; petX: number; petY: number } | null>(null)
+  const [dragTilt, setDragTilt] = useState(0)
+  const dragStartRef = useRef<{
+    startX: number
+    startY: number
+    petX: number
+    petY: number
+    lastX: number
+  } | null>(null)
   const hasDraggedRef = useRef(false)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
 
-  // 萌宠情绪、气泡与语音状态
+  // 萌宠情绪、骨骼微动与物理状态
   const [mood, setMood] = useState<PetMood>('idle')
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [bubbleText, setBubbleText] = useState<string | null>(null)
+  const [bubbleSubtext, setBubbleSubtext] = useState<string | null>(null)
   const [currentAudioUrl, setCurrentAudioUrl] = useState<string | null>(null)
   const [bubbleAction, setBubbleAction] = useState<{ label: string; onClick: () => void } | null>(null)
   const [minimized, setMinimized] = useState(false)
   const [isSquishing, setIsSquishing] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
+  const [bellyJiggle, setBellyJiggle] = useState(false)
+  const [headPatting, setHeadPatting] = useState(false)
+  const [landingBounce, setLandingBounce] = useState(false)
+  const [holdingDrumstick, setHoldingDrumstick] = useState(false)
+
+  // 360° 视差目光追踪与闲置打瞌睡
+  const [eyeOffset, setEyeOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
+  const idleSleepTimerRef = useRef<number | null>(null)
+
   const [voiceMuted, setVoiceMuted] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false
     return localStorage.getItem('coreforge_pet_voice_muted') === '1'
@@ -166,7 +191,37 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
   const [theme, setTheme] = useState<LuluTheme>(() => getSavedPetTheme())
   const persona = PET_PERSONAS[theme] || PET_PERSONAS.yellow
 
-  // 按需播放语音引擎（惰性实例化 HTMLAudioElement，不占首屏加载带宽）
+  // 360° 视差目光跟随与自然呼吸/闲置瞌睡
+  useEffect(() => {
+    if (typeof window === 'undefined' || isMobile) return
+
+    const handlePointerMove = (e: PointerEvent) => {
+      const cx = position.x + petSize / 2
+      const cy = position.y + petSize / 2
+      const dx = e.clientX - cx
+      const dy = e.clientY - cy
+      const maxDist = 260
+      const nx = Math.max(-1, Math.min(1, dx / maxDist))
+      const ny = Math.max(-1, Math.min(1, dy / maxDist))
+      setEyeOffset({ x: Number(nx.toFixed(2)), y: Number(ny.toFixed(2)) })
+
+      // 如果正在打瞌睡，光标晃动时唤醒奶龙
+      setMood(prev => (prev === 'sleepy' ? 'idle' : prev))
+
+      if (idleSleepTimerRef.current) clearTimeout(idleSleepTimerRef.current)
+      idleSleepTimerRef.current = window.setTimeout(() => {
+        setMood(prev => (prev === 'idle' ? 'sleepy' : prev))
+      }, 22000)
+    }
+
+    window.addEventListener('pointermove', handlePointerMove, { passive: true })
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove)
+      if (idleSleepTimerRef.current) clearTimeout(idleSleepTimerRef.current)
+    }
+  }, [position.x, position.y, petSize, isMobile])
+
+  // 按需播放语音引擎（与软萌合成音效双轨联动）
   const playVoice = useCallback(
     (audioUrl: string, force = false) => {
       if (typeof window === 'undefined') return
@@ -193,24 +248,26 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
   )
 
   const showBubbleWithVoice = useCallback(
-    (text: string, audioUrl?: string, durationMs = 5200, forcePlay = false) => {
+    (text: string, audioUrl?: string, durationMs = 5200, forcePlay = false, subtext?: string) => {
       if (bubbleTimerRef.current) {
         window.clearTimeout(bubbleTimerRef.current)
       }
       setBubbleText(text)
+      setBubbleSubtext(subtext || null)
       setCurrentAudioUrl(audioUrl || null)
       if (audioUrl) {
         playVoice(audioUrl, forcePlay)
       }
       bubbleTimerRef.current = window.setTimeout(() => {
         setBubbleText(null)
+        setBubbleSubtext(null)
         setBubbleAction(null)
       }, durationMs)
     },
     [playVoice]
   )
 
-  // 组件卸载时停止音频
+  // 组件卸载时停止音频与计时器
   useEffect(() => {
     return () => {
       if (audioRef.current) {
@@ -218,6 +275,9 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
       }
       if (bubbleTimerRef.current) {
         window.clearTimeout(bubbleTimerRef.current)
+      }
+      if (idleSleepTimerRef.current) {
+        window.clearTimeout(idleSleepTimerRef.current)
       }
     }
   }, [])
@@ -247,35 +307,43 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
     Math.ceil((new Date('2026-12-19T08:30:00').getTime() - Date.now()) / (1000 * 60 * 60 * 24))
   )
 
-  // 首次进入主动问候气泡（附带小喇叭按钮供用户点击播放语音，遵循浏览器未交互前静音礼仪）
+  // 首次进入主动问候气泡
   useEffect(() => {
-    // 每个浏览器会话只主动问候一次，避免每次切页都弹气泡遮挡内容
     let greeted = false
-    try { greeted = sessionStorage.getItem('pet_greeted') === '1' } catch { /* ignore */ }
+    try {
+      greeted = sessionStorage.getItem('pet_greeted') === '1'
+    } catch {
+      /* ignore */
+    }
     if (greeted) return
     const isMobileViewport = window.innerWidth < 640
     const timer = window.setTimeout(() => {
-      try { sessionStorage.setItem('pet_greeted', '1') } catch { /* ignore */ }
+      try {
+        sessionStorage.setItem('pet_greeted', '1')
+      } catch {
+        /* ignore */
+      }
       const curTheme = getSavedPetTheme()
       const p = PET_PERSONAS[curTheme] || PET_PERSONAS.yellow
       const firstAudio = PET_VOICE_PACKS[curTheme]?.[0]?.audio || '/pets/voices/nailong_1.mp3'
-      setBubbleText(`考研倒计时 ${daysToExam} 天！我是${p.name}，戳戳我听专属加油语音哟~`)
+      setBubbleText(`考研倒计时 ${daysToExam} 天！我是${p.name}，摸摸我头或者戳戳大肚皮听我唠叨哟~`)
+      setBubbleSubtext('真·骨骼分层矢量奶龙已就绪 · 支持 360° 眼神跟随')
       setCurrentAudioUrl(firstAudio)
-      if (onOpenQuickPractice) {
-        setBubbleAction({
-          label: '🎯 开启随堂真题测试',
-          onClick: onOpenQuickPractice,
-        })
-      }
+      const triggerPractice = onOpenQuickPractice || (() => navigate('/quiz'))
+      setBubbleAction({
+        label: '🎯 开启随堂真题测试',
+        onClick: triggerPractice,
+      })
       bubbleTimerRef.current = window.setTimeout(() => {
         setBubbleText(null)
+        setBubbleSubtext(null)
         setBubbleAction(null)
-      }, isMobileViewport ? 3500 : 6800)
+      }, isMobileViewport ? 4000 : 7000)
     }, 2000)
     return () => window.clearTimeout(timer)
   }, [daysToExam, onOpenQuickPractice])
 
-  // 番茄钟计时与完成语音播报
+  // 番茄钟计时与完成播报
   useEffect(() => {
     if (!focusActive) return
     const interval = setInterval(() => {
@@ -284,10 +352,13 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
           clearInterval(interval)
           setFocusActive(false)
           setMood('happy')
+          playPetSynthSound('cheer', voiceMuted)
           showBubbleWithVoice(
             `🎉 芜湖——！25 分钟深度专注达成！你脑子怎么这么聪明呀，快让奶龙蹭蹭喜气，嘿嘿嘿~`,
             '/pets/voices/nailong_focus_done.mp3?v=2',
-            6000
+            6000,
+            false,
+            '考神附体 · 奖励大鸡腿一根'
           )
           return 25 * 60
         }
@@ -295,7 +366,24 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
       })
     }, 1000)
     return () => clearInterval(interval)
-  }, [focusActive, showBubbleWithVoice])
+  }, [focusActive, showBubbleWithVoice, voiceMuted])
+
+  // 监听全站做题连对事件，触发奶龙欢呼与庆祝
+  useEffect(() => {
+    const handleStreak = () => {
+      playPetSynthSound('cheer', voiceMuted)
+      setBellyJiggle(true)
+      setMood('happy')
+      const streakLine = NAILONG_DIALOGUES.quizStreak[0]
+      showBubbleWithVoice(streakLine.text, undefined, 4500, false, streakLine.subtext)
+      setTimeout(() => {
+        setBellyJiggle(false)
+        setMood('idle')
+      }, 2500)
+    }
+    window.addEventListener('coreforge-quiz-streak', handleStreak)
+    return () => window.removeEventListener('coreforge-quiz-streak', handleStreak)
+  }, [voiceMuted, showBubbleWithVoice])
 
   // 视口尺寸变化监听
   useEffect(() => {
@@ -328,14 +416,15 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
         setIsSpeaking(false)
         showBubbleWithVoice(`🔇 已切换为自习静音模式，${persona.name}安安静静陪你学习~`, undefined, 3000)
       } else {
+        playPetSynthSound('cheer', false)
         const firstLine = PET_VOICE_PACKS[theme]?.[0] || PET_VOICE_PACKS.yellow[0]
-        showBubbleWithVoice(`🔊 语音已开启！${firstLine.text}`, firstLine.audio, 5000, true)
+        showBubbleWithVoice(`🔊 语音与Q弹音效已开启！${firstLine.text}`, firstLine.audio, 5000, true)
       }
       return nextMuted
     })
   }
 
-  // 一键切换萌宠形象并播放新角色登场语音
+  // 一键切换萌宠形象
   const toggleTheme = () => {
     const themes: LuluTheme[] = ['yellow', 'pink', 'purple']
     const nextIndex = (themes.indexOf(theme) + 1) % themes.length
@@ -347,6 +436,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
     localStorage.setItem('coreforge_lulu_theme', nextTheme)
     window.dispatchEvent(new Event('coreforge-pet-theme-change'))
     setIsSquishing(true)
+    playPetSynthSound('boing', voiceMuted)
     setTimeout(() => setIsSquishing(false), 450)
     setMood('happy')
     setTimeout(() => setMood(focusActive ? 'focus' : 'idle'), 1800)
@@ -358,7 +448,23 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
     )
   }
 
-  // ===== 拖拽手势核心引擎 =====
+  // 投喂大烤鸡腿动作
+  const handleFeedDrumstick = () => {
+    playPetSynthSound('nom', voiceMuted)
+    setHoldingDrumstick(true)
+    setMood('eating')
+    setShowMobileMenu(false)
+    const list = NAILONG_DIALOGUES.feedChicken
+    const line = list[Math.floor(Math.random() * list.length)]
+    showBubbleWithVoice(line.text, '/pets/voices/nailong_3.mp3?v=3', 4500, false, line.subtext)
+    setTimeout(() => {
+      setHoldingDrumstick(false)
+      setMood('happy')
+      setTimeout(() => setMood(focusActive ? 'focus' : 'idle'), 1200)
+    }, 2400)
+  }
+
+  // ===== 拖拽手势核心引擎（带惯性倾角与踢腿） =====
   const handlePointerDown = (e: React.PointerEvent) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return
     const target = e.target as HTMLElement | null
@@ -366,13 +472,13 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
       return
     }
 
-    setIsDragging(true)
     hasDraggedRef.current = false
     dragStartRef.current = {
       startX: e.clientX,
       startY: e.clientY,
       petX: position.x,
       petY: position.y,
+      lastX: e.clientX,
     }
 
     try {
@@ -381,38 +487,61 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
   }
 
   const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isDragging || !dragStartRef.current) return
+    if (!dragStartRef.current) return
     const dx = e.clientX - dragStartRef.current.startX
     const dy = e.clientY - dragStartRef.current.startY
 
-    if (Math.abs(dx) > 6 || Math.abs(dy) > 6) {
+    if (!isDragging && Math.hypot(dx, dy) > 8) {
+      setIsDragging(true)
       hasDraggedRef.current = true
       if (showMobileMenu) setShowMobileMenu(false)
-      if (bubbleText) setBubbleText(null)
+      playPetSynthSound('lift', voiceMuted)
+      if (theme === 'yellow') {
+        const liftLine = NAILONG_DIALOGUES.dragLift[0]
+        showBubbleWithVoice(liftLine.text, undefined, 2600, false, liftLine.subtext)
+      }
     }
 
-    const nextPos = getClampedPosition(
-      {
-        x: dragStartRef.current.petX + dx,
-        y: dragStartRef.current.petY + dy,
-      },
-      false
-    )
-    setPosition(nextPos)
+    if (isDragging || Math.hypot(dx, dy) > 8) {
+      const vx = e.clientX - dragStartRef.current.lastX
+      dragStartRef.current.lastX = e.clientX
+      setDragTilt(Math.max(-22, Math.min(22, vx * 1.35)))
+
+      const nextPos = getClampedPosition(
+        {
+          x: dragStartRef.current.petX + dx,
+          y: dragStartRef.current.petY + dy,
+        },
+        false
+      )
+      setPosition(nextPos)
+    }
   }
 
   const handlePointerUp = (e: React.PointerEvent) => {
-    if (!isDragging) return
-    setIsDragging(false)
-
     try {
       ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
     } catch {}
 
+    const wasDragging = isDragging
     const wasDragged = hasDraggedRef.current
     dragStartRef.current = null
+    setIsDragging(false)
+    setDragTilt(0)
 
-    if (wasDragged) {
+    if (wasDragging || wasDragged) {
+      // 落地重力回弹
+      playPetSynthSound('land', voiceMuted)
+      setLandingBounce(true)
+      if (theme === 'yellow') {
+        const landLine = NAILONG_DIALOGUES.landDrop[0]
+        showBubbleWithVoice(landLine.text, undefined, 2500, false, landLine.subtext)
+      }
+      setTimeout(() => {
+        setLandingBounce(false)
+        setMood(focusActive ? 'focus' : 'idle')
+      }, 650)
+
       setPosition(prev => {
         const finalPos = getClampedPosition(prev, isMobile)
         try {
@@ -429,8 +558,8 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
   }
 
   const handlePointerCancel = (e: React.PointerEvent) => {
-    if (!isDragging) return
     setIsDragging(false)
+    setDragTilt(0)
     try {
       ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
     } catch {}
@@ -449,10 +578,42 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
     return lines[idx]
   }
 
+  // 分区点击：摸大脑袋 vs 戳大白肚皮
+  const handleZoneTrigger = (zone: HitZone) => {
+    if (isDragging || hasDraggedRef.current) return
+
+    if (zone === 'head') {
+      playPetSynthSound('pat', voiceMuted)
+      setHeadPatting(true)
+      setMood('happy')
+      const list = NAILONG_DIALOGUES.headPat
+      const line = list[Math.floor(Math.random() * list.length)]
+      showBubbleWithVoice(line.text, undefined, 4200, false, line.subtext)
+      setTimeout(() => {
+        setHeadPatting(false)
+        setMood(focusActive ? 'focus' : 'idle')
+      }, 1500)
+    } else if (zone === 'belly') {
+      playPetSynthSound('boing', voiceMuted)
+      setBellyJiggle(true)
+      setMood('derp')
+      const list = NAILONG_DIALOGUES.bellyPoke
+      const line = list[Math.floor(Math.random() * list.length)]
+      // 戳肚皮直接触发正版奶龙魔性爆笑原声！
+      showBubbleWithVoice(line.text, '/pets/voices/nailong_1.mp3?v=3', 4800, false, line.subtext)
+      setTimeout(() => {
+        setBellyJiggle(false)
+        setMood(focusActive ? 'focus' : 'idle')
+      }, 1800)
+    }
+  }
+
+  // 基础点击处理
   const handlePetClick = () => {
     if (minimized) {
       setMinimized(false)
       setIsSquishing(true)
+      playPetSynthSound('boing', voiceMuted)
       setTimeout(() => setIsSquishing(false), 500)
       setMood('happy')
       setTimeout(() => setMood(focusActive ? 'focus' : 'idle'), 2000)
@@ -468,6 +629,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
 
     setShowMobileMenu(prev => !prev)
     setIsSquishing(true)
+    playPetSynthSound('boing', voiceMuted)
     setTimeout(() => setIsSquishing(false), 500)
     setMood('happy')
     setTimeout(() => setMood(focusActive ? 'focus' : 'idle'), 2200)
@@ -519,17 +681,24 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
         {bubbleText && (
           <div
             className={`pet-interactive absolute ${
-              isNearTop ? 'top-20' : 'bottom-full mb-2.5'
+              isNearTop ? 'top-24' : 'bottom-full mb-3'
             } ${
               isRightSide ? 'right-0' : 'left-0'
-            } w-64 sm:w-68 max-w-[calc(100vw-24px)] p-3 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-amber-200/90 dark:border-amber-800/60 shadow-xl shadow-amber-500/10 text-xs text-slate-800 dark:text-slate-100 animate-in fade-in zoom-in-95 pointer-events-auto z-20`}
+            } w-68 sm:w-72 max-w-[calc(100vw-24px)] p-3.5 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-amber-200/90 dark:border-amber-800/60 shadow-xl shadow-amber-500/10 text-xs text-slate-800 dark:text-slate-100 animate-in fade-in zoom-in-95 pointer-events-auto z-20`}
           >
             <div className="flex items-start justify-between gap-2">
-              <div className="flex items-start gap-1.5 min-w-0">
-                <span className="text-amber-600 dark:text-amber-400 font-extrabold shrink-0">
-                  {persona.emoji} {persona.name}:
-                </span>
-                <span className="leading-relaxed break-words">{bubbleText}</span>
+              <div className="flex flex-col min-w-0">
+                <div className="flex items-center gap-1.5 font-extrabold text-amber-600 dark:text-amber-400">
+                  <span>{persona.emoji} {persona.name}</span>
+                </div>
+                <div className="mt-1 leading-relaxed font-medium break-words text-slate-800 dark:text-slate-100">
+                  {bubbleText}
+                </div>
+                {bubbleSubtext && (
+                  <div className="text-[11px] font-semibold text-amber-600/90 dark:text-amber-400/90 mt-1">
+                    {bubbleSubtext}
+                  </div>
+                )}
               </div>
               {currentAudioUrl && (
                 <button
@@ -556,6 +725,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                   e.stopPropagation()
                   bubbleAction.onClick()
                   setBubbleText(null)
+                  setBubbleSubtext(null)
                 }}
                 className="mt-2 w-full py-1.5 text-[11px] font-semibold bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all shadow-sm cursor-pointer"
               >
@@ -582,6 +752,14 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
               isSquishing={isSquishing}
               isDragging={isDragging}
               isSpeaking={isSpeaking}
+              dragTilt={dragTilt}
+              wearingHeadphones={focusActive}
+              holdingDrumstick={holdingDrumstick}
+              eyeOffset={eyeOffset}
+              bellyJiggle={bellyJiggle}
+              headPatting={headPatting}
+              landingBounce={landingBounce}
+              onZoneTrigger={handleZoneTrigger}
             />
 
             {/* 番茄钟专注药丸徽章 */}
@@ -632,6 +810,37 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                 <MessageSquare className="w-4 h-4" />
               </button>
 
+              {/* 投喂大烤鸡腿 */}
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation()
+                  handleFeedDrumstick()
+                }}
+                className="w-8 h-8 rounded-full bg-white/95 dark:bg-slate-800 text-amber-600 shadow-lg border border-amber-200 dark:border-slate-700 flex items-center justify-center hover:bg-amber-50 hover:scale-110 active:scale-95 transition-all cursor-pointer select-none"
+                title="投喂香喷喷大烤鸡腿 🍗"
+              >
+                <Utensils className="w-4 h-4 text-amber-600" />
+              </button>
+
+              {/* 随堂练习快捷按钮 */}
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation()
+                  if (onOpenQuickPractice) {
+                    onOpenQuickPractice()
+                  } else {
+                    navigate('/quiz')
+                  }
+                  setShowMobileMenu(false)
+                }}
+                className="w-8 h-8 rounded-full bg-white/95 dark:bg-slate-800 text-emerald-600 shadow-lg border border-emerald-200 dark:border-slate-700 flex items-center justify-center hover:bg-emerald-50 hover:scale-110 active:scale-95 transition-all cursor-pointer select-none"
+                title="开启考研做题中心 / 随堂测验"
+              >
+                <Award className="w-4 h-4 text-emerald-600" />
+              </button>
+
               {/* 语音开关按钮 */}
               <button
                 type="button"
@@ -644,7 +853,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                     ? 'bg-amber-50 dark:bg-slate-800 text-amber-600 border-amber-300 dark:border-amber-700'
                     : 'bg-white/95 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700'
                 }`}
-                title={voiceMuted ? '点击开启奶龙语音' : '语音已开启（点击切换静音自习模式）'}
+                title={voiceMuted ? '点击开启奶龙语音与Q弹音效' : '语音与音效已开启（点击切换静音自习模式）'}
               >
                 {voiceMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
               </button>
@@ -658,10 +867,13 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                     const next = !prev
                     if (next) {
                       setMood('focus')
+                      playPetSynthSound('cheer', voiceMuted)
                       showBubbleWithVoice(
-                        `⏱️ 嘘——！专注时间到咯，${persona.name}把小嘴巴捂住，乖乖在旁边陪你学 25 分钟哟，嘿嘿~`,
+                        `⏱️ 嘘——！专注时间到咯，${persona.name}戴上降噪耳机，乖乖在旁边陪你学 25 分钟哟，嘿嘿~`,
                         theme === 'yellow' ? '/pets/voices/nailong_focus_start.mp3?v=2' : undefined,
-                        4800
+                        4800,
+                        false,
+                        '头戴降噪小耳机 · 开启 408 考研心流模式'
                       )
                     } else {
                       setMood('idle')
@@ -729,6 +941,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
               if (!hasDraggedRef.current) {
                 setMinimized(false)
                 setIsSquishing(true)
+                playPetSynthSound('boing', voiceMuted)
                 setTimeout(() => setIsSquishing(false), 500)
                 setMood('happy')
                 setTimeout(() => setMood(focusActive ? 'focus' : 'idle'), 2000)
@@ -739,7 +952,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/95 dark:bg-slate-900/95 text-amber-900 dark:text-amber-300 text-xs font-bold shadow-xl border border-amber-300 dark:border-amber-700/60 hover:scale-105 active:scale-95 transition-all cursor-pointer whitespace-nowrap select-none backdrop-blur-md"
             title="点击展开伴学奶龙（可按住自由拖拽）"
           >
-            <img src={persona.src} alt={persona.name} className="w-5 h-5 object-contain" draggable={false} />
+            <LuluAvatar size="xs" theme={theme} showAccessories={false} />
             <span>{persona.name}</span>
             {focusActive && (
               <span className="text-[10px] text-amber-600 font-mono">

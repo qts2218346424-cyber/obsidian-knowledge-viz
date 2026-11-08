@@ -32,9 +32,11 @@ import { useAuth } from '../contexts/AuthContext'
 import UserManagementModal from './UserManagementModal'
 import UserGuideModal from './UserGuideModal'
 import CheckinModal from './CheckinModal'
-import { HelpCircle } from 'lucide-react'
+import InteractiveTourGuide from './InteractiveTourGuide'
+import { HelpCircle, Compass } from 'lucide-react'
 import { LogOut, Users as UsersIcon, ShieldAlert as ShieldAlertIcon } from 'lucide-react'
 import { prefetchRoute } from '../App'
+import { useUIModalStore } from '../shared/store/useUIModalStore'
 
 const SearchModal = lazy(() => import('./SearchModal'))
 const AIAssistantModal = lazy(() => import('./AIAssistantModal'))
@@ -55,7 +57,7 @@ interface NavItem {
 const primaryNavItems: NavItem[] = [
   { to: '/dashboard', label: '首页', shortLabel: '首页', icon: Home, emoji: '🏠', desc: '备考驾驶舱与每日概览' },
   { to: '/quiz', label: '做题中心', shortLabel: '刷题', icon: ClipboardList, emoji: '📝', badge: '408+数学', desc: '真题精练、AI 组卷与错题本' },
-  { to: '/history', label: '政治史纲', shortLabel: '史纲', icon: Landmark, emoji: '🏛️', badge: '时空轴', desc: '拖动时间轴看历年事件与政治会议' },
+  { to: '/politics', label: '考研政治', shortLabel: '政治', icon: Landmark, emoji: '🏛️', badge: '史纲+1000题', desc: '全屏时空轴、肖秀荣1000题与考点收藏' },
   { to: '/study', label: '学习中心', shortLabel: '学习', icon: GraduationCap, emoji: '📚', desc: '讲义精读、闪卡记忆与掌握度' },
   { to: '/graph', label: '知识图谱', shortLabel: '图谱', icon: Network, emoji: '🕸️', desc: '全库双链网络可视化探索' },
   { to: '/editor', label: '笔记编辑', shortLabel: '笔记', icon: FileEdit, emoji: '✏️', desc: 'Markdown 写作与手写批注' },
@@ -77,7 +79,7 @@ interface LayoutProps {
 }
 
 function navClass(isActive: boolean) {
-  return `relative inline-flex items-center gap-1.5 rounded-lg px-2.5 2xl:px-3 py-1.5 text-xs font-medium transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer select-none active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 ${
+  return `relative inline-flex items-center gap-1.5 rounded-lg px-2 2xl:px-2.5 py-1.5 text-xs font-medium transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer select-none active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 ${
     isActive
       ? 'bg-neutral-900 text-white shadow-xs'
       : 'text-neutral-600 hover:bg-neutral-100/90 hover:text-neutral-900'
@@ -93,6 +95,7 @@ export default function Layout({ children }: LayoutProps) {
   const [searchOpen, setSearchOpen] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
+  const { activeModals, openModal, closeModal } = useUIModalStore()
   const [assistantOpen, setAssistantOpen] = useState(false)
   const [importModalOpen, setImportModalOpen] = useState(false)
   const [mobileModalOpen, setMobileModalOpen] = useState(false)
@@ -102,6 +105,7 @@ export default function Layout({ children }: LayoutProps) {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [userManagementOpen, setUserManagementOpen] = useState(false)
   const [guideOpen, setGuideOpen] = useState(false)
+  const [interactiveTourOpen, setInteractiveTourOpen] = useState(false)
   const [checkinOpen, setCheckinOpen] = useState(false)
   const [checkinTab, setCheckinTab] = useState<'checkin' | 'redeem' | 'recharge' | 'logs'>('checkin')
 
@@ -116,10 +120,12 @@ export default function Layout({ children }: LayoutProps) {
   })
 
   useEffect(() => {
-    const onOpenQuickNote = () => setQuickNoteOpen(true)
+    const onOpenQuickNote = () => openModal('quick-note')
     window.addEventListener('open-quick-note', onOpenQuickNote)
-    const onOpenGuide = () => setGuideOpen(true)
+    const onOpenGuide = () => openModal('user-guide')
     window.addEventListener('open-user-guide', onOpenGuide)
+    const onStartTour = () => setInteractiveTourOpen(true)
+    window.addEventListener('start-interactive-tour', onStartTour)
     const onOpenCheckin = (e?: Event) => {
       const custom = e as CustomEvent<{ tab?: 'checkin' | 'redeem' | 'recharge' | 'logs' }>
       if (custom?.detail?.tab) {
@@ -127,7 +133,7 @@ export default function Layout({ children }: LayoutProps) {
       } else {
         setCheckinTab('checkin')
       }
-      setCheckinOpen(true)
+      openModal('checkin')
     }
     window.addEventListener('open-checkin-modal', onOpenCheckin)
 
@@ -135,18 +141,26 @@ export default function Layout({ children }: LayoutProps) {
     try {
       const dismissed = localStorage.getItem('coreforge_onboarding_dismissed')
       if (!dismissed) {
-        const timer = setTimeout(() => setGuideOpen(true), 1200)
+        const timer = setTimeout(() => openModal('user-guide'), 1200)
         return () => clearTimeout(timer)
       }
     } catch {}
     const handler = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault()
-        setSearchOpen(previous => !previous)
+        if (activeModals['search']) {
+          closeModal('search')
+        } else {
+          openModal('search')
+        }
       }
       if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'a') {
         event.preventDefault()
-        setAssistantOpen(previous => !previous)
+        if (activeModals['ai-assistant']) {
+          closeModal('ai-assistant')
+        } else {
+          openModal('ai-assistant')
+        }
       }
     }
     window.addEventListener('keydown', handler)
@@ -154,9 +168,10 @@ export default function Layout({ children }: LayoutProps) {
       window.removeEventListener('keydown', handler)
       window.removeEventListener('open-quick-note', onOpenQuickNote)
       window.removeEventListener('open-user-guide', onOpenGuide)
+      window.removeEventListener('start-interactive-tour', onStartTour)
       window.removeEventListener('open-checkin-modal', onOpenCheckin)
     }
-  }, [])
+  }, [openModal, closeModal, activeModals])
 
   useEffect(() => {
     document.title = `${currentPage?.label || '首页'} · ${vaultName} | CoreForge 研核 (408 + 考研数学)`
@@ -199,26 +214,31 @@ export default function Layout({ children }: LayoutProps) {
     <div className="min-h-dvh aurora-mesh text-slate-900 selection:bg-accent-orange/20 selection:text-accent-orange font-sans antialiased">
       {/* Top Global Header */}
       <header className="sticky top-0 z-40 bg-white/90 glass-header border-b border-slate-200/80 pt-[env(safe-area-inset-top,0px)]">
-        <div className="mx-auto flex h-13 sm:h-14 max-w-[1560px] items-center gap-2 sm:gap-3 px-3 sm:px-6">
+        <div className="mx-auto flex h-13 sm:h-14 max-w-[1600px] items-center gap-2 2xl:gap-3 px-3 sm:px-5">
           {/* Logo & Subframe Pill */}
-          <Link to="/dashboard" className="flex min-w-0 items-center gap-2.5 rounded-xl outline-none group select-none">
+          <Link to="/dashboard" className="flex min-w-0 items-center gap-2 rounded-xl outline-none group select-none shrink-0">
             <div className="relative flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center overflow-hidden rounded-lg bg-neutral-950 p-1 shadow-2xs ring-1 ring-neutral-900/10 transition-transform group-hover:scale-105 shrink-0">
               <img src="/favicon.svg" alt="研核图标" className="h-full w-full object-contain" />
             </div>
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-1.5 min-w-0">
               <span className="text-[14px] sm:text-[15px] font-bold tracking-tight text-neutral-900 whitespace-nowrap">
                 CoreForge
               </span>
               <span className="text-xs font-semibold text-neutral-500 whitespace-nowrap">研核</span>
-              <div className="hidden sm:inline-flex items-center gap-1.5 subframe-pill text-[10.5px]">
+              <div 
+                className="hidden sm:inline-flex items-center gap-1.5 subframe-pill text-[10.5px] px-2 py-0.5"
+                title={connected ? `知识库已连接：共 ${noteCount ?? 0} 篇笔记` : '知识库离线'}
+              >
                 <span className={`h-1.5 w-1.5 rounded-full ${connected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-                <span className="truncate max-w-[110px]">{connected ? `${noteCount ?? ''} 篇在线` : '离线'}</span>
+                <span className="truncate max-w-[80px] 2xl:max-w-[110px] hidden md:inline">
+                  {connected ? `${noteCount ?? ''} 篇在线` : '离线'}
+                </span>
               </div>
             </div>
           </Link>
 
           {/* Subframe Pill Primary Navigation */}
-          <nav className="ml-2 2xl:ml-4 hidden flex-1 items-center justify-center gap-1 xl:flex shrink-0 min-w-0" aria-label="主导航">
+          <nav className="ml-1 2xl:ml-3 hidden flex-1 items-center justify-center gap-0.5 2xl:gap-1 xl:flex shrink-0 min-w-0" aria-label="主导航">
             {primaryNavItems.map(item => (
               <NavLink
                 key={item.to}
@@ -226,13 +246,14 @@ export default function Layout({ children }: LayoutProps) {
                 onPointerEnter={() => prefetchRoute(item.to)}
                 onTouchStart={() => prefetchRoute(item.to)}
                 className={({ isActive }) => navClass(isActive)}
+                title={item.desc}
               >
                 {({ isActive }) => (
                   <>
                     <item.icon className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'text-white' : 'text-neutral-400'}`} />
                     <span className="whitespace-nowrap shrink-0">{item.label}</span>
                     {item.badge && (
-                      <span className={`text-[9.5px] px-1.5 py-0.2 rounded-md font-medium tracking-tight whitespace-nowrap shrink-0 ${
+                      <span className={`hidden 2xl:inline-block text-[9.5px] px-1.5 py-0.2 rounded-md font-medium tracking-tight whitespace-nowrap shrink-0 ${
                         isActive ? 'bg-neutral-800 text-neutral-200' : 'bg-neutral-100 text-neutral-600 border border-neutral-200/80'
                       }`}>
                         {item.badge}
@@ -283,74 +304,95 @@ export default function Layout({ children }: LayoutProps) {
           </nav>
 
           {/* Right Utility Toolbar (Subframe Style) */}
-          <div className="ml-auto flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div className="ml-auto flex items-center gap-1.5 2xl:gap-2 shrink-0">
             {/* Subframe Search Pill Input Trigger */}
             <button
-              onClick={() => setSearchOpen(true)}
+              onClick={() => {
+                setSearchOpen(true)
+                openModal('search')
+              }}
               aria-label="全局检索"
-              title="搜索知识库（Ctrl+K）"
-              className="subframe-search-pill cursor-pointer select-none"
+              title="搜索知识库（快捷键 Ctrl+K）"
+              className="subframe-search-pill cursor-pointer select-none h-8 px-2 sm:px-2.5 gap-1.5"
             >
               <Search className="h-3.5 w-3.5 text-neutral-400 shrink-0" />
-              <span className="hidden sm:inline text-xs text-neutral-500 font-normal">搜索知识与笔记...</span>
-              <kbd className="hidden sm:inline-flex items-center text-[9.5px] font-mono text-neutral-400 bg-neutral-200/60 border border-neutral-300/60 rounded px-1.5 py-0.2">Ctrl K</kbd>
+              <span className="hidden md:inline text-xs text-neutral-500 font-normal">搜索...</span>
+              <kbd className="hidden lg:inline-flex items-center text-[9px] font-mono text-neutral-400 bg-neutral-200/70 border border-neutral-300/60 rounded px-1 py-0.2 shrink-0">
+                Ctrl K
+              </kbd>
             </button>
 
-            {/* Quick Actions in Subframe Secondary Button Style */}
+            {/* 随手记高频快捷操作 */}
             <button
-              onClick={() => setGuideOpen(true)}
-              aria-label="新手使用指引"
-              title="查看研核全景使用指南"
-              className="subframe-btn-secondary h-8 px-2.5 text-xs cursor-pointer select-none"
-            >
-              <HelpCircle className="h-3.5 w-3.5 text-neutral-500 shrink-0" />
-              <span className="hidden sm:inline">指引</span>
-            </button>
-
-            <button
-              onClick={() => setQuickNoteOpen(true)}
+              onClick={() => {
+                setQuickNoteOpen(true)
+                openModal('quick-note')
+              }}
               aria-label="随手记"
               title="极速随手记入库"
-              className="subframe-btn-secondary h-8 px-2.5 text-xs cursor-pointer select-none"
+              className="subframe-btn-secondary h-8 px-2 2xl:px-2.5 text-xs cursor-pointer select-none gap-1.5 shrink-0"
             >
-              <PenLine className="h-3.5 w-3.5 text-neutral-500 shrink-0" />
-              <span className="hidden sm:inline">随手记</span>
+              <PenLine className="h-3.5 w-3.5 text-neutral-600 shrink-0" />
+              <span className="hidden sm:inline font-medium">随手记</span>
             </button>
 
-            <button
-              onClick={() => setImportModalOpen(true)}
-              aria-label="导入资料与题库"
-              title="导入资料与题库 (PDF/教材/真题)"
-              className="hidden lg:inline-flex subframe-btn-secondary h-8 px-2.5 text-xs cursor-pointer select-none"
-            >
-              <Database className="h-3.5 w-3.5 text-neutral-500 shrink-0" />
-              <span className="hidden 2xl:inline">导入</span>
-            </button>
+            {/* 轻量辅助工具组（导入、指引、系统设置） */}
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={() => {
+                  setImportModalOpen(true)
+                  openModal('import-resource')
+                }}
+                aria-label="导入资料与题库"
+                title="导入资料与题库 (PDF/教材/真题)"
+                className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-neutral-200/90 bg-white text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900 shadow-2xs cursor-pointer active:scale-95 transition-all"
+              >
+                <Database className="h-3.5 w-3.5 shrink-0" />
+              </button>
 
-            <Link
-              to="/settings"
-              aria-label="系统设置"
-              title="系统设置"
-              className="hidden h-8 w-8 items-center justify-center rounded-lg border border-neutral-200/90 bg-white text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900 shadow-2xs xl:inline-flex cursor-pointer active:scale-95 shrink-0"
-            >
-              <Settings className="h-3.5 w-3.5 shrink-0" />
-            </Link>
+              <button
+                onClick={() => {
+                  setGuideOpen(true)
+                  openModal('user-guide')
+                }}
+                aria-label="新手使用指引"
+                title="查看研核全景使用指南与快捷键"
+                className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-neutral-200/90 bg-white text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900 shadow-2xs cursor-pointer active:scale-95 transition-all"
+              >
+                <HelpCircle className="h-3.5 w-3.5 shrink-0" />
+              </button>
+
+              <Link
+                to="/settings"
+                aria-label="系统设置"
+                title="全局系统设置"
+                className="hidden xl:inline-flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200/90 bg-white text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900 shadow-2xs cursor-pointer active:scale-95 transition-all"
+              >
+                <Settings className="h-3.5 w-3.5 shrink-0" />
+              </Link>
+            </div>
+
+            <div className="hidden sm:block h-3.5 w-[1px] bg-neutral-200/80 mx-0.5" />
 
             {/* AI 伴学积分胶囊与签到入口 */}
             {user && (
               <button
-                onClick={() => setCheckinOpen(true)}
-                className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-amber-200/90 bg-amber-50/80 px-2.5 text-amber-900 shadow-2xs hover:bg-amber-100/90 transition-all cursor-pointer active:scale-95 shrink-0"
+                onClick={() => {
+                  setCheckinOpen(true)
+                  openModal('checkin')
+                }}
+                className="relative inline-flex h-8 items-center gap-1.5 rounded-xl border border-amber-200/90 bg-amber-50/80 px-2 2xl:px-2.5 text-amber-900 shadow-2xs hover:bg-amber-100/90 transition-all cursor-pointer active:scale-95 shrink-0"
                 title="AI 伴学积分中心 (点击每日签到领积分)"
               >
-                <Coins className="h-3.5 w-3.5 text-amber-600 animate-bounce shrink-0" />
+                <Coins className="h-3.5 w-3.5 text-amber-600 shrink-0" />
                 <span className="text-xs font-bold font-mono text-amber-950">
                   {points.toFixed(1)}
                 </span>
-                <span className="hidden sm:inline text-[11px] text-amber-700 font-medium">积分</span>
+                <span className="hidden 2xl:inline text-[11px] text-amber-700 font-medium">积分</span>
                 {canCheckinToday && (
-                  <span className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-amber-500 text-white animate-pulse">
-                    签到+1
+                  <span className="relative flex h-2 w-2 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
                   </span>
                 )}
               </button>
@@ -391,6 +433,29 @@ export default function Layout({ children }: LayoutProps) {
                         <Home className="h-3.5 w-3.5 text-neutral-500" />
                         <span>产品官网与下载中心</span>
                       </Link>
+
+                      <button
+                        onClick={() => {
+                          setUserMenuOpen(false)
+                          setGuideOpen(true)
+                          openModal('user-guide')
+                        }}
+                        className="w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900 transition-colors cursor-pointer"
+                      >
+                        <HelpCircle className="h-3.5 w-3.5 text-neutral-500" />
+                        <span>新手指引全景手册</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setUserMenuOpen(false)
+                          setInteractiveTourOpen(true)
+                        }}
+                        className="w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 transition-colors cursor-pointer"
+                      >
+                        <Compass className="h-3.5 w-3.5 text-indigo-600" />
+                        <span>开启新用户功能体验教程</span>
+                      </button>
 
                       {/* 伴学积分与充值兑换入口 */}
                       <button
@@ -472,11 +537,23 @@ export default function Layout({ children }: LayoutProps) {
           </div>
         </div>
       </header>
-      <UserManagementModal isOpen={userManagementOpen} onClose={() => setUserManagementOpen(false)} />
-      <UserGuideModal isOpen={guideOpen} onClose={() => setGuideOpen(false)} />
+      <UserManagementModal isOpen={Boolean(userManagementOpen || activeModals['user-management'])} onClose={() => { setUserManagementOpen(false); closeModal('user-management') }} />
+      <UserGuideModal
+        isOpen={Boolean(guideOpen || activeModals['user-guide'])}
+        onClose={() => { setGuideOpen(false); closeModal('user-guide') }}
+        onStartInteractiveTour={() => {
+          setGuideOpen(false)
+          closeModal('user-guide')
+          setInteractiveTourOpen(true)
+        }}
+      />
+      <InteractiveTourGuide
+        isOpen={interactiveTourOpen}
+        onClose={() => setInteractiveTourOpen(false)}
+      />
       <CheckinModal
-        isOpen={checkinOpen}
-        onClose={() => setCheckinOpen(false)}
+        isOpen={Boolean(checkinOpen || activeModals['checkin'])}
+        onClose={() => { setCheckinOpen(false); closeModal('checkin') }}
         defaultTab={checkinTab}
       />
 
@@ -678,11 +755,11 @@ export default function Layout({ children }: LayoutProps) {
       {location.pathname !== '/chat' && <DesktopPet />}
 
       <Suspense fallback={null}>
-        {searchOpen && <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />}
-        {assistantOpen && <AIAssistantModal isOpen={assistantOpen} onClose={() => setAssistantOpen(false)} pagePath={location.pathname} />}
-        {importModalOpen && <ImportResourceModal isOpen={importModalOpen} onClose={() => setImportModalOpen(false)} />}
-        {mobileModalOpen && <MobileDeviceModal isOpen={mobileModalOpen} onClose={() => setMobileModalOpen(false)} />}
-        {quickNoteOpen && <QuickNoteDrawer isOpen={quickNoteOpen} onClose={() => setQuickNoteOpen(false)} />}
+        {(searchOpen || activeModals['search']) && <SearchModal isOpen={true} onClose={() => { setSearchOpen(false); closeModal('search') }} />}
+        {(assistantOpen || activeModals['ai-assistant']) && <AIAssistantModal isOpen={true} onClose={() => { setAssistantOpen(false); closeModal('ai-assistant') }} pagePath={location.pathname} />}
+        {(importModalOpen || activeModals['import-resource']) && <ImportResourceModal isOpen={true} onClose={() => { setImportModalOpen(false); closeModal('import-resource') }} />}
+        {(mobileModalOpen || activeModals['mobile-device']) && <MobileDeviceModal isOpen={true} onClose={() => { setMobileModalOpen(false); closeModal('mobile-device') }} />}
+        {(quickNoteOpen || activeModals['quick-note']) && <QuickNoteDrawer isOpen={true} onClose={() => { setQuickNoteOpen(false); closeModal('quick-note') }} />}
       </Suspense>
     </div>
   )

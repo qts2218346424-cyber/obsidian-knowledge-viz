@@ -19,6 +19,7 @@ export const routeLoaders = {
   quiz: () => import('./pages/Quiz'),
   vocabulary: () => import('./pages/Vocabulary'),
   historyOutline: () => import('./pages/HistoryOutline'),
+  politics: () => import('./pages/Politics'),
   music: () => import('./pages/Music'),
   pomodoro: () => import('./pages/Pomodoro'),
 }
@@ -40,7 +41,8 @@ export function prefetchRoute(routePath: string) {
         routeLoaders.knowledgeGraph()
         break
       case '/history':
-        routeLoaders.historyOutline()
+      case '/politics':
+        routeLoaders.politics()
         break
       case '/vocabulary':
         routeLoaders.vocabulary()
@@ -71,6 +73,7 @@ const Settings = lazy(routeLoaders.settings)
 const Quiz = lazy(routeLoaders.quiz)
 const Vocabulary = lazy(routeLoaders.vocabulary)
 const HistoryOutline = lazy(routeLoaders.historyOutline)
+const Politics = lazy(routeLoaders.politics)
 const Music = lazy(routeLoaders.music)
 const Pomodoro = lazy(routeLoaders.pomodoro)
 
@@ -109,7 +112,8 @@ function ProtectedRoutes() {
             <Route path="/study" element={<Study />} />
             <Route path="/quiz" element={<Quiz />} />
             <Route path="/vocabulary" element={<Vocabulary />} />
-            <Route path="/history" element={<HistoryOutline />} />
+            <Route path="/politics" element={<Politics />} />
+            <Route path="/history" element={<Politics />} />
             <Route path="/music" element={<Music />} />
             <Route path="/pomodoro" element={<Pomodoro />} />
             <Route path="/chat" element={<Chat />} />
