@@ -93,7 +93,7 @@ export const ChatMessageItem = memo(
     if (!isUser && msg.isDual && msg.peerResponse) {
       return (
         <div
-          className={`${messageWidthClass} mx-auto my-3 transition-all duration-150 ${
+          className={`${messageWidthClass} mx-auto my-2 sm:my-2.5 transition-all duration-150 ${
             isDeferred ? 'chat-message-deferred' : ''
           }`}
         >
@@ -158,7 +158,7 @@ export const ChatMessageItem = memo(
           >
             {/* 智能体 A 卡片 */}
             {(dualViewMode === 'split' || dualViewMode === 'tab-a') && (
-              <div className="flex flex-col bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs hover:border-orange-300/80 transition-all min-w-0">
+              <div className="flex flex-col bg-white border border-slate-200/90 rounded-2xl p-3 sm:p-3.5 shadow-2xs hover:border-orange-300/80 transition-all min-w-0">
                 <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-100">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="text-lg p-1.5 rounded-xl bg-orange-500/10 text-orange-600 shrink-0">
@@ -398,7 +398,7 @@ export const ChatMessageItem = memo(
 
     return (
       <div
-        className={`${messageWidthClass} mx-auto w-full flex gap-2.5 sm:gap-3.5 ${
+        className={`${messageWidthClass} mx-auto w-full flex gap-2 sm:gap-3 ${
           isUser ? 'justify-end' : 'justify-start'
         } ${isDeferred ? 'chat-message-deferred' : ''}`}
       >
@@ -499,10 +499,10 @@ export const ChatMessageItem = memo(
 
           {/* 消息卡片主体 */}
           <div
-            className={`px-4 py-3 sm:px-5 sm:py-4 rounded-2xl max-w-full overflow-x-hidden ${fontSizeClass} shadow-2xs ${
+            className={`px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl max-w-full overflow-x-hidden ${fontSizeClass} shadow-2xs ${
               isUser
-                ? 'bg-neutral-900 text-white rounded-2xl rounded-br-xs shadow-xs text-sm border border-neutral-800'
-                : 'w-full bg-white border border-slate-200/60 text-slate-900 rounded-2xl rounded-tl-xs shadow-[0_2px_10px_rgba(0,0,0,0.02)] leading-[1.75] academic-body'
+                ? 'bg-neutral-900 text-white rounded-2xl rounded-br-xs shadow-xs border border-neutral-800'
+                : 'w-full bg-white border border-slate-200/60 text-slate-900 rounded-2xl rounded-tl-xs shadow-[0_2px_10px_rgba(0,0,0,0.02)] leading-[1.62] academic-body'
             }`}
           >
             {/* 工具调用折叠卡 */}

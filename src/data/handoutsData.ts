@@ -1,8 +1,10 @@
+import { POLITICS_HANDOUTS } from './politicsHandouts'
+
 export interface HandoutItem {
   id: string
   title: string
-  domain: 'cs_408' | 'math'
-  subject: '数据结构' | '计算机组成原理' | '操作系统' | '计算机网络' | '高等数学' | '线性代数' | '概率论' | '综合'
+  domain: 'cs_408' | 'math' | 'politics'
+  subject: '数据结构' | '计算机组成原理' | '操作系统' | '计算机网络' | '高等数学' | '线性代数' | '概率论' | '综合' | '马克思主义基本原理' | '马克思著作' | '时事政治'
   readTime: string
   difficulty: '核心考点' | '高频重难点' | '真题必考'
   tags: string[]
@@ -407,3 +409,6 @@ $$\\lim_{n \\to \\infty} P\\left( \\frac{\\sum_{i=1}^n X_i - n\\mu}{\\sigma \\sq
 > 当题目出现“$n$ 个独立同分布的随机变量之和”时，立刻将其标准化为标准正态分布 $N(0, 1)$，查表求概率！`
   }
 ]
+
+// 合并考研政治讲义（马原 / 经典著作 / 时政）
+CURATED_HANDOUTS.push(...POLITICS_HANDOUTS)

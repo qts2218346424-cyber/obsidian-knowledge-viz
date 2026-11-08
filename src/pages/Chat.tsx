@@ -245,11 +245,11 @@ export default function Chat() {
   const fontSizeClass = useMemo(() => {
     switch (chatFontSize) {
       case 'sm':
-        return 'text-xs leading-relaxed'
+        return 'text-[11.5px] sm:text-xs leading-[1.55]'
       case 'base':
-        return 'text-sm leading-relaxed'
+        return 'text-xs sm:text-[13px] leading-[1.62]'
       case 'lg':
-        return 'text-base leading-relaxed'
+        return 'text-xs sm:text-sm leading-relaxed'
     }
   }, [chatFontSize])
 

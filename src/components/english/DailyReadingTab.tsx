@@ -1,6 +1,11 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import {
   BookOpen,
+  Maximize2,
+  Minimize2,
+  Minus,
+  ChevronUp,
   Sparkles,
   Bot,
   Send,
@@ -62,6 +67,7 @@ export default function DailyReadingTab() {
   const [showBilingual, setShowBilingual] = useState(true)
   const [highlightHardOnly, setHighlightHardOnly] = useState(false)
   const [mobileCompanionOpen, setMobileCompanionOpen] = useState(false)
+  const [windowMode, setWindowMode] = useState<'half' | 'full' | 'minimized'>('half')
 
   // 4. 右侧 AI 伴读侧边栏选项卡：'companion' | 'vocab' | 'quiz'
   const [sideTab, setSideTab] = useState<'companion' | 'vocab' | 'quiz'>('companion')
@@ -284,59 +290,60 @@ export default function DailyReadingTab() {
   const renderCompanionCard = (isModal = false) => {
     return (
       <div className={`space-y-4 ${isModal ? '' : 'bento-card rounded-3xl p-4 sm:p-5 bg-white border border-slate-200/90 shadow-md'}`}>
-        {/* 伴读舱顶部切换头 */}
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-          <div className="flex items-center gap-2">
-            <span className="flex h-3 w-3 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
-            </span>
-            <div className="flex flex-col">
-              <div className="text-xs font-black text-slate-900 flex items-center gap-1">
-                <Bot className="w-3.5 h-3.5 text-indigo-600" />
-                <span>考研英语 AI 伴读导师</span>
+        {/* 仅在桌面端独立卡片模式下渲染顶栏切页，移动端弹窗已由顶层控制条统一接管 */}
+        {!isModal && (
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <span className="flex h-3 w-3 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+              </span>
+              <div className="flex flex-col">
+                <div className="text-xs font-black text-slate-900 flex items-center gap-1">
+                  <Bot className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>考研英语 AI 伴读导师</span>
+                </div>
+                <span className="text-[10px] text-slate-400">实时交互 · 答疑长难句与同义替换</span>
               </div>
-              <span className="text-[10px] text-slate-400">实时交互 · 答疑长难句与同义替换</span>
+            </div>
+
+            <div className="inline-flex rounded-xl bg-slate-100 p-0.5 text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setSideTab('companion')}
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                  sideTab === 'companion' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500'
+                }`}
+              >
+                伴读对话
+              </button>
+              <button
+                type="button"
+                onClick={() => setSideTab('vocab')}
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                  sideTab === 'vocab' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500'
+                }`}
+              >
+                生词速查
+              </button>
+              <button
+                type="button"
+                onClick={() => setSideTab('quiz')}
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                  sideTab === 'quiz' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500'
+                }`}
+              >
+                真题模考
+              </button>
             </div>
           </div>
-
-          {/* 右侧小切页 */}
-          <div className="inline-flex rounded-xl bg-slate-100 p-0.5 text-xs font-bold">
-            <button
-              type="button"
-              onClick={() => setSideTab('companion')}
-              className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                sideTab === 'companion' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500'
-              }`}
-            >
-              伴读对话
-            </button>
-            <button
-              type="button"
-              onClick={() => setSideTab('vocab')}
-              className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                sideTab === 'vocab' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500'
-              }`}
-            >
-              生词速查
-            </button>
-            <button
-              type="button"
-              onClick={() => setSideTab('quiz')}
-              className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                sideTab === 'quiz' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500'
-              }`}
-            >
-              真题模考
-            </button>
-          </div>
-        </div>
+        )}
 
         {/* TAB 1: AI 伴读对话互动流 */}
         {sideTab === 'companion' && (
           <div className="space-y-3">
             {/* 对话消息区 */}
-            <div className={`${isModal ? 'h-[42dvh]' : 'h-[360px]'} overflow-y-auto space-y-3 p-2.5 rounded-2xl bg-slate-50/80 border border-slate-100 text-xs no-scrollbar`}>
+            <div className={`${isModal ? 'space-y-3 p-2.5 rounded-2xl bg-slate-50/80 border border-slate-100 text-xs' : 'h-[360px] overflow-y-auto space-y-3 p-2.5 rounded-2xl bg-slate-50/80 border border-slate-100 text-xs no-scrollbar'}`}>
               {chatMessages.map((msg) => {
                 const isUser = msg.role === 'user'
                 return (
@@ -421,7 +428,7 @@ export default function DailyReadingTab() {
 
         {/* TAB 2: 生词与熟词生义速查本 */}
         {sideTab === 'vocab' && (
-          <div className={`space-y-3 ${isModal ? 'max-h-[55dvh]' : 'max-h-[460px]'} overflow-y-auto no-scrollbar`}>
+          <div className={`space-y-3 ${isModal ? '' : 'max-h-[460px] overflow-y-auto no-scrollbar'}`}>
             <div className="text-xs text-slate-500">
               收录本篇文献中出现的考研核心真题词汇与熟词生义警告，点击右侧可一键加入生词本：
             </div>
@@ -472,7 +479,7 @@ export default function DailyReadingTab() {
 
         {/* TAB 3: 真题级配套模考题 */}
         {sideTab === 'quiz' && (
-          <div className={`space-y-4 ${isModal ? 'max-h-[55dvh]' : 'max-h-[460px]'} overflow-y-auto no-scrollbar`}>
+          <div className={`space-y-4 ${isModal ? '' : 'max-h-[460px] overflow-y-auto no-scrollbar'}`}>
             <div className="text-xs font-bold text-slate-500">
               基于本篇外刊命制的考研真题同源模考题 (共 {currentArticle.mockQuestions.length} 题)：
             </div>
@@ -858,66 +865,144 @@ export default function DailyReadingTab() {
         </div>
       </div>
 
-      {/* ── 📱 移动端专属：常驻右侧灵动 AI 伴读胶囊 (杜绝滑至底端，随时在手边一键呼出) ── */}
-      <div className="md:hidden fixed right-3 bottom-20 z-40">
-        <button
-          type="button"
-          onClick={() => setMobileCompanionOpen(true)}
-          className="flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 text-white shadow-[0_4px_24px_rgba(79,70,229,0.45)] border border-indigo-400/50 active:scale-95 transition-all cursor-pointer"
-        >
-          <span className="flex h-2.5 w-2.5 relative">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400" />
-          </span>
-          <Bot className="w-4 h-4 text-white" />
-          <span className="text-xs font-black">AI 伴读</span>
-          {activeSentence && (
-            <span className="px-1.5 py-0.2 rounded-full bg-amber-400 text-slate-950 text-[9.5px] font-black">
-              已锁定第{activeSentence.sentenceIndex}句
+      {/* ── 📱 移动端专属：常驻灵动 AI 伴读悬浮胶囊 (未打开或最小化时呈现，随时一键恢复) ── */}
+      {(!mobileCompanionOpen || windowMode === 'minimized') && (
+        <div className="md:hidden fixed right-3 bottom-20 z-40 animate-fade-in">
+          <button
+            type="button"
+            onClick={() => {
+              setMobileCompanionOpen(true)
+              setWindowMode('half')
+            }}
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 text-white shadow-[0_4px_24px_rgba(79,70,229,0.45)] border border-indigo-400/50 active:scale-95 transition-all cursor-pointer"
+            title="展开 AI 伴读工作舱"
+          >
+            <span className="flex h-2.5 w-2.5 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400" />
             </span>
-          )}
-        </button>
-      </div>
+            <Bot className="w-4 h-4 text-white" />
+            <span className="text-xs font-black">AI 伴读</span>
+            {activeSentence && (
+              <span className="px-1.5 py-0.2 rounded-full bg-amber-400 text-slate-950 text-[9.5px] font-black">
+                第{activeSentence.sentenceIndex}句
+              </span>
+            )}
+          </button>
+        </div>
+      )}
 
-      {/* ── 📱 移动端 AI 伴读全功能底部抽屉 (BottomSheet) ── */}
-      {mobileCompanionOpen && (
+      {/* ── 📱 移动端 AI 伴读可放大缩小交互式弹窗 (消除双重滚动锁死与屏幕溢出) ── */}
+      {mobileCompanionOpen && windowMode !== 'minimized' && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 z-50 flex flex-col justify-end md:hidden bg-slate-950/60 backdrop-blur-xs"
-          onClick={() => setMobileCompanionOpen(false)}
+          className="fixed inset-0 z-50 flex flex-col justify-end md:hidden bg-slate-950/45 backdrop-blur-xs transition-opacity duration-200"
+          onClick={() => setWindowMode('minimized')}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full bg-white rounded-t-3xl shadow-2xl border-t border-slate-200 max-h-[86dvh] flex flex-col overflow-hidden animate-sheet-up"
+            className={`w-full bg-white rounded-t-3xl shadow-2xl border-t border-slate-200 flex flex-col transition-all duration-300 ease-out overflow-hidden ${
+              windowMode === 'full' ? 'h-[92dvh]' : 'h-[58dvh]'
+            }`}
           >
-            {/* 抽屉顶部下拉手柄与标题 */}
-            <div className="flex justify-center pt-2.5 pb-1 shrink-0">
-              <div className="w-10 h-1 rounded-full bg-slate-300" />
-            </div>
-            <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between shrink-0">
+            {/* 顶栏控制条：拖拽小手柄 + 标题 + 放大缩小控制 */}
+            <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/90 rounded-t-3xl">
               <div className="flex items-center gap-2 min-w-0">
                 <Bot className="w-4 h-4 text-indigo-600 shrink-0" />
-                <span className="text-xs font-black text-slate-900 truncate">考研英语 AI 伴读工作舱</span>
+                <span className="text-xs font-black text-slate-900 truncate">考研英语 AI 伴读</span>
                 {activeSentence && (
                   <span className="text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full font-mono shrink-0">
                     第{activeSentence.sentenceIndex}句
                   </span>
                 )}
+                <span className="text-[9.5px] text-slate-400 font-medium">
+                  {windowMode === 'full' ? '全屏沉浸' : '半屏伴读'}
+                </span>
               </div>
-              <button
-                type="button"
-                onClick={() => setMobileCompanionOpen(false)}
-                className="p-1 rounded-full bg-slate-100 text-slate-500 hover:text-slate-800 cursor-pointer"
-                aria-label="关闭伴读"
-              >
-                <X className="w-4 h-4" />
-              </button>
+
+              {/* 窗口多态控制按钮群 */}
+              <div className="flex items-center gap-1 shrink-0">
+                {/* 最小化按钮 */}
+                <button
+                  type="button"
+                  onClick={() => setWindowMode('minimized')}
+                  className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200/80 active:scale-95 transition-all cursor-pointer"
+                  title="最小化为右下角胶囊"
+                  aria-label="最小化伴读"
+                >
+                  <Minus className="w-4 h-4" />
+                </button>
+
+                {/* 放大/缩小按钮 */}
+                <button
+                  type="button"
+                  onClick={() => setWindowMode(windowMode === 'full' ? 'half' : 'full')}
+                  className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200/80 active:scale-95 transition-all cursor-pointer"
+                  title={windowMode === 'full' ? '缩小为半屏' : '放大为全屏'}
+                  aria-label={windowMode === 'full' ? '缩小为半屏' : '放大为全屏'}
+                >
+                  {windowMode === 'full' ? (
+                    <Minimize2 className="w-4 h-4 text-indigo-600" />
+                  ) : (
+                    <Maximize2 className="w-4 h-4 text-indigo-600" />
+                  )}
+                </button>
+
+                {/* 关闭按钮 */}
+                <button
+                  type="button"
+                  onClick={() => setMobileCompanionOpen(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-200/80 active:scale-95 transition-all cursor-pointer"
+                  title="关闭伴读"
+                  aria-label="关闭伴读"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-            {/* 抽屉内容区 */}
-            <div className="p-3.5 overflow-y-auto flex-1">
+
+            {/* 顶栏 Tab 切换按钮 */}
+            <div className="px-3.5 py-2 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
+              <div className="inline-flex w-full rounded-xl bg-slate-100 p-0.5 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setSideTab('companion')}
+                  className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer text-center ${
+                    sideTab === 'companion' ? 'bg-white text-slate-900 shadow-2xs font-extrabold' : 'text-slate-500'
+                  }`}
+                >
+                  伴读对话
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSideTab('vocab')}
+                  className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer text-center ${
+                    sideTab === 'vocab' ? 'bg-white text-slate-900 shadow-2xs font-extrabold' : 'text-slate-500'
+                  }`}
+                >
+                  生词速查
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSideTab('quiz')}
+                  className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer text-center ${
+                    sideTab === 'quiz' ? 'bg-white text-slate-900 shadow-2xs font-extrabold' : 'text-slate-500'
+                  }`}
+                >
+                  真题模考
+                </button>
+              </div>
+            </div>
+
+            {/* 唯一全权滚动区域：消除双重滚动条死锁，顺畅滑动 */}
+            <div
+              className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3.5 space-y-3"
+              style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
+            >
               {renderCompanionCard(true)}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

@@ -97,7 +97,7 @@ function CodeBlock({
   const displayLang = useMemo(() => formatLanguage(language), [language])
 
   return (
-    <div className="my-3 rounded-xl overflow-hidden border border-slate-800 bg-[#0d1117] text-slate-100 shadow-md text-xs font-mono group">
+    <div className="my-2 rounded-xl overflow-hidden border border-slate-800 bg-[#0d1117] text-slate-100 shadow-md text-xs font-mono group">
       {/* 顶部控制栏 */}
       <div className="flex items-center justify-between px-3.5 py-1.5 bg-[#161b22] border-b border-slate-800/80 select-none">
         <div className="flex items-center gap-2">
@@ -215,7 +215,7 @@ function ThinkingAccordion({
       </button>
 
       {isOpen && (
-        <div className="p-3.5 border-t border-cream-200/70 dark:border-slate-800/80 text-warm-600 dark:text-slate-400 bg-surface/60 dark:bg-slate-950/50 leading-relaxed max-h-96 overflow-y-auto space-y-2 text-xs">
+        <div className="p-3.5 border-t border-cream-200/70 dark:border-slate-800/80 text-warm-600 dark:text-slate-400 bg-surface/60 dark:bg-slate-950/50 leading-relaxed max-h-64 sm:max-h-72 overflow-y-auto space-y-1.5 text-[11.5px]">
           <ReactMarkdown
             remarkPlugins={[remarkGfm, remarkMath]}
             rehypePlugins={[rehypeHighlight, rehypeKatex]}
@@ -377,7 +377,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
       },
       h1({ children }: any) {
         return (
-          <h1 className="text-base sm:text-lg font-bold text-warm-900 dark:text-white mt-4 mb-2 pb-1.5 border-b border-cream-300 dark:border-white/10 flex items-center gap-2">
+          <h1 className="text-sm sm:text-base font-bold text-warm-900 dark:text-white mt-3 mb-1.5 pb-1 border-b border-cream-300 dark:border-white/10 flex items-center gap-2">
             <span className="w-1.5 h-4.5 rounded-full bg-accent-orange shrink-0" />
             <span>{children}</span>
           </h1>
@@ -385,7 +385,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
       },
       h2({ children }: any) {
         return (
-          <h2 className="text-sm sm:text-base font-bold text-warm-900 dark:text-white mt-3.5 mb-1.5 flex items-center gap-2">
+          <h2 className="text-xs sm:text-[14px] font-bold text-warm-900 dark:text-white mt-2.5 mb-1 flex items-center gap-2">
             <span className="w-1.5 h-3.5 rounded-full bg-blue-400 shrink-0" />
             <span>{children}</span>
           </h2>
@@ -393,20 +393,20 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
       },
       h3({ children }: any) {
         return (
-          <h3 className="text-xs sm:text-sm font-bold text-warm-900 dark:text-slate-100 mt-3 mb-1 flex items-center gap-1.5">
+          <h3 className="text-xs sm:text-[13px] font-bold text-warm-900 dark:text-slate-100 mt-2 mb-1 flex items-center gap-1.5">
             <span className="w-1 h-3 rounded-full bg-purple-400 shrink-0" />
             <span>{children}</span>
           </h3>
         )
       },
       p({ children }: any) {
-        return <p className="my-2 leading-relaxed text-warm-800 dark:text-slate-100">{children}</p>
+        return <p className="my-1.5 leading-[1.62] text-warm-800 dark:text-slate-100">{children}</p>
       },
       ul({ children }: any) {
-        return <ul className="my-2 pl-4 list-disc space-y-1 text-warm-800 dark:text-slate-200">{children}</ul>
+        return <ul className="my-1.5 pl-4 list-disc space-y-0.5 text-warm-800 dark:text-slate-200">{children}</ul>
       },
       ol({ children }: any) {
-        return <ol className="my-2 pl-4 list-decimal space-y-1 text-warm-800 dark:text-slate-200">{children}</ol>
+        return <ol className="my-1.5 pl-4 list-decimal space-y-0.5 text-warm-800 dark:text-slate-200">{children}</ol>
       },
       li({ children }: any) {
         return <li className="leading-relaxed marker:text-accent-orange marker:font-bold text-warm-800 dark:text-slate-200">{children}</li>

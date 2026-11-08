@@ -286,7 +286,7 @@ export const ChatComposerDock = memo(function ChatComposerDock({
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs font-semibold shrink-0">
                   <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
                   <span className="truncate max-w-[180px]">
-                    本机技能：{selectedLocalSkill.displayName}
+                    自带技能：{selectedLocalSkill.displayName}
                   </span>
                   <button
                     type="button"
