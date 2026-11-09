@@ -462,13 +462,14 @@ function MasteryPaletteSection({ onSelectTopic }: { onSelectTopic: (topic: strin
 
 
 
-// 格式化错题文本（若选项与题干混在同一行，智能换行规整显示）
-
+// 格式化错题与题目文本（若选项与题干混在同一行，智能换行与规整排版，支持 A-D 与 (A)-(D)）
 function formatQuestionContent(raw?: string): string {
   if (!raw) return ''
   let text = raw.trim()
-  text = text.replace(/([^\n])\s+([A-D][.、\s])/g, '\n\n')
-  text = text.replace(/([：:])\s*([A-D][.、\s])/g, '\n\n')
+  // 1. 若题干冒号后面紧随 A. 或 (A) 选项，插入双换行
+  text = text.replace(/([：:])\s*([A-D][.、\s]|\([A-D]\))/g, '$1\n\n$2')
+  // 2. 将混排在一行内的 A. B. C. D. 选项拆分为独立换行行
+  text = text.replace(/([^\n])\s+([A-D][.、]|\([A-D]\))\s*/g, '$1\n\n$2 ')
   return text
 }
 
