@@ -25,7 +25,7 @@ import {
 import { buildGraph } from '../graph-builder.js'
 import { checkHealth } from '../health-checker.js'
 import { organizeDocumentIntoWiki } from '../services/wiki-organizer.js'
-import { getRequestVaultPath, resolveSafeUserVaultPath } from '../services/user-sandbox.js'
+import { getRequestVaultPath, resolveSafeUserVaultPath, virtualizeVaultPath, createSandboxExportZip } from '../services/user-sandbox.js'
 import { getUserNotes } from '../context.js'
 
 export const vaultRouter = Router()
@@ -37,9 +37,29 @@ vaultRouter.get('/vault/stats', (req, res) => {
     const vaultPath = getRequestVaultPath(req)
     const notes = getUserNotes(req.user?.id, vaultPath)
     const health = checkHealth(notes, vaultPath)
-    res.json({ vaultPath, connected: notes.length > 0, ...health.stats })
+    const clientVaultPath = virtualizeVaultPath(vaultPath, req.user?.role)
+    res.json({ vaultPath: clientVaultPath, connected: notes.length > 0, ...health.stats })
   } catch (err: any) {
     res.status(500).json({ error: err.message })
+  }
+})
+
+// ===== 一键打包导出用户个人沙箱笔记为 ZIP 压缩包 (可直接导入本地 Obsidian) =====
+vaultRouter.get('/vault/export-zip', async (req, res) => {
+  try {
+    const userOrId = req.user || 'guest'
+    const zipPath = await createSandboxExportZip(userOrId)
+    const safeUsername = (req.user?.username || 'Guest').replace(/[^a-zA-Z0-9_\u4e00-\u9fa5]/g, '_')
+    const filename = `CoreForge_Notes_${safeUsername}_${new Date().toISOString().split('T')[0]}.zip`
+    res.download(zipPath, filename, (err) => {
+      try { fs.unlinkSync(zipPath) } catch {}
+      if (err && !res.headersSent) {
+        res.status(500).json({ error: '导出压缩包传输中断' })
+      }
+    })
+  } catch (err: any) {
+    console.error('Export sandbox zip error:', err)
+    res.status(500).json({ error: err.message || '导出沙盒笔记失败' })
   }
 })
 
@@ -432,8 +452,14 @@ vaultRouter.post('/vault/refresh', (_req, res) => {
   res.json({ ok: true, noteCount: notes.length })
 })
 
-vaultRouter.post('/vault/open-folder', (_req, res) => {
+vaultRouter.post('/vault/open-folder', (req, res) => {
   try {
+    const isAdmin = req.user?.role === 'admin'
+    if (!isAdmin) {
+      res.status(403).json({ error: '权限不足：仅管理员可在本地主机打开文件夹' })
+      return
+    }
+
     if (!config.vaultPath || !fs.existsSync(config.vaultPath)) {
       res.status(404).json({ error: '本地 Obsidian 知识库路径不存在或尚未配置' })
       return

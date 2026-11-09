@@ -635,6 +635,7 @@ export const api = {
 
   refreshVault: () => postJSON<{ ok: boolean; noteCount: number }>('/vault/refresh', {}),
   openVaultFolder: () => postJSON<{ ok: boolean; vaultPath: string }>('/vault/open-folder', {}),
+  exportSandboxZipUrl: () => `${BASE}/vault/export-zip`,
 
   // File CRUD
   createFile: (filePath: string, content: string, frontmatter?: Record<string, unknown>) =>

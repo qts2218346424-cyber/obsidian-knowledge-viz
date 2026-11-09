@@ -525,15 +525,19 @@ aiRouter.post('/research', async (req, res) => {
 
     const safeName = researchTopic.replace(/[<>:"/\\|?*]/g, '_')
     const targetPath = `Research/${safeName}.md`
+    const vaultPath = getRequestVaultPath(req)
+    if (req.user?.id) {
+      resolveSafeUserVaultPath(req.user, targetPath)
+    }
     let finalPath = targetPath
     let counter = 1
-    while (fs.existsSync(path.resolve(config.vaultPath, finalPath))) {
+    while (fs.existsSync(path.resolve(vaultPath, finalPath))) {
       finalPath = `Research/${safeName}-${counter}.md`
       counter++
     }
 
-    const note = createFile(config.vaultPath, finalPath, content, frontmatter)
-    invalidateCache()
+    const note = createFile(vaultPath, finalPath, content, frontmatter)
+    invalidateCache(req.user?.id)
 
     res.json({
       topic: researchTopic,
@@ -684,7 +688,11 @@ aiRouter.post('/defuddle', async (req, res) => {
     const fileName = `${slug}.md`
     const folder = targetFolder || 'Web-Clippings'
     const filePath = path.join(folder, fileName)
-    const fullPath = path.join(config.vaultPath, filePath)
+    const vaultPath = getRequestVaultPath(req)
+    if (req.user?.id) {
+      resolveSafeUserVaultPath(req.user, filePath)
+    }
+    const fullPath = path.join(vaultPath, filePath)
 
     const dir = path.dirname(fullPath)
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })

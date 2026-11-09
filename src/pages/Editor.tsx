@@ -1,3 +1,4 @@
+import { useAuth } from '../contexts/AuthContext'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import {
@@ -331,6 +332,8 @@ function htmlToMarkdown(html: string) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Editor() {
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'admin'
   const [currentFile, setCurrentFile] = useState<FileDetail | null>(null)
   const [content, setContent] = useState('')
   const [originalContent, setOriginalContent] = useState('')
@@ -1597,10 +1600,11 @@ export default function Editor() {
               <div className="p-3 rounded-2xl bg-purple-50 border border-purple-200/80 text-xs text-purple-900 space-y-1">
                 <div className="font-semibold flex items-center gap-1.5 text-[11px] text-purple-800">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>将实时落盘保存至本地 Obsidian 目录：</span>
+                  <span>{isAdmin ? '将实时落盘保存至本地 Obsidian 目录：' : '将安全保存至您的个人专属研学沙盒：'}</span>
                 </div>
                 <div className="font-mono text-[11px] text-purple-700 break-all select-all font-semibold">
-                  {vaultStats?.vaultPath || 'E:\\考研\\408考研学习'}\{newFilePath || `${newFileName || '未命名笔记'}.md`}
+                  {isAdmin ? `${vaultStats?.vaultPath || 'E:\\考研\\408考研学习'}\\` : '专属沙盒空间 / '}
+                  {newFilePath || `${newFileName || '未命名笔记'}.md`}
                 </div>
               </div>
 

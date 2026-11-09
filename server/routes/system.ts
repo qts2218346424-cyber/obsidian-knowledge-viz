@@ -107,9 +107,19 @@ systemRouter.get('/network', getNetworkHandler)
 systemRouter.get('/system/network', getNetworkHandler)
 
 // Settings
-systemRouter.get('/settings', (_req, res) => {
+systemRouter.get('/settings', (req, res) => {
   try {
+    const isAdmin = req.user?.role === 'admin'
     const masked = JSON.parse(JSON.stringify(config))
+
+    // 安全隔离：非管理员隐藏云服务器物理真实路径、配置文件路径与底层端口
+    if (!isAdmin) {
+      masked.vaultPath = '我的专属研学沙盒'
+      delete masked.configPath
+      delete masked.proxy
+      delete masked.port
+    }
+
     if (masked.ai) {
       if (masked.ai.apiKey) {
         masked.ai.apiKey = masked.ai.apiKey.substring(0, 8) + '...' + masked.ai.apiKey.substring(masked.ai.apiKey.length - 4)
@@ -123,7 +133,7 @@ systemRouter.get('/settings', (_req, res) => {
         }))
       }
     }
-    res.json({ ...masked, configPath: loadedConfigPath })
+    res.json(isAdmin ? { ...masked, configPath: loadedConfigPath } : masked)
   } catch (err: any) {
     res.status(500).json({ error: err.message })
   }
@@ -131,6 +141,7 @@ systemRouter.get('/settings', (_req, res) => {
 
 systemRouter.put('/settings', (req, res) => {
   try {
+    const isAdmin = req.user?.role === 'admin'
     const { vaultPath, port, proxy, ai, localAgents } = req.body as {
       vaultPath?: string
       port?: number
@@ -138,13 +149,23 @@ systemRouter.put('/settings', (req, res) => {
       ai?: AiConfig
       localAgents?: any
     }
+
+    // 安全门禁：只有系统超级管理员才有权修改服务器底层物理路径、端口与代理
+    if (!isAdmin && (vaultPath !== undefined || port !== undefined || proxy !== undefined || localAgents !== undefined)) {
+      res.status(403).json({ error: '权限不足：仅系统超级管理员可配置服务器底层基础设施' })
+      return
+    }
+
     const oldVault = config.vaultPath
 
-    if (vaultPath !== undefined) config.vaultPath = vaultPath
-    if (port !== undefined) config.port = port
-    if (proxy !== undefined) config.proxy = proxy
-    if (localAgents !== undefined) config.localAgents = localAgents
-    if (ai !== undefined) {
+    if (isAdmin) {
+      if (vaultPath !== undefined) config.vaultPath = vaultPath
+      if (port !== undefined) config.port = port
+      if (proxy !== undefined) config.proxy = proxy
+      if (localAgents !== undefined) config.localAgents = localAgents
+    }
+
+    if (ai !== undefined && isAdmin) {
       // 恢复顶级 API Key（若未修改）
       let resolvedApiKey = ai.apiKey
       if (resolvedApiKey && resolvedApiKey.includes('...') && config.ai?.apiKey) {
@@ -178,14 +199,20 @@ systemRouter.put('/settings', (req, res) => {
       reinitAnthropic()
     }
 
-    saveConfig()
-    invalidateCache()
+    if (isAdmin) {
+      saveConfig()
+      invalidateCache()
 
-    if (vaultPath !== undefined && vaultPath !== oldVault) {
-      startWatcher()
+      if (vaultPath !== undefined && vaultPath !== oldVault) {
+        startWatcher()
+      }
     }
 
-    res.json({ ok: true, vaultPath: config.vaultPath, aiConfigured: !!config.ai })
+    res.json({
+      ok: true,
+      vaultPath: isAdmin ? config.vaultPath : '我的专属研学沙盒',
+      aiConfigured: !!config.ai
+    })
   } catch (err: any) {
     res.status(500).json({ error: err.message })
   }
@@ -219,9 +246,15 @@ systemRouter.post('/test-proxy', async (req, res) => {
   }
 })
 
-// Filesystem browse (folder picker)
+// Filesystem browse (folder picker) - 严格超级管理员权限门禁，严禁向普通学生暴露云服务器宿主机目录
 systemRouter.get('/fs/browse', async (req, res) => {
   try {
+    const isAdmin = req.user?.role === 'admin'
+    if (!isAdmin) {
+      res.status(403).json({ error: '安全拦截：云服务器磁盘目录已受沙箱隔离保护，普通用户仅能查看个人沙盒文件夹' })
+      return
+    }
+
     const targetPath = req.query.path as string | undefined
     const isWin = process.platform === 'win32'
 
@@ -261,6 +294,12 @@ systemRouter.get('/fs/browse', async (req, res) => {
 })
 
 systemRouter.get('/fs/exists', async (req, res) => {
+  const isAdmin = req.user?.role === 'admin'
+  if (!isAdmin) {
+    res.json({ exists: false })
+    return
+  }
+
   const targetPath = req.query.path as string
   if (!targetPath) {
     res.json({ exists: false })

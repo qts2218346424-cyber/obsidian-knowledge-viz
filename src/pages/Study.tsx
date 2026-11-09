@@ -1,3 +1,4 @@
+import MarkdownRenderer from '../components/MarkdownRenderer'
 import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -226,6 +227,15 @@ function MasteryPaletteSection({ onSelectTopic }: { onSelectTopic: (topic: strin
       </div>
     </div>
   )
+}
+
+
+// 格式化错题文本（若选项与题干混在同一行，智能换行规整显示）
+function formatQuestionContent(raw?: string): string {
+  if (!raw) return ''
+  let text = raw
+  text = text.replace(/([^\n])\s+([A-D][.、\s])/g, '$1\n\n$2')
+  return text
 }
 
 export default function Study() {
@@ -1476,13 +1486,15 @@ function DailyErrorTab() {
               </span>
             )}
           </div>
-          <div className="text-base text-warm-800 font-medium leading-relaxed">
-            {currentQ.question}
+          <div className="text-sm sm:text-base text-warm-800 font-medium leading-relaxed">
+            <MarkdownRenderer content={formatQuestionContent(currentQ.question)} />
           </div>
           {currentQ.userAnswer && (
             <div className="px-3 py-2 bg-rose-500/5 border border-rose-500/10 rounded-lg">
               <span className="text-[10px] text-rose-500 block mb-1">你记录的错误解答：</span>
-              <span className="text-xs text-rose-700">{currentQ.userAnswer}</span>
+              <div className="text-xs text-rose-700">
+                <MarkdownRenderer content={currentQ.userAnswer} inline />
+              </div>
             </div>
           )}
         </div>
@@ -1493,11 +1505,15 @@ function DailyErrorTab() {
               <Check className="w-4 h-4 text-accent-sage" />
               <span className="text-xs text-accent-sage font-bold">正确答案与推导</span>
             </div>
-            <div className="text-sm text-warm-800 leading-relaxed font-semibold">{currentQ.correctAnswer}</div>
+            <div className="text-sm text-warm-800 leading-relaxed font-semibold">
+              <MarkdownRenderer content={currentQ.correctAnswer} inline />
+            </div>
             {currentQ.explanation && (
               <div className="mt-2 px-3.5 py-2.5 bg-cream-200/60 rounded-xl">
                 <span className="text-[10px] text-warm-400 block mb-1">名师解析与考点归因：</span>
-                <span className="text-xs text-warm-700 leading-relaxed">{currentQ.explanation}</span>
+                <div className="text-xs text-warm-700 leading-relaxed">
+                  <MarkdownRenderer content={currentQ.explanation} />
+                </div>
               </div>
             )}
           </div>

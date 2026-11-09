@@ -1181,9 +1181,7 @@ export default function Quiz() {
                     <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                     <span>错题溯源原型：</span>
                   </div>
-                  <div className="text-slate-700 font-serif leading-relaxed line-clamp-2">
-                    {variantSourceQ.question}
-                  </div>
+                  <div className="text-slate-700 font-serif leading-relaxed line-clamp-2"><MarkdownRenderer content={variantSourceQ.question} /></div>
                 </div>
 
                 {/* 变式题列表 */}
@@ -1211,9 +1209,7 @@ export default function Quiz() {
                         </div>
 
                         {/* 题干 */}
-                        <div className="text-slate-900 font-medium leading-relaxed">
-                          {vq.question}
-                        </div>
+                        <div className="text-slate-900 font-medium leading-relaxed"><MarkdownRenderer content={vq.question} /></div>
 
                         {/* 选项组 */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 font-sans">
@@ -2258,9 +2254,7 @@ export default function Quiz() {
                     <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                     <span>错题溯源原型：</span>
                   </div>
-                  <div className="text-slate-700 font-serif leading-relaxed line-clamp-2">
-                    {variantSourceQ.question}
-                  </div>
+                  <div className="text-slate-700 font-serif leading-relaxed line-clamp-2"><MarkdownRenderer content={variantSourceQ.question} /></div>
                 </div>
 
                 {/* 变式题列表 */}
@@ -2288,9 +2282,7 @@ export default function Quiz() {
                         </div>
 
                         {/* 题干 */}
-                        <div className="text-slate-900 font-medium leading-relaxed">
-                          {vq.question}
-                        </div>
+                        <div className="text-slate-900 font-medium leading-relaxed"><MarkdownRenderer content={vq.question} /></div>
 
                         {/* 选项组 */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 font-sans">
@@ -2728,9 +2720,7 @@ export default function Quiz() {
                     <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                     <span>错题溯源原型：</span>
                   </div>
-                  <div className="text-slate-700 font-serif leading-relaxed line-clamp-2">
-                    {variantSourceQ.question}
-                  </div>
+                  <div className="text-slate-700 font-serif leading-relaxed line-clamp-2"><MarkdownRenderer content={variantSourceQ.question} /></div>
                 </div>
 
                 {/* 变式题列表 */}
@@ -2758,9 +2748,7 @@ export default function Quiz() {
                         </div>
 
                         {/* 题干 */}
-                        <div className="text-slate-900 font-medium leading-relaxed">
-                          {vq.question}
-                        </div>
+                        <div className="text-slate-900 font-medium leading-relaxed"><MarkdownRenderer content={vq.question} /></div>
 
                         {/* 选项组 */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 font-sans">

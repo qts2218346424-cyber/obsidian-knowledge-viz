@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import os from 'os'
 import type { Request } from 'express'
 import { config, runtimeDataDir } from '../context.js'
 
@@ -68,21 +69,17 @@ export function getUserChatConversationsPath(userOrId: any): string {
 
 /**
  * 从当前 Express 请求中解析适用的 Vault 目录
- * 1. 超级管理员 (admin) 默认统领系统核心主知识库 (即电脑本地同步的全部 446 篇核心考研笔记与资料)
- * 2. 客户端通过 query 或 header 显式请求 scope=public / shared / global，返回系统核心主知识库
- * 3. 普通注册学生或编辑者，登录后进入其独享的个人沙箱
- * 4. 若未登录，回退至核心主知识库保证向后兼容
+ * 1. 超级管理员 (admin) 统领系统核心主知识库 (即电脑本地同步的全部 446 篇核心考研笔记与资料)
+ * 2. 只有超级管理员通过 scope=public / shared / global 显式请求时，才返回系统核心主知识库
+ * 3. 普通注册学生或编辑者，一律进入其独享的个人沙箱，杜绝越权访问服务器物理宿主机目录
+ * 4. 若未登录访客，分配隔离的访客只读沙箱或回退至安全受限目录
  */
 export function getRequestVaultPath(req: Request): string {
   if (req.user?.role === 'admin') {
     return config.vaultPath
   }
 
-  const scope = (req.query?.scope as string) || (req.headers?.['x-vault-scope'] as string)
-  if (scope === 'public' || scope === 'shared' || scope === 'global') {
-    return config.vaultPath
-  }
-
+  // 严格安全限制：普通用户不得通过 query/header scope 越权穿透至服务器物理根知识库
   if (req.user?.id) {
     const userVault = getUserVaultDir(req.user.id)
     if (!fs.existsSync(userVault)) {
@@ -90,7 +87,24 @@ export function getRequestVaultPath(req: Request): string {
     }
     return userVault
   }
-  return config.vaultPath
+
+  // 未登录访客分配专用临时沙箱，避免直接将宿主机核心物理目录暴露
+  const guestVault = path.join(USERS_ROOT_DIR, 'guest', 'vault')
+  if (!fs.existsSync(guestVault)) {
+    ensureUserSandboxSync('guest', '访客同学')
+  }
+  return guestVault
+}
+
+/**
+ * 虚拟化脱敏路径：向客户端响应时屏蔽云服务器的底层物理磁盘绝对路径
+ * 普通用户只能看到属于自己的沙盒文件夹，仅超级管理员可查看真实底层物理路径
+ */
+export function virtualizeVaultPath(realPath: string, role?: string): string {
+  if (role === 'admin') {
+    return realPath
+  }
+  return '我的专属研学沙盒'
 }
 
 /**
@@ -252,3 +266,47 @@ lastUpdated: "${new Date().toISOString().split('T')[0]}"
     fs.writeFileSync(agentMemoryPath, defaultAgentMarkdown, 'utf-8')
   }
 }
+
+/**
+ * 将用户专属沙箱笔记打包导出为 ZIP 压缩包
+ * 用户可下载后直接用电脑本地 Obsidian 打开（作为独立知识库）
+ */
+export async function createSandboxExportZip(userOrId: any): Promise<string> {
+  const userVault = getUserVaultDir(userOrId)
+  if (!fs.existsSync(userVault)) {
+    ensureUserSandboxSync(typeof userOrId === 'string' ? userOrId : userOrId?.id, '考生同学')
+  }
+
+  const tmpZipPath = path.join(os.tmpdir(), `coreforge_vault_${sanitizeId(userOrId)}_${Date.now()}.zip`)
+  const pythonCmd = process.platform === 'win32' ? 'python' : 'python3'
+  
+  const pyScript = `
+import zipfile, os, sys
+
+vault_dir = sys.argv[1]
+zip_dest = sys.argv[2]
+
+with zipfile.ZipFile(zip_dest, 'w', zipfile.ZIP_DEFLATED) as zf:
+    for root, dirs, files in os.walk(vault_dir):
+        # 排除隐藏目录
+        dirs[:] = [d for d in dirs if not d.startswith('.')]
+        for file in files:
+            if file.startswith('.'):
+                continue
+            full_path = os.path.join(root, file)
+            rel_path = os.path.relpath(full_path, vault_dir)
+            zf.write(full_path, rel_path)
+print("SUCCESS")
+`
+  const { execFile } = await import('child_process')
+  return new Promise((resolve, reject) => {
+    execFile(pythonCmd, ['-c', pyScript, userVault, tmpZipPath], { timeout: 30000 }, (error, stdout) => {
+      if (error || !stdout.includes('SUCCESS')) {
+        reject(error || new Error('打包沙盒知识库失败'))
+        return
+      }
+      resolve(tmpZipPath)
+    })
+  })
+}
+
