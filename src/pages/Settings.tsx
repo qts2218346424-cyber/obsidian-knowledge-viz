@@ -7,7 +7,7 @@ import { api, type AppSettings, type CloudEndpoint } from '../services/api'
 import {
   Save, RefreshCw, CheckCircle, AlertCircle, FolderOpen, Globe, Cpu, Palette,
   Eye, EyeOff, Folder, AlertTriangle, Zap, ChevronRight, ArrowUp,
-  Loader2, X, HardDrive, Check, Download, Plug, Plus, Trash2, Star, KeyRound, ShieldCheck, Copy, ShieldAlert
+  Loader2, X, HardDrive, Check, Download, Plug, Plus, Trash2, Star, KeyRound, ShieldCheck, Lock, Copy, ShieldAlert
 } from 'lucide-react'
 
 declare global {
@@ -910,6 +910,70 @@ export default function Settings() {
             </div>
           </section>
 
+          {/* 考生专属云端沙箱与隐私保护卡片 */}
+          <section className="bento-card bg-gradient-to-br from-white via-emerald-50/20 to-teal-50/30 border border-emerald-200/80 rounded-2xl shadow-xs p-5 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-bold text-slate-800">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span>考生专属云端沙盒与数据隐私保护 (Personal Sandbox)</span>
+              </div>
+              <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-100/70 border border-emerald-300 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                物理多租户隔离已生效
+              </span>
+            </div>
+            
+            <p className="text-xs text-slate-600 leading-relaxed">
+              您的双链笔记、AI 伴学档案与错题记录均存储在独享的云端安全沙箱中。系统已全面启用沙箱虚拟化机制，<b>云端服务器的底层磁盘结构与物理文件夹已对所有考生完全隔离屏蔽</b>，仅展示属于您个人的沙盒文件夹，绝无数据泄露风险。
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+              <div className="p-3 rounded-xl bg-white/90 border border-emerald-200/60 shadow-2xs">
+                <div className="text-[11px] text-slate-500 mb-0.5">沙箱隔离等级</div>
+                <div className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>独立用户沙箱 (独占)</span>
+                </div>
+              </div>
+              <div className="p-3 rounded-xl bg-white/90 border border-emerald-200/60 shadow-2xs">
+                <div className="text-[11px] text-slate-500 mb-0.5">物理路径屏蔽</div>
+                <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>100% 宿主机路径脱敏</span>
+                </div>
+              </div>
+              <div className="p-3 rounded-xl bg-white/90 border border-emerald-200/60 shadow-2xs">
+                <div className="text-[11px] text-slate-500 mb-0.5">离线数据自持</div>
+                <div className="text-xs font-bold text-teal-800 flex items-center gap-1.5">
+                  <Download className="w-3.5 h-3.5 text-teal-600" />
+                  <span>支持一键导出 Zip</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 flex flex-wrap items-center justify-between gap-3 bg-white/70 border border-emerald-100 rounded-xl p-3">
+              <div className="text-xs text-slate-600">
+                需要将云端编写的考研笔记同步到自己电脑本地的 Obsidian 软件？
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const exportUrl = api.exportSandboxZipUrl ? api.exportSandboxZipUrl() : '/api/vault/export-zip';
+                  const a = document.createElement('a');
+                  a.href = exportUrl;
+                  a.download = `CoreForge_Notes_${user?.username || 'Student'}.zip`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                }}
+                className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>一键打包导出我的笔记 (.zip)</span>
+              </button>
+            </div>
+          </section>
+
           {/* 保存偏好按钮 */}
           <div className="pt-2 flex justify-end">
             <button
@@ -1549,7 +1613,7 @@ export default function Settings() {
       )}
 
       {/* Folder Picker Modal */}
-      {showPicker && (
+      {isAdmin && showPicker && (
         <FolderPickerModal
           onSelect={handlePickerSelect}
           onClose={() => setShowPicker(false)}

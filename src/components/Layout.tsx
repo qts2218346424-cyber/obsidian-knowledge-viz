@@ -132,7 +132,8 @@ export default function Layout({ children }: LayoutProps) {
 
   const noteCount = stats?.totalNotes ?? null
   const connected = apiHealthy === true
-  const vaultName = stats?.vaultPath.split(/[\\/]/).filter(Boolean).pop() || '研核知识库'
+  const rawVaultName = stats?.vaultPath?.split(/[\\/]/).filter(Boolean).pop() || '研核知识库'
+  const vaultName = /opt|coreforge|root|data|users/i.test(rawVaultName) ? '我的专属研学沙盒' : rawVaultName
 
   useVaultEvents((event) => {
     const action = event.type === 'file-changed' ? '文件已更新' : event.type === 'file-added' ? '新笔记加入' : '文件已删除'

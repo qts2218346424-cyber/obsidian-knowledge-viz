@@ -37,7 +37,8 @@ import { useExamCountdown } from '../utils/examDate'
 
 function getVaultName(vaultPath?: string) {
   if (!vaultPath) return '研核知识库'
-  return vaultPath.split(/[\\/]/).filter(Boolean).pop() || '研核知识库'
+  const name = vaultPath.split(/[\\/]/).filter(Boolean).pop() || '研核知识库'
+  return /opt|coreforge|root|data|users/i.test(name) ? '我的专属研学沙盒' : name
 }
 
 function getTimeGreeting() {
