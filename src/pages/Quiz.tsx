@@ -31,9 +31,21 @@ import { QUESTION_BANK, type QuizQuestion } from '../data/questions'
 import { MATH_QUESTION_BANK } from '../data/questions/math'
 import { updateMasteryFromQuizResult } from '../data/masteryData'
 import type { MathCategory, MathSubject, CsSubject, UnifiedQuestion } from '../types/subject'
+import {
+  ALL_EXAM_PAPERS,
+  filterPaperQuestions,
+  getPaperStats,
+  getAvailablePaperYears,
+  type ExamPaper,
+  type ExamPaperQuestion,
+  type PaperCategory,
+  type PaperFilterSection,
+} from '../data/examPapers'
+
 
 const ImportResourceModal = lazy(() => import('../components/ImportResourceModal'))
 const AlgorithmSandboxModal = lazy(() => import('../features/quiz/components/AlgorithmSandboxModal'))
+const ExamPaperHubView = lazy(() => import('../features/quiz/components/ExamPaperHubView'))
 
 // 内存级题库缓存，切页秒开不闪烁
 let cachedCustomQuestionsList: ActiveQuizQuestion[] | null = null
@@ -60,6 +72,10 @@ export interface ActiveQuizQuestion {
   steps?: string[]
   keyPoints?: string[]
   tags: string[]
+  paperTitle?: string
+  paperQuestionNumber?: number
+  score?: number
+  sectionName?: string
 }
 
 interface SubjectInfo {
@@ -230,6 +246,21 @@ export default function Quiz() {
   const [savingAllErrors, setSavingAllErrors] = useState(false)
   const [saveAllMsg, setSaveAllMsg] = useState<string | null>(null)
   const [savedItemIds, setSavedItemIds] = useState<Set<string>>(new Set())
+
+  // ── 历年真题整卷库状态 ────────────────────────────────────────────────────────
+  const [hubTab, setHubTab] = useState<'papers' | 'topics'>('papers')
+  const [selectedPaperCategory, setSelectedPaperCategory] = useState<'all' | PaperCategory>('all')
+  const [selectedPaperYear, setSelectedPaperYear] = useState<'all' | number>('all')
+  const [activePaperContext, setActivePaperContext] = useState<{
+    paperId: string
+    title: string
+    year: number
+    category: PaperCategory
+    section: PaperFilterSection
+    totalScore: number
+    durationMinutes: number
+  } | null>(null)
+
 
   const fetchCustomQuestions = useCallback(async () => {
     try {
@@ -432,7 +463,76 @@ export default function Quiz() {
     }
   }
 
+  const startPaperQuiz = useCallback((paper: ExamPaper, section: PaperFilterSection = 'all') => {
+    const paperQs = filterPaperQuestions(paper, section)
+    if (paperQs.length === 0) return
+
+    const mapped: ActiveQuizQuestion[] = paperQs.map((q) => {
+      const optArr = q.options || []
+      const cleanOption = (text?: string) => text ? text.replace(/^[A-D][.、\s]+/, '').trim() : ''
+      let optionsObj: { A: string; B: string; C: string; D: string } | undefined = undefined
+      if (optArr.length >= 2) {
+        optionsObj = {
+          A: cleanOption(optArr[0]),
+          B: cleanOption(optArr[1]),
+          C: cleanOption(optArr[2] || ''),
+          D: cleanOption(optArr[3] || ''),
+        }
+      }
+
+      return {
+        id: q.id,
+        domain: q.domain,
+        subject: q.subject as any,
+        scope: q.scope,
+        chapter: q.chapter,
+        type: q.type || (optionsObj ? 'choice' : 'analysis'),
+        difficulty: q.difficulty,
+        question: q.question,
+        options: optionsObj,
+        answer: q.correctAnswer || '见标准分步推导',
+        explanation: q.explanation,
+        steps: q.steps,
+        keyPoints: q.keyPoints,
+        tags: q.tags,
+        paperTitle: paper.title,
+        paperQuestionNumber: q.paperQuestionNumber,
+        score: q.score,
+        sectionName: q.sectionName,
+      }
+    })
+
+    const sectionTotalScore = section === 'all'
+      ? paper.totalScore
+      : mapped.reduce((acc, cur) => acc + (cur.score || 0), 0)
+
+    setActivePaperContext({
+      paperId: paper.id,
+      title: paper.title,
+      year: paper.year,
+      category: paper.category,
+      section,
+      totalScore: sectionTotalScore,
+      durationMinutes: section === 'all' ? paper.durationMinutes : Math.max(30, mapped.length * 4),
+    })
+
+    setQuestions(mapped)
+    setCurrentIndex(0)
+    setAnswers({})
+    setSelectedOption(null)
+    setBlankInput('')
+    setShowFeedback(false)
+    setShowSteps(false)
+    setTimeElapsed(0)
+    setBookmarkedIds(new Set())
+    setErrorReasons({})
+    setScratchpads({})
+    setActiveSideTab('palette')
+    setView('quiz')
+  }, [])
+
   const startQuiz = useCallback(() => {
+
     if (allAvailableQuestions.length === 0) return
     const shuffled = shuffleArray(allAvailableQuestions)
     const selected = shuffled.slice(0, questionCount)
@@ -624,6 +724,7 @@ export default function Quiz() {
     setIsExitModalOpen(false)
     setIsSubmitModalOpen(false)
     setMobileDrawerOpen(false)
+    setActivePaperContext(null)
     setView('start')
     try {
       window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -735,6 +836,59 @@ export default function Quiz() {
 
     return (
       <div className="mx-auto max-w-[1520px] w-full min-w-0 space-y-4 sm:space-y-6 pb-36 md:pb-0 animate-fade-in-up">
+        {/* 双模式顶栏切换：历年真题整卷库 vs 考点专项演练 */}
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-2.5 sm:p-3 rounded-2xl border border-neutral-200/85 shadow-2xs">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <button
+              type="button"
+              onClick={() => setHubTab('papers')}
+              className={`flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                hubTab === 'papers'
+                  ? 'bg-neutral-900 text-white shadow-xs'
+                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+              }`}
+            >
+              <BookOpen className="w-4 h-4 text-amber-400" />
+              <span>📑 历年真题整卷库</span>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${
+                hubTab === 'papers' ? 'bg-amber-400/20 text-amber-300' : 'bg-neutral-100 text-neutral-500'
+              }`}>
+                {ALL_EXAM_PAPERS.length} 套真实卷
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setHubTab('topics')}
+              className={`flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                hubTab === 'topics'
+                  ? 'bg-neutral-900 text-white shadow-xs'
+                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+              }`}
+            >
+              <Sparkles className="w-4 h-4 text-accent-orange" />
+              <span>🎯 章节考点专项演练</span>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${
+                hubTab === 'topics' ? 'bg-orange-500/20 text-orange-300' : 'bg-neutral-100 text-neutral-500'
+              }`}>
+                {availableCount} 题
+              </span>
+            </button>
+          </div>
+
+          <div className="text-[11px] text-neutral-400 hidden sm:block">
+            {hubTab === 'papers' ? '支持整卷模考、单选专刷与解答大题专项演练' : '支持按学科考点组卷抽题自测'}
+          </div>
+        </div>
+
+        {hubTab === 'papers' ? (
+          /* 历年真题整卷库视图（带卷种/年份筛选与三大练习入口） */
+          <Suspense fallback={<div className="p-12 text-center text-xs text-neutral-400">正在装载历年真题整卷库...</div>}>
+            <ExamPaperHubView onStartPaper={startPaperQuiz} />
+          </Suspense>
+        ) : (
+          /* 章节考点专项演练原视图 */
+          <>
         {/* Subframe Workspace Header */}
         <div className="bento-card rounded-2xl border border-neutral-200/85 bg-white p-5 sm:p-7 shadow-xs">
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
@@ -1287,6 +1441,8 @@ export default function Quiz() {
           document.body
         )}
 
+        </>
+        )}
       </div>
     )
   }
@@ -1585,6 +1741,136 @@ export default function Quiz() {
                     )
 
                   })}
+                </div>
+              ) : currentQ.type === 'analysis' ? (
+                /* Comprehensive Analysis / Proof Question Area (综合解答与大题专练) */
+                <div className="p-4 sm:p-5 rounded-2xl border border-neutral-200/90 bg-neutral-50/70 space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200/70 pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-neutral-800 flex items-center gap-1.5">
+                        <span>✍️ 综合解答题</span>
+                        {currentQ.score && (
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-mono text-[11px] font-bold">
+                            满分 {currentQ.score} 分
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-[11px] text-neutral-400">（请在草稿纸或下方记录关键推导步骤）</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {currentQ.domain === 'cs_408' && (currentQ.subject === '数据结构' || (currentQ.tags && currentQ.tags.includes('算法大题'))) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedAlgoId('algo-custom')
+                            setAlgoModalOpen(true)
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer border border-blue-200/60"
+                        >
+                          <Code2 className="w-3.5 h-3.5" />
+                          <span>💻 启动算法沙盒实时调试</span>
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => setShowSteps(!showSteps)}
+                        className="px-3 py-1 rounded-lg bg-white border border-neutral-200 text-neutral-700 text-xs font-medium hover:border-neutral-900 transition-colors cursor-pointer shadow-2xs"
+                      >
+                        {showSteps ? '收起官方评分细则' : '📋 对照考研官方踩分点与评分细则'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 大题推导与作答思路草稿 */}
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-600 mb-1.5">
+                      解题思路、步骤推导或代码草稿：
+                    </label>
+                    <textarea
+                      rows={5}
+                      value={scratchpads[currentQ.id] || ''}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        setScratchpads(prev => ({ ...prev, [currentQ.id]: val }))
+                      }}
+                      placeholder="在此记录推导的关键步骤、辅助线、特征方程、定理依据或算法核心逻辑..."
+                      className="w-full bg-white border border-neutral-300 rounded-xl p-3 text-xs text-neutral-900 outline-none focus:border-neutral-900 font-mono leading-relaxed resize-y"
+                    />
+                  </div>
+
+                  {/* 分步踩分点展示 */}
+                  {showSteps && currentQ.steps && currentQ.steps.length > 0 && (
+                    <div className="p-4 rounded-xl bg-white border border-emerald-200/80 space-y-2.5 shadow-2xs animate-fade-in-up">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-emerald-800 flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>考研官方阅卷评分标准与踩分点拆解：</span>
+                        </span>
+                        <span className="text-[10px] text-neutral-400">分步踩点给分制</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {currentQ.steps.map((st, sidx) => (
+                          <div key={sidx} className="p-2.5 rounded-lg bg-emerald-50/50 border border-emerald-100 text-xs text-neutral-800 leading-relaxed">
+                            <MarkdownRenderer content={st} inline />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 自我掌握度判定按钮 */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-neutral-200/50">
+                    <span className="text-[11px] text-neutral-500">根据步骤核对判定掌握程度：</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAnswers(prev => ({ ...prev, [currentQ.id]: 'mastered' }))
+                          setShowFeedback(true)
+                        }}
+                        className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                          answers[currentQ.id] === 'mastered'
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/70'
+                        }`}
+                      >
+                        ✓ 已完全掌握 (记满分)
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAnswers(prev => ({ ...prev, [currentQ.id]: 'partial' }))
+                          setShowFeedback(true)
+                        }}
+                        className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                          answers[currentQ.id] === 'partial'
+                            ? 'bg-amber-600 text-white shadow-xs'
+                            : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200/70'
+                        }`}
+                      >
+                        ⚠️ 部分掌握 / 步骤遗漏
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAnswers(prev => ({ ...prev, [currentQ.id]: 'unmastered' }))
+                          setShowFeedback(true)
+                          setBookmarkedIds(prev => new Set([...prev, currentQ.id]))
+                        }}
+                        className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                          answers[currentQ.id] === 'unmastered'
+                            ? 'bg-rose-600 text-white shadow-xs'
+                            : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200/70'
+                        }`}
+                      >
+                        ✕ 未掌握 (自动加入错题本)
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 /* Blank / Fill-in Answer Area (填空题输入区) */
@@ -2569,7 +2855,7 @@ export default function Quiz() {
 
         {/* Action Buttons */}
         <div className="flex gap-3">
-          <WarmButton onClick={() => setView('start')} className="bg-accent-orange text-white px-8">
+          <WarmButton onClick={() => { setActivePaperContext(null); setView('start'); }} className="bg-accent-orange text-white px-8">
             再练一轮
           </WarmButton>
           <WarmButton variant="secondary" onClick={() => window.location.href = '/dashboard'}>
