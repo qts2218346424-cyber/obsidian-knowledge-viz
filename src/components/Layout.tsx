@@ -554,14 +554,157 @@ export default function Layout({ children }: LayoutProps) {
               </button>
             )}
 
-            {/* 3. 用户头像与多维矩阵下拉菜单 (集成设置、主题、随手记、导入等) */}
+            {/* 3. 更多功能下拉菜单集合 (研学快捷动作、导入、图谱、编辑器、工作流与新手指引) */}
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setMoreOpen(prev => !prev)
+                  setUserMenuOpen(false)
+                }}
+                className={`inline-flex items-center gap-1.5 h-8 px-2.5 rounded-xl border text-xs font-medium shadow-2xs transition-all cursor-pointer active:scale-95 shrink-0 ${
+                  moreOpen
+                    ? 'border-indigo-300 bg-indigo-50/90 text-indigo-700 shadow-indigo-500/10'
+                    : 'border-slate-200/80 bg-slate-50/80 hover:bg-white hover:border-slate-300 text-slate-600 hover:text-slate-900'
+                }`}
+                title="更多功能与研学工具集"
+                aria-expanded={moreOpen}
+              >
+                <LayoutGrid className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
+                <span className="hidden sm:inline font-medium">更多功能</span>
+                <ChevronDown className={`h-3 w-3 shrink-0 text-slate-400 transition-transform duration-200 ${moreOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {moreOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
+                  <div className="absolute right-0 top-full z-50 mt-1.5 w-64 rounded-2xl border border-slate-200/90 bg-white/98 p-2 shadow-[0_16px_40px_rgba(0,0,0,0.12)] backdrop-blur-xl animate-fade-in-up text-slate-800">
+                    {/* 功能集合小标题 */}
+                    <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+                      <span>研学百宝箱</span>
+                      <span className="text-[9px] text-indigo-600 font-medium px-1.5 py-0.2 rounded-full bg-indigo-50 border border-indigo-100">
+                        实用工具与工作流
+                      </span>
+                    </div>
+
+                    {/* 分组 1: 研学快捷动作 */}
+                    <div className="space-y-0.5 mt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMoreOpen(false)
+                          setQuickNoteOpen(true)
+                          openModal('quick-note')
+                        }}
+                        className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                      >
+                        <PenLine className="h-3.5 w-3.5 text-indigo-600" />
+                        <span className="font-medium">极速随手记</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMoreOpen(false)
+                          setImportModalOpen(true)
+                          openModal('import-resource')
+                        }}
+                        className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                      >
+                        <Database className="h-3.5 w-3.5 text-indigo-600" />
+                        <span className="font-medium">导入资料与题库 (PDF/真题)</span>
+                      </button>
+
+                      <Link
+                        to="/graph"
+                        onClick={() => setMoreOpen(false)}
+                        className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                      >
+                        <Network className="h-3.5 w-3.5 text-indigo-600" />
+                        <span className="font-medium">知识图谱网络</span>
+                      </Link>
+
+                      <Link
+                        to="/editor"
+                        onClick={() => setMoreOpen(false)}
+                        className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                      >
+                        <FileEdit className="h-3.5 w-3.5 text-indigo-600" />
+                        <span className="font-medium">Markdown 笔记编辑器</span>
+                      </Link>
+
+                      <Link
+                        to="/workflow"
+                        onClick={() => setMoreOpen(false)}
+                        className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                      >
+                        <Workflow className="h-3.5 w-3.5 text-indigo-600" />
+                        <span className="font-medium">知识库整理工作流</span>
+                      </Link>
+                    </div>
+
+                    {/* 分组 2: 界面与偏好 */}
+                    <div className="px-2.5 pt-2 pb-0.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-t border-slate-100 mt-1">
+                      界面与偏好
+                    </div>
+                    <div className="space-y-0.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          toggleThemeStyle()
+                        }}
+                        className="w-full flex items-center justify-between rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Palette className={`h-3.5 w-3.5 ${isVibrant ? 'text-indigo-600' : 'text-slate-500'}`} />
+                          <span className="font-medium">视觉风格</span>
+                        </div>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 border border-slate-200">
+                          {isVibrant ? '鲜艳活力' : '经典极简'}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMoreOpen(false)
+                          setGuideOpen(true)
+                          openModal('user-guide')
+                        }}
+                        className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                      >
+                        <HelpCircle className="h-3.5 w-3.5 text-slate-500" />
+                        <span className="font-medium">新手指引全景手册</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMoreOpen(false)
+                          setInteractiveTourOpen(true)
+                        }}
+                        className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                      >
+                        <Compass className="h-3.5 w-3.5 text-indigo-500" />
+                        <span className="font-medium">开启交互式新功能导览</span>
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* 4. 用户头像与个人账号菜单 (设置、改密、管理与退出) */}
             {user && (
               <div className="relative shrink-0">
                 <button
                   type="button"
-                  onClick={() => setUserMenuOpen(prev => !prev)}
+                  onClick={() => {
+                    setUserMenuOpen(prev => !prev)
+                    setMoreOpen(false)
+                  }}
                   className="flex items-center gap-1.5 rounded-full p-0.5 border border-slate-200/90 hover:ring-2 hover:ring-indigo-100 transition-all cursor-pointer active:scale-95"
-                  title={`${user.displayName || user.username} (${user.role === 'admin' ? '👑 超级管理员' : '🎓 考研研学者'}) · 点击展开设置与工具矩阵`}
+                  title={`${user.displayName || user.username} (${user.role === 'admin' ? '👑 超级管理员' : '🎓 考研研学者'}) · 点击展开设置与个人中心`}
                 >
                   <div className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-white bg-indigo-600 shadow-2xs">
                     {user.displayName ? user.displayName.slice(0, 1).toUpperCase() : user.username.slice(0, 1).toUpperCase()}
@@ -571,7 +714,7 @@ export default function Layout({ children }: LayoutProps) {
                 {userMenuOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
-                    <div className="absolute right-0 top-full z-50 mt-1.5 w-64 rounded-2xl border border-slate-200/90 bg-white/98 p-2 shadow-[0_16px_40px_rgba(0,0,0,0.1)] backdrop-blur-xl animate-fade-in-up text-slate-800">
+                    <div className="absolute right-0 top-full z-50 mt-1.5 w-56 rounded-2xl border border-slate-200/90 bg-white/98 p-2 shadow-[0_16px_40px_rgba(0,0,0,0.1)] backdrop-blur-xl animate-fade-in-up text-slate-800">
                       {/* 用户基础信息卡片 */}
                       <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 mb-1.5">
                         <div className="text-xs font-bold text-slate-900 truncate">{user.displayName || user.username}</div>
@@ -584,114 +727,8 @@ export default function Layout({ children }: LayoutProps) {
                         </div>
                       </div>
 
-                      {/* 分组 1: 研学快捷工具 */}
+                      {/* 账号与系统设置 */}
                       <div className="px-2.5 pt-1.5 pb-0.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                        研学快捷动作
-                      </div>
-                      <div className="space-y-0.5">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setUserMenuOpen(false)
-                            setQuickNoteOpen(true)
-                            openModal('quick-note')
-                          }}
-                          className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                        >
-                          <PenLine className="h-3.5 w-3.5 text-indigo-600" />
-                          <span className="font-medium">极速随手记</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setUserMenuOpen(false)
-                            setImportModalOpen(true)
-                            openModal('import-resource')
-                          }}
-                          className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                        >
-                          <Database className="h-3.5 w-3.5 text-indigo-600" />
-                          <span className="font-medium">导入资料与题库 (PDF/真题)</span>
-                        </button>
-
-                        <Link
-                          to="/graph"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                        >
-                          <Network className="h-3.5 w-3.5 text-indigo-600" />
-                          <span className="font-medium">知识图谱网络</span>
-                        </Link>
-
-                        <Link
-                          to="/editor"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                        >
-                          <FileEdit className="h-3.5 w-3.5 text-indigo-600" />
-                          <span className="font-medium">Markdown 笔记编辑器</span>
-                        </Link>
-
-                        <Link
-                          to="/workflow"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                        >
-                          <Workflow className="h-3.5 w-3.5 text-indigo-600" />
-                          <span className="font-medium">知识库整理工作流</span>
-                        </Link>
-                      </div>
-
-                      {/* 分组 2: 界面与主题偏好 */}
-                      <div className="px-2.5 pt-2 pb-0.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-t border-slate-100 mt-1">
-                        界面与偏好
-                      </div>
-                      <div className="space-y-0.5">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            toggleThemeStyle()
-                          }}
-                          className="w-full flex items-center justify-between rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                        >
-                          <div className="flex items-center gap-2">
-                            <Palette className={`h-3.5 w-3.5 ${isVibrant ? 'text-indigo-600' : 'text-slate-500'}`} />
-                            <span className="font-medium">视觉风格</span>
-                          </div>
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 border border-slate-200">
-                            {isVibrant ? '鲜艳活力' : '经典极简'}
-                          </span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setUserMenuOpen(false)
-                            setGuideOpen(true)
-                            openModal('user-guide')
-                          }}
-                          className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                        >
-                          <HelpCircle className="h-3.5 w-3.5 text-slate-500" />
-                          <span className="font-medium">新手指引全景手册</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setUserMenuOpen(false)
-                            setInteractiveTourOpen(true)
-                          }}
-                          className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                        >
-                          <Compass className="h-3.5 w-3.5 text-indigo-500" />
-                          <span className="font-medium">开启交互式新功能导览</span>
-                        </button>
-                      </div>
-
-                      {/* 分组 3: 账号与系统设置 */}
-                      <div className="px-2.5 pt-2 pb-0.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-t border-slate-100 mt-1">
                         账号与系统
                       </div>
                       <div className="space-y-0.5">
