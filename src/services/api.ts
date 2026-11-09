@@ -1,5 +1,5 @@
 // API service layer for communicating with Express backend
-import { getAuthHeaders } from './auth'
+import { getAuthHeaders, getStoredToken } from './auth'
 
 const BASE = '/api'
 
@@ -603,6 +603,8 @@ export interface MusicFile {
 
 export interface MusicScanResult {
   path: string
+  effectivePath?: string
+  isDefault?: boolean
   files: MusicFile[]
 }
 
@@ -854,17 +856,44 @@ export const api = {
     postJSON<VocabImportResult>('/vocab/import', { format, data }),
 
   // Music
-  scanMusicFolder: (folderPath: string) =>
-    fetchJSON<MusicScanResult>(`/music/scan?path=${encodeURIComponent(folderPath)}`),
+  scanMusicFolder: (folderPath?: string) => {
+    const q = folderPath ? `?path=${encodeURIComponent(folderPath)}` : ''
+    return fetchJSON<MusicScanResult>(`/music/scan${q}`)
+  },
 
   getMusicStreamUrl: (filePath: string) =>
     `${BASE}/music/stream?path=${encodeURIComponent(filePath)}`,
 
   getMusicPath: () =>
-    fetchJSON<{ musicPath: string }>('/music/path'),
+    fetchJSON<{ musicPath: string; effectivePath?: string; isDefault?: boolean }>('/music/path'),
 
   setMusicPath: (musicPath: string) =>
-    putJSON<{ ok: boolean; musicPath: string }>('/music/path', { musicPath }),
+    putJSON<{ ok: boolean; musicPath: string; effectivePath?: string }>('/music/path', { musicPath }),
+
+  uploadMusicFiles: async (files: File[]): Promise<{ ok: boolean; files: MusicFile[]; message?: string }> => {
+    const formData = new FormData()
+    for (const f of files) {
+      formData.append('files', f)
+    }
+    const headers: Record<string, string> = {}
+    const token = getStoredToken()
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+    const res = await fetch(`${BASE}/music/upload`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }))
+      throw new Error(err.error || `音乐上传失败: ${res.status}`)
+    }
+    return res.json()
+  },
+
+  deleteMusicFile: (filePath: string) =>
+    postJSON<{ ok: boolean; files: MusicFile[] }>('/music/delete', { path: filePath }),
 
   // Wiki Skills
   defuddle: (url: string, targetFolder?: string) =>
