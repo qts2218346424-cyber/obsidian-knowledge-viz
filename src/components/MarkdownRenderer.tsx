@@ -456,14 +456,37 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
         const language = match ? match[1] : 'text'
         return <CodeBlock language={language}>{children}</CodeBlock>
       },
-      // 表格：横向自适应滚动防撑破容器
+      // 表格：紧致微缩横向自适应滚动防撑破容器
       table({ children }: any) {
         return (
-          <div className="my-3 overflow-x-auto rounded-xl border border-cream-200 dark:border-white/10 shadow-2xs">
-            <table className="w-full text-left text-[11px] sm:text-xs border-collapse">
+          <div className="my-1.5 sm:my-2 overflow-x-auto rounded-lg border border-cream-200 dark:border-white/10 shadow-2xs">
+            <table className="min-w-full text-left text-[11px] sm:text-xs border-collapse">
               {children}
             </table>
           </div>
+        )
+      },
+      thead({ children }: any) {
+        return <thead className="bg-slate-100/90 dark:bg-slate-800/90 border-b border-slate-200 dark:border-slate-700">{children}</thead>
+      },
+      tbody({ children }: any) {
+        return <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">{children}</tbody>
+      },
+      tr({ children }: any) {
+        return <tr className="transition-colors hover:bg-slate-50/60 dark:hover:bg-slate-800/40">{children}</tr>
+      },
+      th({ children }: any) {
+        return (
+          <th className="px-2 py-1 sm:px-2.5 sm:py-1 font-semibold text-[11px] sm:text-xs text-slate-800 dark:text-slate-100 whitespace-nowrap">
+            {children}
+          </th>
+        )
+      },
+      td({ children }: any) {
+        return (
+          <td className="px-2 py-1 sm:px-2.5 sm:py-1 text-[11px] sm:text-xs leading-snug text-slate-700 dark:text-slate-200 align-middle">
+            {children}
+          </td>
         )
       },
       // 引用块：智能根据避坑 / 提分口诀等类型渲染专业高亮卡片
