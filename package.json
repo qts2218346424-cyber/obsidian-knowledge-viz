@@ -64,7 +64,11 @@
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico"
     },
-    "icon": "build/icon.ico"
+    "icon": "build/icon.ico",
+    "asarUnpack": [
+      "dist-server/**/*",
+      "dist/**/*"
+    ]
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.105.0",

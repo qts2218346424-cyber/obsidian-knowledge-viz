@@ -69,7 +69,24 @@ app.use((err: unknown, _req: express.Request, res: express.Response, next: expre
 })
 
 // Static frontend for production (Electron or standalone)
-const distPath = path.join(__dirname, '..', 'dist')
+function getDistPath(): string {
+  const candidates = [
+    path.join(__dirname, '..', 'dist'),
+    path.join(__dirname, '..', '..', 'app.asar.unpacked', 'dist'),
+    path.join(__dirname, '..', '..', 'app.asar', 'dist'),
+    path.join(process.resourcesPath || '', 'app.asar.unpacked', 'dist'),
+    path.join(process.resourcesPath || '', 'app.asar', 'dist'),
+    path.join(process.cwd(), 'dist'),
+  ]
+  for (const candidate of candidates) {
+    if (candidate && fs.existsSync(path.join(candidate, 'index.html'))) {
+      return candidate
+    }
+  }
+  return path.join(__dirname, '..', 'dist')
+}
+
+const distPath = getDistPath()
 if (fs.existsSync(distPath)) {
   app.use(
     express.static(distPath, {

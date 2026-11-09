@@ -445,8 +445,15 @@ systemRouter.post('/obsidian/plugins/import-ai-config', (req, res) => {
 // ==================== 全平台客户端下载服务 ====================
 
 function getReleaseFiles() {
-  const releaseDir = path.resolve(__dirname, '..', 'release')
-  if (!fs.existsSync(releaseDir)) {
+  const candidates = [
+    path.resolve(process.cwd(), 'release'),
+    path.resolve(__dirname, '..', 'release'),
+    path.resolve(__dirname, '..', '..', 'release'),
+    path.resolve(__dirname, 'release'),
+    '/opt/coreforge/release',
+  ]
+  const releaseDir = candidates.find(dir => fs.existsSync(dir))
+  if (!releaseDir) {
     return { desktop: null, android: null }
   }
 
@@ -557,11 +564,15 @@ systemRouter.get('/downloads/desktop', (_req, res) => {
       return
     }
 
-    res.setHeader('Content-Type', 'application/octet-stream')
-    res.setHeader('Content-Disposition', `attachment; filename="${desktop.filename}"`)
-    res.download(desktop.path, desktop.filename)
+    res.download(desktop.path, desktop.filename, (err) => {
+      if (err && !res.headersSent) {
+        res.status(500).json({ error: '下载传输中断: ' + (err.message || '未知异常') })
+      }
+    })
   } catch (err: any) {
-    res.status(500).json({ error: '下载失败: ' + err.message })
+    if (!res.headersSent) {
+      res.status(500).json({ error: '下载失败: ' + err.message })
+    }
   }
 })
 

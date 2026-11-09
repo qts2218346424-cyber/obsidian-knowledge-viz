@@ -103,8 +103,14 @@ function waitForServer(maxRetries = 60) {
 }
 
 async function startEmbeddedServer() {
-  // Dynamic import ESM server module
-  const serverPath = path.join(__dirname, '..', 'dist-server', 'server.mjs')
+  // Dynamic import ESM server module (handle both unpack and dev)
+  const unpackedServerPath = path.join(process.resourcesPath || '', 'app.asar.unpacked', 'dist-server', 'server.mjs')
+  const devServerPath = path.join(__dirname, '..', 'dist-server', 'server.mjs')
+  const serverPath = (app.isPackaged && fs.existsSync(unpackedServerPath))
+    ? unpackedServerPath
+    : devServerPath
+
+  writeStartupLog('Loading server from: ' + serverPath)
   const serverURL = pathToFileURL(serverPath).href
   const { startServer } = await import(serverURL)
   await startServer(3001)
