@@ -719,6 +719,7 @@ ${question.steps ? `### 详细步骤：\n${question.steps.join('\n\n')}` : ''}
 
     res.json({
       success: true,
+      id: errorId,
       savedPath: targetPath,
       fileName,
       syllabus: syllabusNode ? { id: syllabusNode.id, point: syllabusNode.level3 } : undefined,
@@ -1100,18 +1101,22 @@ quizRouter.post('/quiz/errors/sync-vault', (req, res) => {
     const vaultPath = getRequestVaultPath(req)
     let importedCount = 0
 
-    const candidateDirs = [
+    const baseDirs = [
       path.resolve(vaultPath, '03-真题错题归因'),
-      path.resolve(vaultPath, '03-真题错题归因/408错题本'),
-      path.resolve(vaultPath, '03-真题错题归因/数学错题本'),
-      path.resolve(vaultPath, '03-真题错题归因/每日错题集'),
       path.resolve(vaultPath, '错题本'),
-      path.resolve(vaultPath, '03-刷题与复盘/408错题本'),
-      path.resolve(vaultPath, '03-刷题与复盘/数学错题本'),
-      path.resolve(vaultPath, '03-刷题与复盘/错题集'),
-      path.resolve(vaultPath, '03-真题与错题/408错题本'),
-      path.resolve(vaultPath, '03-真题与错题/数学错题本'),
+      path.resolve(vaultPath, '03-刷题与复盘'),
+      path.resolve(vaultPath, '03-真题与错题'),
     ]
+    const candidateDirs: string[] = []
+    for (const baseDir of baseDirs) {
+      if (!fs.existsSync(baseDir)) continue
+      candidateDirs.push(baseDir)
+      for (const entry of fs.readdirSync(baseDir, { withFileTypes: true })) {
+        if (entry.isDirectory()) {
+          candidateDirs.push(path.join(baseDir, entry.name))
+        }
+      }
+    }
 
     const seenIds = new Set<string>()
     const existing = database.getErrorQuestions({ userId: req.user?.id })
@@ -1130,12 +1135,12 @@ quizRouter.post('/quiz/errors/sync-vault', (req, res) => {
             const { data: meta, content: body } = matter(raw)
 
             // 1. 尝试单题格式解析
-            const questionMatch = body.match(/### 题面：\s*([\s\S]*?)(?:### 选项：|## 2\.|$)/)
-            const optionsMatch = body.match(/### 选项：\s*([\s\S]*?)(?:## 2\.|$)/)
-            const notesMatch = body.match(/\*\*思维障碍\/误区复现\*\*：\s*([\s\S]*?)(?:## 3\.|$)/)
-            const userAnsMatch = body.match(/当时作答[：:*]*\s*`?([^`\r\n]+)`?/)
-            const correctAnsMatch = body.match(/标准答案[：:*]*\s*`?([^`\r\n]+)`?/)
-            const explMatch = body.match(/## 3\. 标准分步严谨推导\s*([\s\S]*?)(?:## 4\.|$)/)
+            const questionMatch = body.match(/### (?:题面|题目)[：:\s]*([\s\S]*?)(?:### 选项[：:\s]*|## 2\.|### 答案与解析|$)/)
+            const optionsMatch = body.match(/### 选项[：:\s]*([\s\S]*?)(?:## 2\.|### 答案与解析|$)/)
+            const notesMatch = body.match(/\*\*思维障碍\/误区复现\*\*[：:]\s*([\s\S]*?)(?:## 3\.|$)/)
+            const userAnsMatch = body.match(/(?:当时作答|我的错选)[：:*]*\s*`?([^`\r\n]+)`?/)
+            const correctAnsMatch = body.match(/(?:标准答案|正确答案)[：:*]*\s*`?([^`\r\n]+)`?/)
+            const explMatch = body.match(/(?:## 3\. 标准分步严谨推导|解析[：:*]*)\s*([\s\S]*?)(?:## 4\.|$)/)
             const subjectMatch = body.match(/科目[：:*]*\s*([^\r\n*]+)/)
             const errorTypeMatch = body.match(/诊断类型[：:*]*\s*`?([^`\r\n]+)`?/)
 
@@ -1162,7 +1167,7 @@ quizRouter.post('/quiz/errors/sync-vault', (req, res) => {
                 domain,
                 subject: subj,
                 chapter: meta?.chapter || '',
-                syllabusId: syllabusNode?.id || String(question.syllabusId || ''),
+                syllabusId: syllabusNode?.id || '',
                 question: questionText,
                 optionsJson: JSON.stringify(parsedOptions),
                 userAnswer: userAnsMatch ? userAnsMatch[1].trim() : '',
@@ -1196,7 +1201,7 @@ quizRouter.post('/quiz/errors/sync-vault', (req, res) => {
                     domain: syllabusNode?.domain || 'math',
                     subject: syllabusNode?.subject || meta?.subject || '考研综合',
                     chapter: syllabusNode?.level2 || '',
-                    syllabusId: syllabusNode?.id || String(question.syllabusId || ''),
+                    syllabusId: syllabusNode?.id || '',
                     question: qText,
                     optionsJson: '{}',
                     userAnswer: uMatch ? uMatch[1].trim() : '',

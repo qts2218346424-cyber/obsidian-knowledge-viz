@@ -1522,6 +1522,22 @@ booksRouter.post('/books/upload', (req, res, next) => {
     const safeName = getSafeUploadFilename(req.file.originalname)
     const relPath = path.relative(vaultRoot, req.file.path).replace(/\\/g, '/')
 
+    // 智能后台线性化优化：若是 PDF 且服务端有 qpdf，转换为 Fast Web View 线性化结构实现首屏秒开
+    if (req.file.path.toLowerCase().endsWith('.pdf')) {
+      const savedPdfPath = req.file.path
+      const tmpLinearized = savedPdfPath + '.linearized.tmp'
+      execFile('qpdf', ['--linearize', savedPdfPath, tmpLinearized], (qpdfErr) => {
+        if (!qpdfErr && fs.existsSync(tmpLinearized)) {
+          try {
+            fs.renameSync(tmpLinearized, savedPdfPath)
+            console.log(`[QPDF Linearized OK]: ${path.basename(savedPdfPath)}`)
+          } catch {}
+        } else if (fs.existsSync(tmpLinearized)) {
+          try { fs.unlinkSync(tmpLinearized) } catch {}
+        }
+      })
+    }
+
     invalidateCache(req.user.id)
     res.json({
       success: true,

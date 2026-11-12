@@ -352,6 +352,10 @@ export default function PdfCanvasViewer({
           >
             <ChevronRight className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
           </button>
+
+          <span className="text-[10px] text-emerald-400/90 font-medium px-1.5 py-0.2 rounded bg-emerald-500/10 border border-emerald-500/20 hidden lg:inline-block">
+            ⚡ 分片秒开
+          </span>
         </div>
 
         {/* 右侧：缩放与视口适应控制 */}
