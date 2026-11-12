@@ -77,7 +77,10 @@ export default function PdfCanvasViewer({
       url,
       cMapUrl: '/cmaps/',
       cMapPacked: true,
-      rangeChunkSize: 65536 * 4,
+      disableAutoFetch: true, // 核心优化：禁止后台全量贪婪预取，仅按需拉取当前浏览页的分片
+      disableStream: false, // 启用浏览器分片流式管道
+      rangeChunkSize: 65536, // 64KB 标准分片尺寸，毫秒级按需拉取
+      isEvalSupported: false,
     })
 
     loadingTask.onProgress = (progressData: { loaded: number; total: number }) => {
@@ -217,6 +220,13 @@ export default function PdfCanvasViewer({
       await task.promise
       ctx.restore()
       setRendering(false)
+
+      // 智能轻量预热相邻下一页，确保点击下一页秒切，且绝不贪婪预取全书
+      if (currentPage < pdfDoc.numPages) {
+        setTimeout(() => {
+          pdfDoc.getPage(currentPage + 1).catch(() => {})
+        }, 80)
+      }
     } catch (err: any) {
       if (err?.name !== 'RenderingCancelledException') {
         console.error('[PdfCanvasViewer Render Error]:', err)

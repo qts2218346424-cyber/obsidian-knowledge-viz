@@ -500,17 +500,40 @@ ${complexity || '（考生未填写复杂度说明）'}
 
 quizRouter.post('/quiz/save-error', (req, res) => {
   try {
-    const { question, userAnswer, errorType, notes } = req.body as {
-      question: any
-      userAnswer: string
-      errorType: '概念不清' | '公式记错' | '计算失误' | '审题疏忽'
-      notes?: string
-    }
+    const body = req.body || {}
+    const rawQuestion = body.question
+    const questionObj =
+      rawQuestion && typeof rawQuestion === 'object'
+        ? rawQuestion
+        : typeof rawQuestion === 'string'
+          ? { ...body, question: rawQuestion }
+          : null
 
-    if (!question) {
+    if (!questionObj || !String(questionObj.question || '').trim()) {
       res.status(400).json({ error: 'Missing question' })
       return
     }
+
+    const question = {
+      ...questionObj,
+      id: String(questionObj.id || Date.now()),
+      domain: String(
+        questionObj.domain ||
+          (String(questionObj.subject || '').includes('数学') || questionObj.scope ? 'math' : 'cs_408')
+      ),
+      subject: String(
+        questionObj.subject ||
+          getQuizDefaultSubject(
+            String(questionObj.domain || (String(questionObj.subject || '').includes('数学') || questionObj.scope ? 'math' : 'cs_408'))
+          )
+      ),
+      chapter: String(questionObj.chapter || ''),
+      answer: String(questionObj.answer || questionObj.correctAnswer || ''),
+      explanation: String(questionObj.explanation || ''),
+    }
+    const userAnswer = String(body.userAnswer ?? questionObj.userAnswer ?? '')
+    const errorType = String(body.errorType || questionObj.errorType || '概念不清')
+    const notes = typeof body.notes === 'string' ? body.notes : String(questionObj.notes || '')
 
     const domain = question.domain || (question.subject?.includes('数学') || question.scope ? 'math' : 'cs_408')
     const subFolder = getErrorSubFolderByDomain(domain)
@@ -540,9 +563,23 @@ quizRouter.post('/quiz/save-error', (req, res) => {
     }
     const targetPath = `${parentFolder}/${subFolder}/${fileName}`
 
-    const optionsText = question.options
-      ? Object.entries(question.options).map(([k, v]) => `- **${k}**: ${v}`).join('\n')
-      : ''
+    const formatOptionEntries = (opts: any): Array<[string, string]> => {
+      if (!opts) return []
+      if (Array.isArray(opts)) {
+        return opts.map((item, idx) => {
+          const text = String(item || '').trim()
+          const matched = text.match(/^([A-Za-z])[.．、:\s]+([\s\S]+)$/)
+          if (matched) return [matched[1].toUpperCase(), matched[2].trim()]
+          return [String.fromCharCode(65 + idx), text]
+        })
+      }
+      if (typeof opts === 'object') {
+        return Object.entries(opts).map(([k, v]) => [String(k), String(v ?? '')])
+      }
+      return []
+    }
+    const optionEntries = formatOptionEntries(question.options)
+    const optionsText = optionEntries.map(([k, v]) => `- **${k}**: ${v}`).join('\n')
 
     const content = `
 # ❌ 错题复盘：${question.chapter || question.subject} · ${question.id}
@@ -608,9 +645,7 @@ ${question.steps ? `### 详细步骤：\n${question.steps.join('\n\n')}` : ''}
         path.join(vaultPath, '错题本'),
         path.join(vaultPath, parentFolder, '每日错题集')
       ]
-      const optionsStr = question.options
-        ? Object.entries(question.options).map(([k, v]) => `${k}. ${v}`).join(' ')
-        : ''
+      const optionsStr = optionEntries.map(([k, v]) => `${k}. ${v}`).join(' ')
       const entryText = `\n## 错题 ${new Date().toISOString()}\n- **来源笔记**: ${sourceFile}\n- **科目**: ${question.subject || ''}\n- **错因类型**: ${errorType || '概念不清'}\n- **错因反思**: ${notes || '待补充复盘反思'}\n- **题目**: ${question.question}${optionsStr ? ` (${optionsStr})` : ''}\n- **你的回答**: ${userAnswer || '未作答'}\n- **正确答案**: ${question.answer || question.correctAnswer || ''}\n- **解析**: ${question.explanation || ''}\n- **复习次数**: 0\n- **下次复习**: ${today}\n`
       for (const dailyDir of dailyDirs) {
         if (!fs.existsSync(dailyDir)) {
@@ -641,7 +676,7 @@ ${question.steps ? `### 详细步骤：\n${question.steps.join('\n\n')}` : ''}
         domain,
         subject: question.subject,
         chapter: question.chapter || '',
-        syllabusId: syllabusNode?.id || '',
+        syllabusId: syllabusNode?.id || String(question.syllabusId || ''),
         question: question.question,
         optionsJson: JSON.stringify(question.options || {}),
         userAnswer: userAnswer || '',
@@ -663,7 +698,7 @@ ${question.steps ? `### 详细步骤：\n${question.steps.join('\n\n')}` : ''}
         userId: req.user?.id || 'default',
         title: `错题复盘 · ${question.subject}`,
         subject: question.subject,
-        syllabusId: syllabusNode?.id || '',
+        syllabusId: syllabusNode?.id || String(question.syllabusId || ''),
         repetition: sm2Initial.repetition,
         intervalDays: sm2Initial.intervalDays,
         easinessFactor: sm2Initial.easinessFactor,
@@ -1127,7 +1162,7 @@ quizRouter.post('/quiz/errors/sync-vault', (req, res) => {
                 domain,
                 subject: subj,
                 chapter: meta?.chapter || '',
-                syllabusId: syllabusNode?.id || '',
+                syllabusId: syllabusNode?.id || String(question.syllabusId || ''),
                 question: questionText,
                 optionsJson: JSON.stringify(parsedOptions),
                 userAnswer: userAnsMatch ? userAnsMatch[1].trim() : '',
@@ -1161,7 +1196,7 @@ quizRouter.post('/quiz/errors/sync-vault', (req, res) => {
                     domain: syllabusNode?.domain || 'math',
                     subject: syllabusNode?.subject || meta?.subject || '考研综合',
                     chapter: syllabusNode?.level2 || '',
-                    syllabusId: syllabusNode?.id || '',
+                    syllabusId: syllabusNode?.id || String(question.syllabusId || ''),
                     question: qText,
                     optionsJson: '{}',
                     userAnswer: uMatch ? uMatch[1].trim() : '',
