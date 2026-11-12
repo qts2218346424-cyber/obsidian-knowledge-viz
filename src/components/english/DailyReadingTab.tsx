@@ -29,8 +29,7 @@ import {
   Check,
   MessageSquare,
   Award,
-  X,
-} from 'lucide-react'
+  X, ClipboardList as IcClipboardList, Search as IcSearch } from 'lucide-react'
 import {
   DAILY_READING_ARTICLES,
   type DailyReadingArticle,
@@ -538,10 +537,10 @@ export default function DailyReadingTab() {
                   {/* 考研名师解析与同义替换 */}
                   {showAnalysis[q.id] && (
                     <div className="p-3 rounded-xl bg-white border border-slate-200 text-xs space-y-1.5">
-                      <div className="font-bold text-slate-800">📋 考研真题命题解析：</div>
+                      <div className="font-bold text-slate-800"><IcClipboardList className="emoji-icon" aria-hidden="true" />考研真题命题解析：</div>
                       <p className="text-slate-600 leading-relaxed">{q.analysis}</p>
                       <div className="text-2xs font-bold text-indigo-700 bg-indigo-50 p-2 rounded-lg">
-                        🔍 考点同义替换还原：{q.paraphrasePoint}
+                        <IcSearch className="emoji-icon" aria-hidden="true" />考点同义替换还原：{q.paraphrasePoint}
                       </div>
                     </div>
                   )}

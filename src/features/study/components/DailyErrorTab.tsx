@@ -148,7 +148,7 @@ export default function DailyErrorTab() {
               className="px-4 py-2 rounded-xl bg-accent-orange/10 hover:bg-accent-orange/20 text-accent-orange text-xs font-bold flex items-center gap-1.5 transition-colors"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              💡 AI 启发式分步辅导 (切入点/挑刺)
+              AI 启发式分步辅导 (切入点/挑刺)
             </button>
             <button
               onClick={() => setShowAnswer(true)}

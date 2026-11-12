@@ -2,8 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import {
   X, Sparkles, Image as ImageIcon, Camera, Check, Loader2,
   FileText, Bookmark, Target, AlertCircle, ArrowUpRight,
-  Bold, List, Sigma, CheckSquare
-} from 'lucide-react'
+  Bold, List, Sigma, CheckSquare } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
 
@@ -329,7 +328,7 @@ export default function QuickNoteDrawer({ isOpen, onClose, onNoteCreated }: Quic
             <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-2.5 animate-in fade-in shadow-xs">
               <div className="flex items-center gap-2 font-bold text-emerald-800">
                 <Check className="w-4 h-4 shrink-0 text-emerald-600" />
-                <span>🎉 极速保存成功！已安全落盘至 Obsidian 知识库。</span>
+                <span>极速保存成功！已安全落盘至 Obsidian 知识库。</span>
               </div>
               <div className="flex flex-wrap items-center gap-2 pt-0.5">
                 <button
@@ -393,7 +392,7 @@ export default function QuickNoteDrawer({ isOpen, onClose, onNoteCreated }: Quic
             ) : (
               <>
                 <Check className="w-4 h-4" />
-                <span>⚡ 一键存入知识库</span>
+                <span>一键存入知识库</span>
               </>
             )}
           </button>

@@ -2,8 +2,7 @@ import { createPortal } from 'react-dom'
 import { useState, useEffect } from 'react'
 import {
   X, Lightbulb, ShieldAlert, BookOpen, Sparkles, Loader2,
-  Copy, Check, RefreshCw
-} from 'lucide-react'
+  Copy, Check, RefreshCw, Globe as IcGlobe, Lightbulb as IcLightbulb, Zap as IcZap } from 'lucide-react'
 import MarkdownRenderer from '../MarkdownRenderer'
 import { api } from '../../services/api'
 
@@ -157,7 +156,7 @@ export default function StepTutorModal({
                 }`}
                 title="本地 Claude Code CLI"
               >
-                ⚡ Claude
+                <IcZap className="emoji-icon" aria-hidden="true" />Claude
               </button>
               <button
                 onClick={() => setProvider('codex')}
@@ -175,7 +174,7 @@ export default function StepTutorModal({
                 }`}
                 title="云端 DeepSeek / OpenAI API"
               >
-                🌐 DeepSeek
+                <IcGlobe className="emoji-icon" aria-hidden="true" />DeepSeek
               </button>
             </div>
           </div>
@@ -278,7 +277,7 @@ export default function StepTutorModal({
 
         {/* Footer */}
         <div className="px-6 py-3 border-t border-cream-200 bg-cream-50/50 flex items-center justify-between text-xs text-warm-500">
-          <span>💡 提示：尝试自己动笔推导第一步，若卡壳可随时切换至“解题步骤挑刺”</span>
+          <span><IcLightbulb className="emoji-icon" aria-hidden="true" />提示：尝试自己动笔推导第一步，若卡壳可随时切换至“解题步骤挑刺”</span>
           <button
             onClick={onClose}
             className="px-4 py-1.5 rounded-xl bg-cream-200 hover:bg-cream-300 text-warm-700 font-semibold transition-colors"

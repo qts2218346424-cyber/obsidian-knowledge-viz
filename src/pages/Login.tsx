@@ -14,8 +14,7 @@ import {
   UserPlus,
   LogIn,
   ArrowLeft,
-  Laptop,
-} from 'lucide-react'
+  Laptop, Search as IcSearch } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function Login() {
@@ -87,7 +86,7 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 subframe-landing-bg relative overflow-hidden font-sans text-[#171719]">
+    <div className="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 subframe-landing-bg relative overflow-hidden font-sans text-slate-900">
       <div className="w-full max-w-[940px] relative z-10 animate-fade-in-up">
         {/* 返回官网与下载门户导航条 */}
         <div className="mb-4 flex items-center justify-between px-1">
@@ -104,13 +103,13 @@ export default function Login() {
         </div>
 
         {/* Subframe 标志性外框与卡片 */}
-        <div className="rounded-2xl bg-[#e3e3e6] p-2 sm:p-3 shadow-[0_28px_70px_rgba(0,0,0,0.25)] border border-white/60 grid grid-cols-1 lg:grid-cols-12 gap-3 overflow-hidden">
+        <div className="rounded-2xl bg-slate-200 p-2 sm:p-3 shadow-[0_28px_70px_rgba(0,0,0,0.25)] border border-white/60 grid grid-cols-1 lg:grid-cols-12 gap-3 overflow-hidden">
           {/* 左栏：核心登录与注册交互 */}
-          <div className="lg:col-span-5 bg-[#efefef] rounded-xl p-6 sm:p-7 flex flex-col justify-between text-left border border-white/70">
+          <div className="lg:col-span-5 bg-slate-100 rounded-xl p-6 sm:p-7 flex flex-col justify-between text-left border border-white/70">
             <div>
               {/* Logo 标识 */}
               <div className="flex items-center gap-2 mb-5">
-                <div className="w-8 h-8 rounded-lg bg-[#18181b] text-white flex items-center justify-center shadow-sm">
+                <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center shadow-sm">
                   <svg className="w-5 h-5 text-white" viewBox="0 0 28 28" fill="none">
                     <rect x="4" y="4" width="17" height="5.5" rx="1" fill="currentColor" />
                     <path d="M4 12.2H14.5L4 22.5V12.2Z" fill="currentColor" />
@@ -118,15 +117,15 @@ export default function Login() {
                   </svg>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-base tracking-tight text-[#18181b]">研核</span>
+                  <span className="font-bold text-base tracking-tight text-slate-900">研核</span>
                 </div>
               </div>
 
               {/* 标题 */}
-              <h2 className="text-[22px] sm:text-[25px] leading-[1.18] tracking-[-0.03em] font-bold text-[#18181b] mb-1">
+              <h2 className="text-[22px] sm:text-[25px] leading-[1.18] tracking-[-0.03em] font-bold text-slate-900 mb-1">
                 {isInitMode ? '初始化系统' : activeTab === 'register' ? '注册研学账号' : '登入研学空间'}
               </h2>
-              <p className="text-xs text-[#8d9096] mb-5">
+              <p className="text-xs text-slate-400 mb-5">
                 408 计算机综合 & 考研数学 · 智能双核空间
               </p>
 
@@ -140,7 +139,7 @@ export default function Login() {
 
               {/* Tab 切换 */}
               {!isInitMode && (
-                <div className="mb-4 flex p-1 rounded-xl bg-[#e2e2e5] border border-black/[0.04]">
+                <div className="mb-4 flex p-1 rounded-xl bg-slate-200 border border-black/[0.04]">
                   <button
                     type="button"
                     onClick={() => {
@@ -190,7 +189,7 @@ export default function Login() {
                         ? '用户名 (字母/数字，至少 3 位)'
                         : '请输入账号名称'
                     }
-                    className="w-full py-2.5 px-3 rounded-lg bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
+                    className="w-full py-2.5 px-3 rounded-lg bg-slate-200 text-slate-900 placeholder-slate-400 text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
                   />
                 </div>
 
@@ -201,7 +200,7 @@ export default function Login() {
                       value={displayName}
                       onChange={(e) => setDisplayName(e.target.value)}
                       placeholder={isInitMode ? '显示昵称 (如：研核掌舵人)' : '显示昵称 (选填)'}
-                      className="w-full py-2.5 px-3 rounded-lg bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
+                      className="w-full py-2.5 px-3 rounded-lg bg-slate-200 text-slate-900 placeholder-slate-400 text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
                     />
                   </div>
                 )}
@@ -214,7 +213,7 @@ export default function Login() {
                     autoComplete={activeTab === 'register' || isInitMode ? 'new-password' : 'current-password'}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="登录密码 (至少 6 位)"
-                    className="w-full py-2.5 pl-3 pr-10 rounded-lg bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
+                    className="w-full py-2.5 pl-3 pr-10 rounded-lg bg-slate-200 text-slate-900 placeholder-slate-400 text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
                   />
                   <button
                     type="button"
@@ -235,7 +234,7 @@ export default function Login() {
                       autoComplete="new-password"
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="请再次输入相同密码确认"
-                      className="w-full py-2.5 px-3 rounded-lg bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
+                      className="w-full py-2.5 px-3 rounded-lg bg-slate-200 text-slate-900 placeholder-slate-400 text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
                     />
                   </div>
                 )}
@@ -243,7 +242,7 @@ export default function Login() {
                 <button
                   type="submit"
                   disabled={submitting || isLoading}
-                  className="w-full mt-1 flex items-center justify-center gap-2 rounded-lg bg-[#1c1c1f] hover:bg-[#2a2a2e] active:scale-[0.98] py-2.5 px-4 text-[13px] font-semibold text-white shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+                  className="w-full mt-1 flex items-center justify-center gap-2 rounded-lg bg-slate-900 hover:bg-slate-800 active:scale-[0.98] py-2.5 px-4 text-[13px] font-semibold text-white shadow-sm transition-all disabled:opacity-50 cursor-pointer"
                 >
                   {submitting ? (
                     <span>正在处理...</span>
@@ -270,7 +269,7 @@ export default function Login() {
           {/* 右栏：研学实景三栏画板缩略图 (Subframe Editor Preview) */}
           <div className="lg:col-span-7 flex items-center justify-center p-2 sm:p-4 overflow-hidden">
             <div className="w-full bg-white rounded-xl shadow-[0_12px_34px_rgba(0,0,0,0.1)] border border-black/[0.08] overflow-hidden text-left select-none">
-              <div className="h-8 px-3 bg-[#fafafa] border-b border-slate-200/80 flex items-center justify-between text-2xs text-slate-500">
+              <div className="h-8 px-3 bg-slate-50 border-b border-slate-200/80 flex items-center justify-between text-2xs text-slate-500">
                 <div className="flex items-center gap-3">
                   <span className="font-semibold text-slate-800">Pages</span>
                   <span>Layers</span>
@@ -286,9 +285,9 @@ export default function Login() {
 
               <div className="grid grid-cols-12 h-[310px] bg-white text-2xs">
                 {/* 笔记侧栏 */}
-                <div className="col-span-4 border-r border-slate-200/80 p-2.5 bg-[#fbfbfc] flex flex-col gap-2">
+                <div className="col-span-4 border-r border-slate-200/80 p-2.5 bg-slate-50 flex flex-col gap-2">
                   <div className="px-2 py-1 rounded bg-white border border-slate-200 text-2xs text-slate-600 flex justify-between">
-                    <span>🔍 检索知识点...</span>
+                    <span><IcSearch className="emoji-icon" aria-hidden="true" />检索知识点...</span>
                   </div>
                   <div className="space-y-1">
                     <div className="p-1.5 rounded border border-slate-200 bg-white font-medium text-slate-800 truncate">
@@ -319,7 +318,7 @@ export default function Login() {
                 </div>
 
                 {/* 属性栏 */}
-                <div className="col-span-3 border-l border-slate-200/80 p-2.5 bg-[#fbfbfc] text-2xs text-slate-600 space-y-2">
+                <div className="col-span-3 border-l border-slate-200/80 p-2.5 bg-slate-50 text-2xs text-slate-600 space-y-2">
                   <div className="font-semibold text-slate-800 pb-1 border-b border-slate-200">研学统计</div>
                   <div>
                     <div className="text-slate-400">今日做题</div>

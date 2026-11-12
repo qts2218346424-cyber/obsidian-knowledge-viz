@@ -7,8 +7,7 @@ import {
   Sparkles,
   RefreshCw,
   FolderPlus,
-  ArrowUp,
-} from 'lucide-react'
+  ArrowUp, BookOpen as IcBookOpen, Lightbulb as IcLightbulb, Target as IcTarget, Users as IcUsers } from 'lucide-react'
 import {
   api,
   type FileDetail,
@@ -192,9 +191,9 @@ export default function Chat() {
       case 'sm':
         return 'text-2xs sm:text-2xs leading-[1.52]'
       case 'base':
-        return 'text-xs sm:text-[12.5px] leading-[1.56]'
+        return 'text-xs sm:text-xs leading-[1.56]'
       case 'lg':
-        return 'text-[12.5px] sm:text-[13.5px] leading-[1.6]'
+        return 'text-xs sm:text-sm leading-[1.6]'
     }
   }, [chatFontSize])
 
@@ -1752,7 +1751,7 @@ export default function Chat() {
               ...msgs[idx],
               content:
                 rawContent ||
-                '⚠️ **智能体已完成推演，但模型服务暂未返回文本内容（系统已自动保留您的伴学积分，本次未扣费）。**\n\n> 💡 建议检查网络连接或直接点击重新生成。',
+                '⚠️ **智能体已完成推演，但模型服务暂未返回文本内容（系统已自动保留您的伴学积分，本次未扣费）。**\n\n> <IcLightbulb className="emoji-icon" aria-hidden="true" />建议检查网络连接或直接点击重新生成。',
               streaming: false,
             }
           }
@@ -2223,13 +2222,13 @@ export default function Chat() {
                   </p>
                   <div className="flex items-center justify-center flex-wrap gap-2 mt-3.5 text-2xs text-slate-400">
                     <span className="px-2.5 py-1 rounded-full bg-slate-100/80 text-slate-600">
-                      👥 顶栏支持双师同台对比
+                      <IcUsers className="emoji-icon" aria-hidden="true" />顶栏支持双师同台对比
                     </span>
                     <span className="px-2.5 py-1 rounded-full bg-slate-100/80 text-slate-600">
-                      📖 右上角开启讲义原文伴读
+                      <IcBookOpen className="emoji-icon" aria-hidden="true" />右上角开启讲义原文伴读
                     </span>
                     <span className="px-2.5 py-1 rounded-full bg-slate-100/80 text-slate-600">
-                      🎯 回答可一键存笔记或现场考 3 题
+                      <IcTarget className="emoji-icon" aria-hidden="true" />回答可一键存笔记或现场考 3 题
                     </span>
                   </div>
                 </div>

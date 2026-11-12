@@ -19,8 +19,7 @@ import {
   Lightbulb,
   AlertTriangle,
   Smile,
-  Frown
-} from 'lucide-react'
+  Frown, Flame as IcFlame, Lightbulb as IcLightbulb, Sparkles as IcSparkles, TriangleAlert as IcTriangleAlert } from 'lucide-react'
 import MarkdownRenderer from '../MarkdownRenderer'
 
 export interface FlashcardItem {
@@ -380,7 +379,7 @@ export default function FlashcardsTab() {
 
         <div className="bg-surface border border-amber-200/80 bg-amber-50/20 rounded-2xl p-4 shadow-xs">
           <div className="flex items-center justify-between text-xs text-amber-700 font-semibold mb-1">
-            <span>🔥 容易遗忘考点</span>
+            <span><IcFlame className="emoji-icon" aria-hidden="true" />容易遗忘考点</span>
             <Flame className="w-4 h-4 text-amber-500 animate-pulse" />
           </div>
           <div className="text-2xl font-bold text-amber-600">
@@ -783,14 +782,14 @@ export default function FlashcardsTab() {
 
                         {cur.mnemonic && (
                           <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs">
-                            <span className="font-bold block mb-1">💡 记忆口诀：</span>
+                            <span className="font-bold block mb-1"><IcLightbulb className="emoji-icon" aria-hidden="true" />记忆口诀：</span>
                             {cur.mnemonic}
                           </div>
                         )}
 
                         {cur.pitfall && (
                           <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-900 text-xs">
-                            <span className="font-bold block mb-1">⚠️ 考研命题陷阱：</span>
+                            <span className="font-bold block mb-1"><IcTriangleAlert className="emoji-icon" aria-hidden="true" />考研命题陷阱：</span>
                             {cur.pitfall}
                           </div>
                         )}
@@ -909,7 +908,7 @@ export default function FlashcardsTab() {
               </div>
 
               <div>
-                <label className="block font-semibold text-warm-700 mb-1">💡 记忆口诀 / 助记技巧（选填）</label>
+                <label className="block font-semibold text-warm-700 mb-1"><IcLightbulb className="emoji-icon" aria-hidden="true" />记忆口诀 / 助记技巧（选填）</label>
                 <input
                   type="text"
                   value={editingCard.mnemonic || ''}
@@ -920,7 +919,7 @@ export default function FlashcardsTab() {
               </div>
 
               <div>
-                <label className="block font-semibold text-warm-700 mb-1">⚠️ 考研命题陷阱（选填）</label>
+                <label className="block font-semibold text-warm-700 mb-1"><IcTriangleAlert className="emoji-icon" aria-hidden="true" />考研命题陷阱（选填）</label>
                 <input
                   type="text"
                   value={editingCard.pitfall || ''}
@@ -939,7 +938,7 @@ export default function FlashcardsTab() {
                   className="rounded text-amber-500 focus:ring-amber-400"
                 />
                 <label htmlFor="forgottenCheck" className="text-xs font-semibold text-amber-700 cursor-pointer">
-                  🔥 标记为【容易遗忘知识点】（排入每日高频强化背诵池）
+                  <IcFlame className="emoji-icon" aria-hidden="true" />标记为【容易遗忘知识点】（排入每日高频强化背诵池）
                 </label>
               </div>
 
@@ -1012,7 +1011,7 @@ export default function FlashcardsTab() {
               </div>
 
               <div className="p-3 rounded-xl bg-purple-50/70 border border-purple-200/80 text-2xs text-purple-800 leading-relaxed">
-                ✨ AI 将结合 408 统考真题命题规律，自动构建正面考查设问、背面核心机理推导、琅琅上口的记忆口诀以及防坑易错辨析！
+                <IcSparkles className="emoji-icon" aria-hidden="true" />AI 将结合 408 统考真题命题规律，自动构建正面考查设问、背面核心机理推导、琅琅上口的记忆口诀以及防坑易错辨析！
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2">

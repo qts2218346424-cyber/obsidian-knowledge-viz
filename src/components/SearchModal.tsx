@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { Search, X, FileText, Loader2 } from 'lucide-react'
+import { Search, X, FileText, Loader2, Search as IcSearch } from 'lucide-react'
 import { api, type FileListItem } from '../services/api'
 
 interface SearchModalProps {
@@ -115,7 +115,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
             <div className="px-4 py-8 text-center text-xs text-slate-500 space-y-3">
               <p className="font-semibold text-slate-700">未在个人笔记中找到匹配「{query}」的篇章</p>
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/90 text-2xs text-slate-600 inline-block text-left max-w-sm">
-                <span className="font-bold text-slate-800">🔍 检索范围提示：</span>
+                <span className="font-bold text-slate-800"><IcSearch className="emoji-icon" aria-hidden="true" />检索范围提示：</span>
                 <p className="mt-1 text-slate-500 leading-relaxed">此处检索您当前绑定的个人 Obsidian 笔记库（不覆盖公共讲义与 408/数学真题库）。</p>
                 <div className="mt-2.5 flex items-center gap-2">
                   <button

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { BookOpen, XCircle, Plus, Search, RefreshCw, Loader2, Sparkles, Edit3 } from 'lucide-react'
+import { BookOpen, XCircle, Plus, Search, RefreshCw, Loader2, Sparkles, Edit3, BookOpen as IcBookOpen, Eraser as IcEraser } from 'lucide-react'
 import { api, type BookItem } from '../services/api'
 import { CURATED_HANDOUTS, type HandoutItem } from '../data/handoutsData'
 import { INTERACTIVE_COURSEWARES, type InteractiveCoursewareItem } from '../data/interactiveCourseware'
@@ -798,7 +798,7 @@ export default function Study() {
 
             >
 
-              <span>📖 讲义精读列表</span>
+              <span><IcBookOpen className="emoji-icon" aria-hidden="true" />讲义精读列表</span>
 
             </button>
 
@@ -1434,7 +1434,7 @@ export default function Study() {
 
                     >
 
-                      🧹 一键去杂乱后缀
+                      <IcEraser className="emoji-icon" aria-hidden="true" />一键去杂乱后缀
 
                     </button>
 

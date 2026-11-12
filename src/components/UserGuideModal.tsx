@@ -15,8 +15,7 @@ import {
   ChevronRight,
   ExternalLink,
   Compass,
-  ArrowRight,
-} from 'lucide-react'
+  ArrowRight, Crown as IcCrown, GraduationCap as IcGraduationCap, Pencil as IcPencil } from 'lucide-react'
 
 interface UserGuideModalProps {
   isOpen: boolean
@@ -439,19 +438,19 @@ export default function UserGuideModal({ isOpen, onClose, onStartInteractiveTour
                 <h4 className="text-sm font-bold text-slate-900 pt-2">二、多用户权限与角色说明</h4>
                 <div className="space-y-2.5 text-xs">
                   <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                    <span className="font-bold text-slate-900">👑 超级管理员 (admin)</span>
+                    <span className="font-bold text-slate-900"><IcCrown className="emoji-icon" aria-hidden="true" />超级管理员 (admin)</span>
                     <p className="text-slate-600 mt-1 leading-relaxed">
                       掌控系统全局底层物理底座、服务器挂载路径、配置各端 AI 服务商与 API 密钥、重构全库标签与用户角色晋升。
                     </p>
                   </div>
                   <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                    <span className="font-bold text-slate-900">✏️ 研学编辑者 (editor)</span>
+                    <span className="font-bold text-slate-900"><IcPencil className="emoji-icon" aria-hidden="true" />研学编辑者 (editor)</span>
                     <p className="text-slate-600 mt-1 leading-relaxed">
                       具备全库笔记研读、双链拓展、知识卡片自由编辑与自选题库导入解析权限；全局系统核心 API 设置受管理员策略保护只读。
                     </p>
                   </div>
                   <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80">
-                    <span className="font-bold text-slate-900">🎓 研学学员 (student)</span>
+                    <span className="font-bold text-slate-900"><IcGraduationCap className="emoji-icon" aria-hidden="true" />研学学员 (student)</span>
                     <p className="text-slate-600 mt-1 leading-relaxed">
                       自主注册默认角色。享受全科目真题模拟、智能批改评分、错题归因本沉淀、艾宾浩斯抗遗忘闪卡与 AI 伴学答疑；公共系统笔记与大模型底座享有安全防误改保护。
                     </p>

@@ -337,6 +337,8 @@ body {
 /* Subframe 规范微质感系统 (Subframe Design System Primitives) */
 .subframe-pill {
   display: inline-flex;
+  white-space: nowrap;
+  flex-shrink: 0;
   align-items: center;
   gap: 0.375rem;
   padding: 0.2rem 0.55rem;
@@ -1350,8 +1352,10 @@ input[type="range"].history-range-slider:focus-visible {
     touch-action: auto;
   }
 
-  /* 移动端所有块级元素防超出保护 */
-  *, ::before, ::after {
+  /* 移动端媒体元素防超出保护。
+     注意：不能对 * 设置 max-width:100%，否则绝对定位的气泡 / 下拉 / 提示会被压成父元素宽度
+     （例如宠物气泡在 390px 下被挤成一列竖排文字）。横向溢出由 #root 的 overflow-x: clip 兜底。 */
+  img, video, canvas, iframe {
     max-width: 100%;
   }
 
@@ -1530,4 +1534,15 @@ h1, h2, h3 {
   .animate-spin {
     animation: spin 1.5s linear infinite !important;
   }
+}
+
+/* emoji 替换为线性图标后的统一尺寸：跟随所在文字字号 */
+.emoji-icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  margin-right: 0.3em;
+  vertical-align: -0.125em;
+  flex-shrink: 0;
+  stroke-width: 2;
 }

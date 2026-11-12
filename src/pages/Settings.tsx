@@ -7,8 +7,7 @@ import { api, type AppSettings, type CloudEndpoint } from '../services/api'
 import {
   Save, RefreshCw, CheckCircle, AlertCircle, FolderOpen, Globe, Cpu, Palette,
   Eye, EyeOff, Folder, AlertTriangle, Zap, ChevronRight, ArrowUp,
-  Loader2, X, HardDrive, Check, Download, Plug, Plus, Trash2, Star, KeyRound, ShieldCheck, Lock, Copy, ShieldAlert
-} from 'lucide-react'
+  Loader2, X, HardDrive, Check, Download, Plug, Plus, Trash2, Star, KeyRound, ShieldCheck, Lock, Copy, ShieldAlert, GraduationCap as IcGraduationCap, Lock as IcLock, Pin as IcPin, Settings as IcSettings } from 'lucide-react'
 
 declare global {
   interface Window {
@@ -529,7 +528,7 @@ export default function Settings() {
                 adminTab === 'student' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-500 hover:text-slate-900'
               }`}
             >
-              🎓 备考偏好
+              <IcGraduationCap className="emoji-icon" aria-hidden="true" />备考偏好
             </button>
             <button
               type="button"
@@ -538,7 +537,7 @@ export default function Settings() {
                 adminTab === 'system' ? 'bg-white text-indigo-700 shadow-xs font-bold' : 'text-slate-500 hover:text-slate-900'
               }`}
             >
-              ⚙️ 系统底座 (管理员)
+              <IcSettings className="emoji-icon" aria-hidden="true" />系统底座 (管理员)
             </button>
           </div>
         )}
@@ -588,7 +587,7 @@ export default function Settings() {
               </div>
             </div>
             <p className="text-2xs text-slate-400 leading-relaxed">
-              🔒 隐私保证：您的自建笔记、错题本复盘记录以及每日模考成绩均受沙箱加密隔离保护，仅您个人账号可见。
+              <IcLock className="emoji-icon" aria-hidden="true" />隐私保证：您的自建笔记、错题本复盘记录以及每日模考成绩均受沙箱加密隔离保护，仅您个人账号可见。
             </p>
           </section>
 
@@ -633,16 +632,16 @@ export default function Settings() {
               <>
                 {/* 专属 8 位安全救援码卡片（默认密文脱敏，防偷窥与公开泄露） */}
                 <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                       <KeyRound className="w-3.5 h-3.5 text-indigo-600" />
                       <span>专属安全救援码 (Recovery Code)</span>
                     </span>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <button
                         type="button"
                         onClick={() => setShowRecoveryCode(prev => !prev)}
-                        className="px-2 py-1 rounded-lg bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-semibold shadow-xs transition-all flex items-center gap-1 cursor-pointer"
+                        className="px-2 py-1 rounded-lg bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-semibold shadow-xs transition-all flex items-center gap-1 whitespace-nowrap cursor-pointer"
                         title={showRecoveryCode ? '隐藏救援码' : '显示救援码'}
                       >
                         {showRecoveryCode ? <EyeOff className="w-3 h-3 text-slate-500" /> : <Eye className="w-3 h-3 text-slate-500" />}
@@ -651,7 +650,7 @@ export default function Settings() {
                       <button
                         type="button"
                         onClick={handleRegenerateRecoveryCode}
-                        className="px-2 py-1 rounded-lg bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-semibold shadow-xs transition-all flex items-center gap-1 cursor-pointer"
+                        className="px-2 py-1 rounded-lg bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-semibold shadow-xs transition-all flex items-center gap-1 whitespace-nowrap cursor-pointer"
                         title="换发新的救援码"
                       >
                         <RefreshCw className="w-3 h-3 text-slate-500" />
@@ -661,7 +660,7 @@ export default function Settings() {
                         type="button"
                         onClick={handleCopyRecoveryCode}
                         disabled={!securityInfo?.recoveryCode}
-                        className="px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold shadow-xs transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                        className="px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold shadow-xs transition-all flex items-center gap-1 whitespace-nowrap cursor-pointer disabled:opacity-50"
                         title="点击复制救援码"
                       >
                         <Copy className="w-3 h-3 text-indigo-600" />
@@ -680,7 +679,7 @@ export default function Settings() {
                     </span>
                   </div>
                   <p className="text-2xs text-slate-400 leading-relaxed">
-                    📌 提示：救援码是忘记密码时的终极应急凭据。默认脱敏显示，请点击「查看」或「换发」并在安全环境下抄写备份，切勿截图公开发布！
+                    <IcPin className="emoji-icon" aria-hidden="true" />提示：救援码是忘记密码时的终极应急凭据。默认脱敏显示，请点击「查看」或「换发」并在安全环境下抄写备份，切勿截图公开发布！
                   </p>
                 </div>
               </>

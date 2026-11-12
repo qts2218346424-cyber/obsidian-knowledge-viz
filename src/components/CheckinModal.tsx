@@ -18,8 +18,7 @@ import {
   Gift,
   HelpCircle,
   Copy,
-  Check,
-} from 'lucide-react'
+  Check, Lightbulb as IcLightbulb, Zap as IcZap } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import * as authService from '../services/auth'
 import type { PointLogItem } from '../types/auth'
@@ -395,7 +394,7 @@ export default function CheckinModal({ isOpen, onClose, defaultTab = 'checkin' }
               </div>
 
               <div className="rounded-xl border border-slate-200/80 p-3 bg-slate-50/60 text-2xs text-slate-500 space-y-1">
-                <p>💡 提示：优惠码大小写不敏感，系统会自动为您转为大写。单次券核销后即作废，多次券每个账号仅限使用一次。</p>
+                <p><IcLightbulb className="emoji-icon" aria-hidden="true" />提示：优惠码大小写不敏感，系统会自动为您转为大写。单次券核销后即作废，多次券每个账号仅限使用一次。</p>
               </div>
             </div>
           )}
@@ -406,7 +405,7 @@ export default function CheckinModal({ isOpen, onClose, defaultTab = 'checkin' }
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-800">选择研学充值套餐</span>
                 <span className="text-2xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-semibold">
-                  ⚡ 自主即时到账通道
+                  <IcZap className="emoji-icon" aria-hidden="true" />自主即时到账通道
                 </span>
               </div>
 

@@ -8,8 +8,7 @@ import {
   Download,
   Highlighter,
   Maximize2,
-  Minimize2,
-} from 'lucide-react'
+  Minimize2, PenLine as IcPenLine } from 'lucide-react'
 
 export interface DoodleScratchpadCanvasProps {
   questionId: string
@@ -412,7 +411,7 @@ export default function DoodleScratchpadCanvas({
 
         {/* 右下角贴心操作指示 */}
         <div className="absolute right-3 bottom-2 pointer-events-none text-2xs text-slate-400 font-mono select-none">
-          ✍️ 支持 iPad触控笔 / 鼠标手绘 · 自动同步第 {questionIndex + 1} 题
+          <IcPenLine className="emoji-icon" aria-hidden="true" />支持 iPad触控笔 / 鼠标手绘 · 自动同步第 {questionIndex + 1} 题
         </div>
       </div>
 

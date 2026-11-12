@@ -10,8 +10,7 @@ import {
   Layers,
   Flame,
   ArrowRight,
-  BookOpen,
-} from 'lucide-react'
+  BookOpen, Monitor as IcMonitor, PenLine as IcPenLine, Pencil as IcPencil, Ruler as IcRuler } from 'lucide-react'
 import {
   ALL_EXAM_PAPERS,
   getAvailablePaperYears,
@@ -89,7 +88,7 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
                   : 'bg-pink-50 text-pink-700 hover:bg-pink-100/80 border border-pink-200/60'
               }`}
             >
-              <span>📐 考研数学（二）</span>
+              <span><IcRuler className="emoji-icon" aria-hidden="true" />考研数学（二）</span>
               <span className="text-2xs px-1.5 py-0.2 rounded-full bg-black/10">
                 {categoryStats.math2Count}
               </span>
@@ -104,7 +103,7 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
                   : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100/80 border border-indigo-200/60'
               }`}
             >
-              <span>📐 考研数学（一）</span>
+              <span><IcRuler className="emoji-icon" aria-hidden="true" />考研数学（一）</span>
               <span className="text-2xs px-1.5 py-0.2 rounded-full bg-black/10">
                 {categoryStats.math1Count}
               </span>
@@ -119,7 +118,7 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
                   : 'bg-blue-50 text-blue-700 hover:bg-blue-100/80 border border-blue-200/60'
               }`}
             >
-              <span>🖥️ 408 计算机综合</span>
+              <span><IcMonitor className="emoji-icon" aria-hidden="true" />408 计算机综合</span>
               <span className="text-2xs px-1.5 py-0.2 rounded-full bg-black/10">
                 {categoryStats.cs408Count}
               </span>
@@ -300,7 +299,7 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
                     className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-xs hover:shadow cursor-pointer"
                   >
                     <Flame className="w-3.5 h-3.5 text-amber-400" />
-                    <span>📝 全卷模拟 (150分)</span>
+                    <span>全卷模拟 (150分)</span>
                   </button>
 
                   {/* 专练选择题入口 */}
@@ -321,7 +320,7 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
                       onClick={() => onStartPaper(paper, 'analysis')}
                       className="inline-flex items-center justify-center gap-1 px-3.5 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100/90 text-emerald-800 border border-emerald-200 text-xs font-semibold transition-all cursor-pointer"
                     >
-                      <span>✍️ 专练解答大题 ({stats.analysisCount}题)</span>
+                      <span><IcPenLine className="emoji-icon" aria-hidden="true" />专练解答大题 ({stats.analysisCount}题)</span>
                     </button>
                   )}
 
@@ -332,7 +331,7 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
                       onClick={() => onStartPaper(paper, 'blank')}
                       className="inline-flex items-center justify-center gap-1 px-3 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100/90 text-amber-800 border border-amber-200 text-xs font-semibold transition-all cursor-pointer"
                     >
-                      <span>✏️ 填空题 ({stats.blankCount}题)</span>
+                      <span><IcPencil className="emoji-icon" aria-hidden="true" />填空题 ({stats.blankCount}题)</span>
                     </button>
                   )}
                 </div>

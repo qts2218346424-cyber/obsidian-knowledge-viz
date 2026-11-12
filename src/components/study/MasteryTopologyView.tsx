@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Network, Flame, CheckCircle2, AlertTriangle,
   Search, ChevronRight, ChevronDown, Sparkles,
-  RefreshCw, Loader2, ArrowRight, X, Target
-} from 'lucide-react'
+  RefreshCw, Loader2, ArrowRight, X, Target, Laptop as IcLaptop, Ruler as IcRuler } from 'lucide-react'
 import { api } from '../../services/api'
 import StepTutorModal from './StepTutorModal'
 import QuickPracticeModal from '../QuickPracticeModal'
@@ -237,7 +236,7 @@ export default function MasteryTopologyView() {
                 : 'text-warm-600 hover:text-warm-900'
             }`}
           >
-            💻 408 计算机学科专业综合
+            <IcLaptop className="emoji-icon" aria-hidden="true" />408 计算机学科专业综合
           </button>
           <button
             onClick={() => setActiveDomain('math')}
@@ -247,7 +246,7 @@ export default function MasteryTopologyView() {
                 : 'text-warm-600 hover:text-warm-900'
             }`}
           >
-            📐 全国硕士考研数学 (数一/数二/数三)
+            <IcRuler className="emoji-icon" aria-hidden="true" />全国硕士考研数学 (数一/数二/数三)
           </button>
         </div>
 

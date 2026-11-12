@@ -14,8 +14,7 @@ import {
   Terminal,
   ArrowRight,
   FileText,
-  Wrench,
-} from 'lucide-react'
+  Wrench, Lightbulb as IcLightbulb } from 'lucide-react'
 import { api, type LocalSkill } from '../services/api'
 
 interface LocalSkillPickerModalProps {
@@ -353,7 +352,7 @@ export default function LocalSkillPickerModal({
 
                 <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
                   <div className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    💡 技能目标与触发说明
+                    <IcLightbulb className="emoji-icon" aria-hidden="true" />技能目标与触发说明
                   </div>
                   <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
                     {previewSkill.description}

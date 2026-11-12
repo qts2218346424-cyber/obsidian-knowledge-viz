@@ -17,8 +17,7 @@ import {
   Copy,
   Plus,
   RefreshCw,
-  Sparkles,
-} from 'lucide-react'
+  Sparkles, Crown as IcCrown, GraduationCap as IcGraduationCap, PenLine as IcPenLine } from 'lucide-react'
 import type { UserProfile, UserRole, CouponCodeItem } from '../types/auth'
 import * as authService from '../services/auth'
 import { useAuth } from '../contexts/AuthContext'
@@ -400,9 +399,9 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
                       onChange={(e) => setNewRole(e.target.value as UserRole)}
                       className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-slate-800 focus:outline-none focus:border-indigo-500"
                     >
-                      <option value="student">🎓 学生只读（可做题刷题/禁止修改知识库）</option>
-                      <option value="editor">✍️ 研学编辑（可读写编辑笔记）</option>
-                      <option value="admin">👑 超级管理员（全权控制）</option>
+                      <option value="student"><IcGraduationCap className="emoji-icon" aria-hidden="true" />学生只读（可做题刷题/禁止修改知识库）</option>
+                      <option value="editor"><IcPenLine className="emoji-icon" aria-hidden="true" />研学编辑（可读写编辑笔记）</option>
+                      <option value="admin"><IcCrown className="emoji-icon" aria-hidden="true" />超级管理员（全权控制）</option>
                     </select>
                   </div>
                   <div className="sm:col-span-2 flex justify-end gap-2 mt-2">

@@ -11,8 +11,7 @@ import {
   ExternalLink,
   CheckCircle2,
   Copy,
-  ArrowRight,
-} from 'lucide-react'
+  ArrowRight, CircleCheck as IcCircleCheck } from 'lucide-react'
 import VocabTab from '../components/study/VocabTab'
 import WordBrowser from '../components/vocab/WordBrowser'
 import VocabStats from '../components/vocab/VocabStats'
@@ -105,7 +104,7 @@ function VocabMasteryPalette() {
         </div>
         {copiedWord && (
           <div className="text-center text-xs text-emerald-600 font-medium">
-            ✅ 已复制示例单词: {copiedWord}
+            <IcCircleCheck className="emoji-icon" aria-hidden="true" />已复制示例单词: {copiedWord}
           </div>
         )}
       </div>

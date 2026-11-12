@@ -326,7 +326,7 @@ export default function Dashboard() {
           </Link>
           <Link
             to="/study"
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#f3f3f5] hover:bg-[#e8e8ec] text-xs font-medium text-[#27272a] transition-colors"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#f3f3f5] hover:bg-[#e8e8ec] text-xs font-medium text-slate-800 transition-colors"
             title="查看今日待温习的考研笔记"
           >
             <Sparkles className="w-3.5 h-3.5 text-[#3f3f46]" />
@@ -341,26 +341,12 @@ export default function Dashboard() {
           <span className="font-mono font-extrabold text-sm text-rose-600">{daysToExam} 天</span>
         </div>
 
-        {/* Style Switcher Pill: 视觉风格鲜艳风 / 极简风一键切换 */}
-        <button
-          type="button"
-          onClick={toggleThemeStyle}
-          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.06)] border text-xs font-bold transition-all active:scale-95 cursor-pointer ${
-            isVibrant
-              ? 'border-indigo-300 text-indigo-700 bg-gradient-to-r from-indigo-50/90 via-purple-50/70 to-pink-50/90 hover:border-indigo-400'
-              : 'border-slate-200/80 text-slate-700 bg-white hover:bg-slate-50'
-          }`}
-          title={isVibrant ? '当前风格：鲜艳活力风（点击切换为经典黑白极简风）' : '当前风格：经典黑白极简风（点击切换为鲜艳活力风）'}
-        >
-          <Palette className={`w-3.5 h-3.5 ${isVibrant ? 'text-indigo-600 animate-pulse' : 'text-slate-500'}`} />
-          <span>{isVibrant ? '🎨 鲜艳风 (开启中)' : '极简风'}</span>
-        </button>
 
         {/* Top-Right Pill: Multi-AI Connection Icons + Avatar (Screen 3 Connect to code replica) */}
         <div className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-2xl bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-slate-200/80">
           <Link
             to="/chat"
-            className="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded-lg hover:bg-slate-100 transition-colors text-xs font-medium text-[#18181b]"
+            className="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded-lg hover:bg-slate-100 transition-colors text-xs font-medium text-slate-900"
             title="推理引擎已连接：Antigravity · Codex · Claude"
           >
             {/* Anthropic / Spark Icon */}
@@ -379,7 +365,7 @@ export default function Dashboard() {
             </svg>
             <span className="ml-0.5 hidden sm:inline">AI 伴学舱就绪</span>
           </Link>
-          <div className="w-6 h-6 rounded-full bg-[#18181b] text-white text-xs font-medium flex items-center justify-center shadow-sm select-none">
+          <div className="w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-medium flex items-center justify-center shadow-sm select-none">
             考
           </div>
         </div>
@@ -460,16 +446,16 @@ export default function Dashboard() {
         </div>
 
         {/* Hero Headline & Subtitle */}
-        <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight text-[#171719] mb-3 transition-all duration-300">
+        <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight text-slate-900 mb-3 transition-all duration-300">
           {currentModeData.headline}
         </h1>
 
-        <p className="text-sm sm:text-base md:text-lg font-normal tracking-tight text-[#6e7178] max-w-[680px] mb-6 transition-all duration-300">
+        <p className="text-sm sm:text-base md:text-lg font-normal tracking-tight text-slate-500 max-w-[680px] mb-6 transition-all duration-300">
           {currentModeData.subheadline}
         </p>
 
         {/* Dynamic Mode Live Status Pill */}
-        <div className="mb-7 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/[0.04] border border-black/[0.06] text-xs text-[#52525b] shadow-xs">
+        <div className="mb-7 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/[0.04] border border-black/[0.06] text-xs text-slate-600 shadow-xs">
           {currentModeData.badge}
         </div>
 
@@ -480,7 +466,7 @@ export default function Dashboard() {
             className={`px-5 py-2.5 rounded-xl text-white text-xs sm:text-sm font-semibold transition-all active:scale-[0.99] inline-flex items-center gap-2 ${
               isVibrant
                 ? 'bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-sm shadow-indigo-500/20'
-                : 'bg-[#1c1c1f] hover:bg-[#2a2a2e] shadow-[0_2px_6px_rgba(0,0,0,0.18)]'
+                : 'bg-slate-900 hover:bg-slate-800 shadow-[0_2px_6px_rgba(0,0,0,0.18)]'
             }`}
           >
             <Flame className="h-4 w-4 text-amber-400" />
@@ -490,7 +476,7 @@ export default function Dashboard() {
 
           <Link
             to={currentModeData.actionSecondary}
-            className="px-5 py-2.5 rounded-lg bg-[#e3e4e7] hover:bg-[#d8d9dd] text-[#18181b] text-xs sm:text-sm font-medium border border-black/[0.05] transition-all active:scale-[0.99] inline-flex items-center gap-2"
+            className="px-5 py-2.5 rounded-lg bg-[#e3e4e7] hover:bg-[#d8d9dd] text-slate-900 text-xs sm:text-sm font-medium border border-black/[0.05] transition-all active:scale-[0.99] inline-flex items-center gap-2"
           >
             <span>{currentModeData.actionSecondaryLabel}</span>
           </Link>
@@ -535,7 +521,7 @@ export default function Dashboard() {
       </section>
 
       {/* ── Subframe Project Showcase: Dual-Core Stations ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-4 gap-4">
         {/* 408 Computer Science Station Card */}
         <div className={`bento-card bento-card-hover rounded-xl p-5 relative overflow-hidden group flex flex-col justify-between transition-all ${
           isVibrant ? 'border-blue-200/90 bg-gradient-to-br from-blue-50/50 via-white to-indigo-50/30 hover:border-blue-300 shadow-blue-500/5' : ''
@@ -564,7 +550,7 @@ export default function Dashboard() {
                   </p>
                 </div>
               </div>
-              <span className={isVibrant ? 'text-2xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200' : 'subframe-pill text-2xs'}>
+              <span className={isVibrant ? 'text-2xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 bg-blue-100 text-blue-700 border border-blue-200' : 'subframe-pill text-2xs'}>
                 {QUESTION_BANK.length} 道真题
               </span>
             </div>
@@ -652,7 +638,7 @@ export default function Dashboard() {
                   </p>
                 </div>
               </div>
-              <span className={isVibrant ? 'text-2xs font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200' : 'subframe-pill text-2xs'}>
+              <span className={isVibrant ? 'text-2xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 bg-rose-100 text-rose-700 border border-rose-200' : 'subframe-pill text-2xs'}>
                 {XIAO_1000_POLITICS_QUESTIONS.length} 道真题精选
               </span>
             </div>
@@ -734,7 +720,7 @@ export default function Dashboard() {
                   </p>
                 </div>
               </div>
-              <span className={isVibrant ? 'text-2xs font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200' : 'subframe-pill text-2xs'}>
+              <span className={isVibrant ? 'text-2xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 bg-purple-100 text-purple-700 border border-purple-200' : 'subframe-pill text-2xs'}>
                 {MATH_QUESTION_BANK.length} 道真题
               </span>
             </div>
@@ -816,7 +802,7 @@ export default function Dashboard() {
                   </p>
                 </div>
               </div>
-              <span className={isVibrant ? 'text-2xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200' : 'subframe-pill text-2xs'}>
+              <span className={isVibrant ? 'text-2xs font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 bg-emerald-100 text-emerald-700 border border-emerald-200' : 'subframe-pill text-2xs'}>
                 全套写作模板
               </span>
             </div>

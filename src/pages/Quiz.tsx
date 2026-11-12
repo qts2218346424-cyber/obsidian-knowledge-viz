@@ -21,8 +21,7 @@ import {
   Save,
   MessageCircle,
   Camera,
-  Code2,
-} from 'lucide-react'
+  Code2, BookOpen as IcBookOpen, Calculator as IcCalculator, Check as IcCheck, FileText as IcFileText, Lightbulb as IcLightbulb, Monitor as IcMonitor, PenLine as IcPenLine, Pin as IcPin, Ruler as IcRuler, Sparkles as IcSparkles, TriangleAlert as IcTriangleAlert } from 'lucide-react'
 import WarmButton from '../components/ui/WarmButton'
 import MarkdownRenderer from '../components/MarkdownRenderer'
 import DoodleScratchpadCanvas from '../features/quiz/components/DoodleScratchpadCanvas'
@@ -722,7 +721,7 @@ export default function Quiz() {
               }`}
             >
               <BookOpen className="w-4 h-4 text-amber-400" />
-              <span>📑 历年真题整卷库</span>
+              <span>历年真题整卷库</span>
               <span className={`text-2xs px-2 py-0.5 rounded-full font-mono ${
                 hubTab === 'papers' ? 'bg-amber-400/20 text-amber-300' : 'bg-slate-100 text-slate-500'
               }`}>
@@ -740,7 +739,7 @@ export default function Quiz() {
               }`}
             >
               <Sparkles className="w-4 h-4 text-accent-orange" />
-              <span>🎯 章节考点专项演练</span>
+              <span>章节考点专项演练</span>
               <span className={`text-2xs px-2 py-0.5 rounded-full font-mono ${
                 hubTab === 'topics' ? 'bg-orange-500/20 text-orange-300' : 'bg-slate-100 text-slate-500'
               }`}>
@@ -810,7 +809,7 @@ export default function Quiz() {
                   domainFilter === 'math' ? 'bg-white text-slate-900 shadow-xs font-semibold' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                📐 考研数学
+                <IcRuler className="emoji-icon" aria-hidden="true" />考研数学
               </button>
               <button
                 onClick={() => handleDomainFilterChange('cs_408')}
@@ -818,7 +817,7 @@ export default function Quiz() {
                   domainFilter === 'cs_408' ? 'bg-white text-slate-900 shadow-xs font-semibold' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                🖥️ 408 计算机
+                <IcMonitor className="emoji-icon" aria-hidden="true" />408 计算机
               </button>
             </div>
 
@@ -1004,7 +1003,7 @@ export default function Quiz() {
               title="支持粘贴数学公式截图与 408 图表，AI 视觉自动识别转 LaTeX"
             >
               <Camera className="h-4 w-4 text-amber-600" />
-              <span>📸 拍照/截图导错题</span>
+              <span>拍照/截图导错题</span>
             </button>
 
             <button
@@ -1014,7 +1013,7 @@ export default function Quiz() {
               title="进入 408 统考第 42 题算法大题 C/C++ 手写判题沙箱"
             >
               <Code2 className="h-4 w-4 text-emerald-400" />
-              <span>💻 408 算法大题 (第42题)</span>
+              <span>408 算法大题 (第42题)</span>
             </button>
 
             <button
@@ -1275,7 +1274,7 @@ export default function Quiz() {
                         {variantShowExplanation[vq.id] && (
                           <div className="mt-2.5 p-3 rounded-xl bg-amber-50/70 border border-amber-200/80 text-xs space-y-1.5 animate-in fade-in">
                             <div className="font-bold text-amber-900 flex items-center gap-1">
-                              <span>💡 考点命题深度解析：</span>
+                              <span><IcLightbulb className="emoji-icon" aria-hidden="true" />考点命题深度解析：</span>
                             </div>
                             <p className="text-slate-700 leading-relaxed font-sans">{vq.explanation}</p>
                           </div>
@@ -1360,7 +1359,7 @@ export default function Quiz() {
               onClick={() => setMobileDrawerOpen(true)}
               className="text-2xs font-bold px-2 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer active:scale-95 transition-colors"
             >
-              🧮 卡
+              <IcCalculator className="emoji-icon" aria-hidden="true" />卡
             </button>
             <button
               type="button"
@@ -1401,33 +1400,33 @@ export default function Quiz() {
               onClick={() => setActiveSideTab('palette')}
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs transition-all cursor-pointer ${
                 activeSideTab === 'palette'
-                  ? 'bg-[#f2f2f4] text-[#18181b] font-semibold shadow-xs'
-                  : 'text-[#52525b] hover:text-[#18181b]'
+                  ? 'bg-slate-100 text-slate-900 font-semibold shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <span>📖 真题测验</span>
+              <span><IcBookOpen className="emoji-icon" aria-hidden="true" />真题测验</span>
             </button>
             <button
               type="button"
               onClick={() => setActiveSideTab('scratchpad')}
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs transition-all cursor-pointer ${
                 activeSideTab === 'scratchpad'
-                  ? 'bg-[#f2f2f4] text-[#18181b] font-semibold shadow-xs'
-                  : 'text-[#52525b] hover:text-[#18181b]'
+                  ? 'bg-slate-100 text-slate-900 font-semibold shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <span>✍️ 手写白板</span>
+              <span><IcPenLine className="emoji-icon" aria-hidden="true" />手写白板</span>
             </button>
             <button
               type="button"
               onClick={() => setActiveSideTab('hints')}
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs transition-all cursor-pointer ${
                 activeSideTab === 'hints'
-                  ? 'bg-[#f2f2f4] text-[#18181b] font-semibold shadow-xs'
-                  : 'text-[#52525b] hover:text-[#18181b]'
+                  ? 'bg-slate-100 text-slate-900 font-semibold shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <span>📐 核心公式</span>
+              <span><IcRuler className="emoji-icon" aria-hidden="true" />核心公式</span>
             </button>
           </div>
 
@@ -1465,7 +1464,7 @@ export default function Quiz() {
               onClick={() => setMobileDrawerOpen(true)}
               className="lg:hidden ml-1 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold shadow-xs active:scale-95 cursor-pointer"
             >
-              <span>🧮 答题卡</span>
+              <span><IcCalculator className="emoji-icon" aria-hidden="true" />答题卡</span>
             </button>
           </div>
         </div>
@@ -1529,7 +1528,7 @@ export default function Quiz() {
                     className="p-1.5 px-2.5 rounded-xl text-indigo-700 bg-indigo-50/90 border border-indigo-200/90 hover:bg-indigo-100 hover:border-indigo-300 transition-all text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
                   >
                     <Sparkles size={13} className="text-indigo-600" />
-                    <span>✨ 追问 AI</span>
+                    <span><IcSparkles className="emoji-icon" aria-hidden="true" />追问 AI</span>
                     <kbd className="hidden sm:inline-block text-2xs font-mono text-indigo-500 bg-white/90 border border-indigo-200 rounded px-1 py-0.2">⌘J</kbd>
                   </button>
 
@@ -1621,7 +1620,7 @@ export default function Quiz() {
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/70 pb-3">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                        <span>✍️ 综合解答题</span>
+                        <span><IcPenLine className="emoji-icon" aria-hidden="true" />综合解答题</span>
                         {currentQ.score && (
                           <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-mono text-2xs font-bold">
                             满分 {currentQ.score} 分
@@ -1642,7 +1641,7 @@ export default function Quiz() {
                           className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer border border-blue-200/60"
                         >
                           <Code2 className="w-3.5 h-3.5" />
-                          <span>💻 启动算法沙盒实时调试</span>
+                          <span>启动算法沙盒实时调试</span>
                         </button>
                       )}
 
@@ -1709,7 +1708,7 @@ export default function Quiz() {
                             : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/70'
                         }`}
                       >
-                        ✓ 已完全掌握 (记满分)
+                        <IcCheck className="emoji-icon" aria-hidden="true" />已完全掌握 (记满分)
                       </button>
 
                       <button
@@ -1724,7 +1723,7 @@ export default function Quiz() {
                             : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200/70'
                         }`}
                       >
-                        ⚠️ 部分掌握 / 步骤遗漏
+                        <IcTriangleAlert className="emoji-icon" aria-hidden="true" />部分掌握 / 步骤遗漏
                       </button>
 
                       <button
@@ -1749,7 +1748,7 @@ export default function Quiz() {
                 /* Blank / Fill-in Answer Area (填空题输入区) */
                 <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-3">
                   <div className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
-                    <span>✍️ 填空题作答</span>
+                    <span><IcPenLine className="emoji-icon" aria-hidden="true" />填空题作答</span>
                     <span className="text-2xs text-slate-400 font-normal">（支持直接输入数值或数学表达式）</span>
                   </div>
                   <div className="flex gap-2">
@@ -1808,7 +1807,7 @@ export default function Quiz() {
                     title="唤起双核 AI 伴学舱追问（快捷键 ⌘J / Ctrl+J）"
                   >
                     <Sparkles size={13} className="text-indigo-600" />
-                    <span>✨ 追问 AI</span>
+                    <span><IcSparkles className="emoji-icon" aria-hidden="true" />追问 AI</span>
                     <kbd className="text-2xs font-mono px-1 py-0.2 rounded border border-indigo-200 bg-white/80 text-indigo-500">
                       ⌘J
                     </kbd>
@@ -1843,7 +1842,7 @@ export default function Quiz() {
                 </div>
 
                 {/* Main Explanation */}
-                <div className="text-sm sm:text-[14.5px] text-slate-800 leading-[1.75] pl-1 academic-body ai-explanation">
+                <div className="text-sm sm:text-sm text-slate-800 leading-[1.75] pl-1 academic-body ai-explanation">
                   <MarkdownRenderer content={currentQ.explanation} />
                 </div>
 
@@ -1875,7 +1874,7 @@ export default function Quiz() {
                 <div className="pt-3 border-t border-slate-200/80 space-y-2.5">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                      <span>📌 错题归因与心得笔记</span>
+                      <span><IcPin className="emoji-icon" aria-hidden="true" />错题归因与心得笔记</span>
                       <span className="text-2xs text-slate-400 font-normal">（自动归档至 Obsidian 错题本）</span>
                     </span>
                   </div>
@@ -1953,7 +1952,7 @@ export default function Quiz() {
                   activeSideTab === 'palette' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
-                🧮 答题卡大纲
+                <IcCalculator className="emoji-icon" aria-hidden="true" />答题卡大纲
               </button>
               <button
                 onClick={() => setActiveSideTab('scratchpad')}
@@ -1961,7 +1960,7 @@ export default function Quiz() {
                   activeSideTab === 'scratchpad' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
-                ✍️ 手写演算白板
+                <IcPenLine className="emoji-icon" aria-hidden="true" />手写演算白板
               </button>
               <button
                 onClick={() => setActiveSideTab('hints')}
@@ -1969,7 +1968,7 @@ export default function Quiz() {
                   activeSideTab === 'hints' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
-                💡 定理速查
+                <IcLightbulb className="emoji-icon" aria-hidden="true" />定理速查
               </button>
             </div>
 
@@ -2054,7 +2053,7 @@ export default function Quiz() {
               <div className="space-y-3 animate-fade-in-up">
                 <div className="flex items-center justify-between text-xs text-slate-500">
                   <span className="font-semibold text-slate-800 flex items-center gap-1.5">
-                    <span>✍️ 考研手写演算白板</span>
+                    <span><IcPenLine className="emoji-icon" aria-hidden="true" />考研手写演算白板</span>
                     <span className="text-2xs text-indigo-600 bg-indigo-50 px-1.5 py-0.2 rounded font-mono">第 {currentIndex + 1} 题</span>
                   </span>
                   <span className="text-2xs text-slate-400">支持 iPad/触控板画二叉树与算式</span>
@@ -2130,7 +2129,7 @@ export default function Quiz() {
               onClick={() => { setActiveSideTab('scratchpad'); setMobileDrawerOpen(true) }}
               className="px-2.5 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold active:scale-95 transition-all cursor-pointer"
             >
-              📝 草稿
+              <IcFileText className="emoji-icon" aria-hidden="true" />草稿
             </button>
             <button
               type="button"
@@ -2182,7 +2181,7 @@ export default function Quiz() {
                     activeSideTab === 'palette' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
-                  🧮 答题卡
+                  <IcCalculator className="emoji-icon" aria-hidden="true" />答题卡
                 </button>
                 <button
                   onClick={() => setActiveSideTab('scratchpad')}
@@ -2190,7 +2189,7 @@ export default function Quiz() {
                     activeSideTab === 'scratchpad' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
-                  📝 草稿纸
+                  <IcFileText className="emoji-icon" aria-hidden="true" />草稿纸
                 </button>
                 <button
                   onClick={() => setActiveSideTab('hints')}
@@ -2198,7 +2197,7 @@ export default function Quiz() {
                     activeSideTab === 'hints' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
-                  💡 定理提示
+                  <IcLightbulb className="emoji-icon" aria-hidden="true" />定理提示
                 </button>
               </div>
 
@@ -2480,7 +2479,7 @@ export default function Quiz() {
                         {variantShowExplanation[vq.id] && (
                           <div className="mt-2.5 p-3 rounded-xl bg-amber-50/70 border border-amber-200/80 text-xs space-y-1.5 animate-in fade-in">
                             <div className="font-bold text-amber-900 flex items-center gap-1">
-                              <span>💡 考点命题深度解析：</span>
+                              <span><IcLightbulb className="emoji-icon" aria-hidden="true" />考点命题深度解析：</span>
                             </div>
                             <p className="text-slate-700 leading-relaxed font-sans">{vq.explanation}</p>
                           </div>
@@ -2554,7 +2553,7 @@ export default function Quiz() {
             <div className="h-10 w-px bg-slate-200" />
             <div className="space-y-1 text-xs font-medium">
               <div className="text-emerald-600 flex items-center gap-1.5">
-                <span>✓ 正确</span> <span>{result.correct} 题</span>
+                <span><IcCheck className="emoji-icon" aria-hidden="true" />正确</span> <span>{result.correct} 题</span>
               </div>
               <div className="text-rose-500 flex items-center gap-1.5">
                 <span>✗ 错题</span> <span>{result.wrong} 题</span>
@@ -2650,7 +2649,7 @@ export default function Quiz() {
                     <div className="pt-2 border-t border-rose-100 space-y-2.5">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                          <span>📌 错因反思与归纳</span>
+                          <span><IcPin className="emoji-icon" aria-hidden="true" />错因反思与归纳</span>
                         </span>
                         {isSaved && (
                           <span className="text-2xs text-emerald-600 font-bold flex items-center gap-1">
@@ -2706,7 +2705,7 @@ export default function Quiz() {
                           title="唤起双核 AI 伴学抽屉深度答疑此错题（快捷键 ⌘J / Ctrl+J）"
                         >
                           <Sparkles size={13} className="text-indigo-600" />
-                          <span>✨ 追问 AI (⌘J)</span>
+                          <span><IcSparkles className="emoji-icon" aria-hidden="true" />追问 AI (⌘J)</span>
                         </button>
 
                         <button
@@ -2946,7 +2945,7 @@ export default function Quiz() {
                         {variantShowExplanation[vq.id] && (
                           <div className="mt-2.5 p-3 rounded-xl bg-amber-50/70 border border-amber-200/80 text-xs space-y-1.5 animate-in fade-in">
                             <div className="font-bold text-amber-900 flex items-center gap-1">
-                              <span>💡 考点命题深度解析：</span>
+                              <span><IcLightbulb className="emoji-icon" aria-hidden="true" />考点命题深度解析：</span>
                             </div>
                             <p className="text-slate-700 leading-relaxed font-sans">{vq.explanation}</p>
                           </div>

@@ -20,8 +20,7 @@ import {
   SlidersHorizontal,
   Check,
   Cpu,
-  Coins,
-} from 'lucide-react'
+  Coins, Cloud as IcCloud, Settings as IcSettings, Sparkles as IcSparkles, Zap as IcZap } from 'lucide-react'
 import { STUDY_AGENTS, type StudyAgent } from '../../data/studyAgents'
 import { STUDY_SKILLS, type StudySkill } from '../../data/studySkills'
 import type { LocalAgentStatus, LocalSkill, CloudEndpoint, FileDetail } from '../../services/api'
@@ -367,7 +366,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                     </option>
                   ))}
             </optgroup>
-            {isAdmin && <option value="__custom__">⚙️ 更多引擎与技能设置...</option>}
+            {isAdmin && <option value="__custom__"><IcSettings className="emoji-icon" aria-hidden="true" />更多引擎与技能设置...</option>}
           </select>
         </div>
 
@@ -1168,10 +1167,10 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                 onChange={e => onPeerProviderChange(e.target.value as ProviderType)}
                 className="bg-transparent text-xs font-semibold text-purple-700 focus:outline-hidden cursor-pointer"
               >
-                <option value="claude-code">⚡ Claude Code</option>
+                <option value="claude-code"><IcZap className="emoji-icon" aria-hidden="true" />Claude Code</option>
                 <option value="codex">🤖 Codex</option>
-                <option value="web">☁️ 云端</option>
-                <option value="antigravity">✨ Antigravity</option>
+                <option value="web"><IcCloud className="emoji-icon" aria-hidden="true" />云端</option>
+                <option value="antigravity"><IcSparkles className="emoji-icon" aria-hidden="true" />Antigravity</option>
               </select>
 
               <select
