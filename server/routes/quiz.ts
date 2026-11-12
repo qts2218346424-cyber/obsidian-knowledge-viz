@@ -120,7 +120,8 @@ quizRouter.post('/quiz/custom', (req, res) => {
     // Assign IDs if missing
     const formatted = toAdd.map((q, idx) => ({
       ...q,
-      id: q.id || custom--,
+      // 修复：原代码 `custom--` 是对未定义变量的自减，导入缺少 id 的题目时会直接抛 ReferenceError
+      id: q.id || `custom-${Date.now()}-${idx}`,
       isCustom: true,
       importedAt: new Date().toISOString()
     }))
@@ -476,6 +477,9 @@ quizRouter.post('/quiz/save-error', (req, res) => {
     const subFolder = domain === 'math' ? '数学错题本' : '408错题本'
     const now = new Date()
     const dateStr = now.toISOString().split('T')[0]
+    // 修复：每日错题集追加逻辑引用了未定义的 today / sourceFile，导致该步骤每次都静默失败
+    const today = dateStr
+    const sourceFile = question.source || question.paperTitle || question.chapter || question.subject || '做题中心'
     const timestamp = `${now.getHours()}${now.getMinutes()}${now.getSeconds()}`
     const safeTitle = (question.chapter || question.subject || '错题')
       .replace(/[\\/:*?"<>|]/g, '_')

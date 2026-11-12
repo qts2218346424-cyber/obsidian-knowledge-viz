@@ -2,7 +2,7 @@ import { Router } from 'express'
 import fs from 'fs'
 import path from 'path'
 import { config, anthropic, getAiClientForModel } from '../context.js'
-import { detectAllLocalAgents, runLocalAgent, type LocalAgentProvider } from '../local-agent-bridge.js'
+import { detectAllLocalAgents, detectLocalAgents, runLocalAgent, type LocalAgentProvider } from '../local-agent-bridge.js'
 import { OpenAICompatibleClient } from '../ai-client.js'
 import { runAgentLoop } from '../agent.js'
 import { scanLocalSkills } from '../local-skill-scanner.js'
@@ -141,6 +141,11 @@ localAgentsRouter.post('/local-agents/sync-skills', async (_req, res) => {
 })
 
 localAgentsRouter.post('/local-agents/chat', async (req, res) => {
+  // 修复：deductInfo / hasProducedContent 此前未声明或声明在 try 块内部，
+  // 一旦进入异常 / finally 分支就会抛出 ReferenceError，导致 SSE 流无法正常结束、前端一直转圈。
+  // 现行计费为「生成 ≥20 字后才扣费」，因此预扣信息默认为空，仅在产出内容后标记 hasProducedContent。
+  let deductInfo: { deducted: number } | null = null
+  let hasProducedContent = false
   try {
     const body = req.body as {
       provider?: LocalAgentProvider
@@ -257,6 +262,7 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
 
   const sendEvent = (event: any) => {
     if (event?.type === 'text' && typeof event.content === 'string') {
+      if (event.content.trim()) hasProducedContent = true
       totalGeneratedChars += event.content.length
       if (totalGeneratedChars >= 20 && !hasSettledDeduction) {
         settlePointsIfEligible()
@@ -275,7 +281,6 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
     })
   }
 
-  let hasProducedContent = false
   const safeRefundPointsIfNeeded = (reason: string) => {
     if (deductInfo && !hasProducedContent && req.user) {
       try {
