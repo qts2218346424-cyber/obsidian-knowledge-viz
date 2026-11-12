@@ -4,7 +4,7 @@ import type { TreeNode } from '../services/api'
 
 interface FileExplorerProps {
   tree: TreeNode[]
-  onFileClick: (path: string) => void
+  onFileClick: (path: string, options?: { mode?: 'preview' | 'write'; fromSearch?: boolean }) => void
   selectedPath?: string
 }
 
@@ -51,7 +51,7 @@ export default function FileExplorer({ tree, onFileClick, selectedPath }: FileEx
       </div>
       <div className="flex-1 overflow-auto p-2">
         {filteredTree.length > 0 ? filteredTree.map(node => (
-          <TreeNodeItem key={node.path} node={node} depth={0} onFileClick={onFileClick} selectedPath={selectedPath} />
+          <TreeNodeItem key={node.path} node={node} depth={0} onFileClick={onFileClick} selectedPath={selectedPath} isSearching={Boolean(query.trim())} />
         )) : (
           <p className="px-3 py-6 text-center text-xs leading-5 text-warm-400">没有找到匹配的笔记</p>
         )}
@@ -90,11 +90,13 @@ function TreeNodeItem({
   depth,
   onFileClick,
   selectedPath,
+  isSearching,
 }: {
   node: TreeNode
   depth: number
-  onFileClick: (path: string) => void
+  onFileClick: (path: string, options?: { mode?: 'preview' | 'write'; fromSearch?: boolean }) => void
   selectedPath?: string
+  isSearching?: boolean
 }) {
   const [expanded, setExpanded] = useState(depth < 1)
 
@@ -109,7 +111,7 @@ function TreeNodeItem({
           if (isPdf || isHtml) {
             window.open(`/api/books/raw?path=${encodeURIComponent(node.path)}`, '_blank')
           }
-          onFileClick(node.path)
+          onFileClick(node.path, { mode: isSearching ? 'preview' : undefined, fromSearch: Boolean(isSearching) })
         }}
         title={isPdf ? `${node.name} (PDF 参考资料 - 点击在新标签页预览)` : isHtml ? `${node.name} (交互仿真课件 - 点击在新标签页打开)` : node.name}
         className={`w-full flex items-center gap-1.5 rounded px-2 py-2.5 sm:py-1 text-left text-xs transition-colors cursor-pointer ${
@@ -159,7 +161,7 @@ function TreeNodeItem({
       {expanded && node.children && (
         <div>
           {node.children.map(child => (
-            <TreeNodeItem key={child.path} node={child} depth={depth + 1} onFileClick={onFileClick} selectedPath={selectedPath} />
+            <TreeNodeItem key={child.path} node={child} depth={depth + 1} onFileClick={onFileClick} selectedPath={selectedPath} isSearching={isSearching} />
           ))}
         </div>
       )}

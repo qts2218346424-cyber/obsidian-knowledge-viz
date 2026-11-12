@@ -6,7 +6,8 @@ import { graphNodes as mockNodes, graphLinks as mockLinks, groupColors, groupLab
 import { api, type FileDetail } from '../services/api'
 import {
   RefreshCw, Loader2, Search, X, FileText, Maximize2, RotateCcw,
-  ZoomIn, ZoomOut, Eye, Flame, Play, ShieldAlert, Sparkles, CheckCircle2, Activity
+  ZoomIn, ZoomOut, Eye, Flame, Play, ShieldAlert, Sparkles, CheckCircle2, Activity,
+  HelpCircle, BookOpen, Compass, ExternalLink, ArrowRight, Lightbulb, Network
 } from 'lucide-react'
 import CoursewareViewerModal from '../components/CoursewareViewerModal'
 import MasteryRescueModal from '../components/MasteryRescueModal'
@@ -83,6 +84,9 @@ export default function KnowledgeGraph() {
   // 🔬 仿真课件查看器弹窗状态
   const [activeCourseware, setActiveCourseware] = useState<InteractiveCoursewareItem | null>(null)
   const [isCoursewareOpen, setIsCoursewareOpen] = useState(false)
+
+  // 📖 色谱图与知识图谱专用使用说明弹窗状态
+  const [showGuideModal, setShowGuideModal] = useState(false)
 
   // Data hooks
   const { data, loading, error, reload } = useVaultGraph()
@@ -625,6 +629,14 @@ export default function KnowledgeGraph() {
           )}
         </div>
         <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setShowGuideModal(true)}
+            className="p-1.5 rounded-lg bg-indigo-50 text-indigo-700 active:scale-95"
+            aria-label="色谱图与图谱说明"
+            title="查看色谱图与图谱使用说明"
+          >
+            <HelpCircle className="h-3.5 w-3.5" />
+          </button>
           {hasFilter && (
             <button onClick={clearFilters} className="px-2 py-1 rounded-lg bg-slate-100 text-slate-600 text-[11px] font-semibold">
               重置
@@ -665,6 +677,17 @@ export default function KnowledgeGraph() {
               <span>知识双链拓扑图</span>
             </button>
           </div>
+
+          {/* 色谱图与图谱专用使用说明胶囊 */}
+          <button
+            type="button"
+            onClick={() => setShowGuideModal(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold transition-all shadow-2xs active:scale-95 cursor-pointer"
+            title="查看色谱图与知识图谱的功能作用与使用说明"
+          >
+            <HelpCircle className="w-3.5 h-3.5 text-indigo-600" />
+            <span>色谱与图谱说明</span>
+          </button>
         </div>
 
         <div className="flex items-center gap-2">
@@ -1083,6 +1106,148 @@ export default function KnowledgeGraph() {
         onClose={() => setIsCoursewareOpen(false)}
         item={activeCourseware}
       />
+
+      {/* 📖 色谱图与知识图谱专项使用说明 Modal */}
+      {showGuideModal && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-5 bg-black/40 backdrop-blur-sm animate-fade-in font-sans"
+          onClick={() => setShowGuideModal(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-2xl rounded-2xl sm:rounded-3xl bg-white border border-neutral-200/90 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-neutral-900"
+          >
+            {/* 头部 */}
+            <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-3.5 bg-neutral-50/80 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-neutral-900 text-white shadow-2xs">
+                  <Flame className="w-4 h-4 text-rose-400" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-neutral-900">
+                    考点色谱图与知识图谱 · 核心作用与使用说明
+                  </h3>
+                  <p className="text-[11px] text-neutral-500">
+                    一分钟掌握红黄绿三级提分色谱、双链星系与提分急救舱的交互秘籍
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowGuideModal(false)}
+                className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-200/60 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* 内容区 */}
+            <div className="p-5 overflow-y-auto space-y-4 text-xs text-neutral-700 leading-relaxed">
+              {/* 板块 1: 考点掌握度热力色谱图 */}
+              <div className="p-4 rounded-xl bg-rose-50/50 border border-rose-200/80 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-sm text-rose-900 flex items-center gap-1.5">
+                    <Flame className="w-4 h-4 text-rose-600" />
+                    <span>一、考点掌握度热力色谱图 (Mastery Spectrum)</span>
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                    提分导航
+                  </span>
+                </div>
+                <p className="text-neutral-600">
+                  <b>核心作用</b>：打破静态死记大纲，根据您的全真做题战绩与闪卡自评，将 408 与考研数学考点动态渲染为红、黄、绿三级色谱，一目了然识别知识漏洞。
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                  <div className="p-2.5 rounded-lg bg-white border border-emerald-200 flex flex-col justify-between">
+                    <div className="flex items-center gap-1.5 font-bold text-emerald-700">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                      <span>稳固攻克 (≥80%)</span>
+                    </div>
+                    <span className="text-[10.5px] text-neutral-500 mt-1">真题高正确率，已建立深层记忆，维持日常低频复盘即可。</span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-white border border-amber-200 flex flex-col justify-between">
+                    <div className="flex items-center gap-1.5 font-bold text-amber-700">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                      <span>巩固掌握 (50%~80%)</span>
+                    </div>
+                    <span className="text-[10.5px] text-neutral-500 mt-1">概念基本理解，但真题演算易卡壳或粗心计算错误。</span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-white border border-rose-200 flex flex-col justify-between">
+                    <div className="flex items-center gap-1.5 font-bold text-rose-700">
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
+                      <span>高危薄弱 (&lt;50%)</span>
+                    </div>
+                    <span className="text-[10.5px] text-neutral-500 mt-1">带<b>呼吸脉冲光晕</b>！错题集中区，提分最快的重点攻坚目标。</span>
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-white border border-rose-100 text-[11px] text-neutral-600 space-y-1">
+                  <div className="font-bold text-rose-800 flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5 text-rose-600" />
+                    <span>提分急救舱实战操作技巧：</span>
+                  </div>
+                  <div>• <b>单击考点节点</b>：立刻呼出【考点诊断与提分急救舱】；</div>
+                  <div>• <b>查看错题档案</b>：回溯曾在该考点因何种原因做错（概念混淆/计算疏漏）；</div>
+                  <div>• <b>开启 5 题靶向速测</b>：急救舱直接为你抽取同考点变式题，做完立即出分并回写色谱；</div>
+                  <div>• <b>算法仿真课件联动</b>：针对红黑树、LRU页面置换、TCP握手等抽象原理，直接一键打开交互动画单步演练。</div>
+                </div>
+              </div>
+
+              {/* 板块 2: 全库双链知识拓扑图谱 */}
+              <div className="p-4 rounded-xl bg-purple-50/50 border border-purple-200/80 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-sm text-purple-900 flex items-center gap-1.5">
+                    <Network className="w-4 h-4 text-purple-600" />
+                    <span>二、全库双链知识拓扑图谱 (Knowledge Graph)</span>
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                    D3拓扑星系
+                  </span>
+                </div>
+                <p className="text-neutral-600">
+                  <b>核心作用</b>：基于 D3 物理力导向引擎，将本地 Obsidian 笔记中通过 <code className="px-1 py-0.2 rounded bg-white font-mono text-purple-800 border border-purple-200">[[双链]]</code> 建立的网状关联全面可视化。
+                </p>
+                <div className="space-y-1.5 text-[11px] text-neutral-600 pl-1">
+                  <div>• <b>节点半径大小</b>：节点越大，说明该笔记在知识库中的出入度引用频次越高，是跨章节的核心枢纽；</div>
+                  <div>• <b>孤立节点排查 (Orphan Notes)</b>：带橙色警示边框的节点，代表尚未建立任何关联，二轮复习时应利用双链将其织入知识体系；</div>
+                  <div>• <b>双击节点唤出抽屉</b>：双击任意考点，右侧滑出属性检查器，无需跳出即可浏览 Markdown 讲义正文与目录大纲；</div>
+                  <div>• <b>画布漫游</b>：滚轮平滑缩放、拖拽平移，点击顶部「适配全景」一键智能居中。</div>
+                </div>
+              </div>
+            </div>
+
+            {/* 底部按钮栏 */}
+            <div className="border-t border-neutral-100 px-5 py-3 bg-neutral-50/80 flex flex-col sm:flex-row items-center justify-between gap-2.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowGuideModal(false)
+                  window.dispatchEvent(
+                    new CustomEvent('open-user-guide', {
+                      detail: { tab: 'doc', category: 'spectrum_graph', featureId: 'mastery-spectrum' }
+                    })
+                  )
+                }}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-900 transition-colors cursor-pointer"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>在系统手册中查阅所有 22 项小功能说明字典 →</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowGuideModal(false)}
+                className="px-4 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+              >
+                我知道了
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

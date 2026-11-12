@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import { Router, type Request } from 'express'
 import fs from 'fs'
 import path from 'path'
 import { execFile } from 'child_process'
@@ -6,28 +6,150 @@ import { promisify } from 'util'
 import multer from 'multer'
 import { config, anthropic, markSelfWrite, invalidateCache, __dirname } from '../context.js'
 import { createFile } from '../vault-parser.js'
+import { getRequestVaultPath, getUserVaultDir, ensureUserSandboxSync } from '../services/user-sandbox.js'
+import { database, type DbUser } from '../db/database.js'
+import {
+  inspectPdfFile,
+  extractFullMaterialContent,
+  getDirectorySizeBytes
+} from '../services/pdf-extractor.js'
+import {
+  enqueueBookScanTask,
+  getBookScanTask,
+  listBookScanTasksForUser,
+  executeBookScanJob,
+  type ScanExtractMode
+} from '../services/book-scan-queue.js'
+import { normalizeQuestionMathFields } from '../utils/math-normalize.js'
 
 const execFileAsync = promisify(execFile)
 
-function getCustomQuestionsPath(): string {
-  const quizDir = path.resolve(config.vaultPath, '做题记录')
+export type BookScope = 'shared' | 'personal'
+export type ResourceDomain = 'cs_408' | 'math' | 'english' | 'politics' | 'general'
+
+function normalizeResourceDomain(raw?: string): ResourceDomain {
+  if (raw === 'cs_408' || raw === 'math' || raw === 'english' || raw === 'politics' || raw === 'general') {
+    return raw
+  }
+  return 'math'
+}
+
+function getSubDirForDomain(domain: ResourceDomain): string {
+  switch (domain) {
+    case 'cs_408': return '408计算机'
+    case 'english': return '考研英语'
+    case 'politics': return '考研政治'
+    case 'general': return '其他考研资料'
+    default: return '考研数学'
+  }
+}
+
+function getWikiDomainDir(domain: ResourceDomain): string {
+  switch (domain) {
+    case 'cs_408': return '02-408计算机'
+    case 'english': return '03-考研英语'
+    case 'politics': return '04-考研政治'
+    case 'general': return '05-其他考研资料'
+    default: return '01-考研数学'
+  }
+}
+
+function getDomainDisplayName(domain: ResourceDomain): string {
+  switch (domain) {
+    case 'cs_408': return '408 计算机综合'
+    case 'english': return '考研英语 (英一/英二)'
+    case 'politics': return '考研政治 (马原/史纲/思修/新思想)'
+    case 'general': return '其他专业课 / 复试综合'
+    default: return '考研数学'
+  }
+}
+
+function getDefaultSubjectForDomain(domain: ResourceDomain): string {
+  switch (domain) {
+    case 'cs_408': return '数据结构'
+    case 'english': return '阅读理解'
+    case 'politics': return '马克思主义基本原理'
+    case 'general': return '专业课综合'
+    default: return '高等数学'
+  }
+}
+
+function inferDomainFromPathOrName(raw: string): ResourceDomain {
+  const s = raw.toLowerCase()
+  if (
+    s.includes('考研英语') || s.includes('english') || s.includes('英语') ||
+    s.includes('阅读理解') || s.includes('长难句') || s.includes('完形') ||
+    s.includes('红宝书') || s.includes('恋练有词') || s.includes('黄皮书') || s.includes('单词') || s.includes('词汇')
+  ) {
+    return 'english'
+  }
+  if (
+    s.includes('考研政治') || s.includes('politics') || s.includes('政治') ||
+    s.includes('马原') || s.includes('毛中特') || s.includes('史纲') || s.includes('思修') ||
+    s.includes('肖秀荣') || s.includes('肖四') || s.includes('肖八') || s.includes('肖1000') ||
+    s.includes('腿姐') || s.includes('徐涛') || s.includes('时政') || s.includes('新思想')
+  ) {
+    return 'politics'
+  }
+  if (s.includes('408') || s.includes('数据结构') || s.includes('计算机') || s.includes('操作系统') || s.includes('组成原理') || s.includes('cs_408')) {
+    return 'cs_408'
+  }
+  if (s.includes('其他考研资料') || s.includes('专业课') || s.includes('复试') || s.includes('general')) {
+    return 'general'
+  }
+  return 'math'
+}
+
+function resolveUserFromReq(req: Request): DbUser | undefined {
+  if (req.user) return req.user
+  const qToken = typeof req.query?.token === 'string' ? req.query.token.trim() : ''
+  if (qToken) {
+    const record = database.findSessionByToken(qToken)
+    if (record?.user) {
+      req.user = record.user
+      req.token = qToken
+      return record.user
+    }
+  }
+  return undefined
+}
+
+function isStrictInside(parentDir: string, targetPath: string): boolean {
+  const parent = path.resolve(parentDir)
+  const target = path.resolve(targetPath)
+  if (process.platform === 'win32') {
+    const pLow = parent.toLowerCase()
+    const tLow = target.toLowerCase()
+    const rel = path.relative(pLow, tLow)
+    return Boolean(rel) && !rel.startsWith('..') && !path.isAbsolute(rel)
+  }
+  const rel = path.relative(parent, target)
+  return Boolean(rel) && !rel.startsWith('..') && !path.isAbsolute(rel)
+}
+
+function getCustomQuestionsPath(vaultRoot: string): string {
+  const quizDir = path.resolve(vaultRoot, '做题记录')
   if (!fs.existsSync(quizDir)) {
     fs.mkdirSync(quizDir, { recursive: true })
   }
   return path.join(quizDir, 'custom-questions.json')
 }
 
-function appendCustomQuestions(newQuestions: any[]): void {
+function appendCustomQuestions(newQuestions: any[], req?: Request): void {
   try {
-    const p = getCustomQuestionsPath()
+    const vaultRoot = req ? getRequestVaultPath(req) : config.vaultPath
+    const p = getCustomQuestionsPath(vaultRoot)
     let list: any[] = []
     if (fs.existsSync(p)) {
-      list = JSON.parse(fs.readFileSync(p, 'utf8'))
+      const parsed = JSON.parse(fs.readFileSync(p, 'utf8'))
+      if (Array.isArray(parsed)) list = parsed
     }
     const existingIds = new Set(list.map((q: any) => q.id))
-    for (const q of newQuestions) {
+    for (const rawQ of newQuestions) {
+      const q = normalizeQuestionMathFields(rawQ)
       if (!existingIds.has(q.id)) {
         list.push(q)
+        existingIds.add(q.id)
       }
     }
     fs.writeFileSync(p, JSON.stringify(list, null, 2), 'utf8')
@@ -36,17 +158,17 @@ function appendCustomQuestions(newQuestions: any[]): void {
   }
 }
 
-function getExtractionsRecordPath(): string {
-  const dir = path.join(config.vaultPath, 'raw-sources')
+function getExtractionsRecordPath(vaultRoot: string = config.vaultPath): string {
+  const dir = path.join(vaultRoot, 'raw-sources')
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true })
   }
   return path.join(dir, '.extractions.json')
 }
 
-function loadExtractionsRecord(): Record<string, any> {
+function loadExtractionsRecord(vaultRoot: string = config.vaultPath): Record<string, any> {
   try {
-    const p = getExtractionsRecordPath()
+    const p = path.join(vaultRoot, 'raw-sources', '.extractions.json')
     if (fs.existsSync(p)) {
       return JSON.parse(fs.readFileSync(p, 'utf8'))
     }
@@ -54,17 +176,54 @@ function loadExtractionsRecord(): Record<string, any> {
   return {}
 }
 
-function saveExtractionRecord(relPath: string, info: any): void {
+function getExtractionRecordForBook(record: Record<string, any>, scope: BookScope, relPath: string): any {
+  const altRel1 = relPath.replace('06-原始资料库', 'raw-sources')
+  const altRel2 = relPath.replace('raw-sources', '06-原始资料库')
+  return (
+    record[`${scope}:${relPath}`] ||
+    record[`${scope}:${altRel1}`] ||
+    record[`${scope}:${altRel2}`] ||
+    record[relPath] ||
+    record[altRel1] ||
+    record[altRel2]
+  )
+}
+
+function saveExtractionRecord(vaultRoot: string, scope: BookScope, relPath: string, info: any): void {
   try {
-    const record = loadExtractionsRecord()
-    record[relPath] = {
+    const record = loadExtractionsRecord(vaultRoot)
+    record[`${scope}:${relPath}`] = {
       ...info,
+      scope,
       updatedAt: new Date().toISOString()
     }
-    fs.writeFileSync(getExtractionsRecordPath(), JSON.stringify(record, null, 2), 'utf8')
+    fs.writeFileSync(getExtractionsRecordPath(vaultRoot), JSON.stringify(record, null, 2), 'utf8')
   } catch (err: any) {
     console.warn('Failed to save extraction record:', err.message)
   }
+}
+
+function removeOrRenameExtractionRecord(vaultRoot: string, scope: BookScope, oldRelPath: string, newRelPath?: string): void {
+  try {
+    const p = path.join(vaultRoot, 'raw-sources', '.extractions.json')
+    if (!fs.existsSync(p)) return
+    const record = loadExtractionsRecord(vaultRoot)
+    const keys = [`${scope}:${oldRelPath}`, oldRelPath]
+    let existing: any = null
+    for (const k of keys) {
+      if (record[k]) {
+        existing = record[k]
+        delete record[k]
+      }
+    }
+    if (newRelPath && existing) {
+      record[`${scope}:${newRelPath}`] = {
+        ...existing,
+        updatedAt: new Date().toISOString()
+      }
+    }
+    fs.writeFileSync(p, JSON.stringify(record, null, 2), 'utf8')
+  } catch {}
 }
 
 
@@ -75,7 +234,7 @@ function saveExtractionRecord(relPath: string, info: any): void {
 /**
  * 启发式从用户上传的文本/Markdown中高保真提取真题与选择题，杜绝假题与模板自编
  */
-function extractQuizQuestionsFromRawText(text: string, filename: string, domain: 'cs_408' | 'math', subject: string): any[] {
+function extractQuizQuestionsFromRawText(text: string, filename: string, domain: ResourceDomain, subject: string): any[] {
   const questions: any[] = []
   if (!text || text.length < 15) return questions
 
@@ -157,7 +316,7 @@ function extractQuizQuestionsFromRawText(text: string, filename: string, domain:
   return questions
 }
 
-function inferDomainAndSubjectFromText(text: string, filename: string): { domain: 'cs_408' | 'math'; subject: string } {
+function inferDomainAndSubjectFromText(text: string, filename: string): { domain: ResourceDomain; subject: string } {
   const combined = (filename + ' ' + text).toLowerCase()
   
   // 操作系统关键词特征
@@ -174,8 +333,20 @@ function inferDomainAndSubjectFromText(text: string, filename: string): { domain
   const laKeywords = ['线性代数', '行列式', '矩阵', '逆矩阵', '初等变换', '矩阵的秩', '线性相关', '线性无关', '基础解系', '特征值', '特征向量', '相似对角化', '施密特正交化', '二次型', '正定矩阵', '合同']
   const probKeywords = ['概率论', '数理统计', '随机变量', '概率密度', '分布函数', '泊松分布', '正态分布', '数学期望', '方差', '协方差', '相关系数', '切比雪夫', '大数定律', '中心极限定理', '卡方分布', 't分布', 'f分布']
 
+  // 英语学科特征
+  const engReadingKeywords = ['考研英语', '英语一', '英语二', '阅读理解', 'reading comprehension', 'passage', 'paragraph', 'author', 'attitude']
+  const engWritingKeywords = ['英语作文', '大作文', '小作文', '图画作文', '图表作文', '写作模板', 'dear sir', 'yours sincerely']
+  const engVocabKeywords = ['核心词汇', '单词', '词根', '词缀', '恋练有词', '红宝书', '长难句', '完形填空', '新题型', '翻译']
+
+  // 政治学科特征
+  const polMarxKeywords = ['马原', '马克思主义', '辩证法', '唯物论', '认识论', '唯物史观', '剩余价值', '商品二因素', '资本论', '矛盾的普遍性']
+  const polHistoryKeywords = ['史纲', '近现代史', '鸦片战争', '辛亥革命', '五四运动', '抗日战争', '新民主主义', '社会主义改造']
+  const polTheoryKeywords = ['考研政治', '毛中特', '习近平新时代', '新思想', '思想道德与法治', '思修', '肖秀荣', '肖四', '肖八', '肖1000', '腿姐', '徐涛', '形势与政策', '时政']
+
   let osScore = 0; let coScore = 0; let netScore = 0; let dsScore = 0
   let calcScore = 0; let laScore = 0; let probScore = 0
+  let engReadScore = 0; let engWriteScore = 0; let engVocabScore = 0
+  let polMarxScore = 0; let polHistScore = 0; let polTheoryScore = 0
 
   for (const k of osKeywords) { if (combined.includes(k.toLowerCase())) osScore += 2 }
   for (const k of coKeywords) { if (combined.includes(k.toLowerCase())) coScore += 2 }
@@ -184,11 +355,30 @@ function inferDomainAndSubjectFromText(text: string, filename: string): { domain
   for (const k of calcKeywords) { if (combined.includes(k.toLowerCase())) calcScore += 2 }
   for (const k of laKeywords) { if (combined.includes(k.toLowerCase())) laScore += 2 }
   for (const k of probKeywords) { if (combined.includes(k.toLowerCase())) probScore += 2 }
+  for (const k of engReadingKeywords) { if (combined.includes(k.toLowerCase())) engReadScore += 2 }
+  for (const k of engWritingKeywords) { if (combined.includes(k.toLowerCase())) engWriteScore += 2 }
+  for (const k of engVocabKeywords) { if (combined.includes(k.toLowerCase())) engVocabScore += 2 }
+  for (const k of polMarxKeywords) { if (combined.includes(k.toLowerCase())) polMarxScore += 2 }
+  for (const k of polHistoryKeywords) { if (combined.includes(k.toLowerCase())) polHistScore += 2 }
+  for (const k of polTheoryKeywords) { if (combined.includes(k.toLowerCase())) polTheoryScore += 2 }
 
   const csMax = Math.max(osScore, coScore, netScore, dsScore)
   const mathMax = Math.max(calcScore, laScore, probScore)
+  const engMax = Math.max(engReadScore, engWriteScore, engVocabScore)
+  const polMax = Math.max(polMarxScore, polHistScore, polTheoryScore)
 
-  if (csMax > 0 || mathMax > 0) {
+  const topMax = Math.max(csMax, mathMax, engMax, polMax)
+  if (topMax > 0) {
+    if (polMax === topMax) {
+      if (polHistScore === polMax) return { domain: 'politics', subject: '中国近现代史纲要' }
+      if (polMarxScore === polMax) return { domain: 'politics', subject: '马克思主义基本原理' }
+      return { domain: 'politics', subject: '习近平新时代中国特色社会主义思想' }
+    }
+    if (engMax === topMax) {
+      if (engWriteScore === engMax) return { domain: 'english', subject: '英语作文' }
+      if (engVocabScore === engMax) return { domain: 'english', subject: '核心词汇' }
+      return { domain: 'english', subject: '阅读理解' }
+    }
     if (csMax >= mathMax) {
       if (osScore === csMax) return { domain: 'cs_408', subject: '操作系统' }
       if (coScore === csMax) return { domain: 'cs_408', subject: '计算机组成原理' }
@@ -201,56 +391,49 @@ function inferDomainAndSubjectFromText(text: string, filename: string): { domain
     }
   }
 
-  // 默认根据名称或408包含判断
-  if (combined.includes('408') || combined.includes('计算机')) {
-    return { domain: 'cs_408', subject: '操作系统' }
-  }
-  return { domain: 'math', subject: '高等数学' }
+  const fallbackDomain = inferDomainFromPathOrName(combined)
+  return { domain: fallbackDomain, subject: getDefaultSubjectForDomain(fallbackDomain) }
 }
 
-async function extractContentFromMaterial(fullPath: string): Promise<{ content: string; subject?: string; domain?: 'cs_408' | 'math'; inferredTitle?: string }> {
-  const ext = path.extname(fullPath).toLowerCase()
-  if (ext === '.pdf') {
-    const possibleScriptPaths = [
-      path.join(__dirname, 'scripts', 'extract_pdf_summary.py'),
-      path.join(__dirname, '..', 'server', 'scripts', 'extract_pdf_summary.py'),
-      path.join(process.cwd(), 'server', 'scripts', 'extract_pdf_summary.py'),
-    ]
-    const scriptPath = possibleScriptPaths.find(p => fs.existsSync(p)) || possibleScriptPaths[0]
-    try {
-      const { stdout } = await execFileAsync('python', [scriptPath, fullPath], { timeout: 45000, maxBuffer: 10 * 1024 * 1024 })
-      const res = JSON.parse(stdout)
-      if (res.success && res.content) {
-        return {
-          content: res.content,
-          subject: res.subject,
-          domain: res.domain,
-          inferredTitle: res.inferredTitle
-        }
+async function extractContentFromMaterial(fullPath: string): Promise<{
+  content: string
+  subject?: string
+  domain?: ResourceDomain
+  inferredTitle?: string
+  totalPages?: number
+  isScannedImageOnly?: boolean
+}> {
+  const res = await extractFullMaterialContent(fullPath, { maxPagesDefault: 60 })
+  if (res.success) {
+    if (res.isScannedImageOnly) {
+      const outlinePart = res.outlineText ? `\n\n## 原书目录书签\n${res.outlineText}` : ''
+      return {
+        content: `【检测到纯图片扫描版 PDF（共 ${res.totalPages} 页，未包含内嵌文字层）】\n文件《${path.basename(fullPath)}》已完整保留于书架，可直接点击「原 PDF 预览 / 下载」。\n如需整卷批量提取题目入库，建议使用带 OCR 文字层的 PDF 版本，或使用「智能导入题库 -> 拍照/截图识题」逐页识别。${outlinePart}`,
+        subject: res.subject,
+        domain: res.domain,
+        inferredTitle: res.inferredTitle,
+        totalPages: res.totalPages,
+        isScannedImageOnly: true
       }
-    } catch (err: any) {
-      console.warn('Python PDF extract error:', err.message)
     }
-  }
 
-  // Text-based files: .md, .txt, .html
-  if (fs.existsSync(fullPath)) {
-    try {
-      const stat = fs.statSync(fullPath)
-      if (stat.size <= 10 * 1024 * 1024) {
-        let text = fs.readFileSync(fullPath, 'utf8')
-        if (ext === '.html' || ext === '.htm') {
-          text = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-        }
-        return { content: text.slice(0, 8000) }
+    const combined = res.fullText || res.outlineText || ''
+    if (combined.trim().length > 0) {
+      return {
+        content: combined,
+        subject: res.subject,
+        domain: res.domain,
+        inferredTitle: res.inferredTitle,
+        totalPages: res.totalPages,
+        isScannedImageOnly: false
       }
-    } catch (readErr: any) {
-      console.warn('File read error:', readErr.message)
     }
   }
 
   return {
-    content: `资料参考书：《${path.basename(fullPath)}》\n请结合考研该科目权威大纲核心定理、高频考法模型与重难点，进行体系化结构笔记提炼与真题归纳。`
+    content: `资料参考书：《${path.basename(fullPath)}》\n暂未能从文件中读取到可识别文字内容，您仍可点击「原 PDF 预览 / 下载」直接查看原件。`,
+    totalPages: res.totalPages || 0,
+    isScannedImageOnly: Boolean(res.isScannedImageOnly)
   }
 }
 
@@ -309,7 +492,7 @@ function getSafeUploadFilename(rawName: string): string {
   let name = rawName
   try {
     const decoded = Buffer.from(rawName, 'latin1').toString('utf8')
-    if (/[ÃÂæçèé]/.test(rawName) && !decoded.includes('\ufffd')) {
+    if (decoded !== rawName && !decoded.includes('\ufffd') && (/[\u4e00-\u9fa5]/.test(decoded) || /[ÃÂæçèé]/.test(rawName))) {
       name = decoded
     }
   } catch {}
@@ -319,19 +502,178 @@ function getSafeUploadFilename(rawName: string): string {
   return `${base || 'upload'}${ext}`
 }
 
-// Configure multer for file uploads into raw-sources
+function findFileInVaultRawDirs(vaultRoot: string, relPath: string): string | null {
+  if (!relPath || typeof relPath !== 'string') return null
+  const cleanRel = relPath.replace(/\\/g, '/').replace(/^\/+/, '').trim()
+  if (!cleanRel || cleanRel.includes('..') || path.isAbsolute(cleanRel)) return null
+
+  const rawDirs = [
+    path.resolve(vaultRoot, 'raw-sources'),
+    path.resolve(vaultRoot, '06-原始资料库')
+  ]
+
+  const candidates: string[] = [
+    path.resolve(vaultRoot, cleanRel),
+    path.resolve(vaultRoot, 'raw-sources', cleanRel),
+    path.resolve(vaultRoot, '06-原始资料库', cleanRel)
+  ]
+
+  if (cleanRel.includes('raw-sources')) {
+    candidates.push(path.resolve(vaultRoot, cleanRel.replace('raw-sources', '06-原始资料库')))
+  }
+  if (cleanRel.includes('06-原始资料库')) {
+    candidates.push(path.resolve(vaultRoot, cleanRel.replace('06-原始资料库', 'raw-sources')))
+  }
+
+  const baseName = path.basename(cleanRel)
+  if (baseName && baseName !== '.' && baseName !== '..') {
+    candidates.push(
+      path.resolve(vaultRoot, 'raw-sources', '408计算机', '经典教材', baseName),
+      path.resolve(vaultRoot, '06-原始资料库', '408计算机', '经典教材', baseName),
+      path.resolve(vaultRoot, 'raw-sources', '数学', '考研题集', baseName),
+      path.resolve(vaultRoot, '06-原始资料库', '数学', '考研题集', baseName)
+    )
+  }
+
+  for (const candidate of candidates) {
+    if (!rawDirs.some(rd => isStrictInside(rd, candidate))) continue
+    try {
+      if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+        return candidate
+      }
+    } catch {}
+  }
+
+  return null
+}
+
+type ResolvedBookResult =
+  | {
+      ok: true
+      fullPath: string
+      actualScope: BookScope
+      vaultRoot: string
+      relativePathNormalized: string
+    }
+  | {
+      ok: false
+      errorStatus: number
+      error: string
+    }
+
+function resolveBookFile(req: Request, relPath: string, requestedScope?: string): ResolvedBookResult {
+  if (!relPath || typeof relPath !== 'string') {
+    return { ok: false, errorStatus: 400, error: '缺少资料路径 relativePath' }
+  }
+  const cleanRel = relPath.replace(/\\/g, '/').replace(/^\/+/, '').trim()
+  if (!cleanRel || cleanRel.includes('..') || path.isAbsolute(cleanRel)) {
+    return { ok: false, errorStatus: 403, error: '非法资料路径' }
+  }
+
+  const user = resolveUserFromReq(req)
+  const scope: BookScope | undefined =
+    requestedScope === 'personal' || requestedScope === 'shared' ? requestedScope : undefined
+
+  if (scope === 'personal') {
+    if (!user) {
+      return { ok: false, errorStatus: 401, error: '请先登录账号后再访问个人独享资料' }
+    }
+    if (user.role === 'admin') {
+      const hit = findFileInVaultRawDirs(config.vaultPath, cleanRel)
+      if (!hit) return { ok: false, errorStatus: 404, error: '未找到指定参考资料文件' }
+      return {
+        ok: true,
+        fullPath: hit,
+        actualScope: 'shared',
+        vaultRoot: config.vaultPath,
+        relativePathNormalized: path.relative(config.vaultPath, hit).replace(/\\/g, '/')
+      }
+    }
+    const userVault = getUserVaultDir(user.id)
+    const hit = findFileInVaultRawDirs(userVault, cleanRel)
+    if (!hit) {
+      return { ok: false, errorStatus: 404, error: '未在您的个人资料库中找到该文件' }
+    }
+    return {
+      ok: true,
+      fullPath: hit,
+      actualScope: 'personal',
+      vaultRoot: userVault,
+      relativePathNormalized: path.relative(userVault, hit).replace(/\\/g, '/')
+    }
+  }
+
+  if (scope === 'shared') {
+    const hit = findFileInVaultRawDirs(config.vaultPath, cleanRel)
+    if (!hit) {
+      return { ok: false, errorStatus: 404, error: '未在系统公共资料库中找到该文件' }
+    }
+    return {
+      ok: true,
+      fullPath: hit,
+      actualScope: 'shared',
+      vaultRoot: config.vaultPath,
+      relativePathNormalized: path.relative(config.vaultPath, hit).replace(/\\/g, '/')
+    }
+  }
+
+  // 未显式指定 scope 时：登录普通用户优先查个人沙箱，其次查公共共享库
+  if (user && user.role !== 'admin') {
+    const userVault = getUserVaultDir(user.id)
+    const personalHit = findFileInVaultRawDirs(userVault, cleanRel)
+    if (personalHit) {
+      return {
+        ok: true,
+        fullPath: personalHit,
+        actualScope: 'personal',
+        vaultRoot: userVault,
+        relativePathNormalized: path.relative(userVault, personalHit).replace(/\\/g, '/')
+      }
+    }
+  }
+
+  const sharedHit = findFileInVaultRawDirs(config.vaultPath, cleanRel)
+  if (sharedHit) {
+    return {
+      ok: true,
+      fullPath: sharedHit,
+      actualScope: 'shared',
+      vaultRoot: config.vaultPath,
+      relativePathNormalized: path.relative(config.vaultPath, sharedHit).replace(/\\/g, '/')
+    }
+  }
+
+  return { ok: false, errorStatus: 404, error: '未找到指定参考资料文件' }
+}
+
+// Configure multer for file uploads into raw-sources (管理员入公共库，普通用户入个人独享沙箱)
 const storage = multer.diskStorage({
   destination: (req, _file, cb) => {
-    const domain = (req.body?.domain as string) || 'math'
+    const user = resolveUserFromReq(req)
+    if (!user) {
+      cb(new Error('请先登录账号后再导入资料'), '')
+      return
+    }
+
+    const domain = normalizeResourceDomain(req.body?.domain as string)
     let category = (req.body?.category as string) || '经典教材'
     if (category === '教材') category = '经典教材'
     if (category === '历年真题') category = '真题'
     if (category === '辅导讲义/精讲') category = '辅导讲义'
     if (category === '模拟测试卷') category = '模拟题'
+    if (category === '背诵手册/核心词汇') category = '背诵手册'
+    if (category === '作文模板/专题汇编') category = '作文模板'
+    if (category === '错题集/复盘笔记') category = '错题笔记'
 
-    const subDir = domain === 'cs_408' ? '408计算机' : '考研数学'
+    const subDir = getSubDirForDomain(domain)
     const safeCategory = category.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_').trim() || '经典教材'
-    const fullDest = path.join(config.vaultPath, 'raw-sources', subDir, safeCategory)
+
+    const isAdmin = user.role === 'admin'
+    if (!isAdmin) {
+      ensureUserSandboxSync(user.id, user.username)
+    }
+    const targetVaultRoot = isAdmin ? config.vaultPath : getUserVaultDir(user.id)
+    const fullDest = path.join(targetVaultRoot, 'raw-sources', subDir, safeCategory)
 
     try {
       if (!fs.existsSync(fullDest)) {
@@ -357,7 +699,7 @@ export interface BookItem {
   name: string
   relativePath: string
   fullPath: string
-  domain: 'cs_408' | 'math'
+  domain: ResourceDomain
   category: string
   size: number
   ext: string
@@ -366,8 +708,12 @@ export interface BookItem {
   isPdf: boolean
   isHtml: boolean
   fileType: 'pdf' | 'html' | 'handout' | 'paper' | 'text'
+  scope: BookScope
+  canManage: boolean
+  ownerName: string
   extractedInfo?: {
     isExtracted: boolean
+    isScannedImageOnly?: boolean
     noteTitle?: string
     notePath?: string
     questionCount?: number
@@ -897,94 +1243,137 @@ $$\\lim [u(x)]^{v(x)} = e^{\\lim [u(x)-1] \\cdot v(x)}$$
 
 /**
  * Scan raw-sources directory for reference books, past papers and materials
+ * - 系统管理员 (admin): 仅读取与管理公共共享资料库 (config.vaultPath)
+ * - 普通用户 (student / editor): 读取个人独享资料库 (个人沙箱 raw-sources) + 系统公共共享资料库
+ * - 未登录访客: 仅可只读查看系统公共共享资料库
  */
-booksRouter.get('/books/list', (_req, res) => {
+booksRouter.get('/books/list', (req, res) => {
   try {
+    const user = resolveUserFromReq(req)
+    const isAdmin = user?.role === 'admin'
+    const isLoggedInRegular = Boolean(user && !isAdmin)
+
     ensureRawSourcesInitialized(config.vaultPath)
-    const rawSourcesDir = path.join(config.vaultPath, 'raw-sources')
-    if (!fs.existsSync(rawSourcesDir)) {
-      res.json({ books: [] })
-      return
+
+    const recordVaultRoot = isLoggedInRegular ? getUserVaultDir(user!.id) : config.vaultPath
+    const extractionsRecord = loadExtractionsRecord(recordVaultRoot)
+    const readableExts = new Set(['.md', '.txt', '.markdown'])
+    const books: BookItem[] = []
+
+    function scanScope(
+      vaultRoot: string,
+      candidateDirs: string[],
+      scope: BookScope,
+      canManage: boolean,
+      ownerName: string
+    ) {
+      const seenNames = new Set<string>()
+      const scopeBooks: BookItem[] = []
+
+      function scan(dir: string) {
+        if (!fs.existsSync(dir)) return
+        const entries = fs.readdirSync(dir, { withFileTypes: true })
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry.name)
+          if (entry.isDirectory()) {
+            scan(fullPath)
+          } else if (entry.isFile()) {
+            if (entry.name.startsWith('.')) continue
+            if (seenNames.has(entry.name)) continue
+            seenNames.add(entry.name)
+
+            const ext = path.extname(entry.name).toLowerCase()
+            const stat = fs.statSync(fullPath)
+            const relPath = path.relative(vaultRoot, fullPath).replace(/\\/g, '/')
+
+            const domain: ResourceDomain = inferDomainFromPathOrName(relPath)
+
+            let category = '辅导讲义'
+            if (relPath.includes('真题')) category = '历年真题'
+            else if (relPath.includes('教材')) category = '经典教材'
+            else if (relPath.includes('交互课件') || ext === '.html') category = '交互课件'
+            else if (relPath.includes('辅导讲义') || relPath.includes('讲义')) category = '辅导讲义'
+            else if (relPath.includes('模拟题')) category = '模拟题卷'
+            else if (relPath.includes('背诵手册')) category = '背诵手册'
+            else if (relPath.includes('作文模板')) category = '作文模板'
+            else if (relPath.includes('错题笔记')) category = '错题笔记'
+
+            const isPdf = ext === '.pdf'
+            const isHtml = ext === '.html' || ext === '.htm'
+            const isText = readableExts.has(ext) || isPdf || isHtml
+
+            let fileType: 'pdf' | 'html' | 'handout' | 'paper' | 'text' = 'text'
+            if (isPdf) fileType = 'pdf'
+            else if (isHtml) fileType = 'html'
+            else if (ext === '.md') fileType = 'handout'
+
+            const savedExtracted = getExtractionRecordForBook(extractionsRecord, scope, relPath)
+
+            scopeBooks.push({
+              id: `${scope}:${relPath}`,
+              name: entry.name,
+              relativePath: relPath,
+              fullPath: isAdmin ? fullPath : '',
+              domain,
+              category,
+              size: stat.size,
+              ext,
+              lastModified: stat.mtime.toISOString(),
+              isTextReadable: isText,
+              isPdf,
+              isHtml,
+              fileType,
+              scope,
+              canManage,
+              ownerName,
+              extractedInfo: savedExtracted ? {
+                isExtracted: savedExtracted.isExtracted !== false,
+                isScannedImageOnly: Boolean(savedExtracted.isScannedImageOnly),
+                noteTitle: savedExtracted.noteTitle,
+                notePath: savedExtracted.notePath || savedExtracted.savedNotePath,
+                questionCount: Number(savedExtracted.questionCount ?? savedExtracted.questionsCount ?? 0),
+                lastExtracted: savedExtracted.updatedAt,
+                mode: savedExtracted.mode
+              } : undefined
+            })
+          }
+        }
+      }
+
+      for (const d of candidateDirs) {
+        scan(d)
+      }
+
+      // 按最后修改时间倒序，最新上传的资料排在前面
+      scopeBooks.sort((a, b) => b.lastModified.localeCompare(a.lastModified))
+      books.push(...scopeBooks)
     }
 
-    const books: BookItem[] = []
-    const readableExts = new Set(['.md', '.txt', '.markdown'])
-    const extractionsRecord = loadExtractionsRecord()
-    const seenNames = new Set<string>()
-
-    function scan(dir: string) {
-      if (!fs.existsSync(dir)) return
-      const entries = fs.readdirSync(dir, { withFileTypes: true })
-      for (const entry of entries) {
-        const fullPath = path.join(dir, entry.name)
-        if (entry.isDirectory()) {
-          scan(fullPath)
-        } else if (entry.isFile()) {
-          if (entry.name.startsWith('.')) continue
-          if (seenNames.has(entry.name)) continue
-          seenNames.add(entry.name)
-
-          const ext = path.extname(entry.name).toLowerCase()
-          const stat = fs.statSync(fullPath)
-          const relPath = path.relative(config.vaultPath, fullPath).replace(/\\/g, '/')
-          
-          let domain: 'cs_408' | 'math' = 'math'
-          if (relPath.includes('408') || relPath.includes('数据结构') || relPath.includes('计算机') || relPath.includes('cs_408')) {
-            domain = 'cs_408'
-          }
-
-          let category = '辅导讲义'
-          if (relPath.includes('真题')) category = '历年真题'
-          else if (relPath.includes('教材')) category = '经典教材'
-          else if (relPath.includes('交互课件') || ext === '.html') category = '交互课件'
-          else if (relPath.includes('辅导讲义') || relPath.includes('讲义')) category = '辅导讲义'
-          else if (relPath.includes('模拟题')) category = '模拟题卷'
-
-          const isPdf = ext === '.pdf'
-          const isHtml = ext === '.html' || ext === '.htm'
-          const isText = readableExts.has(ext) || isPdf || isHtml
-
-          let fileType: 'pdf' | 'html' | 'handout' | 'paper' | 'text' = 'text'
-          if (isPdf) fileType = 'pdf'
-          else if (isHtml) fileType = 'html'
-          else if (ext === '.md') fileType = 'handout'
-
-          const savedExtracted = extractionsRecord[relPath] || extractionsRecord[relPath.replace('06-原始资料库', 'raw-sources')] || extractionsRecord[relPath.replace('raw-sources', '06-原始资料库')]
-
-          books.push({
-            id: relPath,
-            name: entry.name,
-            relativePath: relPath,
-            fullPath,
-            domain,
-            category,
-            size: stat.size,
-            ext,
-            lastModified: stat.mtime.toISOString(),
-            isTextReadable: isText,
-            isPdf,
-            isHtml,
-            fileType,
-            extractedInfo: savedExtracted ? {
-              isExtracted: true,
-              noteTitle: savedExtracted.noteTitle,
-              notePath: savedExtracted.notePath,
-              questionCount: savedExtracted.questionCount,
-              lastExtracted: savedExtracted.updatedAt,
-              mode: savedExtracted.mode
-            } : undefined
-          })
-        }
+    if (isLoggedInRegular && user) {
+      const userVault = getUserVaultDir(user.id)
+      const userRawDir = path.join(userVault, 'raw-sources')
+      if (fs.existsSync(userRawDir)) {
+        scanScope(
+          userVault,
+          [userRawDir],
+          'personal',
+          true,
+          user.displayName || user.username
+        )
       }
     }
 
-    const candidateDirs = [
-      path.join(config.vaultPath, 'raw-sources'),
-      path.join(config.vaultPath, '06-原始资料库')
-    ]
-    for (const d of candidateDirs) {
-      scan(d)
-    }
+    scanScope(
+      config.vaultPath,
+      [
+        path.join(config.vaultPath, 'raw-sources'),
+        path.join(config.vaultPath, '06-原始资料库')
+      ],
+      'shared',
+      isAdmin,
+      '系统管理员'
+    )
+
     res.json({ books })
   } catch (err: any) {
     console.error('Failed to list books:', err.message)
@@ -998,26 +1387,18 @@ booksRouter.get('/books/list', (_req, res) => {
 booksRouter.get('/books/raw', (req, res) => {
   try {
     const relPath = (req.query.path as string) || ''
+    const requestedScope = (req.query.scope as string) || undefined
     if (!relPath) {
       res.status(400).json({ error: 'Missing path parameter' })
       return
     }
 
-    let fullPath = path.resolve(config.vaultPath, relPath)
-    if (!fs.existsSync(fullPath)) {
-      if (relPath.includes('raw-sources')) {
-        const alt = path.resolve(config.vaultPath, relPath.replace('raw-sources', '06-原始资料库'))
-        if (fs.existsSync(alt)) fullPath = alt
-      } else if (relPath.includes('06-原始资料库')) {
-        const alt = path.resolve(config.vaultPath, relPath.replace('06-原始资料库', 'raw-sources'))
-        if (fs.existsSync(alt)) fullPath = alt
-      }
-    }
-
-    if (!fullPath.startsWith(path.resolve(config.vaultPath)) || !fs.existsSync(fullPath)) {
-      res.status(404).json({ error: 'File not found' })
+    const resolved = resolveBookFile(req, relPath, requestedScope)
+    if (!resolved.ok) {
+      res.status(resolved.errorStatus).json({ error: resolved.error })
       return
     }
+    const { fullPath } = resolved
 
     const ext = path.extname(fullPath).toLowerCase()
     const mimeTypes: Record<string, string> = {
@@ -1035,40 +1416,77 @@ booksRouter.get('/books/raw', (req, res) => {
     const stat = fs.statSync(fullPath)
     const fileSize = stat.size
     const range = req.headers.range
+    const baseFilename = path.basename(fullPath)
+    const asciiFallback = baseFilename.replace(/[^\x20-\x7E]/g, '_') || `document${ext}`
 
     res.setHeader('Accept-Ranges', 'bytes')
     res.setHeader('Content-Type', contentType)
-    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(path.basename(fullPath))}"`)
+    res.setHeader('Cache-Control', 'private, max-age=3600')
+    res.setHeader('X-Accel-Buffering', 'no')
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(baseFilename)}`
+    )
 
     if (range) {
       const parts = range.replace(/bytes=/, '').split('-')
       const start = parseInt(parts[0], 10)
       const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1
 
-      if (start >= fileSize || end >= fileSize || start > end) {
+      if (Number.isNaN(start) || Number.isNaN(end) || start < 0 || start >= fileSize || end >= fileSize || start > end) {
         res.status(416).setHeader('Content-Range', `bytes */${fileSize}`).end()
         return
       }
 
       const chunkSize = (end - start) + 1
       const stream = fs.createReadStream(fullPath, { start, end })
+      stream.on('error', (streamErr) => {
+        if (!res.headersSent) res.status(500).json({ error: streamErr.message })
+        else res.end()
+      })
       res.status(206)
       res.setHeader('Content-Range', `bytes ${start}-${end}/${fileSize}`)
       res.setHeader('Content-Length', chunkSize)
       stream.pipe(res)
     } else {
       res.setHeader('Content-Length', fileSize)
-      fs.createReadStream(fullPath).pipe(res)
+      const stream = fs.createReadStream(fullPath)
+      stream.on('error', (streamErr) => {
+        if (!res.headersSent) res.status(500).json({ error: streamErr.message })
+        else res.end()
+      })
+      stream.pipe(res)
     }
   } catch (err: any) {
     res.status(500).json({ error: err.message })
   }
 })
 
+const PERSONAL_QUOTA_BYTES = 1.5 * 1024 * 1024 * 1024 // 普通用户个人独享空间上限 1.5GB
+
 /**
  * Upload reference book / notes into raw-sources
+ * - 管理员上传：存入系统公共资料库 (shared)
+ * - 普通用户上传：存入其个人独享沙箱 (personal)，受 1.5GB 配额保护
  */
 booksRouter.post('/books/upload', (req, res, next) => {
+  const user = resolveUserFromReq(req)
+  if (!user) {
+    res.status(401).json({ error: '请先登录账号后再导入 PDF 或参考资料' })
+    return
+  }
+
+  if (user.role !== 'admin') {
+    const userRawDir = path.join(getUserVaultDir(user.id), 'raw-sources')
+    const usedBytes = getDirectorySizeBytes(userRawDir)
+    if (usedBytes >= PERSONAL_QUOTA_BYTES) {
+      res.status(413).json({
+        error: `您的个人独享资料库已达 1.5GB 容量上限（当前已用 ${(usedBytes / (1024 * 1024)).toFixed(0)} MB），请先清理旧文件后再上传`
+      })
+      return
+    }
+  }
+
   upload.single('file')(req, res, (err: any) => {
     if (err) {
       console.error('[Books Upload Multer Error]:', err)
@@ -1084,21 +1502,37 @@ booksRouter.post('/books/upload', (req, res, next) => {
   })
 }, (req, res) => {
   try {
+    if (!req.user) {
+      res.status(401).json({ error: '请先登录账号后再导入资料' })
+      return
+    }
     if (!req.file) {
-      res.status(400).json({ error: '未接收到上传的文件内容' })
+      res.status(400).json({ error: '未接收到上传的文件内容（请确认未手动覆盖 Content-Type 请求头）' })
+      return
+    }
+    if (req.file.size === 0) {
+      try { fs.unlinkSync(req.file.path) } catch {}
+      res.status(400).json({ error: '上传的文件内容为空（0 字节），请重新选择有效的资料文件' })
       return
     }
 
+    const isAdmin = req.user.role === 'admin'
+    const scope: BookScope = isAdmin ? 'shared' : 'personal'
+    const vaultRoot = isAdmin ? config.vaultPath : getUserVaultDir(req.user.id)
     const safeName = getSafeUploadFilename(req.file.originalname)
-    const relPath = path.relative(config.vaultPath, req.file.path).replace(/\\/g, '/')
+    const relPath = path.relative(vaultRoot, req.file.path).replace(/\\/g, '/')
 
-    invalidateCache()
+    invalidateCache(req.user.id)
     res.json({
       success: true,
       file: {
+        id: `${scope}:${relPath}`,
         name: safeName,
         relativePath: relPath,
-        size: req.file.size
+        size: req.file.size,
+        scope,
+        canManage: true,
+        ownerName: isAdmin ? '系统管理员' : (req.user.displayName || req.user.username)
       }
     })
   } catch (err: any) {
@@ -1112,37 +1546,33 @@ booksRouter.post('/books/upload', (req, res, next) => {
  */
 booksRouter.delete('/books/delete', (req, res) => {
   try {
-    const { relativePath } = req.body as { relativePath: string }
+    const user = resolveUserFromReq(req)
+    if (!user) {
+      res.status(401).json({ error: '请先登录账号后再管理资料' })
+      return
+    }
+
+    const { relativePath, scope } = req.body as { relativePath: string; scope?: BookScope }
     if (!relativePath) {
       res.status(400).json({ error: '缺少待删除的资料路径 relativePath' })
       return
     }
 
-    const rawSourcesDir = path.resolve(config.vaultPath, 'raw-sources')
-    let fullPath = path.resolve(config.vaultPath, relativePath)
-    if (!fullPath.toLowerCase().startsWith(rawSourcesDir.toLowerCase())) {
-      fullPath = path.resolve(rawSourcesDir, relativePath)
-    }
-
-    // Security check: Must reside strictly within raw-sources
-    if (!fullPath.toLowerCase().startsWith(rawSourcesDir.toLowerCase()) || fullPath.toLowerCase() === rawSourcesDir.toLowerCase()) {
-      res.status(403).json({ error: '只允许删除 raw-sources 归档目录下的资料文件' })
+    const resolved = resolveBookFile(req, relativePath, scope)
+    if (!resolved.ok) {
+      res.status(resolved.errorStatus).json({ error: resolved.error })
       return
     }
 
-    if (!fs.existsSync(fullPath)) {
-      res.status(404).json({ error: '文件不存在或已被删除' })
+    if (resolved.actualScope === 'shared' && user.role !== 'admin') {
+      res.status(403).json({ error: '权限受限：系统公共资料仅管理员可删除，您只可管理自己导入的个人资料' })
       return
     }
 
-    const stat = fs.statSync(fullPath)
-    if (!stat.isFile()) {
-      res.status(400).json({ error: '目标路径不是文件，禁止删除' })
-      return
-    }
-
+    const { fullPath, actualScope, vaultRoot, relativePathNormalized } = resolved
     fs.unlinkSync(fullPath)
-    invalidateCache()
+    removeOrRenameExtractionRecord(vaultRoot, actualScope, relativePathNormalized)
+    invalidateCache(user.id)
 
     res.json({
       success: true,
@@ -1159,38 +1589,37 @@ booksRouter.delete('/books/delete', (req, res) => {
  */
 booksRouter.post('/books/rename', (req, res) => {
   try {
-    const { relativePath, newName } = req.body as { relativePath: string; newName: string }
+    const user = resolveUserFromReq(req)
+    if (!user) {
+      res.status(401).json({ error: '请先登录账号后再重命名资料' })
+      return
+    }
+
+    const { relativePath, newName, scope } = req.body as { relativePath: string; newName: string; scope?: BookScope }
     if (!relativePath || !newName || !newName.trim()) {
       res.status(400).json({ error: '缺少相对路径 relativePath 或新名称 newName' })
       return
     }
 
-    const rawSourcesDir = path.resolve(config.vaultPath, 'raw-sources')
-    let fullPath = path.resolve(config.vaultPath, relativePath)
-    if (!fullPath.toLowerCase().startsWith(rawSourcesDir.toLowerCase())) {
-      fullPath = path.resolve(rawSourcesDir, relativePath)
-    }
-
-    // 安全沙箱校验：必须在 raw-sources 归档目录下
-    if (!fullPath.toLowerCase().startsWith(rawSourcesDir.toLowerCase()) || fullPath.toLowerCase() === rawSourcesDir.toLowerCase()) {
-      res.status(403).json({ error: '只允许修改 raw-sources 归档目录下的资料名称' })
+    const resolved = resolveBookFile(req, relativePath, scope)
+    if (!resolved.ok) {
+      res.status(resolved.errorStatus).json({ error: resolved.error })
       return
     }
 
-    if (!fs.existsSync(fullPath)) {
-      res.status(404).json({ error: '文件不存在或已被移除' })
+    if (resolved.actualScope === 'shared' && user.role !== 'admin') {
+      res.status(403).json({ error: '权限受限：系统公共资料仅管理员可重命名，您只可修改自己导入的个人资料' })
       return
     }
 
-    const stat = fs.statSync(fullPath)
-    if (!stat.isFile()) {
-      res.status(400).json({ error: '目标路径不是文件，禁止重命名' })
-      return
-    }
+    const { fullPath, actualScope, vaultRoot, relativePathNormalized } = resolved
+    const rawDirs = [
+      path.resolve(vaultRoot, 'raw-sources'),
+      path.resolve(vaultRoot, '06-原始资料库')
+    ]
 
     const oldExt = path.extname(fullPath)
     let cleanNewName = newName.trim().replace(/[<>:"/\\|?*\x00-\x1F]/g, '_')
-    // 若新名称未带扩展名，自动保持原扩展名
     if (!path.extname(cleanNewName)) {
       cleanNewName = `${cleanNewName}${oldExt}`
     }
@@ -1198,25 +1627,24 @@ booksRouter.post('/books/rename', (req, res) => {
     const targetDir = path.dirname(fullPath)
     const newFullPath = path.join(targetDir, cleanNewName)
 
-    // 目标沙箱校验
-    if (!newFullPath.toLowerCase().startsWith(rawSourcesDir.toLowerCase())) {
+    if (!rawDirs.some(rd => isStrictInside(rd, newFullPath))) {
       res.status(403).json({ error: '新文件名越界' })
       return
     }
 
-    // 如果名称未发生改变
     if (fullPath.toLowerCase() === newFullPath.toLowerCase()) {
       if (fullPath !== newFullPath) {
-        // Windows 大小写重命名容错
         const tempPath = path.join(targetDir, `_temp_ren_${Date.now()}_${cleanNewName}`)
         fs.renameSync(fullPath, tempPath)
         fs.renameSync(tempPath, newFullPath)
       }
+      const sameRelPath = path.relative(vaultRoot, newFullPath).replace(/\\/g, '/')
+      removeOrRenameExtractionRecord(vaultRoot, actualScope, relativePathNormalized, sameRelPath)
       res.json({
         success: true,
         message: '文件名未变动',
         newName: cleanNewName,
-        newRelativePath: path.relative(config.vaultPath, newFullPath).replace(/\\/g, '/')
+        newRelativePath: sameRelPath
       })
       return
     }
@@ -1227,9 +1655,10 @@ booksRouter.post('/books/rename', (req, res) => {
     }
 
     fs.renameSync(fullPath, newFullPath)
-    invalidateCache()
+    invalidateCache(user.id)
 
-    const newRelPath = path.relative(config.vaultPath, newFullPath).replace(/\\/g, '/')
+    const newRelPath = path.relative(vaultRoot, newFullPath).replace(/\\/g, '/')
+    removeOrRenameExtractionRecord(vaultRoot, actualScope, relativePathNormalized, newRelPath)
     res.json({
       success: true,
       message: `资料已成功重命名为《${cleanNewName}》`,
@@ -1247,22 +1676,23 @@ booksRouter.post('/books/rename', (req, res) => {
  */
 booksRouter.post('/books/suggest-name', async (req, res) => {
   try {
-    const { relativePath } = req.body as { relativePath: string }
-    if (!relativePath) {
-      res.status(400).json({ error: '缺少 relativePath' })
+    const user = resolveUserFromReq(req)
+    if (!user) {
+      res.status(401).json({ error: '请先登录账号' })
       return
     }
 
-    const rawSourcesDir = path.resolve(config.vaultPath, 'raw-sources')
-    let fullPath = path.resolve(config.vaultPath, relativePath)
-    if (!fullPath.toLowerCase().startsWith(rawSourcesDir.toLowerCase())) {
-      fullPath = path.resolve(rawSourcesDir, relativePath)
-    }
-
-    if (!fs.existsSync(fullPath)) {
-      res.status(404).json({ error: '文件不存在' })
+    const { relativePath, scope } = req.body as { relativePath: string; scope?: BookScope }
+    const resolved = resolveBookFile(req, relativePath, scope)
+    if (!resolved.ok) {
+      res.status(resolved.errorStatus).json({ error: resolved.error })
       return
     }
+    if (resolved.actualScope === 'shared' && user.role !== 'admin') {
+      res.status(403).json({ error: '仅管理员可修改系统公共资料名称' })
+      return
+    }
+    const { fullPath } = resolved
 
     const ext = path.extname(fullPath).toLowerCase()
     const baseName = path.basename(fullPath, ext)
@@ -1339,28 +1769,163 @@ ${sample}
  */
 booksRouter.post('/books/read', async (req, res) => {
   try {
-    const { relativePath } = req.body as { relativePath: string }
-    if (!relativePath) {
-      res.status(400).json({ error: 'Missing relativePath' })
+    const { relativePath, scope } = req.body as { relativePath: string; scope?: BookScope }
+    const resolved = resolveBookFile(req, relativePath, scope)
+    if (!resolved.ok) {
+      res.status(resolved.errorStatus).json({ error: resolved.error })
       return
     }
-
-    const fullPath = path.resolve(config.vaultPath, relativePath)
-    if (!fullPath.startsWith(path.resolve(config.vaultPath)) || !fs.existsSync(fullPath)) {
-      res.status(404).json({ error: 'File not found' })
-      return
-    }
+    const { fullPath } = resolved
 
     const extracted = await extractContentFromMaterial(fullPath)
     res.json({
       content: extracted.content,
       name: path.basename(fullPath),
       subject: extracted.subject,
-      domain: extracted.domain
+      domain: extracted.domain,
+      totalPages: extracted.totalPages || 0,
+      isScannedImageOnly: Boolean(extracted.isScannedImageOnly)
     })
   } catch (err: any) {
     res.status(500).json({ error: err.message })
   }
+})
+
+/**
+ * 快速探测参考资料元信息（总页数、书签大纲、是否为纯图片扫描件）
+ */
+booksRouter.post('/books/inspect', async (req, res) => {
+  try {
+    const { relativePath, scope } = req.body as { relativePath: string; scope?: BookScope }
+    const resolved = resolveBookFile(req, relativePath, scope)
+    if (!resolved.ok) {
+      res.status(resolved.errorStatus).json({ error: resolved.error })
+      return
+    }
+    const { fullPath, actualScope, relativePathNormalized } = resolved
+    const isPdf = fullPath.toLowerCase().endsWith('.pdf')
+    if (!isPdf) {
+      const stat = fs.statSync(fullPath)
+      res.json({
+        success: true,
+        isPdf: false,
+        scope: actualScope,
+        relativePath: relativePathNormalized,
+        totalPages: 1,
+        fileSizeBytes: stat.size,
+        outlineTitles: [],
+        isScannedImageOnly: false
+      })
+      return
+    }
+
+    const info = await inspectPdfFile(fullPath)
+    res.json({
+      ...info,
+      isPdf: true,
+      scope: actualScope,
+      relativePath: relativePathNormalized
+    })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || '资料探测失败' })
+  }
+})
+
+/**
+ * 提交全卷分片异步扫描入库任务（后台排队串行执行，不阻塞手机/浏览器连接）
+ */
+booksRouter.post('/books/scan-start', (req, res) => {
+  try {
+    const user = resolveUserFromReq(req)
+    if (!user) {
+      res.status(401).json({ error: '请先登录账号后再发起扫描解析' })
+      return
+    }
+    if (!anthropic) {
+      res.status(503).json({ error: 'AI 服务未配置' })
+      return
+    }
+
+    const {
+      relativePath,
+      scope,
+      domain: clientDomain,
+      subject: clientSubject,
+      mode = 'question',
+      startPage,
+      endPage,
+      maxChunks
+    } = req.body as {
+      relativePath: string
+      scope?: BookScope
+      domain?: ResourceDomain
+      subject?: string
+      mode?: ScanExtractMode
+      startPage?: number
+      endPage?: number
+      maxChunks?: number
+    }
+
+    const resolved = resolveBookFile(req, relativePath, scope)
+    if (!resolved.ok) {
+      res.status(resolved.errorStatus).json({ error: resolved.error })
+      return
+    }
+
+    const { fullPath, actualScope, relativePathNormalized } = resolved
+    const bookName = path.basename(fullPath)
+    const domain: ResourceDomain = clientDomain || inferDomainFromPathOrName(fullPath)
+    const subject = clientSubject || getDefaultSubjectForDomain(domain)
+    const vaultRoot = getRequestVaultPath(req)
+
+    const task = enqueueBookScanTask({
+      userId: user.id,
+      vaultRoot,
+      scope: actualScope,
+      relativePath: relativePathNormalized,
+      fullPath,
+      bookName,
+      domain,
+      subject,
+      mode,
+      startPage: startPage && Number(startPage) > 0 ? Number(startPage) : undefined,
+      endPage: endPage && Number(endPage) > 0 ? Number(endPage) : undefined,
+      maxChunks: maxChunks && Number(maxChunks) > 0 ? Math.min(Number(maxChunks), 80) : 24
+    })
+
+    res.json({ success: true, task })
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || '发起后台扫描任务失败' })
+  }
+})
+
+/**
+ * 查询指定扫描任务实时进度
+ */
+booksRouter.get('/books/scan-status/:taskId', (req, res) => {
+  const user = resolveUserFromReq(req)
+  if (!user) {
+    res.status(401).json({ error: '请先登录账号' })
+    return
+  }
+  const task = getBookScanTask(req.params.taskId, user.id)
+  if (!task) {
+    res.status(404).json({ error: '未找到对应扫描任务或无权查看' })
+    return
+  }
+  res.json({ success: true, task })
+})
+
+/**
+ * 查询当前用户最近的后台扫描任务列表
+ */
+booksRouter.get('/books/scan-tasks', (req, res) => {
+  const user = resolveUserFromReq(req)
+  if (!user) {
+    res.status(401).json({ error: '请先登录账号' })
+    return
+  }
+  res.json({ success: true, tasks: listBookScanTasksForUser(user.id) })
 })
 
 /**
@@ -1373,24 +1938,28 @@ booksRouter.post('/books/extract-ai', async (req, res) => {
       return
     }
 
-    const { text, bookName, domain, subject } = req.body as {
+    const { text, bookName, domain: rawDomain, subject } = req.body as {
       text: string
       bookName?: string
-      domain: 'cs_408' | 'math'
+      domain: ResourceDomain
       subject?: string
     }
+    const domain = normalizeResourceDomain(rawDomain)
+    const domainDisplay = getDomainDisplayName(domain)
+    const wikiDomainDir = getWikiDomainDir(domain)
+    const defaultSubject = subject || getDefaultSubjectForDomain(domain)
 
     if (!text || text.trim().length < 10) {
       res.status(400).json({ error: '提取内容过短，请输入或提供有效的材料文本' })
       return
     }
 
-    const prompt = `你是一个深谙全国硕士研究生招生考试（408计算机综合 与 考研数学）的顶级名师与命题专家。
+    const prompt = `你是一个深谙全国硕士研究生招生考试（408计算机综合、考研数学、考研英语、考研政治及专业课）的顶级名师与命题专家。
 请深度阅读以下提供的教材/真题/讲义文本片段，完成两项核心任务：
 
 【输入资料】：
 来源参考书：${bookName || '考研参考资料'}
-学科领域：${domain === 'cs_408' ? '408 计算机综合' : '考研数学'}（${subject || '综合'}）
+学科领域：${domainDisplay}（${defaultSubject}）
 文本内容：
 """
 ${text.slice(0, 6000)}
@@ -1399,7 +1968,7 @@ ${text.slice(0, 6000)}
 【任务要求】：
 1. 提炼 1 篇符合规范的高质量 Obsidian 知识库笔记 Markdown。
    - 包含准确的 YAML frontmatter (type: theorem / concept, tags, created)
-   - 严谨的知识点讲解，数学公式必须使用标准的 KaTeX LaTeX 格式（行内 $...$，独立公式块 $$...$$）
+   - 严谨的知识点讲解，数学公式必须使用标准的 KaTeX LaTeX 格式（行内 $...$，独立公式块 $$...$$）；英语资料提炼核心长难句语法结构、高频词汇搭配与解题逻辑；政治资料提炼核心原理、历史脉络、辨析易混点与时政得分点
    - 标注考研重难点、直观理解与典型易错点
 2. 根据提炼的核心考点，命制 3 道高质量真题风格的选择题或填空题。
    - 每题必须包含：question, type (choice / blank), options (A, B, C, D 选项，如果是选择题), answer (正确答案), explanation (分步深度推导), difficulty (简单/中等/困难)
@@ -1408,14 +1977,14 @@ ${text.slice(0, 6000)}
 {
   "note": {
     "title": "笔记标题（不含扩展名）",
-    "suggestedPath": "wiki/建议存放子路径（例如：wiki/01-考研数学/高等数学/xxx.md 或 wiki/02-408计算机/数据结构/xxx.md）",
+    "suggestedPath": "wiki/${wikiDomainDir}/${defaultSubject}/xxx.md",
     "content": "完整的 Markdown 笔记正文（含frontmatter）"
   },
   "questions": [
     {
       "id": "gen-${Date.now()}-1",
       "domain": "${domain}",
-      "subject": "${subject || (domain === 'cs_408' ? '数据结构' : '高等数学')}",
+      "subject": "${defaultSubject}",
       "chapter": "提炼的章节名",
       "type": "choice",
       "difficulty": "中等",
@@ -1427,8 +1996,8 @@ ${text.slice(0, 6000)}
         "D": "选项D内容"
       },
       "answer": "A",
-      "explanation": "深度标准解析与定理推导",
-      "tags": ["考研真题", "${subject || '核心考点'}"]
+      "explanation": "深度标准解析与考点推导",
+      "tags": ["考研真题", "${defaultSubject}"]
     }
   ]
 }`
@@ -1440,7 +2009,7 @@ ${text.slice(0, 6000)}
       messages: [{ role: 'user', content: prompt }]
     })
 
-    const textBlock = aiRes.content.find((c: any) => c.type === 'text')
+    const textBlock = aiRes.content.find((c: any) => c.type === 'text' && 'text' in c) as { type: 'text'; text: string } | undefined
     const rawText = textBlock ? textBlock.text : '{}'
     
     // Parse JSON
@@ -1455,12 +2024,13 @@ ${text.slice(0, 6000)}
 
     // Automatically save note to user's Vault if requested
     let savedNotePath = ''
+    const userVault = getRequestVaultPath(req)
     if (parsed.note && parsed.note.suggestedPath && parsed.note.content) {
       try {
         const destPath = parsed.note.suggestedPath
-        createFile(config.vaultPath, destPath, parsed.note.content)
+        createFile(userVault, destPath, parsed.note.content)
         markSelfWrite(destPath)
-        invalidateCache()
+        invalidateCache(req.user?.id)
         savedNotePath = destPath
       } catch (saveErr: any) {
         console.warn('Note write warn:', saveErr.message)
@@ -1469,7 +2039,7 @@ ${text.slice(0, 6000)}
 
     const questions = parsed.questions || []
     if (questions.length > 0) {
-      appendCustomQuestions(questions)
+      appendCustomQuestions(questions, req)
     }
 
     res.json({
@@ -1486,6 +2056,7 @@ ${text.slice(0, 6000)}
 
 /**
  * Fully automated book parsing, concept extraction, note persistence & quiz question ingestion
+ * 已升级为全卷多页分片真题全量抽取引擎，取消 4~5 题数量上限
  */
 booksRouter.post('/books/auto-extract', async (req, res) => {
   try {
@@ -1494,365 +2065,160 @@ booksRouter.post('/books/auto-extract', async (req, res) => {
       return
     }
 
-    const { relativePath, domain: clientDomain, subject: clientSubject, customText, mode: clientMode } = req.body as {
+    const {
+      relativePath,
+      scope,
+      domain: clientDomain,
+      subject: clientSubject,
+      customText,
+      mode: clientMode,
+      startPage,
+      endPage
+    } = req.body as {
       relativePath: string
-      domain?: 'cs_408' | 'math'
+      scope?: BookScope
+      domain?: ResourceDomain
       subject?: string
       customText?: string
       mode?: 'concept' | 'question' | 'dual'
+      startPage?: number
+      endPage?: number
     }
 
-    const mode = clientMode || 'dual'
+    const mode: ScanExtractMode = clientMode || 'dual'
 
-    if (!relativePath) {
-      res.status(400).json({ error: '缺少资料相对路径 relativePath' })
+    const resolved = resolveBookFile(req, relativePath, scope)
+    if (!resolved.ok) {
+      res.status(resolved.errorStatus).json({ error: resolved.error })
       return
     }
+    const { fullPath, actualScope, relativePathNormalized } = resolved
+    const bookName = path.basename(fullPath)
+    const userVaultRoot = getRequestVaultPath(req)
 
-    const vaultPath = getRequestVaultPath(req)
-    let fullPath = path.resolve(vaultPath, relativePath)
-    if (!fs.existsSync(fullPath)) {
-      fullPath = path.resolve(config.vaultPath, relativePath)
-    }
-    if (!fs.existsSync(fullPath)) {
-      // 容错：尝试在用户沙箱和根目录下递归匹配同名文件
-      const baseName = path.basename(relativePath)
-      const userFile = path.resolve(vaultPath, baseName)
-      const configFile = path.resolve(config.vaultPath, baseName)
-      if (fs.existsSync(userFile)) {
-        fullPath = userFile
-      } else if (fs.existsSync(configFile)) {
-        fullPath = configFile
-      } else {
-        res.status(404).json({ error: `找不到指定的参考书文件: ${relativePath}` })
-        return
-      }
-    }
+    const cleanCustomText = (customText || '').trim()
+    if (cleanCustomText.length >= 20) {
+      // 用户手工选段或传入自定义长文本时，直接全量抽取真实题目（不限制 4~5 道）
+      const inferred = inferDomainAndSubjectFromText(cleanCustomText, bookName)
+      const domain = clientDomain || inferred.domain
+      const subject = clientSubject || inferred.subject
 
-    let text = (customText || '').trim()
-    let domain = clientDomain
-    let subject = clientSubject
-    let bookName = path.basename(fullPath)
+      const prompt = `你是一个精通全国硕士研究生考试（${getDomainDisplayName(domain)} - ${subject}）的真题与教材解析专家。
+请完整提取以下参考文本中出现的所有真题/例题/模拟题，并生成一篇简明知识笔记：
+1. **文本中出现多少道真实题目就全部提取多少道**（支持单选、多选、填空、计算解答题，绝对不要人为截断为 4~5 题）；
+2. 若原文没有完整答案与解析，请补充严谨步骤并在解析前注明“【参考解析】”；
+3. 所有公式必须使用标准 KaTeX LaTeX（$...$ 或 $$...$$）；若原文无具体题目且为纯概念讲义，questions 返回空数组或至多 2 道核心概念辨析题。
 
-    if (!text || text.length < 20) {
-      const extracted = await extractContentFromMaterial(fullPath)
-      text = extracted.content
-      if (!domain && extracted.domain) domain = extracted.domain
-      if (!subject && extracted.subject) subject = extracted.subject
-      if (extracted.inferredTitle && (/^[0-9a-f]{16,}/i.test(bookName) || /^\d{10,}/.test(bookName))) {
-        bookName = extracted.inferredTitle
-      }
-    }
-
-    // 智能分析文本与文件名，精准推断学科归属 (避免盲目降级为数据结构)
-    const inferred = inferDomainAndSubjectFromText(text, bookName)
-    if (!domain) {
-      domain = clientDomain || inferred.domain
-    }
-    if (!subject) {
-      subject = clientSubject || inferred.subject
-    }
-
-    // 根据模式精细化定制 Prompt
-    let modeInstruction = ''
-    if (mode === 'question') {
-      modeInstruction = `【本次核心目标：真题/习题深度结构化提取与整合入库】
-当前材料为习题集或真题（如做题本/真题卷）。请基于该资料内容，精准提炼命制 5 道高质量考研真题风格的题目（单选题或填空题）：
-- 每题必须包含题干 question（数学/代码公式严格使用标准 KaTeX LaTeX 语法 $...$）、选项 options、正确答案 answer、极其详尽的分步深度推导 explanation、难度 difficulty、考点标签 tags
-- 同时提炼 1 篇考研题型清单与解题模型 Obsidian Markdown 笔记，总结本资料的核心题型分类与高频命题陷阱。`
-    } else if (mode === 'concept') {
-      modeInstruction = `【本次核心目标：讲义教材核心考点深度提炼与知识库归类】
-当前材料为核心教材或考研讲义。请基于该资料内容，深度提炼 1 篇体系完备的高质量 Obsidian 知识库笔记：
-- 严格遵循考研大纲知识结构，包含规范 YAML frontmatter，全面梳理核心定理、系统底层机理、公式推导（使用 LaTeX）、几何图景与易错点辨析；
-- 针对该讲义考点命制 2~3 道考研概念辨析题（单选题），辅助巩固复习。`
-    } else {
-      modeInstruction = `【本次核心目标：双轨全量精炼（深度知识库笔记 + 题库题目全景入库）】
-请同时完成以下两项任务：
-1. 提炼 1 篇符合考研知识体系的高质量 Obsidian 规范 Markdown 笔记（含系统原理机制、核心公式 LaTeX、大纲命题考法分析与易错点）；
-2. 精准命制 4 道高质量考研真题风格的题目（选择题与填空题，含完整选项、标准答案与深度推导解析），整合录入系统题库。`
-    }
-
-    const prompt = `你是一个深谙全国硕士研究生招生考试（408计算机综合 与 考研数学）的顶级名师与命题专家。
-请深度研读以下教材/课件/真题资料的核心考点大纲与知识点文本，完成知识沉淀任务：
-
-【输入资料】：
-书名/资料名：${bookName}
-学科领域：${domain === 'cs_408' ? '408 计算机综合' : '考研数学'}（${subject}）
-解析模式：${mode === 'question' ? '习题集/真题深度提取模式' : (mode === 'concept' ? '讲义教材知识库归类模式' : '双轨全量归类模式')}
-文本内容/考点大纲：
+【资料名称】：${bookName}
+【待分析正文】：
 """
-${text.slice(0, 5000)}
+${cleanCustomText.slice(0, 12000)}
 """
 
-${modeInstruction}
-
-请严格输出合法的 JSON 格式，禁止输出任何前缀闲聊或 Markdown 代码块以外的多余字符：
+请严格只输出合法 JSON 对象：
 {
   "questions": [
     {
-      "id": "gen-${Date.now()}-1",
       "domain": "${domain}",
       "subject": "${subject}",
-      "chapter": "提炼的考点章节",
+      "chapter": "对应章节或专题",
       "type": "choice",
       "difficulty": "中等",
-      "question": "题干内容（支持LaTeX公式 $...$）",
-      "options": {
-        "A": "选项A",
-        "B": "选项B",
-        "C": "选项C",
-        "D": "选项D"
-      },
+      "question": "题干内容",
+      "options": { "A": "...", "B": "...", "C": "...", "D": "..." },
       "answer": "A",
-      "explanation": "分步推导与逐项辨析",
-      "tags": ["考研真题", "${subject}", "核心考点"]
+      "explanation": "分步推导",
+      "tags": ["${subject}", "资料导入"]
     }
   ],
   "note": {
-    "title": "笔记标题（不含扩展名，体现核心考点）",
-    "suggestedPath": "wiki/${domain === 'cs_408' ? '02-408计算机' : '01-考研数学'}/${subject}/${bookName.replace(/\\.[^.]+$/, '')}_考点精讲.md",
-    "content": "完整的 Markdown 笔记正文（含frontmatter）"
+    "title": "${bookName.replace(/\.[^.]+$/, '')}_核心考点精讲",
+    "suggestedPath": "wiki/${getWikiDomainDir(domain)}/${subject}/${bookName.replace(/\.[^.]+$/, '')}_核心考点精讲.md",
+    "content": "完整的 Obsidian Markdown 笔记（含 YAML frontmatter）"
   }
 }`
 
-    let parsed: any = null
-    const model = config.ai?.model || 'deepseek-flash'
-
-    try {
+      const model = config.ai?.model || 'deepseek-flash'
       const aiRes: any = await anthropic.messages.create({
         model,
-        max_tokens: 3500,
-        system: '你是一个严格输出结构化 JSON 的考研知识提炼引擎。必须只输出纯 JSON 对象，格式必须符合要求，严禁包含任何前缀闲聊。',
+        max_tokens: 8192,
+        system: '你是高精度考研题库与知识抽取引擎。必须只输出严格合法的 JSON。',
         messages: [{ role: 'user', content: prompt }]
       })
+      const rawText = Array.isArray(aiRes.content)
+        ? (aiRes.content.find((c: any) => c.type === 'text')?.text || aiRes.content[0]?.text || '{}')
+        : (typeof aiRes.text === 'string' ? aiRes.text : '{}')
+      const parsed = robustParseAiJson(rawText) || {}
+      const directQs = extractQuizQuestionsFromRawText(cleanCustomText, bookName, domain, subject)
+      const mergedQs = Array.isArray(parsed.questions) && parsed.questions.length >= directQs.length
+        ? parsed.questions
+        : directQs
 
-      let rawText = '{}'
-      if (Array.isArray(aiRes.content)) {
-        const textBlock = aiRes.content.find((c: any) => c.type === 'text')
-        if (textBlock && textBlock.text) rawText = textBlock.text
-        else if (aiRes.content[0]?.text) rawText = aiRes.content[0].text
-      } else if (typeof (aiRes as any).text === 'string') {
-        rawText = (aiRes as any).text
+      let savedNotePath = ''
+      if (parsed.note?.content) {
+        try {
+          const cleanTitle = (parsed.note.title || `${bookName.replace(/\.[^.]+$/, '')}_考点精讲`).replace(/[\\/:*?"<>|]/g, '_')
+          const destPath = `wiki/${getWikiDomainDir(domain)}/${subject}/${cleanTitle}.md`
+          createFile(userVaultRoot, destPath, parsed.note.content)
+          markSelfWrite(destPath)
+          invalidateCache(req.user?.id)
+          savedNotePath = destPath
+        } catch {}
       }
 
-      parsed = robustParseAiJson(rawText)
-    } catch (aiErr: any) {
-      console.warn('[AutoExtract AI direct call failed, activating resilient generation]:', aiErr.message)
-      // 弹性容错保底：利用提取出的大纲结构自动生成规范知识库笔记
-      const cleanTitle = `${bookName.replace(/\.[^.]+$/, '')}_核心考点架构精讲`
-      const outlineSummary = text.length > 50 ? text : `涵盖 ${subject} 核心考点章节与重点模型`
-      parsed = {
-        note: {
-          title: cleanTitle,
-          suggestedPath: `wiki/${domain === 'cs_408' ? '02-408计算机' : '01-考研数学'}/${subject}/${cleanTitle}.md`,
-          content: `---
-title: ${cleanTitle}
-type: concept
-domain: ${domain}
-subject: ${subject}
-tags: [考研核心考点, ${subject}, 权威大纲精解]
-updated: ${new Date().toISOString().split('T')[0]}
----
-
-# ${cleanTitle}
-
-> **教材来源**：《${bookName}》  
-> **学科归属**：${domain === 'cs_408' ? '408 计算机学科专业基础' : '全国硕士研究生统一考试 · 考研数学'} · ${subject}  
-> **沉淀状态**：已由研学引擎全自动解析图书架构，深度提取核心考点大纲并建立知识索引。
-
----
-
-## 核心章节与考点大纲脉络
-
-${outlineSummary}
-
----
-
-## 考研命题高频考点分析与备考建议
-
-1. **基本概念与定理定理记忆**：
-   - 重点掌握大纲中明确标柱的核心算法/机制定义，注重区分易混淆术语。
-2. **综合应用与大题模型**：
-   - 统考大题往往跨章节综合考查，建议结合做题中心真题与交互仿真课件加深理解。
-`
-        },
-        questions: [
-          {
-            id: `gen-${Date.now()}-1`,
-            domain,
-            subject,
-            chapter: `${subject}核心考点`,
-            type: 'choice',
-            difficulty: '中等',
-            question: `关于《${bookName}》涉及的【${subject}】核心考点，下列叙述中正确的是（ ）`,
-            options: {
-              A: '核心概念的逻辑结构与物理存储结构是相互独立的抽象层次',
-              B: '所有算法的时间复杂度均与输入数据的初始排列状态完全无关',
-              C: '在计算机系统中，中断处理过程不需要硬件机构提供栈支持',
-              D: '所有连续函数在闭区间上必不可积'
-            },
-            answer: 'A',
-            explanation: '【考研解析】：数据的逻辑结构是面向问题的，而物理存储结构是面向计算机内部实现的，二者是相互独立的抽象层次，故 A 正确。',
-            tags: ['考研真题', subject, '核心考点']
-          }
-        ]
+      if (mergedQs.length > 0) {
+        appendCustomQuestions(mergedQs, req)
       }
+      saveExtractionRecord(userVaultRoot, actualScope, relativePathNormalized, {
+        isExtracted: true,
+        noteTitle: parsed.note?.title,
+        notePath: savedNotePath,
+        questionCount: mergedQs.length,
+        mode
+      })
+
+      res.json({
+        success: true,
+        note: parsed.note,
+        questions: mergedQs,
+        savedNotePath,
+        questionsCount: mergedQs.length,
+        domain,
+        subject
+      })
+      return
     }
 
-    // 确保 parsed 为有效对象且包含完整笔记
-    if (!parsed || typeof parsed !== 'object') parsed = {}
-    if (!parsed.note || typeof parsed.note !== 'object' || !parsed.note.content) {
-      const cleanTitle = `${bookName.replace(/\.[^.]+$/, '')}_核心考点精要`
-      parsed.note = {
-        title: cleanTitle,
-        suggestedPath: `wiki/${domain === 'cs_408' ? '02-408计算机' : '01-考研数学'}/${subject}/${cleanTitle}.md`,
-        content: `---
-title: ${cleanTitle}
-type: concept
-domain: ${domain}
-subject: ${subject}
-tags: [考研核心考点, ${subject}, 知识归纳]
-updated: ${new Date().toISOString().split('T')[0]}
----
+    // 针对整本 PDF/资料文件：运行全卷分片真实提题引擎
+    const domain: ResourceDomain = clientDomain || inferDomainFromPathOrName(fullPath)
+    const subject = clientSubject || getDefaultSubjectForDomain(domain)
 
-# 《${bookName}》· ${subject} 核心考点精要
-
-> **来源教材**：《${bookName}》  
-> **学科归属**：${domain === 'cs_408' ? '408 计算机学科专业基础' : '考研数学'} · ${subject}  
-> **归纳说明**：已由研学引擎全自动解析参考书目章节架构，提炼核心考点脉络并沉淀进个人知识库。
-
----
-
-## 核心章节考点架构与目录脉络
-
-${text}
-
----
-
-## 考研统考命题规律与备考指导
-
-1. **核心概念与数据通路/推导逻辑**：
-   - 本教材覆盖的考点是大纲高频必考重点，复习时务必吃透核心定义与机制，注重理解而非死记硬背。
-2. **结合真题专项突破**：
-   - 建议在做题中心配套完成真题专项突破，并在研学工作台结合交互课件加深直观理解。
-`
-      }
-    }
-
-    // 若原文成功提取了真实题目，优先全量使用真实题目！
-    if (directExtractedQuestions && directExtractedQuestions.length > 0) {
-      parsed.questions = directExtractedQuestions
-    } else if (!Array.isArray(parsed.questions) || parsed.questions.length === 0) {
-      // 动态依据推断出的学科生成契合该学科的真题考点，杜绝盲目硬编码数据结构
-      let subjectQText = `关于《${bookName}》涉及的【${subject}】核心机制，下列说法中正确的是（ ）`
-      let subjectOpts = {
-        A: '系统处于核心态时，可以执行特权指令且能访问全部内存空间',
-        B: '在单CPU多线程环境下，所有线程均能真正实现指令级并行执行',
-        C: '请求分页存储管理中，发生缺页中断后CPU立即转入就绪态等待调度',
-        D: '死锁的发生意味着系统中所有进程均处于阻塞状态且资源利用率为零'
-      }
-      let subjectAns = 'A'
-      let subjectExp = '【考研深度解析】：在操作系统运行状态中，核心态（管态）拥有最高权限，可执行所有特权指令并访问所有内存资源；用户态向核心态的转换由硬件中断/异常机构实现，故 A 正确。'
-
-      if (subject.includes('组成') || subject.includes('计组')) {
-        subjectQText = `关于【${subject}】指令系统与存储层次，下列叙述正确的是（ ）`
-        subjectOpts = {
-          A: 'Cache采用组相联映射时，主存块只能映射到指定Cache组内的任意块',
-          B: '所有RISC指令系统均采用不等长指令字且寻址方式极其繁杂',
-          C: '指令译码阶段硬件无需通过总线读取操作数',
-          D: '浮点数阶码的位数决定了运算的有效数字精度'
-        }
-        subjectAns = 'A'
-        subjectExp = '【考研解析】：组相联映射是全相联与直接映射的折中，主存块号模组数决定目标组，但在组内可放入任意行，故 A 正确。'
-      } else if (subject.includes('网络') || subject.includes('计网')) {
-        subjectQText = `关于【${subject}】传输层与网络层协议，下列说法正确的是（ ）`
-        subjectOpts = {
-          A: 'TCP通过滑动窗口协议实现端到端的流量控制与可靠传输',
-          B: '路由器在转发IP数据报时会修改源IP地址与目的IP地址',
-          C: 'UDP首部包含拥塞窗口字段以实现网络自适应降速',
-          D: '同一局域网内的不同主机必须配置不同的默认网关'
-        }
-        subjectAns = 'A'
-        subjectExp = '【考研解析】：TCP报文段首部包含确认号和接收窗口字段，通过滑动窗口机制实现面向字节流的可靠传输与流量控制，故 A 正确。'
-      } else if (subject.includes('数学') || domain === 'math') {
-        subjectQText = `关于【${subject}】重要极限定理与连续性，下列结论正确的是（ ）`
-        subjectOpts = {
-          A: '若函数在闭区间连续，则其在该区间上必有一致连续性',
-          B: '所有导函数连续的函数必存在拐点',
-          C: '任意阶方阵均存在正交相似对角矩阵',
-          D: '互斥事件与相互独立事件概念完全等价'
-        }
-        subjectAns = 'A'
-        subjectExp = '【考研解析】：根据康托尔一致连续性定理，闭区间上的连续函数必然在该闭区间上一致连续，故 A 正确。'
-      }
-
-      parsed.questions = [
-        {
-          id: `gen-${Date.now()}-1`,
-          domain,
-          subject,
-          chapter: `${subject}核心真题精析`,
-          type: 'choice',
-          difficulty: '中等',
-          question: subjectQText,
-          options: subjectOpts,
-          answer: subjectAns,
-          explanation: subjectExp,
-          tags: ['考研真题', subject, '核心考点']
-        }
-      ]
-    }
-
-    // 1. 自动写入当前用户专属沙箱知识库笔记
-    let savedNotePath = ''
-    if (parsed.note && parsed.note.content) {
-      try {
-        const userVault = getRequestVaultPath(req)
-        const cleanTitle = (parsed.note.title || `${bookName.replace(/\.[^.]+$/, '')}_考点精讲`).replace(/[\\/:*?"<>|]/g, '_')
-        // 优先存入用户专属考点目录
-        let baseFolder = domain === 'cs_408' ? '01-408核心考点' : '02-考研数学公式推导'
-        if (!fs.existsSync(path.join(userVault, baseFolder))) {
-          if (fs.existsSync(path.join(userVault, 'wiki'))) {
-            baseFolder = `wiki/${domain === 'cs_408' ? '02-408计算机' : '01-考研数学'}`
-          } else {
-            fs.mkdirSync(path.join(userVault, baseFolder), { recursive: true })
-          }
-        }
-        const subFolderDir = path.join(userVault, baseFolder, subject)
-        if (!fs.existsSync(subFolderDir)) {
-          fs.mkdirSync(subFolderDir, { recursive: true })
-        }
-        const destPath = `${baseFolder}/${subject}/${cleanTitle}.md`
-        createFile(userVault, destPath, parsed.note.content)
-        markSelfWrite(destPath)
-        invalidateCache(req.user?.id)
-        savedNotePath = destPath
-      } catch (saveErr: any) {
-        console.warn('Note write warn:', saveErr.message)
-      }
-    }
-
-    // 2. 自动存入当前用户题库系统
-    const newQuestions = parsed.questions || []
-    if (newQuestions.length > 0) {
-      appendCustomQuestions(newQuestions, req)
-    }
-
-    // 3. 记录持久化提取元数据状态
-    saveExtractionRecord(relativePath, {
-      isExtracted: true,
-      noteTitle: parsed.note?.title,
-      notePath: savedNotePath,
-      questionCount: newQuestions.length,
-      mode
+    const result = await executeBookScanJob({
+      userId: req.user?.id || 'anonymous',
+      vaultRoot: userVaultRoot,
+      scope: actualScope,
+      relativePath: relativePathNormalized,
+      fullPath,
+      bookName,
+      domain,
+      subject,
+      mode,
+      startPage: startPage && Number(startPage) > 0 ? Number(startPage) : undefined,
+      endPage: endPage && Number(endPage) > 0 ? Number(endPage) : undefined,
+      maxChunks: 16
     })
 
     res.json({
-      success: true,
-      note: parsed.note,
-      questions: newQuestions,
-      savedNotePath,
-      questionsCount: newQuestions.length,
+      success: result.success,
+      isScannedImageOnly: result.isScannedImageOnly,
+      totalPages: result.totalPages,
+      scannedPageRange: result.scannedPageRange,
+      note: result.note,
+      questions: result.questions,
+      savedNotePath: result.savedNotePath,
+      questionsCount: result.questionsCount,
+      newlyAddedCount: result.newlyAddedCount,
+      warningMessage: result.warningMessage,
       domain,
       subject
     })
@@ -1863,12 +2229,22 @@ ${text}
 })
 
 /**
- * 批量自动解析教材/真题并归类入库
+ * 批量自动解析教材/真题并归类入库（全部纳入后台串行队列执行，保护服务器内存）
  */
 booksRouter.post('/books/batch-auto-extract', async (req, res) => {
   try {
+    const user = resolveUserFromReq(req)
+    if (!user) {
+      res.status(401).json({ error: '请先登录账号后再执行批量解析' })
+      return
+    }
+    if (!anthropic) {
+      res.status(503).json({ error: 'AI 服务未配置' })
+      return
+    }
+
     const { items } = req.body as {
-      items: Array<{ relativePath: string; mode?: 'concept' | 'question' | 'dual' }>
+      items: Array<{ relativePath: string; scope?: BookScope; mode?: 'concept' | 'question' | 'dual' }>
     }
 
     if (!Array.isArray(items) || items.length === 0) {
@@ -1876,97 +2252,49 @@ booksRouter.post('/books/batch-auto-extract', async (req, res) => {
       return
     }
 
+    const userVault = getRequestVaultPath(req)
     const results: any[] = []
     for (const item of items) {
-      try {
-        const fullPath = path.resolve(config.vaultPath, item.relativePath)
-        if (!fs.existsSync(fullPath)) continue
-        const bookName = path.basename(fullPath)
-        const extracted = await extractContentFromMaterial(fullPath)
-        const domain = extracted.domain || ((fullPath.includes('408') || bookName.includes('408')) ? 'cs_408' : 'math')
-        const subject = extracted.subject || (domain === 'cs_408' ? '数据结构' : '高等数学')
-
-        // 构造提取调用逻辑
-        const cleanTitle = `${bookName.replace(/\.[^.]+$/, '')}_核心考点精讲`
-        const destPath = `wiki/${domain === 'cs_408' ? '02-408计算机' : '01-考研数学'}/${subject}/${cleanTitle}.md`
-        
-        const noteContent = `---
-title: ${cleanTitle}
-type: concept
-domain: ${domain}
-subject: ${subject}
-tags: [考研核心考点, ${subject}, 知识体系归纳]
-updated: ${new Date().toISOString().split('T')[0]}
----
-
-# 《${bookName}》· ${subject} 核心考点体系精要
-
-> **来源资料**：《${bookName}》  
-> **学科归属**：${domain === 'cs_408' ? '408 计算机学科专业基础' : '考研数学'} · ${subject}  
-> **入库状态**：已由研学引擎全自动解析并建立考点网络关联。
-
----
-
-## 核心章节脉络与大纲要点
-
-${extracted.content}
-
----
-
-## 考研统考命题规律与备考指导
-
-1. **核心概念与数据通路/推导逻辑**：
-   - 重点掌握大纲高频核心定义与机制，注重理解物理意义与数学本质。
-2. **结合真题专项突破**：
-   - 建议在做题中心配套完成真题专项突破，并在研学工作台结合交互课件加深直观理解。
-`
-        createFile(config.vaultPath, destPath, noteContent)
-        markSelfWrite(destPath)
-
-        const questions = [
-          {
-            id: `gen-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-            domain,
-            subject,
-            chapter: `${subject}核心考点`,
-            type: 'choice',
-            difficulty: '中等',
-            question: `关于《${bookName}》中涉及的【${subject}】核心知识体系，下列说法中正确的是（ ）`,
-            options: {
-              A: '逻辑结构与物理存储结构是相互独立的抽象层次，算法设计取决于逻辑结构',
-              B: '所有算法的时间复杂度均与输入数据的初始状态无关',
-              C: '计算机系统中，用户态向核心态的切换是由操作系统指令主动完成的',
-              D: '连续函数在闭区间上必定不可积'
-            },
-            answer: 'A',
-            explanation: '【考研深度解析】：逻辑结构反映数据元素之间的逻辑关系，面向算法设计；物理存储结构面向计算机内部实现，二者层次独立，故 A 正确。',
-            tags: ['考研真题', subject, '核心考点'],
-            source: bookName
-          }
-        ]
-        appendCustomQuestions(questions)
-        saveExtractionRecord(item.relativePath, {
-          isExtracted: true,
-          noteTitle: cleanTitle,
-          notePath: destPath,
-          questionCount: questions.length,
-          mode: item.mode || 'dual'
-        })
-
-        results.push({
-          relativePath: item.relativePath,
-          success: true,
-          noteTitle: cleanTitle,
-          savedNotePath: destPath,
-          questionCount: questions.length
-        })
-      } catch (subErr: any) {
-        results.push({ relativePath: item.relativePath, success: false, error: subErr.message })
+      const resolved = resolveBookFile(req, item.relativePath, item.scope)
+      if (!resolved.ok) {
+        results.push({ relativePath: item.relativePath, success: false, error: resolved.error })
+        continue
       }
+      const { fullPath, actualScope, relativePathNormalized } = resolved
+      const bookName = path.basename(fullPath)
+      const domain: ResourceDomain = inferDomainFromPathOrName(fullPath)
+      const subject = getDefaultSubjectForDomain(domain)
+
+      const task = enqueueBookScanTask({
+        userId: user.id,
+        vaultRoot: userVault,
+        scope: actualScope,
+        relativePath: relativePathNormalized,
+        fullPath,
+        bookName,
+        domain,
+        subject,
+        mode: item.mode || 'dual',
+        maxChunks: 16
+      })
+
+      results.push({
+        relativePath: item.relativePath,
+        success: true,
+        queued: true,
+        taskId: task.taskId,
+        noteTitle: `${bookName.replace(/\.[^.]+$/, '')}_全卷解析与题库精粹`,
+        questionCount: 0
+      })
     }
 
-    invalidateCache()
-    res.json({ success: true, count: results.filter(r => r.success).length, results })
+    invalidateCache(req.user?.id)
+    res.json({
+      success: true,
+      queued: true,
+      count: results.filter(r => r.success).length,
+      results
+    })
   } catch (err: any) {
     res.status(500).json({ error: err.message })
   }
@@ -2050,40 +2378,6 @@ function parseOutlineIntoChapters(outline: string): BookChapter[] {
 }
 
 /**
- * 健壮解析资料文件的绝对路径，支持 raw-sources 与 06-原始资料库 互备
- */
-function resolveMaterialFullPath(vaultPath: string, relPath: string): string | null {
-  if (!relPath) return null
-  let fullPath = path.resolve(vaultPath, relPath)
-  if (fs.existsSync(fullPath)) return fullPath
-
-  const rawSourcesDir = path.resolve(vaultPath, 'raw-sources')
-  const inRaw = path.resolve(rawSourcesDir, relPath)
-  if (fs.existsSync(inRaw)) return inRaw
-
-  if (relPath.includes('raw-sources')) {
-    const alt = path.resolve(vaultPath, relPath.replace('raw-sources', '06-原始资料库'))
-    if (fs.existsSync(alt)) return alt
-  } else if (relPath.includes('06-原始资料库')) {
-    const alt = path.resolve(vaultPath, relPath.replace('06-原始资料库', 'raw-sources'))
-    if (fs.existsSync(alt)) return alt
-  }
-
-  const baseName = path.basename(relPath)
-  const candidates = [
-    path.resolve(vaultPath, 'raw-sources', '408计算机', '经典教材', baseName),
-    path.resolve(vaultPath, '06-原始资料库', '408计算机', '经典教材', baseName),
-    path.resolve(vaultPath, 'raw-sources', '数学', '考研题集', baseName),
-    path.resolve(vaultPath, '06-原始资料库', '数学', '考研题集', baseName)
-  ]
-  for (const c of candidates) {
-    if (fs.existsSync(c)) return c
-  }
-
-  return fullPath
-}
-
-/**
  * 调用 Python 真实书本正文与习题深度提取引擎
  */
 async function runBookContentExtractor(fullPath: string, action: 'outline' | 'extract_chapter', chapterId?: string): Promise<any> {
@@ -2102,16 +2396,21 @@ async function runBookContentExtractor(fullPath: string, action: 'outline' | 'ex
   const args = [scriptPath, fullPath, action]
   if (chapterId) args.push(chapterId)
 
-  try {
-    const { stdout } = await execFileAsync('python', args, {
-      timeout: 90000,
-      maxBuffer: 30 * 1024 * 1024
-    })
-    return JSON.parse(stdout)
-  } catch (err: any) {
-    console.warn(`runBookContentExtractor error (${action}):`, err.message)
-    return null
+  const pyBins = process.platform === 'win32' ? ['python', 'python3'] : ['python3', 'python']
+  for (const bin of pyBins) {
+    try {
+      const { stdout } = await execFileAsync(bin, args, {
+        timeout: 90000,
+        maxBuffer: 30 * 1024 * 1024
+      })
+      return JSON.parse(stdout)
+    } catch (err: any) {
+      if (bin === pyBins[pyBins.length - 1]) {
+        console.warn(`runBookContentExtractor error (${action}):`, err.message)
+      }
+    }
   }
+  return null
 }
 
 /**
@@ -2119,17 +2418,13 @@ async function runBookContentExtractor(fullPath: string, action: 'outline' | 'ex
  */
 booksRouter.post('/books/outline', async (req, res) => {
   try {
-    const { relativePath } = req.body as { relativePath: string }
-    if (!relativePath) {
-      res.status(400).json({ error: '缺少 relativePath 参数' })
+    const { relativePath, scope } = req.body as { relativePath: string; scope?: BookScope }
+    const resolved = resolveBookFile(req, relativePath, scope)
+    if (!resolved.ok) {
+      res.status(resolved.errorStatus).json({ error: resolved.error })
       return
     }
-
-    const fullPath = resolveMaterialFullPath(config.vaultPath, relativePath)
-    if (!fullPath || !fs.existsSync(fullPath)) {
-      res.status(404).json({ error: '未找到指定参考资料文件' })
-      return
-    }
+    const { fullPath } = resolved
 
     const bookName = path.basename(fullPath)
     const isPdf = fullPath.toLowerCase().endsWith('.pdf')
@@ -2141,8 +2436,8 @@ booksRouter.post('/books/outline', async (req, res) => {
     }
 
     if (deepData && deepData.success && Array.isArray(deepData.chapters) && deepData.chapters.length > 0) {
-      const domain = ((fullPath.includes('408') || bookName.includes('408')) ? 'cs_408' : 'math') as 'cs_408' | 'math'
-      const subject = domain === 'cs_408' ? '操作系统' : '高等数学'
+      const domain: ResourceDomain = inferDomainFromPathOrName(fullPath)
+      const subject = getDefaultSubjectForDomain(domain)
 
       res.json({
         success: true,
@@ -2171,8 +2466,8 @@ booksRouter.post('/books/outline', async (req, res) => {
     const extracted = await extractContentFromMaterial(fullPath)
     const chapters = parseOutlineIntoChapters(extracted.content)
 
-    const domain = extracted.domain || ((fullPath.includes('408') || bookName.includes('408')) ? 'cs_408' : 'math')
-    const subject = extracted.subject || (domain === 'cs_408' ? '操作系统' : '高等数学')
+    const domain: ResourceDomain = extracted.domain || inferDomainFromPathOrName(fullPath)
+    const subject = extracted.subject || getDefaultSubjectForDomain(domain)
 
     res.json({
       success: true,
@@ -2196,34 +2491,33 @@ booksRouter.post('/books/deep-extract', async (req, res) => {
   try {
     const {
       relativePath,
+      scope,
       domain: clientDomain,
       subject: clientSubject,
       selectedChapterIds,
       mode = 'dual'
     } = req.body as {
       relativePath: string
-      domain?: 'cs_408' | 'math'
+      scope?: BookScope
+      domain?: ResourceDomain
       subject?: string
       selectedChapterIds?: string[]
       mode?: 'concept' | 'question' | 'dual'
     }
 
-    if (!relativePath) {
-      res.status(400).json({ error: '缺少 relativePath 参数' })
+    const resolved = resolveBookFile(req, relativePath, scope)
+    if (!resolved.ok) {
+      res.status(resolved.errorStatus).json({ error: resolved.error })
       return
     }
-
-    const fullPath = resolveMaterialFullPath(config.vaultPath, relativePath)
-    if (!fullPath || !fs.existsSync(fullPath)) {
-      res.status(404).json({ error: '未找到指定参考资料文件' })
-      return
-    }
+    const { fullPath, actualScope, relativePathNormalized } = resolved
+    const userVault = getRequestVaultPath(req)
 
     const bookName = path.basename(fullPath)
     const bookNameClean = bookName.replace(/\.[^.]+$/, '')
     const extracted = await extractContentFromMaterial(fullPath)
-    const domain = clientDomain || extracted.domain || ((fullPath.includes('408') || bookName.includes('408')) ? 'cs_408' : 'math')
-    const subject = clientSubject || extracted.subject || (domain === 'cs_408' ? '操作系统' : '高等数学')
+    const domain: ResourceDomain = clientDomain || extracted.domain || inferDomainFromPathOrName(fullPath)
+    const subject = clientSubject || extracted.subject || getDefaultSubjectForDomain(domain)
 
     const isPdf = fullPath.toLowerCase().endsWith('.pdf')
 
@@ -2263,7 +2557,7 @@ booksRouter.post('/books/deep-extract', async (req, res) => {
     const createdNotes: Array<{ title: string; path: string; chapterTitle: string }> = []
     const allGeneratedQuestions: any[] = []
 
-    const domainDir = domain === 'cs_408' ? '02-408计算机' : '01-考研数学'
+    const domainDir = getWikiDomainDir(domain)
 
     // 针对每个选中的章节，提取原书真实正文与真实原题，生成专属深度笔记并注入题库
     for (let idx = 0; idx < targetChapters.length; idx++) {
@@ -2302,7 +2596,7 @@ booksRouter.post('/books/deep-extract', async (req, res) => {
       }
 
       const subSectionText = chapter.subSections.length > 0
-        ? chapter.subSections.map(s => `- **${s}**`).join('\n')
+        ? chapter.subSections.map((s: string) => `- **${s}**`).join('\n')
         : `- 重点掌握该模块大纲核心概念、数据通路与解题模型`
 
       const chapterNoteContent = `---
@@ -2317,7 +2611,7 @@ updated: ${new Date().toISOString().split('T')[0]}
 # ${chapter.title} · 核心考点深度精解
 
 > **所属教材**：《${bookName}》  
-> **学科门类**：${domain === 'cs_408' ? '408 计算机学科专业基础' : '考研数学统考'} · ${subject}  
+> **学科门类**：${getDomainDisplayName(domain)} · ${subject}  
 > **所属章节**：${chapter.title}  
 > **知识网络索引**：[[${bookNameClean}_全书考点知识图谱总览]]
 
@@ -2351,8 +2645,8 @@ ${chapter.rawContent}
 - **关联章节复盘**：结合 [[${bookNameClean}_全书考点知识图谱总览]] 查看跨章节综合考法。
 `
 
-      // 安全写入或覆盖笔记文件
-      const fullNoteDest = path.resolve(config.vaultPath, destPath)
+      // 安全写入或覆盖笔记文件（写入当前用户专属空间或管理员主库）
+      const fullNoteDest = path.resolve(userVault, destPath)
       fs.mkdirSync(path.dirname(fullNoteDest), { recursive: true })
       fs.writeFileSync(fullNoteDest, chapterNoteContent, 'utf-8')
       markSelfWrite(destPath)
@@ -2419,7 +2713,7 @@ updated: ${new Date().toISOString().split('T')[0]}
 # 📚 《${bookName}》· 全书考点知识图谱总览导航
 
 > **参考书目**：《${bookName}》  
-> **学科归属**：${domain === 'cs_408' ? '408 计算机综合' : '考研数学'} · ${subject}  
+> **学科归属**：${getDomainDisplayName(domain)} · ${subject}  
 > **拆解规模**：共完成 **${targetChapters.length}** 大核心章节深度拆解入库，注入 **${allGeneratedQuestions.length}** 道真题至做题中心  
 > **更新时间**：${new Date().toISOString().split('T')[0]}
 
@@ -2437,18 +2731,18 @@ ${chapterLinksText}
 - 前往 **做题中心**，可按【${subject}】学科与各章节标签进行专项针对性突破训练！
 `
 
-    const fullIndexDest = path.resolve(config.vaultPath, indexNotePath)
+    const fullIndexDest = path.resolve(userVault, indexNotePath)
     fs.mkdirSync(path.dirname(fullIndexDest), { recursive: true })
     fs.writeFileSync(fullIndexDest, indexContent, 'utf-8')
     markSelfWrite(indexNotePath)
 
     // 4. 将全书所有生成的真题批量存入系统题库
     if (allGeneratedQuestions.length > 0) {
-      appendCustomQuestions(allGeneratedQuestions)
+      appendCustomQuestions(allGeneratedQuestions, req)
     }
 
     // 5. 更新图书持久化解析元数据
-    saveExtractionRecord(relativePath, {
+    saveExtractionRecord(userVault, actualScope, relativePathNormalized, {
       isExtracted: true,
       noteTitle: indexNoteTitle,
       notePath: indexNotePath,
@@ -2457,7 +2751,7 @@ ${chapterLinksText}
       mode
     })
 
-    invalidateCache()
+    invalidateCache(req.user?.id)
 
     res.json({
       success: true,

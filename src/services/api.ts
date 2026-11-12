@@ -1,5 +1,5 @@
 // API service layer for communicating with Express backend
-import { getAuthHeaders, getStoredToken } from './auth'
+import { getAuthHeaders, getAuthTokenHeaders, getStoredToken } from './auth'
 
 const BASE = '/api'
 
@@ -23,7 +23,7 @@ async function fetchJSON<T>(url: string): Promise<T> {
   return res.json()
 }
 
-async function postJSON<T>(url: string, body: unknown): Promise<T> {
+async function postJSON<T>(url: string, body: unknown = {}): Promise<T> {
   const res = await fetch(`${BASE}${url}`, {
     method: 'POST',
     headers: getAuthHeaders(),
@@ -220,12 +220,15 @@ export interface Flashcard {
   a: string
 }
 
+export type BookScope = 'shared' | 'personal'
+export type ResourceDomain = 'cs_408' | 'math' | 'english' | 'politics' | 'general'
+
 export interface BookItem {
   id: string
   name: string
   relativePath: string
   fullPath: string
-  domain: 'cs_408' | 'math'
+  domain: ResourceDomain
   category: string
   size: number
   ext: string
@@ -234,6 +237,9 @@ export interface BookItem {
   isPdf?: boolean
   isHtml?: boolean
   fileType?: 'pdf' | 'html' | 'handout' | 'paper' | 'text'
+  scope?: BookScope
+  canManage?: boolean
+  ownerName?: string
   extractedInfo?: {
     isExtracted: boolean
     noteTitle?: string
@@ -256,11 +262,52 @@ export interface ChapterOutlineItem {
   exercisePagesCount?: number
 }
 
+export interface PdfInspectResult {
+  success: boolean
+  isPdf: boolean
+  scope: BookScope
+  relativePath: string
+  fileSizeBytes: number
+  totalPages: number
+  outlineTitles: string[]
+  isScannedImageOnly: boolean
+  avgCharsPerPage?: number
+  error?: string
+}
+
+export interface ScanTaskState {
+  taskId: string
+  userId: string
+  scope: BookScope
+  relativePath: string
+  bookName: string
+  domain: ResourceDomain
+  subject: string
+  mode: 'concept' | 'question' | 'dual'
+  status: 'queued' | 'extracting' | 'scanning' | 'saving' | 'completed' | 'error'
+  progress: number
+  totalPages: number
+  scannedPageRange: string
+  currentChunk: number
+  totalChunks: number
+  currentPageRange: string
+  stepMessage: string
+  extractedQuestionsCount: number
+  previewQuestions: any[]
+  savedNotePath?: string
+  note?: { title: string; suggestedPath: string; content: string }
+  isScannedImageOnly: boolean
+  warningMessage?: string
+  error?: string
+  createdAt: string
+  updatedAt: string
+}
+
 export interface BookOutlineResult {
   success: boolean
   bookName: string
   inferredTitle: string
-  domain: 'cs_408' | 'math'
+  domain: ResourceDomain
   subject: string
   totalPages?: number
   totalChapters: number
@@ -429,6 +476,44 @@ export interface AgentMemoryConfig {
   lastUpdated: string
 }
 
+export interface DetailedErrorQuestion {
+  id: string
+  userId?: string
+  domain: string
+  subject: string
+  chapter: string
+  syllabusId: string
+  question: string
+  options: Record<string, string>
+  optionsJson?: string
+  userAnswer: string
+  correctAnswer: string
+  explanation: string
+  errorType: string
+  difficulty: string
+  sourceNote: string
+  status: 'active' | 'reviewing' | 'mastered'
+  notes?: string
+  createdAt: string
+  updatedAt: string
+  sm2?: {
+    repetition: number
+    intervalDays: number
+    easinessFactor: number
+    reviewCount: number
+    nextReviewAt: string | null
+  }
+}
+
+export interface ErrorNotebookStats {
+  total: number
+  active: number
+  mastered: number
+  dueToday: number
+  subjectBreakdown: Record<string, number>
+  errorTypeBreakdown: Record<string, number>
+}
+
 export interface ErrorQuestion {
   source: string
   question: string
@@ -458,10 +543,16 @@ export interface VocabWord {
   phonetic?: string
   definition: string
   example?: string
-  subject: string
-  reviewCount: number
-  nextReview: string
-  addedDate: string
+  exampleCn?: string
+  frequency?: string
+  unit?: number
+  roots?: string
+  synonyms?: string
+  subject?: string
+  reviews?: number
+  reviewCount?: number
+  nextReview?: string
+  addedDate?: string
 }
 
 export interface VocabData {
@@ -608,6 +699,142 @@ export interface MusicScanResult {
   files: MusicFile[]
 }
 
+export type StudyStage = 'not_started' | 'foundation' | 'reinforcement' | 'sprint' | 'mock'
+
+export interface SubjectGoalConfig {
+  stage: StudyStage
+  targetScore: number
+  manualProgress?: number
+  note?: string
+}
+
+export interface StudyDailyTask {
+  id: string
+  title: string
+  domain: 'cs_408' | 'math' | 'english' | 'politics' | 'general'
+  done: boolean
+  date: string
+}
+
+export interface StudyGoalsConfig {
+  userId: string
+  targetSchool: string
+  targetTotalScore: number
+  weeklyQuestionGoal: number
+  dailyVocabGoal: number
+  subjectGoals: {
+    cs_408: SubjectGoalConfig
+    math: SubjectGoalConfig
+    english: SubjectGoalConfig
+    politics: SubjectGoalConfig
+  }
+  dailyTasks: StudyDailyTask[]
+  updatedAt: string
+}
+
+export interface StudySubjectProgress {
+  key: 'cs_408' | 'math' | 'english' | 'politics'
+  name: string
+  subtitle: string
+  maxScore: number
+  stage: StudyStage
+  targetScore: number
+  manualProgress: number
+  quizSessions: number
+  attemptedQuestions: number
+  correctQuestions: number
+  accuracy: number | null
+  lastPracticedAt: string | null
+  errorsTotal: number
+  errorsPending: number
+  errorsMastered: number
+  flashcardsTotal: number
+  flashcardsDue: number
+  booksTotal: number
+  booksExtracted: number
+  customQuestionsCount: number
+  mastery: {
+    total: number
+    green: number
+    yellow: number
+    red: number
+    avgScore: number
+  } | null
+}
+
+export interface StudyProgressOverview {
+  generatedAt: string
+  today: string
+  summary: {
+    totalQuizSessions: number
+    totalQuestionsAttempted: number
+    totalCorrect: number
+    overallAccuracy: number
+    totalTimeMinutes: number
+    weeklyQuestionsDone: number
+    streakDays: number
+    checkedInToday: boolean
+    errorTotal: number
+    errorPending: number
+    errorMastered: number
+    flashcardsTotal: number
+    flashcardsDue: number
+    flashcardsForgotten: number
+    flashcardsMastered: number
+    syllabusTotal: number
+    syllabusMastered: number
+    syllabusInProgress: number
+    syllabusWeak: number
+    vocabPoolTotal: number
+    vocabLearned: number
+    vocabMastered: number
+    vocabLearning: number
+    vocabDueToday: number
+    booksTotal: number
+    booksExtracted: number
+    customQuestionsTotal: number
+  }
+  weeklyTrend: Array<{
+    date: string
+    label: string
+    attempted: number
+    correct: number
+    accuracy: number
+    sessions: number
+  }>
+  errorTypeDistribution: Array<{ name: string; count: number }>
+  subjects: StudySubjectProgress[]
+  weakestNodes: Array<{
+    syllabusId: string
+    domain: string
+    subject: string
+    topic: string
+    score: number
+    status: string
+    attempted: number
+    wrongCount: number
+  }>
+  recentErrors: Array<{
+    id: string
+    domain: string
+    subject: string
+    chapter: string
+    question: string
+    errorType: string
+    updatedAt: string
+  }>
+  todayActions: Array<{
+    id: string
+    priority: 'urgent' | 'recommended' | 'advance'
+    title: string
+    description: string
+    actionLabel: string
+    targetType: 'tab' | 'route'
+    target: string
+  }>
+  goals: StudyGoalsConfig
+}
+
 // ===== API Functions =====
 
 export const api = {
@@ -656,7 +883,11 @@ export const api = {
   uploadFile: async (file: File): Promise<IngestResult> => {
     const formData = new FormData()
     formData.append('file', file)
-    const res = await fetch(`${BASE}/ingest/upload`, { method: 'POST', body: formData })
+    const res = await fetch(`${BASE}/ingest/upload`, {
+      method: 'POST',
+      headers: getAuthTokenHeaders(),
+      body: formData,
+    })
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: res.statusText }))
       throw new Error(err.error || `Upload failed: ${res.status}`)
@@ -679,6 +910,11 @@ export const api = {
     postJSON<FlashcardResult>('/study/flashcards', { notePath }),
 
   getReviewDue: () => fetchJSON<ReviewDueData>('/study/review-due'),
+
+  getStudyProgressOverview: () => fetchJSON<StudyProgressOverview>('/study/progress-overview'),
+
+  updateStudyProgressGoals: (patch: Partial<Omit<StudyGoalsConfig, 'userId' | 'updatedAt'>>) =>
+    putJSON<{ success: boolean; goals: StudyGoalsConfig }>('/study/progress-goals', patch),
 
   // Settings
   getSettings: () => fetchJSON<AppSettings>('/settings'),
@@ -804,6 +1040,51 @@ export const api = {
     errorType: string
     notes?: string
   }) => postJSON<{ success: boolean; savedPath: string; fileName: string; syllabus?: any }>('/quiz/save-error', params),
+
+  // ── 新一代错题攻克中心体系 API ──
+  getErrorNotebookStats: () =>
+    fetchJSON<{ success: boolean; stats: ErrorNotebookStats }>('/quiz/errors/stats'),
+
+  getErrorNotebookList: (params?: {
+    subject?: string
+    status?: string
+    errorType?: string
+    search?: string
+    domain?: string
+  }) => {
+    const q = new URLSearchParams()
+    if (params?.subject && params.subject !== 'all' && params.subject !== '全部') q.set('subject', params.subject)
+    if (params?.status && params.status !== 'all' && params.status !== '全部') q.set('status', params.status)
+    if (params?.errorType && params.errorType !== 'all' && params.errorType !== '全部') q.set('errorType', params.errorType)
+    if (params?.search) q.set('search', params.search)
+    if (params?.domain) q.set('domain', params.domain)
+    const qs = q.toString()
+    return fetchJSON<{ success: boolean; errors: DetailedErrorQuestion[]; total: number }>(`/quiz/errors${qs ? `?${qs}` : ''}`)
+  },
+
+  updateErrorNotebookQuestion: (id: string, updates: {
+    status?: 'active' | 'reviewing' | 'mastered'
+    errorType?: string
+    notes?: string
+    userAnswer?: string
+    difficulty?: string
+  }) => patchJSON<{ success: boolean; id: string; status?: string; notes?: string; errorType?: string }>(`/quiz/errors/${id}`, updates),
+
+  deleteErrorNotebookQuestion: (id: string) =>
+    deleteJSON<{ success: boolean; id: string }>(`/quiz/errors/${id}`),
+
+  batchUpdateErrorNotebook: (data: {
+    ids: string[]
+    action: 'update_status' | 'delete' | 'update_error_type'
+    status?: 'active' | 'mastered'
+    errorType?: string
+  }) => postJSON<{ success: boolean; count: number; action: string }>(`/quiz/errors/batch`, data),
+
+  syncVaultErrors: () =>
+    postJSON<{ success: boolean; importedCount: number }>('/quiz/errors/sync-vault', {}),
+
+  parseQuizText: (params: { text: string; domain?: string; subject?: string }) =>
+    postJSON<{ questions: any[] }>('/quiz/parse-text', params),
 
   getCustomQuestions: () => fetchJSON<{ questions: any[] }>('/quiz/custom'),
 
@@ -967,29 +1248,63 @@ export const api = {
 
   // Books & Materials
   getBooks: () => fetchJSON<{ books: BookItem[] }>('/books/list'),
-  readBook: (relativePath: string) => postJSON<{ content: string; name: string }>('/books/read', { relativePath }),
+  getBookRawUrl: (relativePath: string, scope?: BookScope) => {
+    const q = new URLSearchParams()
+    q.set('path', relativePath)
+    if (scope) q.set('scope', scope)
+    const token = getStoredToken()
+    if (token) q.set('token', token)
+    return `${BASE}/books/raw?${q.toString()}`
+  },
+  readBook: (relativePath: string, scope?: BookScope) =>
+    postJSON<{ content: string; name: string; totalPages?: number; isScannedImageOnly?: boolean }>('/books/read', { relativePath, scope }),
+  inspectBook: (relativePath: string, scope?: BookScope) =>
+    postJSON<PdfInspectResult>('/books/inspect', { relativePath, scope }),
+  startBookScan: (data: {
+    relativePath: string
+    scope?: BookScope
+    domain?: ResourceDomain
+    subject?: string
+    mode?: 'concept' | 'question' | 'dual'
+    startPage?: number
+    endPage?: number
+    maxChunks?: number
+  }) => postJSON<{ success: boolean; task: ScanTaskState }>('/books/scan-start', data),
+  getBookScanStatus: (taskId: string) =>
+    fetchJSON<{ success: boolean; task: ScanTaskState }>(`/books/scan-status/${encodeURIComponent(taskId)}`),
+  getBookScanTasks: () =>
+    fetchJSON<{ success: boolean; tasks: ScanTaskState[] }>('/books/scan-tasks'),
   autoExtractBook: (data: {
     relativePath: string
-    domain?: 'cs_408' | 'math'
+    scope?: BookScope
+    domain?: ResourceDomain
     subject?: string
     mode?: 'concept' | 'question' | 'dual'
     customText?: string
+    startPage?: number
+    endPage?: number
   }) => postJSON<{
     success: boolean
+    isScannedImageOnly?: boolean
+    totalPages?: number
+    scannedPageRange?: string
     note?: { title: string; suggestedPath: string; content: string }
     questions: any[]
-    savedNotePath: string
+    savedNotePath?: string
     questionsCount: number
+    newlyAddedCount?: number
+    warningMessage?: string
     domain: string
     subject: string
   }>('/books/auto-extract', data),
-  batchAutoExtractBooks: (items: Array<{ relativePath: string; mode?: 'concept' | 'question' | 'dual' }>) =>
-    postJSON<{ success: boolean; count: number; results: any[] }>('/books/batch-auto-extract', { items }),
-  getBookOutline: (relativePath: string) =>
-    postJSON<BookOutlineResult>('/books/outline', { relativePath }),
+  batchAutoExtractBooks: (items: Array<{ relativePath: string; scope?: BookScope; mode?: 'concept' | 'question' | 'dual' }>) =>
+    postJSON<{ success: boolean; queued?: boolean; count: number; results: any[] }>('/books/batch-auto-extract', { items }),
+  getBookOutline: (relativePath: string, scope?: BookScope) =>
+    postJSON<BookOutlineResult>('/books/outline', { relativePath, scope }),
   deepExtractBook: (data: {
     relativePath: string
-    domain?: 'cs_408' | 'math'
+    scope?: BookScope
+    domain?: ResourceDomain
     subject?: string
     selectedChapterIds?: string[]
     mode?: 'concept' | 'question' | 'dual'
@@ -1013,7 +1328,7 @@ export const api = {
 
   // ===== 考研 AI 启发式分步思维链辅导 =====
   askStepTutor: (params: {
-    mode: 'hint' | 'audit' | 'formula'
+    mode: 'hint' | 'audit' | 'formula' | 'followup'
     questionText: string
     subject?: string
     studentSteps?: string
@@ -1021,7 +1336,7 @@ export const api = {
     provider?: string
     model?: string
   }) =>
-    postJSON<{ mode: 'hint' | 'audit' | 'formula'; syllabusMatch?: { id: string; subject: string; level1: string; level2: string; level3: string }; content: string; engineUsed?: string }>('/ai/tutor/step', params),
+    postJSON<{ mode: 'hint' | 'audit' | 'formula' | 'followup'; syllabusMatch?: { id: string; subject: string; level1: string; level2: string; level3: string }; content: string; engineUsed?: string }>('/ai/tutor/step', params),
 
   // ===== 笔记附件与图片上传接口 =====
   uploadAttachment: async (file: File | Blob, prefix = 'image', customFilename?: string): Promise<AttachmentResult> => {
@@ -1031,7 +1346,11 @@ export const api = {
     if (customFilename) {
       formData.append('filename', customFilename)
     }
-    const res = await fetch(`${BASE}/vault/attachment`, { method: 'POST', body: formData })
+    const res = await fetch(`${BASE}/vault/attachment`, {
+      method: 'POST',
+      headers: getAuthTokenHeaders(),
+      body: formData,
+    })
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: res.statusText }))
       throw new Error(err.error || `上传附件失败: ${res.status}`)

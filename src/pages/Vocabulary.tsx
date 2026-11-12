@@ -1,4 +1,4 @@
-import { useState, Component, type ReactNode } from 'react'
+import { useState, Component, lazy, Suspense, type ReactNode } from 'react'
 import {
   BookOpen,
   BarChart3,
@@ -16,7 +16,7 @@ import {
 import VocabTab from '../components/study/VocabTab'
 import WordBrowser from '../components/vocab/WordBrowser'
 import VocabStats from '../components/vocab/VocabStats'
-import WordRelations from '../components/vocab/WordRelations'
+const WordRelations = lazy(() => import('../components/vocab/WordRelations'))
 import ImportPanel from '../components/vocab/ImportPanel'
 
 // 词汇 5 级掌握度色谱数据 (Subframe Screen 4 Swatches Replica)
@@ -263,7 +263,11 @@ export default function Vocabulary() {
           {tab === 'palette' && <VocabMasteryPalette />}
           {tab === 'browse' && <WordBrowser />}
           {tab === 'stats' && <VocabStats />}
-          {tab === 'relations' && <WordRelations />}
+          {tab === 'relations' && (
+            <Suspense fallback={<div className="py-12 text-center text-xs text-slate-400">正在装载词根词缀衍生树...</div>}>
+              <WordRelations />
+            </Suspense>
+          )}
           {tab === 'import' && <ImportPanel />}
         </TabErrorBoundary>
       </div>

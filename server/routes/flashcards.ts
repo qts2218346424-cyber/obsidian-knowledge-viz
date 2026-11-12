@@ -4,6 +4,8 @@ import path from 'path'
 import { config, anthropic, markSelfWrite, invalidateCache } from '../context.js'
 import { createFile } from '../vault-parser.js'
 import { calculateSM2 } from '../algorithms/sm2.js'
+import { buildCs408Flashcards, CS408_FLASHCARD_SEED_VERSION } from '../data/cs408Flashcards.js'
+import { buildMathFlashcards, MATH_FLASHCARD_SEED_VERSION } from '../data/mathFlashcards.js'
 import { buildPoliticsFlashcards, POLITICS_FLASHCARD_SEED_VERSION } from '../data/politicsFlashcards.js'
 
 export interface FlashcardItem {
@@ -250,37 +252,57 @@ function loadBaseFlashcards(): FlashcardItem[] {
 }
 
 /**
- * 增量播种考研政治预置闪卡：
- * 仅注入从未播种过的卡片 id，并记录到 flashcards-seeded.json，
- * 因此用户删除某张预置卡后不会在下次加载时复活，已有学习进度也不会被覆盖。
+ * 增量播种全科（408 / 考研数学 / 考研政治与马原）预置闪卡：
+ * 只要官方种子卡尚未进入当前卡库且未被用户主动删除，则自动补充注入，
+ * 已有卡片的学习进度和复习状态（SM-2 艾宾浩斯）完整保留，绝不覆盖。
  */
 function loadFlashcards(): FlashcardItem[] {
   const cards = loadBaseFlashcards()
   try {
     const seedPath = path.join(path.dirname(getFlashcardsFilePath()), 'flashcards-seeded.json')
-    let seeded: string[] = []
+    let deletedIds: string[] = []
     if (fs.existsSync(seedPath)) {
-      const parsed = JSON.parse(fs.readFileSync(seedPath, 'utf8'))
-      if (Array.isArray(parsed?.ids)) seeded = parsed.ids
+      try {
+        const parsed = JSON.parse(fs.readFileSync(seedPath, 'utf8'))
+        if (Array.isArray(parsed?.deletedIds)) deletedIds = parsed.deletedIds
+      } catch {}
     }
-    const seededSet = new Set(seeded)
-    const existing = new Set(cards.map(c => c.id))
-    const fresh = buildPoliticsFlashcards().filter(c => !seededSet.has(c.id))
-    if (fresh.length === 0) return cards
+    const deletedSet = new Set(deletedIds)
+    const existing = new Set(cards.map(c => c?.id).filter(Boolean))
+    const allSeedCards: FlashcardItem[] = [
+      ...INITIAL_FLASHCARDS,
+      ...buildCs408Flashcards(),
+      ...buildMathFlashcards(),
+      ...buildPoliticsFlashcards(),
+    ].filter((c): c is FlashcardItem => Boolean(c && typeof c === 'object' && typeof c.id === 'string' && c.id.trim()))
 
-    const merged = [...cards]
-    for (const c of fresh) {
-      if (!existing.has(c.id)) merged.push(c)
-      seededSet.add(c.id)
-    }
+    // 补齐缺失的官方种子卡
+    const missing = allSeedCards.filter(c => c && c.id && !existing.has(c.id) && !deletedSet.has(c.id))
+    if (missing.length === 0) return cards
+
+    const merged = [...cards, ...missing]
     saveFlashcards(merged)
     fs.writeFileSync(
       seedPath,
-      JSON.stringify({ version: POLITICS_FLASHCARD_SEED_VERSION, ids: [...seededSet] }, null, 2),
+      JSON.stringify(
+        {
+          version: {
+            cs408: CS408_FLASHCARD_SEED_VERSION,
+            math: MATH_FLASHCARD_SEED_VERSION,
+            politics: POLITICS_FLASHCARD_SEED_VERSION,
+          },
+          totalCount: merged.length,
+          deletedIds: [...deletedSet],
+          updatedAt: new Date().toISOString(),
+        },
+        null,
+        2
+      ),
       'utf8'
     )
     return merged
-  } catch {
+  } catch (err) {
+    console.error('Failed to seed flashcards:', err)
     return cards
   }
 }
@@ -502,6 +524,21 @@ flashcardsRouter.delete('/flashcards/:id', (req, res) => {
     }
 
     saveFlashcards(cards)
+
+    // 记录主动删除的卡片 ID，防止后续被预置种子重新播种复活
+    try {
+      const seedPath = path.join(path.dirname(getFlashcardsFilePath()), 'flashcards-seeded.json')
+      if (fs.existsSync(seedPath)) {
+        const parsed = JSON.parse(fs.readFileSync(seedPath, 'utf8'))
+        const delList = Array.isArray(parsed?.deletedIds) ? parsed.deletedIds : []
+        if (!delList.includes(id)) {
+          delList.push(id)
+          parsed.deletedIds = delList
+          fs.writeFileSync(seedPath, JSON.stringify(parsed, null, 2), 'utf8')
+        }
+      }
+    } catch {}
+
     res.json({ success: true, message: '卡片已成功删除' })
   } catch (err: any) {
     res.status(500).json({ error: err.message || '删除卡片失败' })
@@ -519,7 +556,7 @@ flashcardsRouter.post('/flashcards/ai-generate', async (req, res) => {
     }
 
     const inputDesc = concept ? `知识点概念：${concept}` : `讲义/参考书片段：\n${text.slice(0, 3000)}`
-    const prompt = `你是一个深谙全国硕士研究生招生考试（408计算机综合与考研数学）的顶级命题与记忆学专家。
+    const prompt = `你是一个深谙全国硕士研究生招生考试（408计算机综合、考研数学与考研政治/马原）的顶级命题与记忆学专家。
 请根据以下知识点，制作 1 张极其精准、适合考研反复背诵的知识点记忆闪卡 (Flashcard)：
 
 【知识点输入】：

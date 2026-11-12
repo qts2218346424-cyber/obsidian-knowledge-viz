@@ -47,21 +47,20 @@ export interface FlashcardItem {
   updatedAt: string
 }
 
-const SUBJECT_OPTIONS = [
-  '数据结构',
-  '计算机组成原理',
-  '操作系统',
-  '计算机网络',
-  '高等数学',
-  '线性代数',
-  '概率论与数理统计'
-]
-
+const CS408_SUBJECT_OPTIONS = ['数据结构', '计算机组成原理', '操作系统', '计算机网络']
+const MATH_SUBJECT_OPTIONS = ['高等数学', '线性代数', '概率论与数理统计']
 const POLITICS_SUBJECT_OPTIONS = ['马克思主义基本原理', '马克思著作', '毛中特', '史纲', '时事政治']
+
+function inferDomainBySubject(subject: string): 'cs_408' | 'math' | 'politics' {
+  if (MATH_SUBJECT_OPTIONS.includes(subject)) return 'math'
+  if (POLITICS_SUBJECT_OPTIONS.includes(subject)) return 'politics'
+  return 'cs_408'
+}
 
 export default function FlashcardsTab() {
   const [cards, setCards] = useState<FlashcardItem[]>([])
   const [loading, setLoading] = useState(false)
+  const [domainFilter, setDomainFilter] = useState<'all' | 'cs_408' | 'math' | 'politics'>('all')
   const [subjectFilter, setSubjectFilter] = useState<string>('all')
   const [onlyForgotten, setOnlyForgotten] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -216,7 +215,7 @@ export default function FlashcardsTab() {
         body: JSON.stringify({
           concept: aiConceptInput.trim(),
           subject: aiSubject,
-          domain: ['高等数学', '线性代数', '概率论与数理统计'].includes(aiSubject) ? 'math' : 'cs_408'
+          domain: inferDomainBySubject(aiSubject)
         })
       })
       const data = await res.json()
@@ -254,14 +253,17 @@ export default function FlashcardsTab() {
   // 开启沉浸式背诵
   const handleStartReview = (onlyForgot = true) => {
     let queue = cards
-    if (onlyForgot) {
-      queue = cards.filter(c => c.isForgotten)
+    if (domainFilter !== 'all') {
+      queue = queue.filter(c => c.domain === domainFilter)
     }
     if (subjectFilter !== 'all') {
       queue = queue.filter(c => c.subject === subjectFilter)
     }
+    if (onlyForgot) {
+      queue = queue.filter(c => c.isForgotten)
+    }
     if (queue.length === 0) {
-      alert(onlyForgot ? '当前学科没有标记为【容易遗忘】的卡片！' : '当前筛选条件下暂无卡片！')
+      alert(onlyForgot ? '当前筛选范围没有标记为【容易遗忘】的卡片！' : '当前筛选条件下暂无卡片！')
       return
     }
 
@@ -337,10 +339,86 @@ export default function FlashcardsTab() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [reviewModalOpen, reviewQueue, currentReviewIdx, isReviewFlipped, sessionReviewedCount])
 
+  // 切换一级领域时，重置不匹配的二级学科筛选
+  const handleDomainChange = (nextDomain: 'all' | 'cs_408' | 'math' | 'politics') => {
+    setDomainFilter(nextDomain)
+    if (subjectFilter === 'all') return
+    if (nextDomain === 'cs_408' && !CS408_SUBJECT_OPTIONS.includes(subjectFilter)) {
+      setSubjectFilter('all')
+    } else if (nextDomain === 'math' && !MATH_SUBJECT_OPTIONS.includes(subjectFilter)) {
+      setSubjectFilter('all')
+    } else if (nextDomain === 'politics' && !POLITICS_SUBJECT_OPTIONS.includes(subjectFilter)) {
+      setSubjectFilter('all')
+    }
+  }
+
+  // 全科各领域总览统计
+  const domainOverview = useMemo(() => {
+    const calc = (list: FlashcardItem[]) => ({
+      total: list.length,
+      forgotten: list.filter(c => c.isForgotten).length,
+      mastered: list.filter(c => c.masteryLevel >= 3).length,
+      due: list.filter(c => !c.nextReviewAt || new Date(c.nextReviewAt) <= new Date()).length,
+    })
+    return {
+      all: calc(cards),
+      cs_408: calc(cards.filter(c => c.domain === 'cs_408')),
+      math: calc(cards.filter(c => c.domain === 'math')),
+      politics: calc(cards.filter(c => c.domain === 'politics')),
+    }
+  }, [cards])
+
+  // 当前所选领域 + 学科作用域内的统计数据（驱动顶部 4 张看板卡片）
+  const scopedCards = useMemo(() => {
+    return cards.filter(c => {
+      if (domainFilter !== 'all' && c.domain !== domainFilter) return false
+      if (subjectFilter !== 'all' && c.subject !== subjectFilter) return false
+      return true
+    })
+  }, [cards, domainFilter, subjectFilter])
+
+  const stats = useMemo(() => {
+    const total = scopedCards.length
+    const forgotten = scopedCards.filter(c => c.isForgotten).length
+    const mastered = scopedCards.filter(c => c.masteryLevel >= 3).length
+    const due = scopedCards.filter(c => !c.nextReviewAt || new Date(c.nextReviewAt) <= new Date()).length
+    return { total, forgotten, mastered, due }
+  }, [scopedCards])
+
+  const scopeMeta = useMemo(() => {
+    if (subjectFilter !== 'all') {
+      return {
+        title: `${subjectFilter} · 专项闪卡库`,
+        desc: '当前已按二级学科精确过滤，点击顶部切换可回到全科视图',
+      }
+    }
+    if (domainFilter === 'cs_408') {
+      return {
+        title: '408 计算机核心闪卡库',
+        desc: '涵盖数据结构、计组、操作系统与计算机网络高频易忘点',
+      }
+    }
+    if (domainFilter === 'math') {
+      return {
+        title: '考研数学公式与核心库',
+        desc: '涵盖高数、线代、概率论必背公式、恒等式与证明套路',
+      }
+    }
+    if (domainFilter === 'politics') {
+      return {
+        title: '考研政治（马原/时政）闪卡库',
+        desc: '涵盖马原哲学/政经公式、经典著作、毛中特史纲与时政',
+      }
+    }
+    return {
+      title: '考研全科记忆闪卡库',
+      desc: `408 ${domainOverview.cs_408.total} 张 · 数学 ${domainOverview.math.total} 张 · 政治/马原 ${domainOverview.politics.total} 张`,
+    }
+  }, [domainFilter, subjectFilter, domainOverview])
+
   // 过滤后的卡片列表
   const filteredCards = useMemo(() => {
-    return cards.filter(c => {
-      if (subjectFilter !== 'all' && c.subject !== subjectFilter) return false
+    return scopedCards.filter(c => {
       if (onlyForgotten && !c.isForgotten) return false
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase()
@@ -352,30 +430,91 @@ export default function FlashcardsTab() {
       }
       return true
     })
-  }, [cards, subjectFilter, onlyForgotten, searchQuery])
-
-  // 统计数据
-  const stats = useMemo(() => {
-    const total = cards.length
-    const forgotten = cards.filter(c => c.isForgotten).length
-    const mastered = cards.filter(c => c.masteryLevel >= 3).length
-    const due = cards.filter(c => !c.nextReviewAt || new Date(c.nextReviewAt) <= new Date()).length
-    return { total, forgotten, mastered, due }
-  }, [cards])
+  }, [scopedCards, onlyForgotten, searchQuery])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      {/* 0. 一级学科领域切换栏（全科 / 408 / 考研数学 / 考研政治） */}
+      <div className="bg-surface border border-cream-200 rounded-2xl p-3 shadow-xs flex flex-wrap items-center justify-between gap-2.5">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          <span className="text-xs font-semibold text-warm-500 mr-1">学科领域：</span>
+          <button
+            type="button"
+            onClick={() => handleDomainChange('all')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+              domainFilter === 'all'
+                ? 'bg-neutral-900 text-white shadow-xs'
+                : 'bg-cream-100 text-warm-700 hover:bg-cream-200'
+            }`}
+          >
+            <span>🌐 全部学科</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${domainFilter === 'all' ? 'bg-white/20 text-white' : 'bg-white text-warm-600'}`}>
+              {domainOverview.all.total}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleDomainChange('cs_408')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+              domainFilter === 'cs_408'
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200/60'
+            }`}
+          >
+            <span>🖥️ 408 计算机</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${domainFilter === 'cs_408' ? 'bg-white/20 text-white' : 'bg-white/80 text-indigo-700'}`}>
+              {domainOverview.cs_408.total}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleDomainChange('math')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+              domainFilter === 'math'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/60'
+            }`}
+          >
+            <span>📐 考研数学</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${domainFilter === 'math' ? 'bg-white/20 text-white' : 'bg-white/80 text-emerald-700'}`}>
+              {domainOverview.math.total}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleDomainChange('politics')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+              domainFilter === 'politics'
+                ? 'bg-rose-600 text-white shadow-xs'
+                : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200/60'
+            }`}
+          >
+            <span>🏛️ 考研政治 · 马原</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${domainFilter === 'politics' ? 'bg-white/20 text-white' : 'bg-white/80 text-rose-700'}`}>
+              {domainOverview.politics.total}
+            </span>
+          </button>
+        </div>
+
+        <div className="text-[11px] text-warm-400 hidden sm:flex items-center gap-2">
+          <span>易忘分布：408({domainOverview.cs_408.forgotten}) · 数学({domainOverview.math.forgotten}) · 政治({domainOverview.politics.forgotten})</span>
+        </div>
+      </div>
+
       {/* 1. 顶部数据看板与快捷行动栏 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="bg-surface border border-cream-200 rounded-2xl p-4 shadow-xs">
           <div className="flex items-center justify-between text-xs text-warm-500 mb-1">
-            <span>408 核心闪卡库</span>
-            <Layers className="w-4 h-4 text-warm-400" />
+            <span className="truncate font-medium">{scopeMeta.title}</span>
+            <Layers className="w-4 h-4 text-warm-400 shrink-0" />
           </div>
           <div className="text-2xl font-bold text-warm-800">
             {stats.total} <span className="text-xs font-normal text-warm-400">张知识卡</span>
           </div>
-          <div className="text-[11px] text-warm-400 mt-1">涵盖数据结构、计组、操作系统与网络</div>
+          <div className="text-[11px] text-warm-500 mt-1 truncate" title={scopeMeta.desc}>{scopeMeta.desc}</div>
         </div>
 
         <div className="bg-surface border border-amber-200/80 bg-amber-50/20 rounded-2xl p-4 shadow-xs">
@@ -436,10 +575,16 @@ export default function FlashcardsTab() {
 
           <button
             onClick={() => {
+              const defaultSubject =
+                domainFilter === 'math'
+                  ? '高等数学'
+                  : domainFilter === 'politics'
+                  ? '马克思主义基本原理'
+                  : '操作系统'
               setEditingCard({
                 title: '',
-                domain: 'cs_408',
-                subject: '操作系统',
+                domain: inferDomainBySubject(defaultSubject),
+                subject: defaultSubject,
                 chapter: '核心考点',
                 front: '',
                 back: '',
@@ -458,7 +603,12 @@ export default function FlashcardsTab() {
           </button>
 
           <button
-            onClick={() => setAiModalOpen(true)}
+            onClick={() => {
+              if (domainFilter === 'math') setAiSubject('高等数学')
+              else if (domainFilter === 'politics') setAiSubject('马克思主义基本原理')
+              else if (domainFilter === 'cs_408') setAiSubject('操作系统')
+              setAiModalOpen(true)
+            }}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-semibold shadow-xs hover:from-purple-500 hover:to-indigo-500 transition-all cursor-pointer"
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-300" />
@@ -493,13 +643,30 @@ export default function FlashcardsTab() {
             onChange={e => setSubjectFilter(e.target.value)}
             className="text-xs rounded-xl border border-cream-300 px-2.5 py-1.5 bg-white text-warm-700 focus:outline-none focus:ring-1 focus:ring-accent-orange"
           >
-            <option value="all">全学科卡片</option>
-            {POLITICS_SUBJECT_OPTIONS.map(s => (
-              <option key={s} value={s}>政治 · {s}</option>
-            ))}
-            {SUBJECT_OPTIONS.map(s => (
-              <option key={s} value={s}>{s}</option>
-            ))}
+            <option value="all">
+              {domainFilter === 'all' ? '全学科卡片' : '当前领域全部学科'}
+            </option>
+            {(domainFilter === 'all' || domainFilter === 'cs_408') && (
+              <optgroup label="408 计算机综合">
+                {CS408_SUBJECT_OPTIONS.map(s => (
+                  <option key={s} value={s}>408 · {s}</option>
+                ))}
+              </optgroup>
+            )}
+            {(domainFilter === 'all' || domainFilter === 'math') && (
+              <optgroup label="考研数学">
+                {MATH_SUBJECT_OPTIONS.map(s => (
+                  <option key={s} value={s}>数学 · {s}</option>
+                ))}
+              </optgroup>
+            )}
+            {(domainFilter === 'all' || domainFilter === 'politics') && (
+              <optgroup label="考研政治 · 马原">
+                {POLITICS_SUBJECT_OPTIONS.map(s => (
+                  <option key={s} value={s}>政治 · {s}</option>
+                ))}
+              </optgroup>
+            )}
           </select>
 
           <div className="relative">
@@ -526,7 +693,7 @@ export default function FlashcardsTab() {
           <Brain className="w-10 h-10 text-warm-300 mx-auto mb-2" />
           <h4 className="text-sm font-bold text-warm-700">暂无符合条件的知识点卡片</h4>
           <p className="text-xs text-warm-400 mt-1">
-            {onlyForgotten ? '太棒了！当前没有标记为易忘的考点，继续保持！' : '点击上方“新建卡片”或“AI 智能提炼卡片”添加你的 408 核心记忆卡。'}
+            {onlyForgotten ? '太棒了！当前没有标记为易忘的考点，继续保持！' : '点击上方“新建卡片”或“AI 智能提炼卡片”添加新的考研核心记忆卡。'}
           </p>
         </div>
       ) : (
@@ -602,7 +769,7 @@ export default function FlashcardsTab() {
                             <HelpCircle className="w-3.5 h-3.5 text-amber-600" />
                             <span>核心记忆挑战与设问：</span>
                           </div>
-                          {card.front}
+                          <MarkdownRenderer content={card.front} inline />
                         </div>
 
                         <button
@@ -625,7 +792,7 @@ export default function FlashcardsTab() {
                             <span className="font-bold flex items-center gap-1 mb-0.5 text-amber-900">
                               <Lightbulb className="w-3 h-3 text-amber-600" /> 速记口诀：
                             </span>
-                            {card.mnemonic}
+                            <MarkdownRenderer content={card.mnemonic} inline />
                           </div>
                         )}
 
@@ -634,7 +801,7 @@ export default function FlashcardsTab() {
                             <span className="font-bold flex items-center gap-1 mb-0.5 text-red-900">
                               <AlertTriangle className="w-3 h-3 text-red-600" /> 命题陷阱：
                             </span>
-                            {card.pitfall}
+                            <MarkdownRenderer content={card.pitfall} inline />
                           </div>
                         )}
 
@@ -757,7 +924,7 @@ export default function FlashcardsTab() {
                         <HelpCircle className="w-4 h-4 text-amber-600" />
                         <span>请在脑海中回忆推导：</span>
                       </div>
-                      {cur.front}
+                      <MarkdownRenderer content={cur.front} inline />
                     </div>
 
                     {/* 背面内容 */}
@@ -784,14 +951,14 @@ export default function FlashcardsTab() {
                         {cur.mnemonic && (
                           <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs">
                             <span className="font-bold block mb-1">💡 记忆口诀：</span>
-                            {cur.mnemonic}
+                            <MarkdownRenderer content={cur.mnemonic} inline />
                           </div>
                         )}
 
                         {cur.pitfall && (
                           <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-900 text-xs">
                             <span className="font-bold block mb-1">⚠️ 考研命题陷阱：</span>
-                            {cur.pitfall}
+                            <MarkdownRenderer content={cur.pitfall} inline />
                           </div>
                         )}
                       </div>
@@ -839,7 +1006,7 @@ export default function FlashcardsTab() {
           <div className="bg-white rounded-3xl border border-cream-300 shadow-2xl w-full max-w-lg p-5 sm:p-6 max-h-[88dvh] overflow-y-auto overscroll-contain animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-cream-200 pb-3 mb-4">
               <h3 className="text-sm font-bold text-warm-900">
-                {editingCard.id ? '编辑知识点记忆卡片' : '新建 408 知识点记忆闪卡'}
+                {editingCard.id ? '编辑知识点记忆卡片' : '新建考研知识点记忆闪卡'}
               </h3>
               <button
                 onClick={() => setEditModalOpen(false)}
@@ -866,12 +1033,30 @@ export default function FlashcardsTab() {
                   <label className="block font-semibold text-warm-700 mb-1">所属学科</label>
                   <select
                     value={editingCard.subject || '操作系统'}
-                    onChange={e => setEditingCard({ ...editingCard, subject: e.target.value })}
+                    onChange={e =>
+                      setEditingCard({
+                        ...editingCard,
+                        subject: e.target.value,
+                        domain: inferDomainBySubject(e.target.value)
+                      })
+                    }
                     className="w-full rounded-xl border border-cream-300 p-2 bg-white text-warm-800"
                   >
-                    {SUBJECT_OPTIONS.map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
+                    <optgroup label="408 计算机综合">
+                      {CS408_SUBJECT_OPTIONS.map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="考研数学">
+                      {MATH_SUBJECT_OPTIONS.map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="考研政治 · 马原">
+                      {POLITICS_SUBJECT_OPTIONS.map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </optgroup>
                   </select>
                 </div>
                 <div>
@@ -994,9 +1179,21 @@ export default function FlashcardsTab() {
                   onChange={e => setAiSubject(e.target.value)}
                   className="w-full rounded-xl border border-cream-300 p-2.5 bg-white text-warm-800"
                 >
-                  {SUBJECT_OPTIONS.map(s => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
+                  <optgroup label="408 计算机综合">
+                    {CS408_SUBJECT_OPTIONS.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="考研数学">
+                    {MATH_SUBJECT_OPTIONS.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="考研政治 · 马原">
+                    {POLITICS_SUBJECT_OPTIONS.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </optgroup>
                 </select>
               </div>
 
@@ -1006,13 +1203,13 @@ export default function FlashcardsTab() {
                   type="text"
                   value={aiConceptInput}
                   onChange={e => setAiConceptInput(e.target.value)}
-                  placeholder="例如：流水线冒险处理、死锁避免银行家算法、二叉排序树"
+                  placeholder="例如：泰勒公式、社会再生产公式、PV操作、Cache映射"
                   className="w-full rounded-xl border border-cream-300 p-2.5 bg-white text-warm-800 focus:outline-none focus:ring-1 focus:ring-purple-500 font-medium"
                 />
               </div>
 
               <div className="p-3 rounded-xl bg-purple-50/70 border border-purple-200/80 text-[11px] text-purple-800 leading-relaxed">
-                ✨ AI 将结合 408 统考真题命题规律，自动构建正面考查设问、背面核心机理推导、琅琅上口的记忆口诀以及防坑易错辨析！
+                ✨ AI 将结合 408 / 考研数学 / 考研政治命题规律，自动构建正面考查设问、背面核心机理与公式推导、琅琅上口的记忆口诀以及防坑易错辨析！
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2">

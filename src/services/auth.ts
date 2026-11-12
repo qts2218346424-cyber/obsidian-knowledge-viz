@@ -91,6 +91,16 @@ export function getAuthHeaders(): Record<string, string> {
   return headers
 }
 
+/** 仅附带认证令牌（不设 Content-Type），供 FormData / multipart 文件上传使用 */
+export function getAuthTokenHeaders(): Record<string, string> {
+  const token = getStoredToken()
+  const headers: Record<string, string> = {}
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+  return headers
+}
+
 async function requestJSON<T>(url: string, options: RequestInit = {}): Promise<T> {
   const headers = {
     ...getAuthHeaders(),

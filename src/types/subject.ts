@@ -6,13 +6,16 @@
  */
 
 // 主学科领域
-export type SubjectDomain = 'cs_408' | 'math'
+export type SubjectDomain = 'cs_408' | 'math' | 'english'
 
 // 408 专业课科目
 export type CsSubject = '数据结构' | '计算机组成原理' | '操作系统' | '计算机网络'
 
 // 考研数学科目
 export type MathSubject = '高等数学' | '线性代数' | '概率论与数理统计'
+
+// 考研英语科目
+export type EnglishSubject = '英语知识运用' | '阅读理解' | '新题型' | '英译汉' | '短文写作'
 
 // 考研数学卷种分类
 export type MathCategory = '数一' | '数二' | '数三'
@@ -21,7 +24,7 @@ export type MathCategory = '数一' | '数二' | '数三'
 export type QuestionType = 'choice' | 'blank' | 'analysis'
 
 // 难度等级
-export type QuestionDifficulty = '简单' | '中等' | '困难'
+export type QuestionDifficulty = '简单' | '中等' | '困难' | '基础' | '提高'
 
 // 错因分类标签（尤其针对数学与专业课的复盘）
 export type ErrorReason = 
@@ -36,7 +39,7 @@ export type ErrorReason =
 export interface UnifiedQuestion {
   id: string
   domain: SubjectDomain
-  subject: MathSubject | CsSubject
+  subject: MathSubject | CsSubject | EnglishSubject | string
   /** 考研数学卷种适用范围（仅数学科目有效） */
   scope?: MathCategory[]
   /** 所属章节/知识点（例如 "极限计算", "矩阵对角化", "虚拟内存"） */

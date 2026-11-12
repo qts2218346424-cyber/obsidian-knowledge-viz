@@ -1,7 +1,7 @@
-import { getAuthHeaders } from '../services/auth'
+import { getAuthHeaders, getStoredUser } from '../services/auth'
 import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react'
 import { createPortal } from 'react-dom'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, Link, useNavigate } from 'react-router-dom'
 import {
   Upload,
   ChevronDown,
@@ -22,65 +22,71 @@ import {
   MessageCircle,
   Camera,
   Code2,
+  Layers,
+  HelpCircle,
+  Trash2,
+  RotateCcw,
+  Clock,
+  History,
 } from 'lucide-react'
 import WarmButton from '../components/ui/WarmButton'
 import MarkdownRenderer from '../components/MarkdownRenderer'
 import DoodleScratchpadCanvas from '../features/quiz/components/DoodleScratchpadCanvas'
-import { api } from '../services/api'
-import { QUESTION_BANK, type QuizQuestion } from '../data/questions'
-import { MATH_QUESTION_BANK } from '../data/questions/math'
+import { api, type ResourceDomain } from '../services/api'
 import { updateMasteryFromQuizResult } from '../data/masteryData'
-import type { MathCategory, MathSubject, CsSubject, UnifiedQuestion } from '../types/subject'
+import type { MathCategory, CsSubject } from '../types/subject'
 import {
   ALL_EXAM_PAPERS,
   filterPaperQuestions,
-  getPaperStats,
-  getAvailablePaperYears,
   type ExamPaper,
-  type ExamPaperQuestion,
   type PaperCategory,
   type PaperFilterSection,
 } from '../data/examPapers'
+import {
+  buildUnifiedQuestionPool,
+  buildPopulatedTopicCategories,
+  CS_CHAPTER_MODULES,
+  getCsChapterModules,
+  classifyQuestionTopicId,
+  type ActiveQuizQuestion,
+  type AllSubject,
+  type QuizQuestionType as QuestionType,
+  type CsChapterModuleItem,
+} from '../features/quiz/utils/questionTopics'
+
+export type { ActiveQuizQuestion, AllSubject }
 
 
 const ImportResourceModal = lazy(() => import('../components/ImportResourceModal'))
 const AlgorithmSandboxModal = lazy(() => import('../features/quiz/components/AlgorithmSandboxModal'))
 const ExamPaperHubView = lazy(() => import('../features/quiz/components/ExamPaperHubView'))
+const TopicCategoryHubView = lazy(() => import('../features/quiz/components/TopicCategoryHubView'))
+const ErrorNotebookHubView = lazy(() => import('../features/quiz/components/ErrorNotebookHubView'))
+import { convertErrorToActiveQuestion } from '../features/quiz/utils/errorQuestions'
+import type { ErrorNotebookStats } from '../services/api'
 
 // 内存级题库缓存，切页秒开不闪烁
 let cachedCustomQuestionsList: ActiveQuizQuestion[] | null = null
 
+/** 若纯数学答案串含 LaTeX 命令但缺失定界符，自动补齐 $...$ 以免渲染成源码 */
+function formatMathInline(raw?: string): string {
+  const s = (raw || '').trim()
+  if (!s) return ''
+  if (s.includes('$')) return s
+  if (/\\(?:frac|dfrac|tfrac|sqrt|int|iint|lim|sum|prod|pi|alpha|beta|gamma|theta|infty|ln|log|sin|cos|tan|cdot|times|le|ge|ne)/.test(s)) {
+    return `$${s}$`
+  }
+  return s
+}
+
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-export type AllSubject = CsSubject | MathSubject
 type ViewMode = 'start' | 'quiz' | 'results'
 type QuizMode = 'practice' | 'exam'
-type QuestionType = 'choice' | 'blank' | 'analysis'
-
-export interface ActiveQuizQuestion {
-  id: string
-  domain: 'cs_408' | 'math'
-  subject: AllSubject
-  scope?: MathCategory[]
-  chapter?: string
-  type: QuestionType
-  difficulty: '简单' | '中等' | '困难'
-  question: string
-  options?: { A: string; B: string; C: string; D: string }
-  answer: string
-  explanation: string
-  steps?: string[]
-  keyPoints?: string[]
-  tags: string[]
-  paperTitle?: string
-  paperQuestionNumber?: number
-  score?: number
-  sectionName?: string
-}
 
 interface SubjectInfo {
   key: AllSubject
-  domain: 'cs_408' | 'math'
+  domain: ResourceDomain
   emoji: string
   color: string
   bgColor: string
@@ -89,16 +95,45 @@ interface SubjectInfo {
 
 interface QuizResult {
   total: number
+  answered?: number
+  unanswered?: number
   correct: number
   wrong: number
   timeTaken: number
-  subjectBreakdown: Record<string, { total: number; correct: number }>
+  mode?: QuizMode
+  createdAt?: string
+  subjectBreakdown: Record<string, { total: number; correct: number; answered?: number; wrong?: number; unanswered?: number }>
   wrongQuestions: Array<{
     question: ActiveQuizQuestion
     userAnswer: string
     errorReason?: string
   }>
   summaryPath: string
+}
+
+export interface QuizProgressRecord {
+  id: string
+  title: string
+  mode: QuizMode
+  categoryType: 'paper' | 'topic' | 'custom' | 'free'
+  questions: ActiveQuizQuestion[]
+  currentIndex: number
+  answers: Record<string, string>
+  timeElapsed: number
+  bookmarkedIds: string[]
+  errorReasons: Record<string, string>
+  scratchpads: Record<string, string>
+  activePaperContext: {
+    paperId: string
+    title: string
+    year: number
+    category: PaperCategory
+    section: PaperFilterSection
+    totalScore: number
+    durationMinutes: number
+  } | null
+  activeTopicLabel: string | null
+  updatedAt: number
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -113,6 +148,10 @@ const ALL_SUBJECTS: SubjectInfo[] = [
   { key: '高等数学', domain: 'math', emoji: '📐', color: 'text-pink-600', bgColor: 'bg-pink-50 border-pink-200', categories: ['数一', '数二', '数三'] },
   { key: '线性代数', domain: 'math', emoji: '🔢', color: 'text-indigo-600', bgColor: 'bg-indigo-50 border-indigo-200', categories: ['数一', '数二', '数三'] },
   { key: '概率论与数理统计', domain: 'math', emoji: '🎲', color: 'text-teal-600', bgColor: 'bg-teal-50 border-teal-200', categories: ['数一', '数三'] },
+  // 其他专业课 / 综合
+  { key: '专业课综合', domain: 'general', emoji: '📚', color: 'text-slate-700', bgColor: 'bg-slate-50 border-slate-200' },
+  { key: '复试面试', domain: 'general', emoji: '🎤', color: 'text-slate-700', bgColor: 'bg-slate-50 border-slate-200' },
+  { key: '其他通用', domain: 'general', emoji: '🗂️', color: 'text-slate-700', bgColor: 'bg-slate-50 border-slate-200' },
 ]
 
 const ERROR_REASONS = ['概念不清', '公式记错', '计算失误', '忽略定理前提', '思路阻塞', '审题遗漏']
@@ -130,53 +169,6 @@ const SCRATCHPAD_MATH_SYMBOLS = [
   { label: '∞', code: '\\infty' },
 ]
 
-function convertCsQuestion(q: QuizQuestion): ActiveQuizQuestion {
-  return {
-    id: q.id,
-    domain: 'cs_408',
-    subject: q.subject,
-    type: 'choice',
-    difficulty: q.difficulty,
-    question: q.question,
-    options: q.options,
-    answer: q.answer,
-    explanation: q.explanation,
-    tags: q.tags,
-  }
-}
-
-function convertMathQuestion(q: UnifiedQuestion): ActiveQuizQuestion {
-  const optArr = q.options || []
-  const cleanOption = (text?: string) => text ? text.replace(/^[A-D][.、\s]+/, '').trim() : ''
-
-  let optionsObj: { A: string; B: string; C: string; D: string } | undefined = undefined
-  if (optArr.length >= 2) {
-    optionsObj = {
-      A: cleanOption(optArr[0]),
-      B: cleanOption(optArr[1]),
-      C: cleanOption(optArr[2] || ''),
-      D: cleanOption(optArr[3] || ''),
-    }
-  }
-
-  return {
-    id: q.id,
-    domain: 'math',
-    subject: q.subject as MathSubject,
-    scope: q.scope,
-    chapter: q.chapter,
-    type: q.type || (optionsObj ? 'choice' : 'blank'),
-    difficulty: q.difficulty,
-    question: q.question,
-    options: optionsObj,
-    answer: q.correctAnswer || 'A',
-    explanation: q.explanation,
-    steps: q.steps,
-    keyPoints: q.keyPoints,
-    tags: q.tags,
-  }
-}
-
 function shuffleArray<T>(arr: T[]): T[] {
   const shuffled = [...arr]
   for (let i = shuffled.length - 1; i > 0; i--) {
@@ -192,20 +184,81 @@ function formatTime(seconds: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
+function formatRelativeTime(ts: number): string {
+  if (!ts) return ''
+  const diff = Date.now() - ts
+  const minutes = Math.floor(diff / 60000)
+  if (minutes < 1) return '刚刚'
+  if (minutes < 60) return `${minutes} 分钟前`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} 小时前`
+  const days = Math.floor(hours / 86400000)
+  if (days < 7) return `${days} 天前`
+  const d = new Date(ts)
+  return `${d.getMonth() + 1}月${d.getDate()}日 ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+function getQuizProgressKey(): string {
+  try {
+    const user = getStoredUser()
+    return user?.id ? `coreforge_quiz_progress_${user.id}` : 'coreforge_quiz_progress_guest'
+  } catch {
+    return 'coreforge_quiz_progress_guest'
+  }
+}
+
+function loadSavedQuizProgress(): QuizProgressRecord | null {
+  try {
+    const key = getQuizProgressKey()
+    const raw = localStorage.getItem(key)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as QuizProgressRecord
+    if (parsed && Array.isArray(parsed.questions) && parsed.questions.length > 0) {
+      return parsed
+    }
+  } catch (e) {
+    console.error('Failed to load saved quiz progress', e)
+  }
+  return null
+}
+
+function saveQuizProgressToStorage(data: QuizProgressRecord): void {
+  try {
+    const key = getQuizProgressKey()
+    localStorage.setItem(key, JSON.stringify(data))
+  } catch (e) {
+    console.error('Failed to save quiz progress', e)
+  }
+}
+
+function clearQuizProgressFromStorage(): void {
+  try {
+    const key = getQuizProgressKey()
+    localStorage.removeItem(key)
+  } catch (e) {
+    console.error('Failed to clear quiz progress', e)
+  }
+}
+
 // ── Main Component ──────────────────────────────────────────────────────────
 
 export default function Quiz() {
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const [view, setView] = useState<ViewMode>('start')
 
   // Subject and category filters
-  const [domainFilter, setDomainFilter] = useState<'all' | 'cs_408' | 'math'>('all')
+  const [domainFilter, setDomainFilter] = useState<'all' | ResourceDomain>('all')
   const [mathCategory, setMathCategory] = useState<MathCategory | 'all'>('all')
   const [selectedSubjects, setSelectedSubjects] = useState<Set<AllSubject>>(new Set(ALL_SUBJECTS.map(s => s.key)))
 
   // Practice mode & question count
   const [mode, setMode] = useState<QuizMode>('practice')
   const [questionCount, setQuestionCount] = useState(20)
+
+  // 408 章节知识点分模块专项筛选状态
+  const [selectedCsChapters, setSelectedCsChapters] = useState<Set<string>>(new Set())
+  const [activeCsSubjectTab, setActiveCsSubjectTab] = useState<CsSubject>('数据结构')
 
   // Quiz active state
   const [questions, setQuestions] = useState<ActiveQuizQuestion[]>([])
@@ -226,8 +279,32 @@ export default function Quiz() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const scratchpadRef = useRef<HTMLTextAreaElement>(null)
 
+  // ── 刷题断点记忆与进度回溯状态 ───────────────────────────────────────────────
+  const [savedProgress, setSavedProgress] = useState<QuizProgressRecord | null>(() => loadSavedQuizProgress())
+  const [confirmClearDraft, setConfirmClearDraft] = useState(false)
+  const sessionStateRef = useRef({
+    questions,
+    currentIndex,
+    answers,
+    timeElapsed,
+    bookmarkedIds,
+    errorReasons,
+    scratchpads,
+    mode,
+    activePaperContext: null as any,
+    activeTopicLabel: null as string | null,
+  })
+
   // Results state
   const [result, setResult] = useState<QuizResult | null>(null)
+  const [lastSavedResult, setLastSavedResult] = useState<QuizResult | null>(() => {
+    try {
+      const raw = localStorage.getItem('cf_last_quiz_result')
+      return raw ? JSON.parse(raw) : null
+    } catch {
+      return null
+    }
+  })
 
   // Custom import state & Modal (优先从内存缓存中直出)
   const [customQuestions, setCustomQuestions] = useState<ActiveQuizQuestion[]>(() => cachedCustomQuestionsList || [])
@@ -247,10 +324,10 @@ export default function Quiz() {
   const [saveAllMsg, setSaveAllMsg] = useState<string | null>(null)
   const [savedItemIds, setSavedItemIds] = useState<Set<string>>(new Set())
 
-  // ── 历年真题整卷库状态 ────────────────────────────────────────────────────────
-  const [hubTab, setHubTab] = useState<'papers' | 'topics'>('papers')
-  const [selectedPaperCategory, setSelectedPaperCategory] = useState<'all' | PaperCategory>('all')
-  const [selectedPaperYear, setSelectedPaperYear] = useState<'all' | number>('all')
+  // ── 历年真题整卷库 & 题型归纳专题 & 错题攻克中心状态 ─────────────────────────────────────────
+  const [hubTab, setHubTab] = useState<'papers' | 'categories' | 'topics' | 'errors'>('papers')
+  const [errorStats, setErrorStats] = useState<ErrorNotebookStats | null>(null)
+  const [activeTopicLabel, setActiveTopicLabel] = useState<string | null>(null)
   const [activePaperContext, setActivePaperContext] = useState<{
     paperId: string
     title: string
@@ -279,9 +356,26 @@ export default function Quiz() {
           answer: q.answer,
           explanation: q.explanation,
           tags: q.tags || ['用户导入'],
+          sourceKind: 'custom',
+          isCustom: true,
         }))
         setCustomQuestions(mapped)
         cachedCustomQuestionsList = mapped
+        // 确保自定义导入的科目默认处于选中状态，方便用户直接在做题中心开刷
+        const importedSubjectKeys = Array.from(new Set(mapped.map(q => q.subject).filter(Boolean)))
+        if (importedSubjectKeys.length > 0) {
+          setSelectedSubjects(prev => {
+            const next = new Set(prev)
+            let changed = false
+            for (const sub of importedSubjectKeys) {
+              if (!next.has(sub)) {
+                next.add(sub)
+                changed = true
+              }
+            }
+            return changed ? next : prev
+          })
+        }
       }
     } catch (err) {
       console.error('Failed to load custom questions:', err)
@@ -300,8 +394,31 @@ export default function Quiz() {
   }, [fetchCustomQuestions])
 
   useEffect(() => {
+    const fetchErrorStats = () => {
+      api.getErrorNotebookStats().then((res) => {
+        if (res?.stats) setErrorStats(res.stats)
+      }).catch(() => {})
+    }
+    fetchErrorStats()
+    window.addEventListener('daily-errors-updated', fetchErrorStats)
+    return () => window.removeEventListener('daily-errors-updated', fetchErrorStats)
+  }, [])
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab')
+    if (tabParam === 'papers' || tabParam === 'categories' || tabParam === 'topics' || tabParam === 'errors') {
+      setHubTab(tabParam)
+    }
     const domainParam = searchParams.get('domain')
-    if (domainParam === 'cs_408' || domainParam === 'math') {
+    if (domainParam === 'english') {
+      navigate('/english', { replace: true })
+      return
+    }
+    if (domainParam === 'politics') {
+      navigate('/politics', { replace: true })
+      return
+    }
+    if (domainParam === 'cs_408' || domainParam === 'math' || domainParam === 'general') {
       setDomainFilter(domainParam)
       setSelectedSubjects(new Set(ALL_SUBJECTS.filter(s => s.domain === domainParam).map(s => s.key)))
     }
@@ -412,30 +529,72 @@ export default function Quiz() {
 
   // ── Unified Question Pool ───────────────────────────────────────────────────
 
-  const builtInQuestions = useMemo(() => [
-    ...QUESTION_BANK.map(convertCsQuestion),
-    ...MATH_QUESTION_BANK.map(convertMathQuestion),
-  ], [])
+  const unifiedQuestionPool = useMemo(
+    () => buildUnifiedQuestionPool(customQuestions),
+    [customQuestions]
+  )
+
+  const populatedTopics = useMemo(
+    () => buildPopulatedTopicCategories(unifiedQuestionPool, mathCategory),
+    [unifiedQuestionPool, mathCategory]
+  )
+
+  const availableSubjectInfos = useMemo(() => {
+    const knownKeys = new Set(ALL_SUBJECTS.map(s => s.key))
+    const dynamicExtras: SubjectInfo[] = []
+    for (const q of customQuestions) {
+      if (q.subject && !knownKeys.has(q.subject)) {
+        knownKeys.add(q.subject)
+        dynamicExtras.push({
+          key: q.subject,
+          domain: q.domain || 'general',
+          emoji: q.domain === 'english' ? '📖' : q.domain === 'politics' ? '🏛️' : '📚',
+          color: 'text-slate-700',
+          bgColor: 'bg-slate-50 border-slate-200',
+        })
+      }
+    }
+    return [...ALL_SUBJECTS, ...dynamicExtras]
+  }, [customQuestions])
 
   const allAvailableQuestions = useMemo(() => {
-    const combined = [...builtInQuestions, ...customQuestions]
-    return combined.filter(q => {
+    return unifiedQuestionPool.filter(q => {
       if (!selectedSubjects.has(q.subject)) return false
-      if (domainFilter === 'cs_408' && q.domain !== 'cs_408') return false
-      if (domainFilter === 'math' && q.domain !== 'math') return false
+      if (domainFilter !== 'all' && q.domain !== domainFilter) return false
       if (q.domain === 'math' && mathCategory !== 'all') {
         if (q.scope && !q.scope.includes(mathCategory)) return false
       }
+      // 408 章节知识点分模块过滤（线性表、图论、排序等）
+      if ((q.domain === 'cs_408' || ['数据结构', '计算机组成原理', '操作系统', '计算机网络'].includes(q.subject)) && selectedCsChapters.size > 0) {
+        const topicId = classifyQuestionTopicId(q)
+        if (!topicId || !selectedCsChapters.has(topicId)) return false
+      }
       return true
     })
-  }, [builtInQuestions, customQuestions, selectedSubjects, domainFilter, mathCategory])
+  }, [unifiedQuestionPool, selectedSubjects, domainFilter, mathCategory, selectedCsChapters])
 
   const displayedSubjects = useMemo(() => {
-    if (domainFilter === 'all') return ALL_SUBJECTS
-    return ALL_SUBJECTS.filter(s => s.domain === domainFilter)
-  }, [domainFilter])
+    if (domainFilter === 'all') {
+      return availableSubjectInfos
+    }
+    return availableSubjectInfos.filter(s => s.domain === domainFilter)
+  }, [domainFilter, availableSubjectInfos])
 
-  // ── Timer ──────────────────────────────────────────────────────────────────
+  // 408 章节知识点模块实时题目数统计
+  const csChapterQuestionCounts = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const q of unifiedQuestionPool) {
+      if (q.domain === 'cs_408' || ['数据结构', '计算机组成原理', '操作系统', '计算机网络'].includes(q.subject)) {
+        const topicId = classifyQuestionTopicId(q)
+        if (topicId) {
+          map.set(topicId, (map.get(topicId) || 0) + 1)
+        }
+      }
+    }
+    return map
+  }, [unifiedQuestionPool])
+
+  // ── Timer & 自动保存断点进度 ──────────────────────────────────────────────
 
   useEffect(() => {
     if (view === 'quiz') {
@@ -448,18 +607,139 @@ export default function Quiz() {
     }
   }, [view])
 
+  // 每次进入 start 视图时自动刷新最新本地未完成进度
+  useEffect(() => {
+    if (view === 'start') {
+      setSavedProgress(loadSavedQuizProgress())
+      setConfirmClearDraft(false)
+    }
+  }, [view])
+
+  // 同步最新的做题状态到 ref 中供事件回调与退出使用
+  useEffect(() => {
+    sessionStateRef.current = {
+      questions,
+      currentIndex,
+      answers,
+      timeElapsed,
+      bookmarkedIds,
+      errorReasons,
+      scratchpads,
+      mode,
+      activePaperContext,
+      activeTopicLabel,
+    }
+  }, [questions, currentIndex, answers, timeElapsed, bookmarkedIds, errorReasons, scratchpads, mode, activePaperContext, activeTopicLabel])
+
+  // 派生当前刷题的标题
+  const deriveQuizTitle = useCallback((): string => {
+    if (activePaperContext) {
+      const secText =
+        activePaperContext.section === 'choice'
+          ? ' (单选专练)'
+          : activePaperContext.section === 'blank'
+          ? ' (填空专练)'
+          : activePaperContext.section === 'analysis'
+          ? ' (解答大题)'
+          : ' (真题全卷)'
+      return `${activePaperContext.title}${secText}`
+    }
+    if (activeTopicLabel) {
+      return `专题专练 · ${activeTopicLabel}`
+    }
+    if (questions.length > 0) {
+      const subj = questions[0].subject || '综合科目'
+      return `${subj} · 组卷练习 (${questions.length}题)`
+    }
+    return '考研刷题练习'
+  }, [activePaperContext, activeTopicLabel, questions])
+
+  // 持久化保存当前做题进度
+  const persistCurrentProgress = useCallback((overrideIndex?: number, overrideAnswers?: Record<string, string>) => {
+    if (view !== 'quiz' || questions.length === 0) return
+    const curIdx = overrideIndex !== undefined ? overrideIndex : currentIndex
+    const curAns = overrideAnswers !== undefined ? overrideAnswers : answers
+    const record: QuizProgressRecord = {
+      id: activePaperContext?.paperId || activeTopicLabel || `quiz_${Date.now()}`,
+      title: deriveQuizTitle(),
+      mode,
+      categoryType: activePaperContext ? 'paper' : activeTopicLabel ? 'topic' : 'free',
+      questions,
+      currentIndex: curIdx,
+      answers: curAns,
+      timeElapsed,
+      bookmarkedIds: Array.from(bookmarkedIds),
+      errorReasons,
+      scratchpads,
+      activePaperContext,
+      activeTopicLabel,
+      updatedAt: Date.now(),
+    }
+    saveQuizProgressToStorage(record)
+    setSavedProgress(record)
+  }, [view, questions, currentIndex, answers, timeElapsed, bookmarkedIds, errorReasons, scratchpads, mode, activePaperContext, activeTopicLabel, deriveQuizTitle])
+
+  // 做题中关键状态变化时自动保存（防崩溃/防意外刷新）
+  useEffect(() => {
+    if (view === 'quiz' && questions.length > 0) {
+      persistCurrentProgress()
+    }
+  }, [view, questions, currentIndex, answers, bookmarkedIds, errorReasons, scratchpads, mode, activePaperContext, activeTopicLabel])
+
+  // 页面离开前自动保存一次最新状态
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (view === 'quiz' && sessionStateRef.current.questions.length > 0) {
+        const s = sessionStateRef.current
+        let title = '考研刷题练习'
+        if (s.activePaperContext) {
+          const secText =
+            s.activePaperContext.section === 'choice'
+              ? ' (单选专练)'
+              : s.activePaperContext.section === 'blank'
+              ? ' (填空专练)'
+              : s.activePaperContext.section === 'analysis'
+              ? ' (解答大题)'
+              : ' (真题全卷)'
+          title = `${s.activePaperContext.title}${secText}`
+        } else if (s.activeTopicLabel) {
+          title = `专题专练 · ${s.activeTopicLabel}`
+        } else if (s.questions.length > 0) {
+          title = `${s.questions[0].subject || '综合科目'} · 组卷练习 (${s.questions.length}题)`
+        }
+        const record: QuizProgressRecord = {
+          id: s.activePaperContext?.paperId || s.activeTopicLabel || 'custom_quiz',
+          title,
+          mode: s.mode,
+          categoryType: s.activePaperContext ? 'paper' : s.activeTopicLabel ? 'topic' : 'free',
+          questions: s.questions,
+          currentIndex: s.currentIndex,
+          answers: s.answers,
+          timeElapsed: s.timeElapsed,
+          bookmarkedIds: Array.from(s.bookmarkedIds),
+          errorReasons: s.errorReasons,
+          scratchpads: s.scratchpads,
+          activePaperContext: s.activePaperContext,
+          activeTopicLabel: s.activeTopicLabel,
+          updatedAt: Date.now(),
+        }
+        saveQuizProgressToStorage(record)
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [view])
+
   // (键盘快捷键流已统一定义在下方，包含 A/B/C/D、1/2/3/4、方向键翻题与 Enter 展开解析)
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
-  const handleDomainFilterChange = (domain: 'all' | 'cs_408' | 'math') => {
+  const handleDomainFilterChange = (domain: 'all' | ResourceDomain) => {
     setDomainFilter(domain)
-    if (domain === 'cs_408') {
-      setSelectedSubjects(new Set(ALL_SUBJECTS.filter(s => s.domain === 'cs_408').map(s => s.key)))
-    } else if (domain === 'math') {
-      setSelectedSubjects(new Set(ALL_SUBJECTS.filter(s => s.domain === 'math').map(s => s.key)))
+    if (domain === 'all') {
+      setSelectedSubjects(new Set(availableSubjectInfos.map(s => s.key)))
     } else {
-      setSelectedSubjects(new Set(ALL_SUBJECTS.map(s => s.key)))
+      setSelectedSubjects(new Set(availableSubjectInfos.filter(s => s.domain === domain).map(s => s.key)))
     }
   }
 
@@ -515,6 +795,7 @@ export default function Quiz() {
       totalScore: sectionTotalScore,
       durationMinutes: section === 'all' ? paper.durationMinutes : Math.max(30, mapped.length * 4),
     })
+    setActiveTopicLabel(null)
 
     setQuestions(mapped)
     setCurrentIndex(0)
@@ -532,10 +813,22 @@ export default function Quiz() {
   }, [])
 
   const startQuiz = useCallback(() => {
-
     if (allAvailableQuestions.length === 0) return
     const shuffled = shuffleArray(allAvailableQuestions)
     const selected = shuffled.slice(0, questionCount)
+    setActivePaperContext(null)
+    
+    let topicLabel: string | null = null
+    if (selectedCsChapters.size > 0) {
+      const titles = CS_CHAPTER_MODULES.filter(m => selectedCsChapters.has(m.id)).map(m => m.shortTitle)
+      if (titles.length <= 3) {
+        topicLabel = `408专项 · ${titles.join(' / ')}`
+      } else {
+        topicLabel = `408专项 · ${titles.slice(0, 3).join(' / ')}等${titles.length}个模块`
+      }
+    }
+    setActiveTopicLabel(topicLabel)
+
     setQuestions(selected)
     setCurrentIndex(0)
     setAnswers({})
@@ -549,7 +842,73 @@ export default function Quiz() {
     setScratchpads({})
     setActiveSideTab('palette')
     setView('quiz')
-  }, [allAvailableQuestions, questionCount])
+  }, [allAvailableQuestions, questionCount, selectedCsChapters])
+
+  const startTopicsQuiz = useCallback((
+    topicIds: string[],
+    options: { shuffle: boolean; onlyCustom?: boolean }
+  ) => {
+    const pickedTopics = populatedTopics.filter(t => topicIds.includes(t.id))
+    const mergedMap = new Map<string, ActiveQuizQuestion>()
+    for (const topic of pickedTopics) {
+      for (const q of topic.questions) {
+        if (options.onlyCustom && !(q.isCustom || q.sourceKind === 'custom')) continue
+        if (!mergedMap.has(q.id)) mergedMap.set(q.id, q)
+      }
+    }
+    const list = Array.from(mergedMap.values())
+    if (list.length === 0) return
+
+    const finalQs = options.shuffle ? shuffleArray(list) : list
+    const label =
+      pickedTopics.length === 1
+        ? pickedTopics[0].title
+        : `多专题联合专练 (${pickedTopics.length} 个专题)`
+
+    setActivePaperContext(null)
+    setActiveTopicLabel(label)
+    setQuestions(finalQs)
+    setCurrentIndex(0)
+    setAnswers({})
+    setSelectedOption(null)
+    setBlankInput('')
+    setShowFeedback(false)
+    setShowSteps(false)
+    setTimeElapsed(0)
+    setBookmarkedIds(new Set())
+    setErrorReasons({})
+    setScratchpads({})
+    setActiveSideTab('palette')
+    setView('quiz')
+    try {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } catch {}
+  }, [populatedTopics])
+
+  const startErrorRetestQuiz = useCallback((
+    retestQuestions: ActiveQuizQuestion[],
+    title: string = '📕 错题攻克专属重练卷'
+  ) => {
+    if (!retestQuestions || retestQuestions.length === 0) return
+    setActivePaperContext(null)
+    setActiveTopicLabel(title)
+    setQuestions(retestQuestions)
+    setCurrentIndex(0)
+    setAnswers({})
+    setSelectedOption(null)
+    setBlankInput('')
+    setShowFeedback(false)
+    setShowSteps(false)
+    setTimeElapsed(0)
+    setBookmarkedIds(new Set())
+    setErrorReasons({})
+    setScratchpads({})
+    setActiveSideTab('palette')
+    setView('quiz')
+    try {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } catch {}
+  }, [])
 
   const goToQuestion = (index: number) => {
     if (index < 0 || index >= questions.length) return
@@ -644,28 +1003,40 @@ export default function Quiz() {
       optionsText ? `【题目选项】：\n${optionsText}` : null,
       `【我的作答】：${userAns ? userAns : '（尚未作答 / 存在疑惑）'}`,
       q.answer ? `【标准答案】：${q.answer}` : null,
-      q.explanation ? `【参考解析与定理】：\n${q.explanation}` : null
+      q.explanation ? `【参考解析与定理】：\n${q.explanation}` : null,
+      `【语言与表达习惯强制要求】：必须全程使用符合中文母语考生阅读习惯的简体中文进行深度解析与逻辑推导！即使题目包含英文术语、代码或英文缩写，除专业英文缩写保留外，所有解析推导、破题思路、易错陷阱与技巧必须使用纯正中文阐述，严禁整句英文回答。`
     ].filter(Boolean).join('\n\n')
 
     const defaultInput = userAns && q.answer && userAns.toUpperCase() !== q.answer.toUpperCase()
-      ? `为什么我的选项 ${userAns} 不对？请结合考研定理与本题陷阱详细剖析：`
-      : `请针对这道题的核心考点与解题突破口，为我详细拆解思维推导过程：`
+      ? `为什么我的选项 ${userAns} 不对？请用纯中文结合考研考纲定理与命题陷阱为我详细剖析：`
+      : `请用纯正中文针对这道题的核心考点与解题突破口，为我详细拆解思维推导过程（符合中文考生理解习惯）：`
 
     window.dispatchEvent(new CustomEvent('open-ai-assistant', {
       detail: {
         contextPrompt,
-        defaultInput
+        defaultInput,
+        mode: 'followup',
       }
     }))
   }, [answers])
 
   // UI/UX Pro Max · 全面补齐键盘快捷键流 (Keyboard-First 体验)
-  // 支持 A/B/C/D 或 1/2/3/4 直接选答案；←/→ 翻题；Enter 展开/收起解析
+  // 支持 ⌘J / Ctrl+J 携本题直呼 AI 伴学、A/B/C/D 或 1/2/3/4 直接选答案、←/→ 翻题、Enter 展开/收起解析
   useEffect(() => {
     if (view !== 'quiz' || questions.length === 0) return
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // 遇到系统级修饰键 (Ctrl/Cmd/Alt) 时不拦截，方便用户触发 ⌘J / Ctrl+J
+      // 优先响应 ⌘J / Ctrl+J：携带当前题目上下文立即唤起 AI 助手
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'j') {
+        const curQ = questions[currentIndex]
+        if (curQ) {
+          e.preventDefault()
+          handleAskAI(curQ)
+          return
+        }
+      }
+
+      // 遇到其余系统级修饰键 (Ctrl/Cmd/Alt) 时不拦截
       if (e.ctrlKey || e.metaKey || e.altKey) return
 
       // 如果焦点在输入框、文本域或可编辑区域，不劫持
@@ -716,23 +1087,78 @@ export default function Quiz() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [view, currentIndex, questions, handleOptionSelect, advanceQuestion, goToQuestion])
+  }, [view, currentIndex, questions, handleOptionSelect, advanceQuestion, goToQuestion, handleAskAI])
 
 
-  const handleExitQuiz = useCallback(() => {
+  const handleExitWithOption = useCallback((option: 'save' | 'clear') => {
     if (timerRef.current) clearInterval(timerRef.current)
+    if (option === 'save') {
+      persistCurrentProgress()
+      setSavedProgress(loadSavedQuizProgress())
+    } else {
+      clearQuizProgressFromStorage()
+      setSavedProgress(null)
+    }
     setIsExitModalOpen(false)
     setIsSubmitModalOpen(false)
     setMobileDrawerOpen(false)
     setActivePaperContext(null)
+    setActiveTopicLabel(null)
     setView('start')
     try {
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch {}
+  }, [persistCurrentProgress])
+
+  const handleExitQuiz = useCallback(() => {
+    handleExitWithOption('save')
+  }, [handleExitWithOption])
+
+  const handleResumeSavedProgress = useCallback(() => {
+    if (!savedProgress || !savedProgress.questions || savedProgress.questions.length === 0) return
+
+    setQuestions(savedProgress.questions)
+    setCurrentIndex(savedProgress.currentIndex)
+    setAnswers(savedProgress.answers || {})
+    setTimeElapsed(savedProgress.timeElapsed || 0)
+    setBookmarkedIds(new Set(savedProgress.bookmarkedIds || []))
+    setErrorReasons(savedProgress.errorReasons || {})
+    setScratchpads(savedProgress.scratchpads || {})
+    setMode(savedProgress.mode || 'practice')
+    setActivePaperContext(savedProgress.activePaperContext || null)
+    setActiveTopicLabel(savedProgress.activeTopicLabel || null)
+
+    const curQ = savedProgress.questions[savedProgress.currentIndex]
+    if (curQ) {
+      const curAns = savedProgress.answers?.[curQ.id]
+      setSelectedOption(curAns || null)
+      setBlankInput(curAns || '')
+      setShowFeedback(savedProgress.mode === 'practice' && Boolean(curAns))
+    } else {
+      setSelectedOption(null)
+      setBlankInput('')
+      setShowFeedback(false)
+    }
+
+    setShowSteps(false)
+    setActiveSideTab('palette')
+    setView('quiz')
+    try {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } catch {}
+  }, [savedProgress])
+
+  const handleClearSavedProgress = useCallback(() => {
+    clearQuizProgressFromStorage()
+    setSavedProgress(null)
+    setConfirmClearDraft(false)
   }, [])
 
   const finishQuiz = useCallback(async (overrideAnswers?: Record<string, string>) => {
     if (timerRef.current) clearInterval(timerRef.current)
+    // 正常交卷后清除临时做题草稿
+    clearQuizProgressFromStorage()
+    setSavedProgress(null)
     setIsSubmitModalOpen(false)
     setIsExitModalOpen(false)
     setMobileDrawerOpen(false)
@@ -743,31 +1169,58 @@ export default function Quiz() {
     } catch {}
 
     let correctCount = 0
+    let answeredCount = 0
+    let unansweredCount = 0
     const wrongQuestions: QuizResult['wrongQuestions'] = []
-    const subjectBreakdown: Record<string, { total: number; correct: number }> = {}
+    const subjectBreakdown: Record<string, { total: number; correct: number; answered: number; wrong: number; unanswered: number }> = {}
 
     for (const q of questions) {
       if (!subjectBreakdown[q.subject]) {
-        subjectBreakdown[q.subject] = { total: 0, correct: 0 }
+        subjectBreakdown[q.subject] = { total: 0, correct: 0, answered: 0, wrong: 0, unanswered: 0 }
       }
       subjectBreakdown[q.subject].total++
-      const userAns = finalAnswers[q.id]
-      const isCorrect = userAns && (
-        userAns.trim().toUpperCase() === q.answer.trim().toUpperCase() ||
-        userAns.trim() === q.answer.replace(/[\$\\s]/g, '')
-      )
+      const rawAns = finalAnswers[q.id]
+      const userAns = typeof rawAns === 'string' ? rawAns.trim() : ''
 
-      // 联动考点掌握度热力图
+      // 未作答题：单独统计为未答，绝对不计入错题本或扣减正确率分母中的错题数
+      if (!userAns) {
+        unansweredCount++
+        subjectBreakdown[q.subject].unanswered++
+        continue
+      }
+
+      answeredCount++
+      subjectBreakdown[q.subject].answered++
+
+      let isCorrect = false
+      if (userAns === 'mastered') {
+        isCorrect = true
+      } else if (userAns === 'unmastered') {
+        isCorrect = false
+      } else {
+        isCorrect =
+          userAns.toUpperCase() === q.answer.trim().toUpperCase() ||
+          userAns === q.answer.replace(/[\$\\s]/g, '')
+      }
+
+      // 联动考点掌握度热力图（仅针对已作答题目）
       const masteryKey = (q.tags && q.tags.length > 0) ? q.tags[q.tags.length - 1] : q.subject
-      updateMasteryFromQuizResult(masteryKey, Boolean(isCorrect))
+      updateMasteryFromQuizResult(masteryKey, isCorrect)
 
       if (isCorrect) {
         correctCount++
         subjectBreakdown[q.subject].correct++
+        // 若为错题重练且作答正确，自动更新错题本状态为已斩杀掌握
+        if (q.tags?.includes('错题重练') || q.id.startsWith('err-')) {
+          api.updateErrorNotebookQuestion(q.id, { status: 'mastered' }).then(() => {
+            window.dispatchEvent(new CustomEvent('daily-errors-updated'))
+          }).catch(() => {})
+        }
       } else {
+        subjectBreakdown[q.subject].wrong++
         wrongQuestions.push({
           question: q,
-          userAnswer: userAns || '未作答',
+          userAnswer: userAns === 'unmastered' ? '自评未掌握' : userAns,
           errorReason: errorReasons[q.id],
         })
       }
@@ -775,14 +1228,22 @@ export default function Quiz() {
 
     const localResult: QuizResult = {
       total: questions.length,
+      answered: answeredCount,
+      unanswered: unansweredCount,
       correct: correctCount,
-      wrong: questions.length - correctCount,
+      wrong: wrongQuestions.length,
       timeTaken: timeElapsed,
+      mode,
+      createdAt: new Date().toISOString(),
       subjectBreakdown,
       wrongQuestions,
       summaryPath: '',
     }
     setResult(localResult)
+    setLastSavedResult(localResult)
+    try {
+      localStorage.setItem('cf_last_quiz_result', JSON.stringify(localResult))
+    } catch {}
 
     try {
       const resp = await fetch('/api/quiz/submit', {
@@ -804,7 +1265,16 @@ export default function Quiz() {
       })
       if (resp.ok) {
         const data = await resp.json()
-        setResult((prev) => prev ? { ...prev, summaryPath: data.summaryPath || '' } : prev)
+        setResult((prev) => {
+          const updated = prev ? { ...prev, summaryPath: data.summaryPath || '' } : prev
+          if (updated) {
+            setLastSavedResult(updated)
+            try {
+              localStorage.setItem('cf_last_quiz_result', JSON.stringify(updated))
+            } catch {}
+          }
+          return updated
+        })
       }
     } catch {
       // Local result shown
@@ -836,58 +1306,225 @@ export default function Quiz() {
 
     return (
       <div className="mx-auto max-w-[1520px] w-full min-w-0 space-y-4 sm:space-y-6 pb-36 md:pb-0 animate-fade-in-up">
-        {/* 双模式顶栏切换：历年真题整卷库 vs 考点专项演练 */}
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-2.5 sm:p-3 rounded-2xl border border-neutral-200/85 shadow-2xs">
-          <div className="flex items-center gap-1.5 sm:gap-2">
+        {/* ── 📌 上次刷题进度未完成 · 一键回溯看板 ── */}
+        {savedProgress && (
+          <div className="bento-card rounded-2xl border-2 border-indigo-200/90 bg-gradient-to-r from-indigo-50/80 via-white to-sky-50/70 p-4 sm:p-5 shadow-xs relative overflow-hidden transition-all">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div className="space-y-2 min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-600 text-white shadow-2xs">
+                    <Sparkles className="w-3 h-3" />
+                    检测到上次刷题记录
+                  </span>
+                  <span className="text-[11px] text-slate-500 font-mono flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-slate-400" />
+                    {formatRelativeTime(savedProgress.updatedAt)}
+                  </span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                    savedProgress.mode === 'practice' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'
+                  }`}>
+                    {savedProgress.mode === 'practice' ? '练习模式' : '模考模式'}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 truncate">
+                    {savedProgress.title}
+                  </h3>
+                </div>
+
+                <div className="flex items-center gap-3 sm:gap-6 text-xs text-slate-600 flex-wrap">
+                  <span>
+                    📍 停留进度：<strong className="text-indigo-700 font-bold">第 {savedProgress.currentIndex + 1} 题</strong> / 共 {savedProgress.questions.length} 题
+                  </span>
+                  <span>
+                    ✍️ 已答题数：<strong className="text-emerald-700 font-bold">{Object.keys(savedProgress.answers || {}).length} 题</strong>
+                    <span className="text-slate-400 ml-1">
+                      ({Math.round((Object.keys(savedProgress.answers || {}).length / Math.max(1, savedProgress.questions.length)) * 100)}%)
+                    </span>
+                  </span>
+                  <span>
+                    ⏱️ 累计用时：<strong className="text-slate-700 font-mono">{formatTime(savedProgress.timeElapsed || 0)}</strong>
+                  </span>
+                </div>
+
+                {/* 进度条 */}
+                <div className="w-full max-w-lg bg-slate-200/80 h-2 rounded-full overflow-hidden mt-1">
+                  <div
+                    className="bg-indigo-600 h-full rounded-full transition-all duration-300"
+                    style={{
+                      width: `${Math.min(100, Math.max(4, Math.round(((savedProgress.currentIndex + 1) / Math.max(1, savedProgress.questions.length)) * 100)))}%`
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* 操作按钮区 */}
+              <div className="flex items-center gap-2.5 shrink-0 pt-1 lg:pt-0">
+                <button
+                  type="button"
+                  onClick={handleResumeSavedProgress}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/25 active:scale-95 transition-all cursor-pointer whitespace-nowrap"
+                  title="恢复现场并继续从上次停留题目刷题"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span>继续刷题 (第 {savedProgress.currentIndex + 1} 题)</span>
+                </button>
+
+                {!confirmClearDraft ? (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmClearDraft(true)}
+                    title="清除此刷题进度记录"
+                    className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 active:scale-95 transition-all cursor-pointer whitespace-nowrap"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>清除记录</span>
+                  </button>
+                ) : (
+                  <div className="inline-flex items-center gap-1.5 bg-rose-50 border border-rose-200 rounded-xl p-1 animate-in fade-in">
+                    <button
+                      type="button"
+                      onClick={handleClearSavedProgress}
+                      className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white cursor-pointer active:scale-95 transition-colors whitespace-nowrap"
+                    >
+                      确认清除
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmClearDraft(false)}
+                      className="px-2 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-200/60 cursor-pointer transition-colors whitespace-nowrap"
+                    >
+                      取消
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 三模式顶栏切换：历年真题整卷库 / 题型归纳专项突破 / 学科自由组卷 */}
+        <div className="flex flex-wrap items-center justify-between gap-2.5 bg-white p-2 sm:p-3 rounded-2xl border border-neutral-200/85 shadow-2xs min-w-0 max-w-full">
+          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar max-w-full py-0.5">
             <button
               type="button"
               onClick={() => setHubTab('papers')}
-              className={`flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              className={`shrink-0 flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
                 hubTab === 'papers'
                   ? 'bg-neutral-900 text-white shadow-xs'
                   : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
               }`}
             >
-              <BookOpen className="w-4 h-4 text-amber-400" />
-              <span>📑 历年真题整卷库</span>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${
+              <BookOpen className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>📑 真题与模拟整卷库</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
                 hubTab === 'papers' ? 'bg-amber-400/20 text-amber-300' : 'bg-neutral-100 text-neutral-500'
               }`}>
-                {ALL_EXAM_PAPERS.length} 套真实卷
+                {ALL_EXAM_PAPERS.length}套
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setHubTab('categories')}
+              className={`shrink-0 flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+                hubTab === 'categories'
+                  ? 'bg-neutral-900 text-white shadow-xs'
+                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+              }`}
+            >
+              <Layers className="w-4 h-4 text-indigo-400 shrink-0" />
+              <span>🗂️ 题型归纳专项</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
+                hubTab === 'categories' ? 'bg-indigo-400/25 text-indigo-200' : 'bg-indigo-50 text-indigo-600'
+              }`}>
+                {populatedTopics.length}专项
               </span>
             </button>
 
             <button
               type="button"
               onClick={() => setHubTab('topics')}
-              className={`flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              className={`shrink-0 flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
                 hubTab === 'topics'
                   ? 'bg-neutral-900 text-white shadow-xs'
                   : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
               }`}
             >
-              <Sparkles className="w-4 h-4 text-accent-orange" />
-              <span>🎯 章节考点专项演练</span>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${
+              <Sparkles className="w-4 h-4 text-accent-orange shrink-0" />
+              <span>🎯 学科自由组卷</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
                 hubTab === 'topics' ? 'bg-orange-500/20 text-orange-300' : 'bg-neutral-100 text-neutral-500'
               }`}>
-                {availableCount} 题
+                {availableCount}题
               </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setHubTab('errors')}
+              className={`shrink-0 flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap ${
+                hubTab === 'errors'
+                  ? 'bg-rose-600 text-white shadow-xs'
+                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+              }`}
+            >
+              <Flame className="w-4 h-4 text-rose-400 shrink-0" />
+              <span>📕 错题攻克中心</span>
+              {errorStats && errorStats.active > 0 && (
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
+                  hubTab === 'errors' ? 'bg-white text-rose-700' : 'bg-rose-100 text-rose-700 animate-pulse'
+                }`}>
+                  🔥 {errorStats.active}
+                </span>
+              )}
             </button>
           </div>
 
-          <div className="text-[11px] text-neutral-400 hidden sm:block">
-            {hubTab === 'papers' ? '支持整卷模考、单选专刷与解答大题专项演练' : '支持按学科考点组卷抽题自测'}
+          <div className="text-[11px] text-neutral-400 hidden lg:block">
+            {hubTab === 'papers'
+              ? '支持真题/模拟分类筛选、全卷模考、单选专刷与解答大题演练'
+              : hubTab === 'categories'
+              ? '按极限、线面积分、重积分、特征值等高频考法专题专刷'
+              : hubTab === 'errors'
+              ? '全生命周期闭环管理：错因病灶诊断、一键重测组卷、现场答题与打印刷题纸'
+              : '支持按学科自由筛选抽题自测'}
           </div>
         </div>
 
         {hubTab === 'papers' ? (
-          /* 历年真题整卷库视图（带卷种/年份筛选与三大练习入口） */
-          <Suspense fallback={<div className="p-12 text-center text-xs text-neutral-400">正在装载历年真题整卷库...</div>}>
+          /* 真题与模拟整卷库视图（带卷种/性质/年份筛选与三大练习入口） */
+          <Suspense fallback={<div className="p-12 text-center text-xs text-neutral-400">正在装载整卷试卷库...</div>}>
             <ExamPaperHubView onStartPaper={startPaperQuiz} />
           </Suspense>
+        ) : hubTab === 'categories' ? (
+          /* 题型归纳专项突破视图（线面积分/极限/重积分/线代/概率/408/个人导入专题） */
+          <Suspense fallback={<div className="p-12 text-center text-xs text-neutral-400">正在归类汇总高频题型专项...</div>}>
+            <TopicCategoryHubView
+              categories={populatedTopics}
+              mathCategory={mathCategory}
+              onMathCategoryChange={setMathCategory}
+              mode={mode}
+              onModeChange={setMode}
+              onStartTopics={startTopicsQuiz}
+              onOpenImport={(tab = 'import_quiz') => {
+                setDefaultModalTab(tab)
+                setImportModalOpen(true)
+              }}
+            />
+          </Suspense>
+        ) : hubTab === 'errors' ? (
+          /* 新一代全闭环错题攻克中心视图 */
+          <Suspense fallback={<div className="p-12 text-center text-xs text-neutral-400">正在装载错题攻克中心...</div>}>
+            <ErrorNotebookHubView
+              onStartRetest={startErrorRetestQuiz}
+              onAskAI={(err) => handleAskAI(convertErrorToActiveQuestion(err))}
+              onGenerateVariants={(err) => handleGenerateVariants(convertErrorToActiveQuestion(err))}
+            />
+          </Suspense>
         ) : (
-          /* 章节考点专项演练原视图 */
+          /* 学科自由组卷原视图 */
           <>
         {/* Subframe Workspace Header */}
         <div className="bento-card rounded-2xl border border-neutral-200/85 bg-white p-5 sm:p-7 shadow-xs">
@@ -905,12 +1542,24 @@ export default function Quiz() {
               </p>
             </div>
 
-            <div className="hidden md:flex items-center gap-3 shrink-0">
+            <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+              {lastSavedResult && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setResult(lastSavedResult)
+                    setView('results')
+                  }}
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-indigo-200 bg-indigo-50/90 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  <span>📊 最近交卷报告 ({lastSavedResult.total > 0 ? Math.round((lastSavedResult.correct / lastSavedResult.total) * 100) : 0}%)</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={startQuiz}
                 disabled={availableCount === 0}
-                className="subframe-btn-black px-6 py-2.5 text-xs font-semibold cursor-pointer disabled:opacity-50"
+                className="hidden md:inline-flex subframe-btn-black px-6 py-2.5 text-xs font-semibold cursor-pointer disabled:opacity-50"
               >
                 {availableCount > 0 ? `开始做题 (${effectiveCount} 题) →` : '暂无匹配试题'}
               </button>
@@ -922,7 +1571,7 @@ export default function Quiz() {
         <div className="bento-card rounded-xl p-3.5 flex flex-wrap items-center gap-3 justify-between">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-medium text-neutral-500 mr-1">学科领域:</span>
-            <div className="flex rounded-lg border border-neutral-200/80 bg-neutral-100/90 p-1">
+            <div className="flex flex-wrap rounded-lg border border-neutral-200/80 bg-neutral-100/90 p-1 gap-0.5">
               <button
                 onClick={() => handleDomainFilterChange('all')}
                 className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all cursor-pointer ${
@@ -947,6 +1596,14 @@ export default function Quiz() {
               >
                 🖥️ 408 计算机
               </button>
+              <button
+                onClick={() => handleDomainFilterChange('general')}
+                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-all cursor-pointer ${
+                  domainFilter === 'general' ? 'bg-white text-neutral-900 shadow-xs font-semibold' : 'text-neutral-600 hover:text-neutral-900'
+                }`}
+              >
+                📚 其他专业课
+              </button>
             </div>
 
             {(domainFilter === 'math' || domainFilter === 'all') && (
@@ -967,18 +1624,34 @@ export default function Quiz() {
             )}
           </div>
 
-          <button
-            onClick={() => setSelectedSubjects(new Set(displayedSubjects.map(s => s.key)))}
-            className="text-xs font-medium text-neutral-700 hover:text-neutral-900 hover:underline cursor-pointer"
-          >
-            全选当前组学科
-          </button>
+          <div className="flex items-center gap-2.5">
+            <Link
+              to="/english"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold border border-indigo-200/60 transition-colors shadow-2xs"
+            >
+              <span>📖 考研英语专攻</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
+            <Link
+              to="/politics"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-semibold border border-rose-200/60 transition-colors shadow-2xs"
+            >
+              <span>🏛️ 考研政治专攻</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
+            <button
+              onClick={() => setSelectedSubjects(new Set(displayedSubjects.map(s => s.key)))}
+              className="text-xs font-medium text-neutral-700 hover:text-neutral-900 hover:underline cursor-pointer ml-1"
+            >
+              全选当前组学科
+            </button>
+          </div>
         </div>
 
         {/* Subjects Cards Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3.5">
           {displayedSubjects.map((s) => {
-            const count = [...builtInQuestions, ...customQuestions].filter(q => {
+            const count = unifiedQuestionPool.filter(q => {
               if (q.subject !== s.key) return false
               if (q.domain === 'math' && mathCategory !== 'all') {
                 if (q.scope && !q.scope.includes(mathCategory)) return false
@@ -1013,6 +1686,228 @@ export default function Quiz() {
             )
           })}
         </div>
+
+        {/* ── 🖥️ 408 章节知识点分模块专项练习（线性表、图论、排序等章节划分） ── */}
+        {(domainFilter === 'cs_408' ||
+          domainFilter === 'all' ||
+          Array.from(selectedSubjects).some((sub) =>
+            ['数据结构', '计算机组成原理', '操作系统', '计算机网络'].includes(sub as string)
+          )) && (
+          <div className="bento-card rounded-2xl border border-blue-200/90 bg-gradient-to-b from-blue-50/40 via-white to-white p-4 sm:p-5 shadow-xs space-y-3.5 animate-in fade-in">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-blue-100/80">
+              <div className="min-w-0">
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-100/80 text-blue-800 text-[11px] font-bold mb-1">
+                  <Layers className="w-3.5 h-3.5 text-blue-600" />
+                  <span>408 大纲知识点分模块专练</span>
+                </div>
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-1.5">
+                  <span>考研 408 核心章节模块细分</span>
+                  <span className="text-xs font-normal text-slate-500">
+                    （按大纲精准划分：线性表、树、图、排序、Cache、PV、TCP等）
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                  可单选或组合勾选细分章节；勾选后抽题将精确聚焦于所选模块，不勾选时默认整科全量题库演练。
+                </p>
+              </div>
+
+              {/* 快捷预设操作按钮组 */}
+              <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCsChapters(new Set(['cs-ds-linear', 'cs-ds-graph', 'cs-ds-sort']))
+                    setActiveCsSubjectTab('数据结构')
+                    setSelectedSubjects((prev) => new Set(prev).add('数据结构'))
+                  }}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200/90 text-[11px] font-bold transition-all cursor-pointer shadow-2xs active:scale-95"
+                  title="一键只刷数据结构最高频考点：线性表 + 图论 + 排序"
+                >
+                  <Flame className="w-3.5 h-3.5 text-orange-500" />
+                  <span>🔥 高频三大件(线性表+图+排序)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const currentIds = getCsChapterModules(activeCsSubjectTab).map((m) => m.id)
+                    setSelectedCsChapters((prev) => {
+                      const next = new Set(prev)
+                      currentIds.forEach((id) => next.add(id))
+                      return next
+                    })
+                    setSelectedSubjects((prev) => new Set(prev).add(activeCsSubjectTab))
+                  }}
+                  className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-medium transition-all cursor-pointer active:scale-95"
+                >
+                  ⚡ 全选本门章节
+                </button>
+
+                {selectedCsChapters.size > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCsChapters(new Set())}
+                    className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-[11px] font-medium transition-all cursor-pointer active:scale-95"
+                  >
+                    🔄 清空细分(刷整科)
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* 408 四大学科二级切换选项卡 */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {(
+                [
+                  { key: '数据结构' as const, emoji: '🧮', count: 7 },
+                  { key: '计算机组成原理' as const, emoji: '🖥️', count: 6 },
+                  { key: '操作系统' as const, emoji: '⚙️', count: 7 },
+                  { key: '计算机网络' as const, emoji: '🌐', count: 5 },
+                ] as const
+              ).map((tab) => {
+                const isSelectedTab = activeCsSubjectTab === tab.key
+                const activeCountInThisSubject = getCsChapterModules(tab.key).filter((m) =>
+                  selectedCsChapters.has(m.id)
+                ).length
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setActiveCsSubjectTab(tab.key)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      isSelectedTab
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'bg-white border border-slate-200 text-slate-650 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span>{tab.emoji}</span>
+                    <span>{tab.key}</span>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                        isSelectedTab
+                          ? 'bg-white/20 text-white'
+                          : activeCountInThisSubject > 0
+                          ? 'bg-blue-100 text-blue-700 font-bold'
+                          : 'bg-slate-100 text-slate-500'
+                      }`}
+                    >
+                      {activeCountInThisSubject > 0
+                        ? `已选 ${activeCountInThisSubject}/${tab.count}`
+                        : `${tab.count}章`}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* 当前学科下的章节模块卡片列表 */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2.5">
+              {getCsChapterModules(activeCsSubjectTab).map((mod) => {
+                const isChecked = selectedCsChapters.has(mod.id)
+                const qCount = csChapterQuestionCounts.get(mod.id) || 0
+                return (
+                  <button
+                    key={mod.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedCsChapters((prev) => {
+                        const next = new Set(prev)
+                        if (next.has(mod.id)) {
+                          next.delete(mod.id)
+                        } else {
+                          next.add(mod.id)
+                        }
+                        return next
+                      })
+                      // 点击某模块时，确保所属的主学科被勾选
+                      setSelectedSubjects((prev) => new Set(prev).add(mod.subject))
+                    }}
+                    className={`rounded-xl border p-2.5 sm:p-3 text-left transition-all relative flex flex-col justify-between gap-1.5 cursor-pointer shadow-2xs ${
+                      isChecked
+                        ? 'bg-blue-50/80 border-blue-500 ring-2 ring-blue-500/25 shadow-xs'
+                        : 'bg-white border-slate-200/90 hover:border-blue-300 hover:bg-slate-50/60'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-1">
+                      <span className="text-xl shrink-0">{mod.emoji}</span>
+                      <div className="flex items-center gap-1">
+                        {mod.isHot && (
+                          <span className="text-[9px] font-bold px-1 rounded bg-amber-100 text-amber-800 shrink-0">
+                            🔥
+                          </span>
+                        )}
+                        <span
+                          className={`w-4 h-4 rounded-md border flex items-center justify-center text-[10px] font-bold shrink-0 transition-colors ${
+                            isChecked
+                              ? 'bg-blue-600 border-blue-600 text-white'
+                              : 'bg-white border-slate-300 text-transparent'
+                          }`}
+                        >
+                          ✓
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="min-w-0">
+                      <div
+                        className={`text-xs font-bold truncate ${
+                          isChecked ? 'text-blue-900' : 'text-slate-800'
+                        }`}
+                      >
+                        {mod.shortTitle}
+                      </div>
+                      <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                        {qCount} 题可用
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-0.5 mt-0.5">
+                      {mod.keywords.slice(0, 2).map((kw) => (
+                        <span
+                          key={kw}
+                          className="text-[9px] px-1 py-0.2 rounded bg-slate-100 text-slate-500 truncate max-w-full"
+                        >
+                          #{kw}
+                        </span>
+                      ))}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* 选中章节状态反馈提示 */}
+            {selectedCsChapters.size > 0 && (
+              <div className="rounded-xl bg-blue-50 border border-blue-200/90 px-3.5 py-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span className="text-blue-900 font-medium">
+                    已精确选定{' '}
+                    <strong className="font-bold text-blue-700">
+                      {selectedCsChapters.size} 个 408 核心章节模块
+                    </strong>
+                    （涵盖{' '}
+                    {Array.from(selectedCsChapters)
+                      .map((id) => CS_CHAPTER_MODULES.find((m) => m.id === id)?.shortTitle)
+                      .filter(Boolean)
+                      .slice(0, 4)
+                      .join('、')}
+                    {selectedCsChapters.size > 4 ? ` 等` : ''}），当前题池匹配共{' '}
+                    <strong className="font-bold text-blue-700">{availableCount} 题</strong>。
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedCsChapters(new Set())}
+                  className="text-xs text-blue-700 hover:text-blue-900 hover:underline font-semibold cursor-pointer shrink-0"
+                >
+                  取消限定，刷整科题目 →
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Mode & Settings Config Cards */}
         <div className="grid gap-5 md:grid-cols-2">
@@ -1170,13 +2065,13 @@ export default function Quiz() {
           </div>
         </div>
 
-        {/* 📱 移动端悬浮吸底开刷栏（选完科目随时一键开始，无需滚回页面顶部） */}
-        <div className="md:hidden fixed bottom-[calc(3.85rem+env(safe-area-inset-bottom,0px))] left-2.5 right-2.5 z-30 rounded-2xl bg-slate-900/95 text-white px-4 py-2.5 shadow-xl backdrop-blur-xl flex items-center justify-between gap-3 border border-white/10">
+        {/* 📱 移动端悬浮吸底开刷栏 (精致微缩自适应) */}
+        <div className="md:hidden fixed bottom-[calc(3.85rem+env(safe-area-inset-bottom,0px))] left-2.5 right-2.5 z-30 rounded-xl bg-slate-900/95 text-white px-3 py-2 shadow-xl backdrop-blur-xl flex items-center justify-between gap-2.5 border border-white/10">
           <div className="min-w-0">
-            <div className="text-xs font-bold truncate">
+            <div className="text-[11.5px] font-bold truncate">
               {mode === 'practice' ? '📖 练习模式' : '📋 考试模式'} · 抽 {effectiveCount} 题
             </div>
-            <div className="text-[10px] text-slate-400 truncate">
+            <div className="text-[9.5px] text-slate-400 truncate">
               已选 {selectedSubjects.size} 门科目（题池共 {availableCount} 题）
             </div>
           </div>
@@ -1184,45 +2079,78 @@ export default function Quiz() {
             type="button"
             onClick={startQuiz}
             disabled={availableCount === 0}
-            className="shrink-0 inline-flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-indigo-600/30 active:scale-95 transition-all cursor-pointer whitespace-nowrap min-w-[96px]"
+            className="shrink-0 inline-flex items-center justify-center gap-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 px-3 py-1.5 text-[11px] font-bold text-white shadow-md shadow-indigo-600/30 active:scale-95 transition-all cursor-pointer whitespace-nowrap min-w-[88px]"
           >
             <Flame className="h-3.5 w-3.5 text-amber-300" />
             <span className="whitespace-nowrap font-bold">立即开始</span>
-            <ArrowRight className="h-3.5 w-3.5" />
+            <ArrowRight className="h-3 w-3" />
           </button>
         </div>
 
-        {/* 自定义安全退出做题确认弹窗（彻底消除浏览器原生 confirm 拦截与静默无响应） */}
+        {/* 自定义安全退出做题选择弹窗（支持用户选择保存记录或清除记录） */}
         {isExitModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
-            <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl border border-slate-200 space-y-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+            <div className="w-full max-w-md rounded-2xl bg-white p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-lg shrink-0">
                   ⚠️
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">确定退出当前做题？</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">做题进度已实时自动缓存，随时可返回继续</p>
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900">确定退出当前刷题？</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">您可以保留进度以便下次回溯继续，也可以彻底清除记录。</p>
                 </div>
               </div>
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1">
-                <p>• 当前进度：已完成 {Object.keys(answers).length} / {questions.length} 题</p>
-                <p>• 累计用时：{formatTime(timeElapsed)}</p>
+
+              {/* 当前刷题进度摘要 */}
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">试卷 / 专题：</span>
+                  <strong className="text-indigo-700 font-bold truncate max-w-[220px]">
+                    {activeTopicLabel || activePaperContext?.title || (questions[0] ? `${questions[0].subject} · 组卷` : '刷题练习')}
+                  </strong>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">停留题号：</span>
+                  <strong className="text-slate-800">第 {currentIndex + 1} 题 / 共 {questions.length} 题</strong>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">已作答进度：</span>
+                  <strong className="text-emerald-700">
+                    {Object.keys(answers).length} 题 ({Math.round((Object.keys(answers).length / Math.max(1, questions.length)) * 100)}%)
+                  </strong>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">做题累计用时：</span>
+                  <strong className="font-mono text-slate-700">{formatTime(timeElapsed)}</strong>
+                </div>
               </div>
-              <div className="flex items-center justify-end gap-2 pt-1">
+
+              {/* 退出选项选择区 */}
+              <div className="space-y-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => handleExitWithOption('save')}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm transition-all cursor-pointer active:scale-98"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>保存进度并退出 (推荐，下次可回溯继续)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleExitWithOption('clear')}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-all cursor-pointer active:scale-98"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>清除记录并退出 (放弃本次进度，不再保留)</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => setIsExitModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                  className="w-full py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                 >
-                  继续做题
-                </button>
-                <button
-                  type="button"
-                  onClick={handleExitQuiz}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-xs transition-colors cursor-pointer"
-                >
-                  确认退出
+                  取消，继续做题
                 </button>
               </div>
             </div>
@@ -1363,10 +2291,10 @@ export default function Quiz() {
                         </div>
 
                         {/* 题干 */}
-                        <div className="text-slate-900 font-medium leading-relaxed"><MarkdownRenderer content={vq.question} /></div>
+                        <div className="text-slate-900 font-medium leading-relaxed min-w-0 max-w-full quiz-stem-scroll"><MarkdownRenderer content={vq.question} /></div>
 
                         {/* 选项组 */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 font-sans">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 font-sans min-w-0">
                           {vq.options && Object.entries(vq.options).map(([optKey, optVal]) => {
                             const isPicked = chosen === optKey
                             return (
@@ -1377,7 +2305,7 @@ export default function Quiz() {
                                   setVariantAnswers(prev => ({ ...prev, [vq.id]: optKey }))
                                   setVariantShowExplanation(prev => ({ ...prev, [vq.id]: true }))
                                 }}
-                                className={`text-left p-2.5 rounded-xl text-xs font-medium border transition-all cursor-pointer flex items-center gap-2 ${
+                                className={`text-left p-2.5 rounded-xl text-xs font-medium border transition-all cursor-pointer flex items-start gap-2 min-w-0 max-w-full overflow-hidden ${
                                   isPicked
                                     ? isCorrect
                                       ? 'bg-emerald-50 border-emerald-400 text-emerald-950 font-bold shadow-2xs'
@@ -1385,14 +2313,16 @@ export default function Quiz() {
                                     : 'bg-slate-50/70 border-slate-200/80 text-slate-700 hover:bg-slate-100/80'
                                 }`}
                               >
-                                <span className={`w-5 h-5 rounded-lg flex items-center justify-center font-bold text-[11px] shrink-0 ${
+                                <span className={`w-5 h-5 rounded-lg flex items-center justify-center font-bold text-[11px] shrink-0 mt-0.5 ${
                                   isPicked
                                     ? isCorrect ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'
                                     : 'bg-white border border-slate-200 text-slate-600'
                                 }`}>
                                   {optKey}
                                 </span>
-                                <span className="leading-snug">{String(optVal)}</span>
+                                <span className="leading-snug flex-1 min-w-0 quiz-option-scroll">
+                                  <MarkdownRenderer content={String(optVal)} inline />
+                                </span>
                               </button>
                             )
                           })}
@@ -1400,11 +2330,13 @@ export default function Quiz() {
 
                         {/* 解析与考点总结 */}
                         {variantShowExplanation[vq.id] && (
-                          <div className="mt-2.5 p-3 rounded-xl bg-amber-50/70 border border-amber-200/80 text-xs space-y-1.5 animate-in fade-in">
+                          <div className="mt-2.5 p-3 rounded-xl bg-amber-50/70 border border-amber-200/80 text-xs space-y-1.5 animate-in fade-in min-w-0 max-w-full overflow-x-auto">
                             <div className="font-bold text-amber-900 flex items-center gap-1">
                               <span>💡 考点命题深度解析：</span>
                             </div>
-                            <p className="text-slate-700 leading-relaxed font-sans">{vq.explanation}</p>
+                            <div className="text-slate-700 leading-relaxed font-sans min-w-0 quiz-stem-scroll">
+                              <MarkdownRenderer content={vq.explanation} />
+                            </div>
                           </div>
                         )}
                       </div>
@@ -1418,9 +2350,10 @@ export default function Quiz() {
                 <button
                   type="button"
                   onClick={() => {
-                    const promptText = `我在做题中心刷题时遇到了这道关于「${variantSourceQ.chapter || variantSourceQ.subject}」的错题：\n> "${variantSourceQ.question}"\n\n请老师帮我详细剖析该考点的命题本质、高频设坑方式与秒杀解题技巧！`
+                    const promptText = `我在做题中心刷题时遇到了这道关于「${variantSourceQ.chapter || variantSourceQ.subject}」的错题：\n> "${variantSourceQ.question}"\n\n请老师用纯正中文帮我详细剖析该考点的命题本质、高频设坑方式与秒杀解题技巧（严格符合中文母语回答习惯）！`
                     sessionStorage.setItem('pending_chat_prompt', promptText)
-                    window.location.href = '/chat'
+                    sessionStorage.setItem('prefilled_chat_prompt', promptText)
+                    window.location.href = `/chat?prompt=${encodeURIComponent(promptText)}&auto=1&mode=followup`
                   }}
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 transition-colors cursor-pointer"
                 >
@@ -1463,8 +2396,8 @@ export default function Quiz() {
     return (
       <div className="mx-auto max-w-[1560px] w-full min-w-0 space-y-3 sm:space-y-4 pb-28 lg:pb-0 animate-fade-in-up">
         {/* ── 📱 移动端专属微型刷题控制条 (专为手机单手设计) ── */}
-        <div className="sm:hidden bento-card rounded-2xl bg-white px-3 py-2 flex items-center justify-between gap-1.5 shadow-xs border border-slate-200/90 relative">
-          <div className="flex items-center gap-1.5 min-w-0">
+        <div className="sm:hidden bento-card rounded-2xl bg-white px-3 py-2 flex items-center justify-between gap-1.5 shadow-xs border border-slate-200/90 relative min-w-0 max-w-full">
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
             <button
               onClick={() => setIsExitModalOpen(true)}
               className="text-[11px] text-slate-600 hover:text-slate-900 flex items-center gap-0.5 font-bold cursor-pointer active:scale-95 shrink-0"
@@ -1475,7 +2408,7 @@ export default function Quiz() {
             </button>
             <span className="text-slate-300 text-xs shrink-0">|</span>
             <span className="text-xs font-bold text-slate-800 truncate">
-              {currentQ.subject}
+              {activeTopicLabel || activePaperContext?.title || currentQ.subject}
             </span>
           </div>
 
@@ -1514,9 +2447,9 @@ export default function Quiz() {
             <span className="text-xs font-bold text-slate-800 truncate">
               {currentQ.subject}
             </span>
-            {currentQ.chapter && (
-              <span className="text-[11px] text-slate-500 hidden sm:inline truncate">
-                · {currentQ.chapter}
+            {(activeTopicLabel || currentQ.chapter) && (
+              <span className="text-[11px] text-slate-500 hidden sm:inline truncate max-w-[260px]">
+                · {activeTopicLabel || currentQ.chapter}
               </span>
             )}
           </div>
@@ -1599,10 +2532,10 @@ export default function Quiz() {
 
 
         {/* Dual-Panel Grid Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1.22fr_0.78fr] gap-5 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[1.22fr_0.78fr] gap-5 items-start min-w-0 max-w-full">
           {/* ───────────────── LEFT PANEL: Question & Solution ───────────────── */}
-          <div className="space-y-3.5 sm:space-y-4 min-w-0">
-            <div className="rounded-2xl sm:rounded-3xl border border-slate-200/60 bg-white shadow-xs p-3.5 sm:p-8 space-y-3.5 sm:space-y-5 relative">
+          <div className="space-y-3.5 sm:space-y-4 min-w-0 max-w-full">
+            <div className="rounded-2xl sm:rounded-3xl border border-slate-200/60 bg-white shadow-xs p-3.5 sm:p-8 space-y-3.5 sm:space-y-5 relative min-w-0 max-w-full overflow-hidden">
               {/* Floating Canvas Action Pill (Subframe Screen 5 Replica) */}
               <div className="absolute right-4 top-4 z-10 hidden sm:inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-neutral-50/90 border border-neutral-200/80 text-neutral-600 text-[11px] shadow-2xs">
                 <button
@@ -1627,8 +2560,8 @@ export default function Quiz() {
               </div>
 
               {/* Question Meta Badges */}
-              <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-3.5">
-                <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3 min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 min-w-0">
                   <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
                     currentQ.difficulty === '简单' ? 'bg-emerald-100 text-emerald-700' :
                     currentQ.difficulty === '中等' ? 'bg-amber-100 text-amber-700' :
@@ -1641,6 +2574,18 @@ export default function Quiz() {
                     {currentQ.type === 'blank' ? '填空题' : currentQ.type === 'analysis' ? '解答题' : '单选题'}
                   </span>
 
+                  {(() => {
+                    const topicId = classifyQuestionTopicId(currentQ)
+                    const mod = topicId ? CS_CHAPTER_MODULES.find((m) => m.id === topicId) : null
+                    const label = mod ? `${mod.emoji} ${mod.shortTitle}` : currentQ.chapter
+                    if (!label) return null
+                    return (
+                      <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200/80 text-blue-700">
+                        {label}
+                      </span>
+                    )
+                  })()}
+
                   {currentQ.scope && (
                     <span className="text-[11px] text-slate-500 font-medium bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-md">
                       适用：{currentQ.scope.join(' / ')}
@@ -1648,14 +2593,14 @@ export default function Quiz() {
                   )}
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     type="button"
                     onClick={() => handleAskAI(currentQ)}
                     title="唤起双核 AI 伴学抽屉追问此题（快捷键 ⌘J / Ctrl+J）"
-                    className="p-1.5 px-2.5 rounded-xl text-indigo-700 bg-indigo-50/90 border border-indigo-200/90 hover:bg-indigo-100 hover:border-indigo-300 transition-all text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95"
+                    className="p-1.5 px-2.5 rounded-xl text-indigo-700 bg-indigo-50/90 border border-indigo-200/90 hover:bg-indigo-100 hover:border-indigo-300 transition-all text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-2xs active:scale-95 whitespace-nowrap"
                   >
-                    <Sparkles size={13} className="text-indigo-600" />
+                    <Sparkles size={13} className="text-indigo-600 shrink-0" />
                     <span>✨ 追问 AI</span>
                     <kbd className="hidden sm:inline-block text-[9px] font-mono text-indigo-500 bg-white/90 border border-indigo-200 rounded px-1 py-0.2">⌘J</kbd>
                   </button>
@@ -1663,7 +2608,7 @@ export default function Quiz() {
                   <button
                     onClick={() => toggleBookmark(currentQ.id)}
                     title={isBookmarked ? '取消标星' : '标星关注此题'}
-                    className={`p-1.5 rounded-xl transition-colors cursor-pointer ${
+                    className={`p-1.5 rounded-xl transition-colors cursor-pointer shrink-0 ${
                       isBookmarked ? 'text-amber-500 bg-amber-50' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
                     }`}
                   >
@@ -1673,14 +2618,14 @@ export default function Quiz() {
               </div>
 
               {/* Question Text (KaTeX Rendered) */}
-              <div className="text-[15px] sm:text-base font-medium text-slate-900 leading-[1.75] min-h-[4rem] academic-body">
+              <div className="text-[15px] sm:text-base font-medium text-slate-900 leading-[1.78] min-h-[4rem] academic-body min-w-0 max-w-full quiz-stem-scroll">
                 <MarkdownRenderer content={currentQ.question} />
               </div>
 
               {/* Answering Area */}
               {hasOptions ? (
                 /* Choice Options (选择题选项) */
-                <div className="space-y-2 sm:space-y-3 pt-1.5">
+                <div className="space-y-2 sm:space-y-3 pt-1.5 min-w-0 max-w-full">
                   {optionKeys.map((key) => {
                     const optionText = currentQ.options![key]
                     if (!optionText) return null
@@ -1705,7 +2650,7 @@ export default function Quiz() {
                         onClick={() => handleOptionSelect(key)}
                         disabled={mode === 'practice' && showFeedback}
                         aria-label={`选项 ${key}: ${optionText}`}
-                        className={`w-full text-left rounded-xl sm:rounded-2xl border px-3 py-2.5 sm:px-4 sm:py-3.5 transition-all duration-150 group flex items-start gap-2.5 sm:gap-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${btnStyle} ${
+                        className={`w-full min-w-0 max-w-full overflow-hidden text-left rounded-xl sm:rounded-2xl border px-3 py-2.5 sm:px-4 sm:py-3.5 transition-all duration-150 group flex items-start gap-2.5 sm:gap-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${btnStyle} ${
                           mode === 'practice' && showFeedback
                             ? 'cursor-default'
                             : 'cursor-pointer hover:scale-[1.006] active:scale-[0.99] hover:shadow-sm'
@@ -1720,7 +2665,7 @@ export default function Quiz() {
                           {key}
                         </span>
 
-                        <div className="flex-1 text-sm pt-0.5 leading-relaxed">
+                        <div className="flex-1 min-w-0 text-sm pt-0.5 leading-relaxed quiz-option-scroll">
                           <MarkdownRenderer content={optionText} inline />
                         </div>
 
@@ -1744,9 +2689,9 @@ export default function Quiz() {
                 </div>
               ) : currentQ.type === 'analysis' ? (
                 /* Comprehensive Analysis / Proof Question Area (综合解答与大题专练) */
-                <div className="p-4 sm:p-5 rounded-2xl border border-neutral-200/90 bg-neutral-50/70 space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200/70 pb-3">
-                    <div className="flex items-center gap-2">
+                <div className="p-3.5 sm:p-5 rounded-2xl border border-neutral-200/90 bg-neutral-50/70 space-y-4 min-w-0 max-w-full overflow-hidden">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200/70 pb-3 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 min-w-0">
                       <span className="text-xs font-bold text-neutral-800 flex items-center gap-1.5">
                         <span>✍️ 综合解答题</span>
                         {currentQ.score && (
@@ -1758,7 +2703,7 @@ export default function Quiz() {
                       <span className="text-[11px] text-neutral-400">（请在草稿纸或下方记录关键推导步骤）</span>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2 min-w-0">
                       {currentQ.domain === 'cs_408' && (currentQ.subject === '数据结构' || (currentQ.tags && currentQ.tags.includes('算法大题'))) && (
                         <button
                           type="button"
@@ -1784,7 +2729,7 @@ export default function Quiz() {
                   </div>
 
                   {/* 大题推导与作答思路草稿 */}
-                  <div>
+                  <div className="min-w-0">
                     <label className="block text-xs font-medium text-neutral-600 mb-1.5">
                       解题思路、步骤推导或代码草稿：
                     </label>
@@ -1796,23 +2741,23 @@ export default function Quiz() {
                         setScratchpads(prev => ({ ...prev, [currentQ.id]: val }))
                       }}
                       placeholder="在此记录推导的关键步骤、辅助线、特征方程、定理依据或算法核心逻辑..."
-                      className="w-full bg-white border border-neutral-300 rounded-xl p-3 text-xs text-neutral-900 outline-none focus:border-neutral-900 font-mono leading-relaxed resize-y"
+                      className="w-full min-w-0 bg-white border border-neutral-300 rounded-xl p-3 text-xs text-neutral-900 outline-none focus:border-neutral-900 font-mono leading-relaxed resize-y"
                     />
                   </div>
 
                   {/* 分步踩分点展示 */}
                   {showSteps && currentQ.steps && currentQ.steps.length > 0 && (
-                    <div className="p-4 rounded-xl bg-white border border-emerald-200/80 space-y-2.5 shadow-2xs animate-fade-in-up">
-                      <div className="flex items-center justify-between">
+                    <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-emerald-200/80 space-y-2.5 shadow-2xs animate-fade-in-up min-w-0 max-w-full overflow-hidden">
+                      <div className="flex flex-wrap items-center justify-between gap-1.5">
                         <span className="text-xs font-bold text-emerald-800 flex items-center gap-1">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                           <span>考研官方阅卷评分标准与踩分点拆解：</span>
                         </span>
                         <span className="text-[10px] text-neutral-400">分步踩点给分制</span>
                       </div>
-                      <div className="space-y-1.5">
+                      <div className="space-y-1.5 min-w-0">
                         {currentQ.steps.map((st, sidx) => (
-                          <div key={sidx} className="p-2.5 rounded-lg bg-emerald-50/50 border border-emerald-100 text-xs text-neutral-800 leading-relaxed">
+                          <div key={sidx} className="p-2.5 rounded-lg bg-emerald-50/50 border border-emerald-100 text-xs text-neutral-800 leading-relaxed min-w-0 overflow-x-auto">
                             <MarkdownRenderer content={st} inline />
                           </div>
                         ))}
@@ -1821,16 +2766,16 @@ export default function Quiz() {
                   )}
 
                   {/* 自我掌握度判定按钮 */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-neutral-200/50">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-neutral-200/50 min-w-0">
                     <span className="text-[11px] text-neutral-500">根据步骤核对判定掌握程度：</span>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2 min-w-0">
                       <button
                         type="button"
                         onClick={() => {
                           setAnswers(prev => ({ ...prev, [currentQ.id]: 'mastered' }))
                           setShowFeedback(true)
                         }}
-                        className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                           answers[currentQ.id] === 'mastered'
                             ? 'bg-emerald-600 text-white shadow-xs'
                             : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/70'
@@ -1845,7 +2790,7 @@ export default function Quiz() {
                           setAnswers(prev => ({ ...prev, [currentQ.id]: 'partial' }))
                           setShowFeedback(true)
                         }}
-                        className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                           answers[currentQ.id] === 'partial'
                             ? 'bg-amber-600 text-white shadow-xs'
                             : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200/70'
@@ -1861,7 +2806,7 @@ export default function Quiz() {
                           setShowFeedback(true)
                           setBookmarkedIds(prev => new Set([...prev, currentQ.id]))
                         }}
-                        className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                           answers[currentQ.id] === 'unmastered'
                             ? 'bg-rose-600 text-white shadow-xs'
                             : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200/70'
@@ -1874,24 +2819,24 @@ export default function Quiz() {
                 </div>
               ) : (
                 /* Blank / Fill-in Answer Area (填空题输入区) */
-                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-3">
-                  <div className="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
+                <div className="p-3.5 sm:p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-3 min-w-0 max-w-full overflow-hidden">
+                  <div className="text-xs font-semibold text-slate-600 flex flex-wrap items-center gap-1.5">
                     <span>✍️ 填空题作答</span>
                     <span className="text-[10px] text-slate-400 font-normal">（支持直接输入数值或数学表达式）</span>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap sm:flex-nowrap gap-2 min-w-0">
                     <input
                       type="text"
                       value={blankInput}
                       onChange={(e) => setBlankInput(e.target.value)}
                       placeholder="在此键入你的计算结果..."
                       disabled={mode === 'practice' && showFeedback}
-                      className="flex-1 bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-accent-orange font-mono"
+                      className="flex-1 min-w-0 w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-accent-orange font-mono"
                     />
                     <button
                       onClick={handleBlankSubmit}
                       disabled={(mode === 'practice' && showFeedback) || !blankInput.trim()}
-                      className="rounded-xl bg-accent-orange text-white px-5 py-2.5 text-xs font-semibold hover:bg-accent-orange/90 disabled:opacity-40 transition-all"
+                      className="w-full sm:w-auto shrink-0 rounded-xl bg-accent-orange text-white px-5 py-2.5 text-xs font-semibold hover:bg-accent-orange/90 disabled:opacity-40 transition-all whitespace-nowrap cursor-pointer"
                     >
                       提交验证
                     </button>
@@ -1900,11 +2845,11 @@ export default function Quiz() {
               )}
 
               {/* Bottom Navigation Buttons */}
-              <div className="flex flex-wrap items-center justify-between gap-2.5 pt-4 border-t border-slate-100">
+              <div className="flex flex-wrap items-center justify-center lg:justify-between gap-2.5 pt-4 border-t border-slate-100 min-w-0">
                 <button
                   onClick={() => goToQuestion(currentIndex - 1)}
                   disabled={currentIndex === 0}
-                  className="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 disabled:opacity-30 transition-colors flex items-center gap-1.5 cursor-pointer rounded-xl hover:bg-slate-100/70"
+                  className="hidden lg:flex px-3.5 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 disabled:opacity-30 transition-colors items-center gap-1.5 cursor-pointer rounded-xl hover:bg-slate-100/70 whitespace-nowrap"
                   title="上一题（快捷键 ←）"
                 >
                   <ArrowLeft size={14} />
@@ -1914,16 +2859,16 @@ export default function Quiz() {
                   </kbd>
                 </button>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center justify-center gap-2 min-w-0">
                   <button
                     type="button"
                     onClick={() => setShowFeedback(prev => !prev)}
-                    className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
+                    className="px-3.5 py-2 sm:py-1.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap"
                     title="按 Enter 键展开/收起解析"
                   >
-                    <BookOpen size={13} className="text-indigo-600" />
+                    <BookOpen size={13} className="text-indigo-600 shrink-0" />
                     <span>{showFeedback ? '收起解析' : '展开解析'}</span>
-                    <kbd className="text-[10px] font-mono px-1 py-0.2 rounded border border-slate-200 bg-slate-100 text-slate-400">
+                    <kbd className="hidden sm:inline-block text-[10px] font-mono px-1 py-0.2 rounded border border-slate-200 bg-slate-100 text-slate-400">
                       Enter
                     </kbd>
                   </button>
@@ -1931,12 +2876,12 @@ export default function Quiz() {
                   <button
                     type="button"
                     onClick={() => handleAskAI(currentQ)}
-                    className="px-3 py-1.5 rounded-xl border border-indigo-200/90 bg-indigo-50/80 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95"
+                    className="px-3.5 py-2 sm:py-1.5 rounded-xl border border-indigo-200/90 bg-indigo-50/80 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all shadow-2xs active:scale-95 whitespace-nowrap"
                     title="唤起双核 AI 伴学舱追问（快捷键 ⌘J / Ctrl+J）"
                   >
-                    <Sparkles size={13} className="text-indigo-600" />
+                    <Sparkles size={13} className="text-indigo-600 shrink-0" />
                     <span>✨ 追问 AI</span>
-                    <kbd className="text-[10px] font-mono px-1 py-0.2 rounded border border-indigo-200 bg-white/80 text-indigo-500">
+                    <kbd className="hidden sm:inline-block text-[10px] font-mono px-1 py-0.2 rounded border border-indigo-200 bg-white/80 text-indigo-500">
                       ⌘J
                     </kbd>
                   </button>
@@ -1945,11 +2890,11 @@ export default function Quiz() {
                 <WarmButton
                   onClick={advanceQuestion}
                   disabled={mode === 'practice' && !showFeedback && currentIndex < questions.length - 1}
-                  className="bg-accent-orange text-white px-5 cursor-pointer flex items-center gap-1.5"
+                  className="max-lg:!hidden lg:inline-flex bg-accent-orange text-white px-5 cursor-pointer items-center gap-1.5 whitespace-nowrap"
                   title="下一题（快捷键 →）"
                 >
                   <span>{currentIndex < questions.length - 1 ? '下一题' : '交卷结算'}</span>
-                  <kbd className="text-[10px] font-mono px-1.5 py-0.2 rounded border border-white/30 bg-black/20 text-white">
+                  <kbd className="hidden sm:inline-block text-[10px] font-mono px-1.5 py-0.2 rounded border border-white/30 bg-black/20 text-white">
                     →
                   </kbd>
                 </WarmButton>
@@ -1958,25 +2903,29 @@ export default function Quiz() {
 
             {/* Explanation & Step-by-Step Derivation (Notion / Brilliant Style) */}
             {mode === 'practice' && showFeedback && (
-              <div className="rounded-2xl sm:rounded-3xl border border-slate-200/60 bg-white shadow-xs p-3.5 sm:p-7 space-y-3 sm:space-y-4 animate-fade-in-up leading-[1.75]">
-                <div className="flex items-start justify-between">
+              <div className="rounded-2xl sm:rounded-3xl border border-slate-200/60 bg-white shadow-xs p-3.5 sm:p-7 space-y-3 sm:space-y-4 animate-fade-in-up leading-[1.75] min-w-0 max-w-full overflow-hidden">
+                <div className="flex flex-wrap items-start justify-between gap-2 min-w-0">
                   <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
                     <span className="text-base">💡</span>
                     <span>真题全解与定理依据</span>
                   </div>
-                  <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                    正确答案: {currentQ.answer}
+                  <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1 max-w-full overflow-x-auto">
+                    <span className="shrink-0">正确答案:</span>
+                    <MarkdownRenderer
+                      content={formatMathInline(currentQ.answer)}
+                      inline
+                    />
                   </span>
                 </div>
 
                 {/* Main Explanation */}
-                <div className="text-sm sm:text-[14.5px] text-slate-800 leading-[1.75] pl-1 academic-body ai-explanation">
+                <div className="text-sm sm:text-[14.5px] text-slate-800 leading-[1.75] pl-1 academic-body ai-explanation min-w-0 max-w-full quiz-stem-scroll">
                   <MarkdownRenderer content={currentQ.explanation} />
                 </div>
 
                 {/* Brilliant-style Collapsible Step-by-Step Derivation */}
                 {currentQ.steps && currentQ.steps.length > 0 && (
-                  <div className="pt-3 border-t border-slate-200/80">
+                  <div className="pt-3 border-t border-slate-200/80 min-w-0">
                     <button
                       onClick={() => setShowSteps(!showSteps)}
                       className="flex items-center gap-1.5 text-xs font-bold text-accent-orange hover:opacity-85 transition-opacity"
@@ -1986,9 +2935,9 @@ export default function Quiz() {
                     </button>
 
                     {showSteps && (
-                      <div className="mt-3 space-y-2 pl-2 border-l-2 border-accent-orange/40">
+                      <div className="mt-3 space-y-2 pl-2 border-l-2 border-accent-orange/40 min-w-0">
                         {currentQ.steps.map((step, idx) => (
-                          <div key={idx} className="bg-slate-50/90 rounded-xl p-3 border border-slate-100 text-xs text-slate-800">
+                          <div key={idx} className="bg-slate-50/90 rounded-xl p-3 border border-slate-100 text-xs text-slate-800 min-w-0 overflow-x-auto">
                             <span className="font-bold text-accent-orange mr-1.5">步骤 {idx + 1}.</span>
                             <MarkdownRenderer content={step} inline />
                           </div>
@@ -2105,7 +3054,21 @@ export default function Quiz() {
               <div className="space-y-4 animate-fade-in-up">
                 <div className="flex items-center justify-between text-xs text-slate-500">
                   <span>已完成 {answeredCount} / {questions.length} 题</span>
-                  <span>标星关注 {bookmarkedIds.size} 题</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.dispatchEvent(
+                        new CustomEvent('open-user-guide', {
+                          detail: { tab: 'doc', category: 'quiz_error', featureId: 'answer-palette' }
+                        })
+                      )
+                    }}
+                    className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
+                    title="查看答题卡调色板与草稿纸使用说明"
+                  >
+                    <span>调色板说明</span>
+                    <HelpCircle className="w-3 h-3" />
+                  </button>
                 </div>
 
                 {/* Progress bar */}
@@ -2232,42 +3195,42 @@ export default function Quiz() {
           </div>
         </div>
 
-        {/* 📱 移动端固定拇指答题操作栏 */}
-        <div className="lg:hidden fixed bottom-[calc(3.85rem+env(safe-area-inset-bottom,0px))] left-2.5 right-2.5 z-30 rounded-2xl bg-white/95 border border-slate-200/90 px-3 py-2 shadow-xl backdrop-blur-xl flex items-center justify-between gap-2">
+        {/* 📱 移动端固定拇指答题操作栏 (精致微缩自适应，防溢出) */}
+        <div className="lg:hidden fixed bottom-[calc(3.85rem+env(safe-area-inset-bottom,0px))] left-2 right-2 z-30 rounded-xl bg-white/95 border border-slate-200/90 px-2 py-1.5 shadow-xl backdrop-blur-xl flex items-center justify-between gap-1 max-w-full overflow-x-auto no-scrollbar">
           <button
             type="button"
             onClick={() => goToQuestion(currentIndex - 1)}
             disabled={currentIndex === 0}
-            className="px-3 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold disabled:opacity-35 active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+            className="px-2 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-[11px] font-bold disabled:opacity-35 active:scale-95 transition-all flex items-center gap-0.5 cursor-pointer whitespace-nowrap shrink-0"
           >
-            <ArrowLeft size={14} />
+            <ArrowLeft size={12} className="shrink-0" />
             <span>上一题</span>
           </button>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 min-w-0 shrink-0">
             <button
               type="button"
               onClick={() => { setActiveSideTab('palette'); setMobileDrawerOpen(true) }}
-              className="px-2.5 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold active:scale-95 transition-all cursor-pointer"
+              className="px-1.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-[11px] font-bold active:scale-95 transition-all cursor-pointer whitespace-nowrap shrink-0"
             >
               🧮 {answeredCount}/{questions.length}
             </button>
             <button
               type="button"
               onClick={() => { setActiveSideTab('scratchpad'); setMobileDrawerOpen(true) }}
-              className="px-2.5 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold active:scale-95 transition-all cursor-pointer"
+              className="px-1.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-[11px] font-bold active:scale-95 transition-all cursor-pointer whitespace-nowrap shrink-0"
             >
               📝 草稿
             </button>
             <button
               type="button"
               onClick={() => toggleBookmark(currentQ.id)}
-              className={`p-2 rounded-xl border transition-all active:scale-95 cursor-pointer ${
+              className={`p-1.5 rounded-lg border transition-all active:scale-95 cursor-pointer shrink-0 ${
                 isBookmarked ? 'bg-amber-50 border-amber-300 text-amber-500' : 'bg-slate-50 border-slate-200 text-slate-400'
               }`}
               aria-label="标星"
             >
-              <Star size={15} className={isBookmarked ? 'fill-amber-500' : ''} />
+              <Star size={13} className={isBookmarked ? 'fill-amber-500' : ''} />
             </button>
           </div>
 
@@ -2275,14 +3238,14 @@ export default function Quiz() {
             type="button"
             onClick={advanceQuestion}
             disabled={mode === 'practice' && !showFeedback && currentIndex < questions.length - 1}
-            className={`px-4 py-2 rounded-xl text-white text-xs font-bold active:scale-95 transition-all flex items-center gap-1 cursor-pointer shadow-xs ${
+            className={`px-2.5 py-1.5 rounded-lg text-white text-[11px] font-bold active:scale-95 transition-all flex items-center gap-0.5 cursor-pointer shadow-xs whitespace-nowrap shrink-0 ${
               currentIndex < questions.length - 1
                 ? 'bg-slate-900 disabled:opacity-35'
                 : 'bg-emerald-600 hover:bg-emerald-500'
             }`}
           >
-            <span>{currentIndex < questions.length - 1 ? '下一题' : '立即交卷'}</span>
-            <ArrowRight size={14} />
+            <span>{currentIndex < questions.length - 1 ? '下一题' : '交卷'}</span>
+            <ArrowRight size={12} className="shrink-0" />
           </button>
         </div>
 
@@ -2397,37 +3360,70 @@ export default function Quiz() {
           </div>
         )}
 
-        {/* 自定义安全退出做题确认弹窗（彻底消除浏览器原生 confirm 拦截与静默无响应） */}
+        {/* 自定义安全退出做题选择弹窗（支持用户选择保存记录或清除记录） */}
         {isExitModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
-            <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl border border-slate-200 space-y-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+            <div className="w-full max-w-md rounded-2xl bg-white p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-lg shrink-0">
                   ⚠️
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">确定退出当前做题？</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">做题进度已实时自动缓存，随时可返回继续</p>
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900">确定退出当前刷题？</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">您可以保留进度以便下次回溯继续，也可以彻底清除记录。</p>
                 </div>
               </div>
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1">
-                <p>• 当前进度：已完成 {Object.keys(answers).length} / {questions.length} 题</p>
-                <p>• 累计用时：{formatTime(timeElapsed)}</p>
+
+              {/* 当前刷题进度摘要 */}
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">试卷 / 专题：</span>
+                  <strong className="text-indigo-700 font-bold truncate max-w-[220px]">
+                    {activeTopicLabel || activePaperContext?.title || (questions[0] ? `${questions[0].subject} · 组卷` : '刷题练习')}
+                  </strong>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">停留题号：</span>
+                  <strong className="text-slate-800">第 {currentIndex + 1} 题 / 共 {questions.length} 题</strong>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">已作答进度：</span>
+                  <strong className="text-emerald-700">
+                    {Object.keys(answers).length} 题 ({Math.round((Object.keys(answers).length / Math.max(1, questions.length)) * 100)}%)
+                  </strong>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">做题累计用时：</span>
+                  <strong className="font-mono text-slate-700">{formatTime(timeElapsed)}</strong>
+                </div>
               </div>
-              <div className="flex items-center justify-end gap-2 pt-1">
+
+              {/* 退出选项选择区 */}
+              <div className="space-y-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => handleExitWithOption('save')}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm transition-all cursor-pointer active:scale-98"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>保存进度并退出 (推荐，下次可回溯继续)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleExitWithOption('clear')}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-all cursor-pointer active:scale-98"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>清除记录并退出 (放弃本次进度，不再保留)</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => setIsExitModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                  className="w-full py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                 >
-                  继续做题
-                </button>
-                <button
-                  type="button"
-                  onClick={handleExitQuiz}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-xs transition-colors cursor-pointer"
-                >
-                  确认退出
+                  取消，继续做题
                 </button>
               </div>
             </div>
@@ -2568,10 +3564,10 @@ export default function Quiz() {
                         </div>
 
                         {/* 题干 */}
-                        <div className="text-slate-900 font-medium leading-relaxed"><MarkdownRenderer content={vq.question} /></div>
+                        <div className="text-slate-900 font-medium leading-relaxed min-w-0 max-w-full quiz-stem-scroll"><MarkdownRenderer content={vq.question} /></div>
 
                         {/* 选项组 */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 font-sans">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 font-sans min-w-0">
                           {vq.options && Object.entries(vq.options).map(([optKey, optVal]) => {
                             const isPicked = chosen === optKey
                             return (
@@ -2582,7 +3578,7 @@ export default function Quiz() {
                                   setVariantAnswers(prev => ({ ...prev, [vq.id]: optKey }))
                                   setVariantShowExplanation(prev => ({ ...prev, [vq.id]: true }))
                                 }}
-                                className={`text-left p-2.5 rounded-xl text-xs font-medium border transition-all cursor-pointer flex items-center gap-2 ${
+                                className={`text-left p-2.5 rounded-xl text-xs font-medium border transition-all cursor-pointer flex items-start gap-2 min-w-0 max-w-full overflow-hidden ${
                                   isPicked
                                     ? isCorrect
                                       ? 'bg-emerald-50 border-emerald-400 text-emerald-950 font-bold shadow-2xs'
@@ -2590,14 +3586,16 @@ export default function Quiz() {
                                     : 'bg-slate-50/70 border-slate-200/80 text-slate-700 hover:bg-slate-100/80'
                                 }`}
                               >
-                                <span className={`w-5 h-5 rounded-lg flex items-center justify-center font-bold text-[11px] shrink-0 ${
+                                <span className={`w-5 h-5 rounded-lg flex items-center justify-center font-bold text-[11px] shrink-0 mt-0.5 ${
                                   isPicked
                                     ? isCorrect ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'
                                     : 'bg-white border border-slate-200 text-slate-600'
                                 }`}>
                                   {optKey}
                                 </span>
-                                <span className="leading-snug">{String(optVal)}</span>
+                                <span className="leading-snug flex-1 min-w-0 quiz-option-scroll">
+                                  <MarkdownRenderer content={String(optVal)} inline />
+                                </span>
                               </button>
                             )
                           })}
@@ -2605,11 +3603,13 @@ export default function Quiz() {
 
                         {/* 解析与考点总结 */}
                         {variantShowExplanation[vq.id] && (
-                          <div className="mt-2.5 p-3 rounded-xl bg-amber-50/70 border border-amber-200/80 text-xs space-y-1.5 animate-in fade-in">
+                          <div className="mt-2.5 p-3 rounded-xl bg-amber-50/70 border border-amber-200/80 text-xs space-y-1.5 animate-in fade-in min-w-0 max-w-full overflow-x-auto">
                             <div className="font-bold text-amber-900 flex items-center gap-1">
                               <span>💡 考点命题深度解析：</span>
                             </div>
-                            <p className="text-slate-700 leading-relaxed font-sans">{vq.explanation}</p>
+                            <div className="text-slate-700 leading-relaxed font-sans min-w-0 quiz-stem-scroll">
+                              <MarkdownRenderer content={vq.explanation} />
+                            </div>
                           </div>
                         )}
                       </div>
@@ -2623,9 +3623,10 @@ export default function Quiz() {
                 <button
                   type="button"
                   onClick={() => {
-                    const promptText = `我在做题中心刷题时遇到了这道关于「${variantSourceQ.chapter || variantSourceQ.subject}」的错题：\n> "${variantSourceQ.question}"\n\n请老师帮我详细剖析该考点的命题本质、高频设坑方式与秒杀解题技巧！`
+                    const promptText = `我在做题中心刷题时遇到了这道关于「${variantSourceQ.chapter || variantSourceQ.subject}」的错题：\n> "${variantSourceQ.question}"\n\n请老师用纯正中文帮我详细剖析该考点的命题本质、高频设坑方式与秒杀解题技巧（严格符合中文母语回答习惯）！`
                     sessionStorage.setItem('pending_chat_prompt', promptText)
-                    window.location.href = '/chat'
+                    sessionStorage.setItem('prefilled_chat_prompt', promptText)
+                    window.location.href = `/chat?prompt=${encodeURIComponent(promptText)}&auto=1&mode=followup`
                   }}
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 transition-colors cursor-pointer"
                 >
@@ -2655,7 +3656,10 @@ export default function Quiz() {
   // ─────────────────────────────────────────────────────────────────────────────
 
   if (view === 'results' && result) {
-    const percentage = Math.round((result.correct / result.total) * 100)
+    const percentage = result.total > 0 ? Math.round((result.correct / result.total) * 100) : 0
+    const answeredCount = result.answered ?? (result.correct + result.wrong)
+    const unansweredCount = result.unanswered ?? Math.max(0, result.total - answeredCount)
+    const answeredPct = answeredCount > 0 ? Math.round((result.correct / answeredCount) * 100) : 0
     const gradeColor = percentage >= 80 ? 'text-emerald-600' : percentage >= 60 ? 'text-amber-500' : 'text-rose-500'
     const gradeEmoji = percentage >= 80 ? '🎉' : percentage >= 60 ? '💪' : '📚'
 
@@ -2669,14 +3673,17 @@ export default function Quiz() {
               <span>{gradeEmoji} 测评报告生成完毕</span>
             </h1>
             <p className="mt-1 text-xs text-slate-500">
-              {mode === 'practice' ? '练习模式' : '考试模式'} · 答题用时 {formatTime(result.timeTaken)} · 成绩已沉淀至本地 Vault
+              {(result.mode || mode) === 'practice' ? '练习模式' : '考试模式'} · 答题用时 {formatTime(result.timeTaken)} · 共 {result.total} 题（已答 {answeredCount} 题{unansweredCount > 0 ? `，未答 ${unansweredCount} 题不计入错题` : ''}）
             </p>
           </div>
 
-          <div className="flex items-center justify-center gap-4 sm:gap-8 bg-neutral-50 px-4 sm:px-6 py-3 sm:py-4 rounded-xl border border-neutral-200/80 w-full sm:w-auto">
+          <div className="flex items-center justify-center gap-4 sm:gap-7 bg-neutral-50 px-4 sm:px-6 py-3 sm:py-4 rounded-xl border border-neutral-200/80 w-full sm:w-auto">
             <div className="text-center">
               <div className="text-xs text-slate-400">总得分率</div>
               <div className={`text-4xl font-extrabold ${gradeColor}`}>{percentage}%</div>
+              {answeredCount > 0 && answeredCount < result.total && (
+                <div className="text-[11px] text-slate-500 mt-0.5">实答正确率 {answeredPct}%</div>
+              )}
             </div>
             <div className="h-10 w-px bg-slate-200" />
             <div className="space-y-1 text-xs font-medium">
@@ -2686,6 +3693,11 @@ export default function Quiz() {
               <div className="text-rose-500 flex items-center gap-1.5">
                 <span>✗ 错题</span> <span>{result.wrong} 题</span>
               </div>
+              {unansweredCount > 0 && (
+                <div className="text-slate-500 flex items-center gap-1.5">
+                  <span>○ 未答</span> <span>{unansweredCount} 题</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -2746,8 +3758,8 @@ export default function Quiz() {
               {result.wrongQuestions.map(({ question: q, userAnswer, errorReason }) => {
                 const isSaved = savedItemIds.has(q.id)
                 return (
-                  <div key={q.id} className="rounded-2xl border border-rose-200/80 bg-rose-50/30 p-4 sm:p-5 space-y-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div key={q.id} className="rounded-2xl border border-rose-200/80 bg-rose-50/30 p-3.5 sm:p-5 space-y-3 min-w-0 max-w-full overflow-hidden">
+                    <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">
                           {q.subject}
@@ -2758,17 +3770,23 @@ export default function Quiz() {
                           </span>
                         )}
                       </div>
-                      <div className="text-xs font-mono flex items-center gap-3">
+                      <div className="text-xs font-mono flex flex-wrap items-center gap-3">
                         <span className="text-rose-600 font-semibold">你的回答: {userAnswer}</span>
-                        <span className="text-emerald-700 font-bold">标准答案: {q.answer}</span>
+                        <span className="text-emerald-700 font-bold inline-flex items-center gap-1 max-w-full overflow-x-auto">
+                          <span className="shrink-0">标准答案:</span>
+                          <MarkdownRenderer
+                            content={formatMathInline(q.answer)}
+                            inline
+                          />
+                        </span>
                       </div>
                     </div>
 
-                    <div className="text-sm font-medium text-slate-900 leading-relaxed">
+                    <div className="text-sm font-medium text-slate-900 leading-relaxed min-w-0 max-w-full quiz-stem-scroll">
                       <MarkdownRenderer content={q.question} />
                     </div>
 
-                    <div className="bg-white/80 rounded-xl p-3 border border-slate-200 text-xs text-slate-700 leading-relaxed">
+                    <div className="bg-white/80 rounded-xl p-3 border border-slate-200 text-xs text-slate-700 leading-relaxed min-w-0 max-w-full quiz-stem-scroll">
                       <div className="font-bold text-slate-800 mb-1">真题解析：</div>
                       <MarkdownRenderer content={q.explanation} />
                     </div>
@@ -2854,46 +3872,89 @@ export default function Quiz() {
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <WarmButton onClick={() => { setActivePaperContext(null); setView('start'); }} className="bg-accent-orange text-white px-8">
             再练一轮
+          </WarmButton>
+          <WarmButton
+            onClick={() => {
+              setActivePaperContext(null)
+              setHubTab('errors')
+              setView('start')
+            }}
+            className="bg-rose-600 hover:bg-rose-700 text-white px-6 flex items-center gap-1.5"
+          >
+            <span>📕 前往错题攻克中心</span>
           </WarmButton>
           <WarmButton variant="secondary" onClick={() => window.location.href = '/dashboard'}>
             返回首页工作台
           </WarmButton>
         </div>
 
-        {/* 自定义安全退出做题确认弹窗（彻底消除浏览器原生 confirm 拦截与静默无响应） */}
+        {/* 自定义安全退出做题选择弹窗（支持用户选择保存记录或清除记录） */}
         {isExitModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
-            <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl border border-slate-200 space-y-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+            <div className="w-full max-w-md rounded-2xl bg-white p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-lg shrink-0">
                   ⚠️
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">确定退出当前做题？</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">做题进度已实时自动缓存，随时可返回继续</p>
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900">确定退出当前刷题？</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">您可以保留进度以便下次回溯继续，也可以彻底清除记录。</p>
                 </div>
               </div>
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1">
-                <p>• 当前进度：已完成 {Object.keys(answers).length} / {questions.length} 题</p>
-                <p>• 累计用时：{formatTime(timeElapsed)}</p>
+
+              {/* 当前刷题进度摘要 */}
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">试卷 / 专题：</span>
+                  <strong className="text-indigo-700 font-bold truncate max-w-[220px]">
+                    {activeTopicLabel || activePaperContext?.title || (questions[0] ? `${questions[0].subject} · 组卷` : '刷题练习')}
+                  </strong>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">停留题号：</span>
+                  <strong className="text-slate-800">第 {currentIndex + 1} 题 / 共 {questions.length} 题</strong>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">已作答进度：</span>
+                  <strong className="text-emerald-700">
+                    {Object.keys(answers).length} 题 ({Math.round((Object.keys(answers).length / Math.max(1, questions.length)) * 100)}%)
+                  </strong>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">做题累计用时：</span>
+                  <strong className="font-mono text-slate-700">{formatTime(timeElapsed)}</strong>
+                </div>
               </div>
-              <div className="flex items-center justify-end gap-2 pt-1">
+
+              {/* 退出选项选择区 */}
+              <div className="space-y-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => handleExitWithOption('save')}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm transition-all cursor-pointer active:scale-98"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>保存进度并退出 (推荐，下次可回溯继续)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleExitWithOption('clear')}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-all cursor-pointer active:scale-98"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>清除记录并退出 (放弃本次进度，不再保留)</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => setIsExitModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                  className="w-full py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                 >
-                  继续做题
-                </button>
-                <button
-                  type="button"
-                  onClick={handleExitQuiz}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-xs transition-colors cursor-pointer"
-                >
-                  确认退出
+                  取消，继续做题
                 </button>
               </div>
             </div>
@@ -3034,10 +4095,10 @@ export default function Quiz() {
                         </div>
 
                         {/* 题干 */}
-                        <div className="text-slate-900 font-medium leading-relaxed"><MarkdownRenderer content={vq.question} /></div>
+                        <div className="text-slate-900 font-medium leading-relaxed min-w-0 max-w-full quiz-stem-scroll"><MarkdownRenderer content={vq.question} /></div>
 
                         {/* 选项组 */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 font-sans">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 font-sans min-w-0">
                           {vq.options && Object.entries(vq.options).map(([optKey, optVal]) => {
                             const isPicked = chosen === optKey
                             return (
@@ -3048,7 +4109,7 @@ export default function Quiz() {
                                   setVariantAnswers(prev => ({ ...prev, [vq.id]: optKey }))
                                   setVariantShowExplanation(prev => ({ ...prev, [vq.id]: true }))
                                 }}
-                                className={`text-left p-2.5 rounded-xl text-xs font-medium border transition-all cursor-pointer flex items-center gap-2 ${
+                                className={`text-left p-2.5 rounded-xl text-xs font-medium border transition-all cursor-pointer flex items-start gap-2 min-w-0 max-w-full overflow-hidden ${
                                   isPicked
                                     ? isCorrect
                                       ? 'bg-emerald-50 border-emerald-400 text-emerald-950 font-bold shadow-2xs'
@@ -3056,14 +4117,16 @@ export default function Quiz() {
                                     : 'bg-slate-50/70 border-slate-200/80 text-slate-700 hover:bg-slate-100/80'
                                 }`}
                               >
-                                <span className={`w-5 h-5 rounded-lg flex items-center justify-center font-bold text-[11px] shrink-0 ${
+                                <span className={`w-5 h-5 rounded-lg flex items-center justify-center font-bold text-[11px] shrink-0 mt-0.5 ${
                                   isPicked
                                     ? isCorrect ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'
                                     : 'bg-white border border-slate-200 text-slate-600'
                                 }`}>
                                   {optKey}
                                 </span>
-                                <span className="leading-snug">{String(optVal)}</span>
+                                <span className="leading-snug flex-1 min-w-0 quiz-option-scroll">
+                                  <MarkdownRenderer content={String(optVal)} inline />
+                                </span>
                               </button>
                             )
                           })}
@@ -3071,11 +4134,13 @@ export default function Quiz() {
 
                         {/* 解析与考点总结 */}
                         {variantShowExplanation[vq.id] && (
-                          <div className="mt-2.5 p-3 rounded-xl bg-amber-50/70 border border-amber-200/80 text-xs space-y-1.5 animate-in fade-in">
+                          <div className="mt-2.5 p-3 rounded-xl bg-amber-50/70 border border-amber-200/80 text-xs space-y-1.5 animate-in fade-in min-w-0 max-w-full overflow-x-auto">
                             <div className="font-bold text-amber-900 flex items-center gap-1">
                               <span>💡 考点命题深度解析：</span>
                             </div>
-                            <p className="text-slate-700 leading-relaxed font-sans">{vq.explanation}</p>
+                            <div className="text-slate-700 leading-relaxed font-sans min-w-0 quiz-stem-scroll">
+                              <MarkdownRenderer content={vq.explanation} />
+                            </div>
                           </div>
                         )}
                       </div>
@@ -3089,9 +4154,10 @@ export default function Quiz() {
                 <button
                   type="button"
                   onClick={() => {
-                    const promptText = `我在做题中心刷题时遇到了这道关于「${variantSourceQ.chapter || variantSourceQ.subject}」的错题：\n> "${variantSourceQ.question}"\n\n请老师帮我详细剖析该考点的命题本质、高频设坑方式与秒杀解题技巧！`
+                    const promptText = `我在做题中心刷题时遇到了这道关于「${variantSourceQ.chapter || variantSourceQ.subject}」的错题：\n> "${variantSourceQ.question}"\n\n请老师用纯正中文帮我详细剖析该考点的命题本质、高频设坑方式与秒杀解题技巧（严格符合中文母语回答习惯）！`
                     sessionStorage.setItem('pending_chat_prompt', promptText)
-                    window.location.href = '/chat'
+                    sessionStorage.setItem('prefilled_chat_prompt', promptText)
+                    window.location.href = `/chat?prompt=${encodeURIComponent(promptText)}&auto=1&mode=followup`
                   }}
                   className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 transition-colors cursor-pointer"
                 >

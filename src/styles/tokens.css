@@ -48,18 +48,45 @@
   --color-surface-elevated: #FFFFFF;
 }
 
-/* 深色模式语义变量覆写 */
-.dark {
-  --color-bg-canvas: #090D16;
-  --color-bg-surface: #111827;
-  --color-bg-elevated: #1E293B;
-  --color-bg-muted: #1E293B;
-  --color-text-primary: #F8FAFC;
+/* 🍃 温润护眼模式语义变量覆写 (Eyecare Soft Green Paper Palette) */
+.theme-eyecare {
+  --color-bg-canvas: #F4F7F2;
+  --color-bg-surface: #FAFBF8;
+  --color-bg-elevated: #FAFBF8;
+  --color-bg-muted: #EBF0E7;
+  --color-text-primary: #243329;
+  --color-text-secondary: #4A5D50;
+  --color-text-muted: #738779;
+  --color-border-subtle: #E1E9DF;
+  --color-border-strong: #CCD8C8;
+  --color-brand-primary: #2D6A4F;
+  --color-brand-subtle: #E2EFE5;
+  --color-surface: #FAFBF8;
+  --color-surface-elevated: #FAFBF8;
+  --color-cream-50: #F4F7F2;
+  --color-cream-100: #EBF0E7;
+  --color-cream-200: #E1E9DF;
+  --color-warm-800: #243329;
+}
+
+/* 🌙 深邃夜间暗黑模式语义变量覆写 (Dark Night Cyber Obsidian Palette) */
+.dark,
+.theme-dark {
+  --color-bg-canvas: #0B0F19;
+  --color-bg-surface: #131926;
+  --color-bg-elevated: #1A2234;
+  --color-bg-muted: #1A2234;
+  --color-text-primary: #F1F5F9;
   --color-text-secondary: #CBD5E1;
-  --color-text-muted: #64748B;
-  --color-border-subtle: #1E293B;
-  --color-border-strong: #334155;
+  --color-text-muted: #94A3B8;
+  --color-border-subtle: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.16);
   --color-brand-primary: #38BDF8;
-  --color-surface: #111827;
-  --color-surface-elevated: #1E293B;
+  --color-brand-subtle: rgba(56, 189, 248, 0.15);
+  --color-surface: #131926;
+  --color-surface-elevated: #1A2234;
+  --color-cream-50: #0B0F19;
+  --color-cream-100: #131926;
+  --color-cream-200: rgba(255, 255, 255, 0.08);
+  --color-warm-800: #F1F5F9;
 }

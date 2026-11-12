@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft,
   Home,
@@ -53,12 +53,21 @@ const CATEGORY_ICONS: Record<RadioCategory, typeof Headphones> = {
 
 export default function Music() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tabFromUrl = searchParams.get('tab') as MusicTab | null
   const { setQueue, play, state } = useAudioContext()
 
-  // 顶层标签：在线电台 vs 我的曲库
-  const [activeTab, setActiveTab] = useState<MusicTab>('library')
+  // 顶层标签：默认优先进入「在线电台 (radio)」，解决空曲库导致用户误以为无音乐的痛点
+  const [activeTab, setActiveTab] = useState<MusicTab>(tabFromUrl || 'radio')
   // 曲库子模式：云端音乐（多端漫游） vs 本机音频（免上传即播）
   const [librarySubTab, setLibrarySubTab] = useState<LibrarySubTab>('cloud')
+
+  useEffect(() => {
+    const t = searchParams.get('tab') as MusicTab | null
+    if (t && (t === 'radio' || t === 'library')) {
+      setActiveTab(t)
+    }
+  }, [searchParams])
 
   // 云端音乐状态
   const [cloudFiles, setCloudFiles] = useState<MusicFile[]>([])
@@ -339,7 +348,24 @@ export default function Music() {
         {/* 主 Tab 切换 */}
         <div className="flex gap-2 shrink-0">
           <button
-            onClick={() => setActiveTab('library')}
+            onClick={() => {
+              setActiveTab('radio')
+              setSearchParams({ tab: 'radio' }, { replace: true })
+            }}
+            className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+              activeTab === 'radio'
+                ? 'bg-accent-orange text-white shadow-xs'
+                : 'bg-cream-100 dark:bg-slate-800 text-warm-600 dark:text-slate-300 border border-cream-200 dark:border-slate-700 hover:bg-cream-200'
+            }`}
+          >
+            <Radio className="w-4 h-4" />
+            <span>📻 在线专注电台</span>
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('library')
+              setSearchParams({ tab: 'library' }, { replace: true })
+            }}
             className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'library'
                 ? 'bg-accent-orange text-white shadow-xs'
@@ -355,17 +381,6 @@ export default function Music() {
                 {cloudFiles.length}
               </span>
             )}
-          </button>
-          <button
-            onClick={() => setActiveTab('radio')}
-            className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'radio'
-                ? 'bg-accent-orange text-white shadow-xs'
-                : 'bg-cream-100 dark:bg-slate-800 text-warm-600 dark:text-slate-300 border border-cream-200 dark:border-slate-700 hover:bg-cream-200'
-            }`}
-          >
-            <Radio className="w-4 h-4" />
-            <span>在线电台</span>
           </button>
         </div>
       </div>

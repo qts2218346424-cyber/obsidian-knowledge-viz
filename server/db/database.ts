@@ -37,6 +37,7 @@ export interface DbErrorQuestion {
   difficulty: string
   sourceNote: string
   status: string
+  notes?: string
   createdAt: string
   updatedAt: string
 }
@@ -148,6 +149,39 @@ export interface DbSession {
   userId: string
   createdAt: string
   expiresAt: string
+}
+
+export type StudyStage = 'not_started' | 'foundation' | 'reinforcement' | 'sprint' | 'mock'
+
+export interface SubjectGoalConfig {
+  stage: StudyStage
+  targetScore: number
+  manualProgress?: number
+  note?: string
+}
+
+export interface StudyDailyTask {
+  id: string
+  title: string
+  domain: 'cs_408' | 'math' | 'english' | 'politics' | 'general'
+  done: boolean
+  date: string
+}
+
+export interface DbStudyGoal {
+  userId: string
+  targetSchool: string
+  targetTotalScore: number
+  weeklyQuestionGoal: number
+  dailyVocabGoal: number
+  subjectGoals: {
+    cs_408: SubjectGoalConfig
+    math: SubjectGoalConfig
+    english: SubjectGoalConfig
+    politics: SubjectGoalConfig
+  }
+  dailyTasks: StudyDailyTask[]
+  updatedAt: string
 }
 
 class CoreForgeDatabase {
@@ -343,9 +377,24 @@ class CoreForgeDatabase {
       CREATE INDEX IF NOT EXISTS idx_redemptions_code ON coupon_redemptions(code);
     `)
 
+    // 9. 考生个人研学目标与今日冲刺清单表 (study_goals)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS study_goals (
+        user_id TEXT PRIMARY KEY,
+        target_school TEXT DEFAULT '目标院校 · 计算机学硕/专硕',
+        target_total_score INTEGER DEFAULT 380,
+        weekly_question_goal INTEGER DEFAULT 100,
+        daily_vocab_goal INTEGER DEFAULT 30,
+        subject_goals_json TEXT,
+        daily_tasks_json TEXT,
+        updated_at TEXT NOT NULL
+      );
+    `)
+
     // 8. 多租户数据隔离字段与积分字段自动补齐 (向后兼容)
     this.ensureColumn('quiz_records', 'user_id', "TEXT DEFAULT 'default'")
     this.ensureColumn('error_questions', 'user_id', "TEXT DEFAULT 'default'")
+    this.ensureColumn('error_questions', 'notes', "TEXT DEFAULT ''")
     this.ensureColumn('sm2_flashcards', 'user_id', "TEXT DEFAULT 'default'")
     this.ensureColumn('users', 'points', 'REAL DEFAULT 5.0')
     this.ensureColumn('users', 'last_checkin_at', 'TEXT')
@@ -441,12 +490,13 @@ class CoreForgeDatabase {
       INSERT INTO error_questions (
         id, user_id, domain, subject, chapter, syllabus_id, question, options_json,
         user_answer, correct_answer, explanation, error_type, difficulty,
-        source_note, status, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        source_note, status, notes, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         user_answer = excluded.user_answer,
         error_type = excluded.error_type,
         status = excluded.status,
+        notes = CASE WHEN excluded.notes IS NOT NULL AND excluded.notes != '' THEN excluded.notes ELSE error_questions.notes END,
         updated_at = excluded.updated_at
     `)
     stmt.run(
@@ -465,32 +515,219 @@ class CoreForgeDatabase {
       item.difficulty,
       item.sourceNote,
       item.status,
+      item.notes || '',
       item.createdAt,
       item.updatedAt
     )
   }
 
-  getErrorQuestions(filter?: { subject?: string; status?: string; syllabusId?: string; userId?: string }): DbErrorQuestion[] {
-    if (!this.db) return []
-    let query = 'SELECT * FROM error_questions WHERE 1=1'
+  updateErrorQuestion(id: string, updates: Partial<DbErrorQuestion>, userId?: string): boolean {
+    if (!this.db) return false
+    const fields: string[] = []
     const params: any[] = []
-    if (filter?.userId) {
-      query += ' AND user_id = ?'
+
+    if (updates.status !== undefined) {
+      fields.push('status = ?')
+      params.push(updates.status)
+    }
+    if (updates.errorType !== undefined) {
+      fields.push('error_type = ?')
+      params.push(updates.errorType)
+    }
+    if (updates.notes !== undefined) {
+      fields.push('notes = ?')
+      params.push(updates.notes)
+    }
+    if (updates.userAnswer !== undefined) {
+      fields.push('user_answer = ?')
+      params.push(updates.userAnswer)
+    }
+    if (updates.difficulty !== undefined) {
+      fields.push('difficulty = ?')
+      params.push(updates.difficulty)
+    }
+    if (fields.length === 0) return true
+
+    fields.push('updated_at = ?')
+    params.push(new Date().toISOString().split('T')[0])
+
+    let query = `UPDATE error_questions SET ${fields.join(', ')} WHERE id = ?`
+    params.push(id)
+
+    if (userId && userId !== 'all') {
+      query += " AND (user_id = ? OR user_id IS NULL OR user_id = 'default')"
+      params.push(userId)
+    }
+
+    const res = this.db.prepare(query).run(...params)
+    return res.changes > 0
+  }
+
+  deleteErrorQuestion(id: string, userId?: string): boolean {
+    if (!this.db) return false
+    let query = 'DELETE FROM error_questions WHERE id = ?'
+    const params: any[] = [id]
+    if (userId && userId !== 'all') {
+      query += " AND (user_id = ? OR user_id IS NULL OR user_id = 'default')"
+      params.push(userId)
+    }
+    const res = this.db.prepare(query).run(...params)
+    // 联动清理 SM-2 关联卡片
+    try {
+      this.db.prepare('DELETE FROM sm2_flashcards WHERE card_id = ?').run(id)
+    } catch {}
+    return res.changes > 0
+  }
+
+  batchUpdateErrorQuestions(ids: string[], updates: Partial<DbErrorQuestion>, userId?: string): number {
+    if (!this.db || ids.length === 0) return 0
+    let count = 0
+    for (const id of ids) {
+      if (this.updateErrorQuestion(id, updates, userId)) {
+        count++
+      }
+    }
+    return count
+  }
+
+  getErrorQuestionStats(userId?: string): {
+    total: number
+    active: number
+    mastered: number
+    dueToday: number
+    subjectBreakdown: Record<string, number>
+    errorTypeBreakdown: Record<string, number>
+  } {
+    if (!this.db) {
+      return { total: 0, active: 0, mastered: 0, dueToday: 0, subjectBreakdown: {}, errorTypeBreakdown: {} }
+    }
+    const todayStr = new Date().toISOString().split('T')[0]
+    let userFilter = ''
+    const params: any[] = []
+    if (userId && userId !== 'all') {
+      userFilter = " AND (user_id = ? OR user_id IS NULL OR user_id = 'default')"
+      params.push(userId)
+    }
+
+    // 统计总数、待攻克、已掌握
+    const summaryStmt = this.db.prepare(`
+      SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN status != 'mastered' THEN 1 ELSE 0 END) as active,
+        SUM(CASE WHEN status = 'mastered' THEN 1 ELSE 0 END) as mastered
+      FROM error_questions WHERE 1=1 ${userFilter}
+    `)
+    const summaryRow = summaryStmt.get(...params) as any
+
+    // 统计今日待复习到期数 (通过关联 sm2_flashcards)
+    let dueToday = 0
+    try {
+      const dueStmt = this.db.prepare(`
+        SELECT COUNT(DISTINCT e.id) as due_count
+        FROM error_questions e
+        LEFT JOIN sm2_flashcards s ON e.id = s.card_id
+        WHERE e.status != 'mastered' 
+          AND (s.next_review_at IS NULL OR s.next_review_at <= ?)
+          ${userFilter.replace(/user_id/g, 'e.user_id')}
+      `)
+      const dueParams = [todayStr, ...params]
+      const dueRow = dueStmt.get(...dueParams) as any
+      dueToday = dueRow?.due_count || 0
+    } catch {}
+
+    // 学科分布
+    const subjStmt = this.db.prepare(`
+      SELECT subject, COUNT(*) as count 
+      FROM error_questions 
+      WHERE 1=1 ${userFilter} 
+      GROUP BY subject
+    `)
+    const subjRows = subjStmt.all(...params) as any[]
+    const subjectBreakdown: Record<string, number> = {}
+    for (const r of subjRows) {
+      subjectBreakdown[r.subject || '其他'] = r.count
+    }
+
+    // 错因分布
+    const errTypeStmt = this.db.prepare(`
+      SELECT error_type, COUNT(*) as count 
+      FROM error_questions 
+      WHERE 1=1 ${userFilter} 
+      GROUP BY error_type
+    `)
+    const errTypeRows = errTypeStmt.all(...params) as any[]
+    const errorTypeBreakdown: Record<string, number> = {}
+    for (const r of errTypeRows) {
+      errorTypeBreakdown[r.error_type || '未归类'] = r.count
+    }
+
+    return {
+      total: summaryRow?.total || 0,
+      active: summaryRow?.active || 0,
+      mastered: summaryRow?.mastered || 0,
+      dueToday,
+      subjectBreakdown,
+      errorTypeBreakdown,
+    }
+  }
+
+  getErrorQuestions(filter?: {
+    subject?: string
+    status?: string
+    syllabusId?: string
+    userId?: string
+    errorType?: string
+    search?: string
+    domain?: string
+  }): (DbErrorQuestion & { sm2?: any })[] {
+    if (!this.db) return []
+    let query = `
+      SELECT 
+        e.*,
+        s.repetition,
+        s.interval_days,
+        s.easiness_factor,
+        s.review_count,
+        s.next_review_at
+      FROM error_questions e
+      LEFT JOIN sm2_flashcards s ON e.id = s.card_id
+      WHERE 1=1
+    `
+    const params: any[] = []
+    if (filter?.userId && filter.userId !== 'all') {
+      query += " AND (e.user_id = ? OR e.user_id IS NULL OR e.user_id = 'default')"
       params.push(filter.userId)
     }
-    if (filter?.subject) {
-      query += ' AND subject = ?'
+    if (filter?.domain) {
+      query += ' AND e.domain = ?'
+      params.push(filter.domain)
+    }
+    if (filter?.subject && filter.subject !== 'all' && filter.subject !== '全部') {
+      query += ' AND e.subject = ?'
       params.push(filter.subject)
     }
-    if (filter?.status) {
-      query += ' AND status = ?'
-      params.push(filter.status)
+    if (filter?.status && filter.status !== 'all' && filter.status !== '全部') {
+      if (filter.status === 'active') {
+        query += " AND (e.status = 'active' OR e.status = 'reviewing' OR e.status IS NULL)"
+      } else {
+        query += ' AND e.status = ?'
+        params.push(filter.status)
+      }
+    }
+    if (filter?.errorType && filter.errorType !== 'all' && filter.errorType !== '全部') {
+      query += ' AND e.error_type = ?'
+      params.push(filter.errorType)
     }
     if (filter?.syllabusId) {
-      query += ' AND syllabus_id = ?'
+      query += ' AND e.syllabus_id = ?'
       params.push(filter.syllabusId)
     }
-    query += ' ORDER BY updated_at DESC'
+    if (filter?.search && filter.search.trim()) {
+      const kw = `%${filter.search.trim()}%`
+      query += ' AND (e.question LIKE ? OR e.explanation LIKE ? OR e.notes LIKE ? OR e.chapter LIKE ?)'
+      params.push(kw, kw, kw, kw)
+    }
+    query += ' ORDER BY e.updated_at DESC, e.created_at DESC'
 
     const stmt = this.db.prepare(query)
     const rows = stmt.all(...params)
@@ -509,9 +746,17 @@ class CoreForgeDatabase {
       errorType: r.error_type,
       difficulty: r.difficulty,
       sourceNote: r.source_note,
-      status: r.status,
+      status: r.status || 'active',
+      notes: r.notes || '',
       createdAt: r.created_at,
       updatedAt: r.updated_at,
+      sm2: r.review_count !== undefined ? {
+        repetition: r.repetition || 0,
+        intervalDays: r.interval_days || 1,
+        easinessFactor: r.easiness_factor || 2.5,
+        reviewCount: r.review_count || 0,
+        nextReviewAt: r.next_review_at || null,
+      } : undefined,
     }))
   }
 
@@ -1363,6 +1608,162 @@ class CoreForgeDatabase {
       return true
     } catch {
       return false
+    }
+  }
+
+  // ===== 个人研学目标与今日冲刺清单 (study_goals) =====
+  getDefaultStudyGoal(userId: string): DbStudyGoal {
+    const today = this.getTodayDateString()
+    return {
+      userId,
+      targetSchool: '985/211 计算机考研目标',
+      targetTotalScore: 380,
+      weeklyQuestionGoal: 100,
+      dailyVocabGoal: 30,
+      subjectGoals: {
+        cs_408: { stage: 'foundation', targetScore: 115, manualProgress: 0 },
+        math: { stage: 'foundation', targetScore: 120, manualProgress: 0 },
+        english: { stage: 'foundation', targetScore: 75, manualProgress: 0 },
+        politics: { stage: 'not_started', targetScore: 70, manualProgress: 0 },
+      },
+      dailyTasks: [
+        { id: `task-${today}-1`, title: '完成 1 组 408 / 数学真题专项练习', domain: 'cs_408', done: false, date: today },
+        { id: `task-${today}-2`, title: '复习到期易忘闪卡与错题本', domain: 'math', done: false, date: today },
+        { id: `task-${today}-3`, title: '考研英语高频词背诵与长难句精读', domain: 'english', done: false, date: today },
+      ],
+      updatedAt: new Date().toISOString(),
+    }
+  }
+
+  getStudyGoal(userId: string): DbStudyGoal {
+    const uid = userId || 'default'
+    const defaults = this.getDefaultStudyGoal(uid)
+    if (!this.db) return defaults
+    try {
+      const row = this.db.prepare('SELECT * FROM study_goals WHERE user_id = ?').get(uid) as any
+      if (!row) return defaults
+
+      let subjectGoals = defaults.subjectGoals
+      try {
+        if (row.subject_goals_json) {
+          const parsed = JSON.parse(row.subject_goals_json)
+          subjectGoals = {
+            cs_408: { ...defaults.subjectGoals.cs_408, ...(parsed.cs_408 || {}) },
+            math: { ...defaults.subjectGoals.math, ...(parsed.math || {}) },
+            english: { ...defaults.subjectGoals.english, ...(parsed.english || {}) },
+            politics: { ...defaults.subjectGoals.politics, ...(parsed.politics || {}) },
+          }
+        }
+      } catch {}
+
+      let dailyTasks = defaults.dailyTasks
+      const today = this.getTodayDateString()
+      try {
+        if (row.daily_tasks_json) {
+          const parsed = JSON.parse(row.daily_tasks_json)
+          if (Array.isArray(parsed)) {
+            const todayTasks = parsed.filter((t: any) => t && t.date === today)
+            if (todayTasks.length > 0) {
+              dailyTasks = todayTasks
+            } else if (parsed.length > 0) {
+              // 新的一天：继承昨日自定义任务的模板标题但重置完成状态
+              dailyTasks = parsed.slice(0, 8).map((t: any, idx: number) => ({
+                id: `task-${today}-${idx + 1}`,
+                title: String(t.title || ''),
+                domain: t.domain || 'general',
+                done: false,
+                date: today,
+              })).filter((t: any) => t.title)
+            }
+          }
+        }
+      } catch {}
+
+      return {
+        userId: uid,
+        targetSchool: row.target_school || defaults.targetSchool,
+        targetTotalScore: Number(row.target_total_score) || defaults.targetTotalScore,
+        weeklyQuestionGoal: Number(row.weekly_question_goal) || defaults.weeklyQuestionGoal,
+        dailyVocabGoal: Number(row.daily_vocab_goal) || defaults.dailyVocabGoal,
+        subjectGoals,
+        dailyTasks,
+        updatedAt: row.updated_at || defaults.updatedAt,
+      }
+    } catch {
+      return defaults
+    }
+  }
+
+  upsertStudyGoal(
+    userId: string,
+    patch: Partial<Omit<DbStudyGoal, 'userId' | 'updatedAt'>>
+  ): DbStudyGoal {
+    const uid = userId || 'default'
+    const current = this.getStudyGoal(uid)
+    const today = this.getTodayDateString()
+
+    const merged: DbStudyGoal = {
+      userId: uid,
+      targetSchool: patch.targetSchool !== undefined ? String(patch.targetSchool).trim().slice(0, 80) : current.targetSchool,
+      targetTotalScore: patch.targetTotalScore !== undefined ? Math.min(500, Math.max(100, Number(patch.targetTotalScore) || 380)) : current.targetTotalScore,
+      weeklyQuestionGoal: patch.weeklyQuestionGoal !== undefined ? Math.min(2000, Math.max(10, Number(patch.weeklyQuestionGoal) || 100)) : current.weeklyQuestionGoal,
+      dailyVocabGoal: patch.dailyVocabGoal !== undefined ? Math.min(500, Math.max(5, Number(patch.dailyVocabGoal) || 30)) : current.dailyVocabGoal,
+      subjectGoals: patch.subjectGoals
+        ? {
+            cs_408: { ...current.subjectGoals.cs_408, ...(patch.subjectGoals.cs_408 || {}) },
+            math: { ...current.subjectGoals.math, ...(patch.subjectGoals.math || {}) },
+            english: { ...current.subjectGoals.english, ...(patch.subjectGoals.english || {}) },
+            politics: { ...current.subjectGoals.politics, ...(patch.subjectGoals.politics || {}) },
+          }
+        : current.subjectGoals,
+      dailyTasks: Array.isArray(patch.dailyTasks)
+        ? patch.dailyTasks.slice(0, 20).map((t, idx) => ({
+            id: t.id || `task-${today}-${idx + 1}`,
+            title: String(t.title || '').trim().slice(0, 120),
+            domain: t.domain || 'general',
+            done: Boolean(t.done),
+            date: today,
+          })).filter(t => t.title.length > 0)
+        : current.dailyTasks,
+      updatedAt: new Date().toISOString(),
+    }
+
+    if (this.db) {
+      this.db.prepare(`
+        INSERT INTO study_goals (
+          user_id, target_school, target_total_score, weekly_question_goal, daily_vocab_goal,
+          subject_goals_json, daily_tasks_json, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET
+          target_school = excluded.target_school,
+          target_total_score = excluded.target_total_score,
+          weekly_question_goal = excluded.weekly_question_goal,
+          daily_vocab_goal = excluded.daily_vocab_goal,
+          subject_goals_json = excluded.subject_goals_json,
+          daily_tasks_json = excluded.daily_tasks_json,
+          updated_at = excluded.updated_at
+      `).run(
+        merged.userId,
+        merged.targetSchool,
+        merged.targetTotalScore,
+        merged.weeklyQuestionGoal,
+        merged.dailyVocabGoal,
+        JSON.stringify(merged.subjectGoals),
+        JSON.stringify(merged.dailyTasks),
+        merged.updatedAt
+      )
+    }
+
+    return merged
+  }
+
+  close() {
+    if (this.db) {
+      try {
+        this.db.close()
+      } catch {}
+      this.db = null
+      this.isInitialized = false
     }
   }
 }

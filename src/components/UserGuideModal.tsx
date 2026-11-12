@@ -1,11 +1,10 @@
 import { createPortal } from 'react-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   X,
   Play,
   Pause,
-  BookOpen,
   Sparkles,
   Network,
   ClipboardList,
@@ -16,12 +15,41 @@ import {
   ExternalLink,
   Compass,
   ArrowRight,
+  Search,
+  Flame,
+  ShieldAlert,
+  FileEdit,
+  Palette,
+  PenTool,
+  AlertTriangle,
+  BookOpen,
+  Landmark,
+  Cpu,
+  Music,
+  Timer,
+  Highlighter,
+  Bot,
+  Smile,
+  Workflow,
+  Smartphone,
+  HelpCircle,
+  Lightbulb,
+  Keyboard,
+  Sliders,
 } from 'lucide-react'
+import {
+  FEATURE_MANUAL_DATA,
+  MANUAL_CATEGORIES,
+  type FeatureManualItem,
+} from '../data/featureManualData'
 
 interface UserGuideModalProps {
   isOpen: boolean
   onClose: () => void
   onStartInteractiveTour?: () => void
+  initialTab?: 'tour' | 'doc'
+  initialCategory?: string
+  initialFeatureId?: string
 }
 
 interface TourScene {
@@ -39,6 +67,7 @@ interface TourScene {
   routeText: string
 }
 
+// 扩充后的全景 6 幕巡礼场景：强化考点掌握度色谱图、极速随手记等小功能体验
 const TOUR_SCENES: TourScene[] = [
   {
     id: 1,
@@ -61,25 +90,63 @@ const TOUR_SCENES: TourScene[] = [
   },
   {
     id: 2,
-    title: '全真真题演练与错题智能诊断',
-    subtitle: '做题、评分、归因与复盘一步到位',
+    title: '考点掌握度色谱图与提分急救舱',
+    subtitle: '红黄绿三色热力透视 · 呼吸光晕锁定高危考点',
+    badge: '掌握度色谱 /graph',
+    icon: Flame,
+    colorText: 'text-rose-600',
+    colorBg: 'bg-rose-50/80',
+    colorBorder: 'border-rose-200/80',
+    description:
+      '将抽象考纲转化为直观掌握度热力色谱。绿色稳固(≥80%)、黄色巩固(50%~80%)、红色高危薄弱(<50%)带呼吸脉冲闪烁。单击红色薄弱考点直达提分急救舱，5题速测与仿真课件立即可用。',
+    highlights: [
+      '动态三色色谱：客观感知薄弱盲区，告别“以为自己掌握了”的复习盲目感',
+      '提分急救舱：一键定位关联错题记录并抽取同考点精选变式题',
+      '算法仿真联动：配套红黑树、LRU页面置换、TCP握手等动态步进课件',
+    ],
+    route: '/graph',
+    routeText: '体验掌握度色谱图',
+  },
+  {
+    id: 3,
+    title: '极速随手记与沉浸式笔记',
+    subtitle: '随时随地顶栏滑出 · 碎片推导灵感0中断入库',
+    badge: '随手记抽屉 ⚡',
+    icon: Sparkles,
+    colorText: 'text-emerald-600',
+    colorBg: 'bg-emerald-50/80',
+    colorBorder: 'border-emerald-200/80',
+    description:
+      '在做题或研读讲义时，无需跳转页面，随时点击顶栏随手记胶囊即可滑出抽屉。预设多学科标签，支持 LaTeX 公式与拍照上传，一键直写本地 Obsidian Vault。',
+    highlights: [
+      '0 中断心流：顶栏一键呼出，做题草稿、考点灵感与闪念随手保存',
+      '双链与标签：自动按日期归档至随手记目录，并自动纳入全库双链网络',
+      '多端插图：支持本地截图与手机扫码拍照直传，自动生成 Markdown 语法',
+    ],
+    route: '/editor',
+    routeText: '查看笔记编辑器',
+  },
+  {
+    id: 4,
+    title: '全真做题、答题卡调色板与错题归因',
+    subtitle: 'LeetCode 风格色板矩阵 · 分步解析与真题收录',
     badge: '刷题中心 /quiz',
     icon: ClipboardList,
     colorText: 'text-amber-600',
     colorBg: 'bg-amber-50/80',
     colorBorder: 'border-amber-200/80',
     description:
-      '内置历年 408 统考真题与考研数学精选题库，支持高质量 KaTeX 公式渲染与智能评分。答错题目自动沉淀进入错题档案，支持细粒度错因归因。',
+      '内置历年 408 统考真题与考研数学精选题库，支持高质量 KaTeX 公式渲染。右侧答题卡调色板矩阵直观显示已答、未答与标记状态，做题草稿纸随时推演。',
     highlights: [
-      '全真 LaTeX 排版：严谨还原真题排版与推导演算，支持分步深度对照',
-      '错题智能归因：精准分类「概念混淆 / 审题疏漏 / 计算失误 / 综合推导」，直击盲点',
-      '笔记双向追溯：答题解析可一键跳转对应的知识库讲义笔记，闭环巩固',
+      '答题卡矩阵调色板：题号色彩实时区分作答状态，一键平滑跳转题号',
+      '做题草稿板 (Scratchpad)：压感草稿纸，随时演算微积分或二进制推导',
+      '多维错因归因：概念混淆、计算失误、审题疏漏分类沉淀并推荐变式题',
     ],
     route: '/quiz',
     routeText: '进入真题刷题中心',
   },
   {
-    id: 3,
+    id: 5,
     title: '全库双链网络图谱与盲区雷达',
     subtitle: '从宏观上帝视角透视全科目考点联系',
     badge: '知识图谱 /graph',
@@ -92,47 +159,88 @@ const TOUR_SCENES: TourScene[] = [
     highlights: [
       '动态拓扑漫游：自由缩放拖拽知识网络，感受考点之间的脉络互联',
       '孤立笔记雷达：红绿警示快速发现未建立关联的遗漏死角，二轮复盘神器',
-      '标签与学科分层：408 四大模块与数学科目色彩分明，宏观把握知识密度',
+      '属性检查器：双击节点右侧滑出抽屉，实时阅读笔记 Markdown 正文与大纲',
     ],
     route: '/graph',
-    routeText: '打开知识图谱',
+    routeText: '打开双链图谱',
   },
   {
-    id: 4,
+    id: 6,
     title: 'SM-2 艾宾浩斯闪卡与科学抗遗忘',
-    subtitle: '在临界点抗遗忘巩固，配合安全权限管理',
+    subtitle: '在临界点抗遗忘巩固 · 智能多 Agent 导师伴学',
     badge: '学习中心 /study',
     icon: ShieldCheck,
-    colorText: 'text-emerald-600',
-    colorBg: 'bg-emerald-50/80',
-    colorBorder: 'border-emerald-200/80',
+    colorText: 'text-teal-600',
+    colorBg: 'bg-teal-50/80',
+    colorBorder: 'border-teal-200/80',
     description:
-      '内置基于认知负荷理论的 SM-2 间隔重复算法，在即将遗忘的黄金临界点自动推送复习。全面支持超级管理员、助教编辑与学生只读角色分权。',
+      '内置基于认知心理学的 SM-2 间隔重复算法，在即将遗忘的黄金临界点自动推送复习。全站按下 Ctrl+Shift+A 随时召唤 AI 伴学导师，解答复杂大题推导。',
     highlights: [
       'SM-2 记忆曲线：自适应评估掌握度，高频核心概念定理永不生疏',
-      '学生只读防篡改：学生账号可全量查阅与刷题，修改笔记受只读安全锁拦截',
-      'AI 深度推导伴学：按下 Ctrl+Shift+A 随时唤起导师，解答疑难大题推导',
+      'AI 导师随时召唤：Ctrl+Shift+A 快捷呼出，结合本地笔记给出严谨证明步骤',
+      '伴学萌宠与专属 Skills：右下角常驻奶龙/小猫伙伴，自主执行笔记治理与大纲重构',
     ],
     route: '/study',
     routeText: '体验艾宾浩斯闪卡',
   },
 ]
 
-export default function UserGuideModal({ isOpen, onClose, onStartInteractiveTour }: UserGuideModalProps) {
+export default function UserGuideModal({
+  isOpen,
+  onClose,
+  onStartInteractiveTour,
+  initialTab = 'tour',
+  initialCategory,
+  initialFeatureId,
+}: UserGuideModalProps) {
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState<'tour' | 'doc'>('tour')
+  const [activeTab, setActiveTab] = useState<'tour' | 'doc'>(initialTab)
   const [currentSceneIndex, setCurrentSceneIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(true)
   const [dontShowAgain, setDontShowAgain] = useState(false)
+
+  // 手册搜索与筛选状态
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'all')
+  const [expandedFeatureId, setExpandedFeatureId] = useState<string | null>(initialFeatureId || null)
+
+  // 响应外部属性变化
+  useEffect(() => {
+    if (initialTab) setActiveTab(initialTab)
+    if (initialCategory) setSelectedCategory(initialCategory)
+    if (initialFeatureId) {
+      setExpandedFeatureId(initialFeatureId)
+      setActiveTab('doc')
+    }
+  }, [initialTab, initialCategory, initialFeatureId])
 
   // 视频/巡礼自动轮播定时器
   useEffect(() => {
     if (!isOpen || !isPlaying || activeTab !== 'tour') return
     const timer = setInterval(() => {
       setCurrentSceneIndex((prev) => (prev + 1) % TOUR_SCENES.length)
-    }, 6000)
+    }, 6500)
     return () => clearInterval(timer)
   }, [isOpen, isPlaying, activeTab])
+
+  // 过滤后的手册条目列表
+  const filteredManualItems = useMemo(() => {
+    return FEATURE_MANUAL_DATA.filter((item) => {
+      const matchCategory = selectedCategory === 'all' || item.category === selectedCategory
+      if (!matchCategory) return false
+
+      if (!searchQuery.trim()) return true
+      const q = searchQuery.toLowerCase().trim()
+      return (
+        item.name.toLowerCase().includes(q) ||
+        item.summary.toLowerCase().includes(q) ||
+        item.problemSolved.toLowerCase().includes(q) ||
+        item.categoryName.toLowerCase().includes(q) ||
+        item.howToUse.some((step) => step.toLowerCase().includes(q)) ||
+        item.proTips.some((tip) => tip.toLowerCase().includes(q))
+      )
+    })
+  }, [selectedCategory, searchQuery])
 
   if (!isOpen) return null
 
@@ -179,36 +287,79 @@ export default function UserGuideModal({ isOpen, onClose, onStartInteractiveTour
     navigate('/editor?file=💡 新手指引 · CoreForge 研核完全使用手册.md')
   }
 
+  // 动态渲染功能手册图标
+  const renderItemIcon = (iconName: string) => {
+    const iconClass = 'w-4 h-4'
+    switch (iconName) {
+      case 'Flame': return <Flame className={iconClass} />
+      case 'Network': return <Network className={iconClass} />
+      case 'ShieldAlert': return <ShieldAlert className={iconClass} />
+      case 'Sparkles': return <Sparkles className={iconClass} />
+      case 'FileEdit': return <FileEdit className={iconClass} />
+      case 'Palette': return <Palette className={iconClass} />
+      case 'PenTool': return <PenTool className={iconClass} />
+      case 'AlertTriangle': return <AlertTriangle className={iconClass} />
+      case 'GraduationCap': return <GraduationCap className={iconClass} />
+      case 'BookOpen': return <BookOpen className={iconClass} />
+      case 'Landmark': return <Landmark className={iconClass} />
+      case 'Cpu': return <Cpu className={iconClass} />
+      case 'Music': return <Music className={iconClass} />
+      case 'Timer': return <Timer className={iconClass} />
+      case 'Highlighter': return <Highlighter className={iconClass} />
+      case 'Bot': return <Bot className={iconClass} />
+      case 'Smile': return <Smile className={iconClass} />
+      case 'Workflow': return <Workflow className={iconClass} />
+      case 'Search': return <Search className={iconClass} />
+      case 'ShieldCheck': return <ShieldCheck className={iconClass} />
+      case 'Smartphone': return <Smartphone className={iconClass} />
+      default: return <Sparkles className={iconClass} />
+    }
+  }
+
+  // 徽章颜色映射
+  const getBadgeStyle = (color: string) => {
+    switch (color) {
+      case 'rose': return 'bg-rose-50 text-rose-700 border-rose-200'
+      case 'purple': return 'bg-purple-50 text-purple-700 border-purple-200'
+      case 'amber': return 'bg-amber-50 text-amber-700 border-amber-200'
+      case 'emerald': return 'bg-emerald-50 text-emerald-700 border-emerald-200'
+      case 'blue': return 'bg-blue-50 text-blue-700 border-blue-200'
+      case 'teal': return 'bg-teal-50 text-teal-700 border-teal-200'
+      case 'cyan': return 'bg-cyan-50 text-cyan-700 border-cyan-200'
+      case 'indigo': return 'bg-indigo-50 text-indigo-700 border-indigo-200'
+      default: return 'bg-neutral-50 text-neutral-700 border-neutral-200'
+    }
+  }
+
   const modalContent = (
-    <div 
-      className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-5 bg-black/40 backdrop-blur-sm animate-fade-in font-sans"
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center p-2 sm:p-5 bg-black/40 backdrop-blur-sm animate-fade-in font-sans"
       onClick={handleClose}
       role="dialog"
       aria-modal="true"
     >
-      <div 
+      <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-4xl rounded-2xl sm:rounded-3xl bg-white border border-neutral-200/90 shadow-[0_24px_50px_-12px_rgba(0,0,0,0.14)] overflow-hidden flex flex-col max-h-[90vh] text-neutral-900"
+        className="relative w-full max-w-5xl rounded-2xl sm:rounded-3xl bg-white border border-neutral-200/90 shadow-[0_24px_50px_-12px_rgba(0,0,0,0.16)] overflow-hidden flex flex-col max-h-[92vh] text-neutral-900"
       >
-        
-        {/* Top Header - Subframe 纯净浅色玻璃风格 */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-100 px-5 sm:px-6 py-4 bg-white/95">
+        {/* Top Header - 纯净现代玻璃质感 */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-100 px-5 sm:px-6 py-4 bg-white/95 shrink-0">
           <div className="flex items-center justify-between gap-3 min-w-0">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-900 p-2 text-white shadow-xs">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-900 p-2 text-white shadow-xs">
                 <Compass className="h-5 w-5" />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm sm:text-base font-bold text-neutral-900 tracking-tight truncate">
-                    CoreForge 研核 · 新手巡礼指南
+                    CoreForge 研核 · 全功能与小功能完全使用手册
                   </h3>
                   <span className="hidden md:inline-flex px-2 py-0.5 text-[10.5px] font-semibold rounded-md bg-neutral-100 text-neutral-600 border border-neutral-200/70 shrink-0">
-                    全景导览
+                    22 大功能全景
                   </span>
                 </div>
                 <p className="text-xs text-neutral-500 line-clamp-1 mt-0.5">
-                  带您 3 分钟快速熟悉核心功能与每日研学闭环
+                  涵盖色谱图、知识图谱、随手记、答题卡调色板、SM-2 闪卡与所有小功能的作用与使用说明
                 </p>
               </div>
             </div>
@@ -223,12 +374,12 @@ export default function UserGuideModal({ isOpen, onClose, onStartInteractiveTour
           </div>
 
           <div className="flex items-center justify-between sm:justify-end gap-2.5 shrink-0">
-            {/* Tab Switch - Subframe 极简微胶囊 */}
+            {/* Tab Switch */}
             <div className="flex w-full sm:w-auto p-1 rounded-xl bg-neutral-100 border border-neutral-200/60 text-xs">
               <button
                 type="button"
                 onClick={() => setActiveTab('tour')}
-                className={`flex-1 sm:flex-initial whitespace-nowrap px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
+                className={`flex-1 sm:flex-initial whitespace-nowrap px-3.5 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
                   activeTab === 'tour'
                     ? 'bg-white text-neutral-900 shadow-2xs font-semibold'
                     : 'text-neutral-500 hover:text-neutral-900'
@@ -239,13 +390,13 @@ export default function UserGuideModal({ isOpen, onClose, onStartInteractiveTour
               <button
                 type="button"
                 onClick={() => setActiveTab('doc')}
-                className={`flex-1 sm:flex-initial whitespace-nowrap px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
+                className={`flex-1 sm:flex-initial whitespace-nowrap px-3.5 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
                   activeTab === 'doc'
                     ? 'bg-white text-neutral-900 shadow-2xs font-semibold'
                     : 'text-neutral-500 hover:text-neutral-900'
                 }`}
               >
-                图文使用手册
+                全功能使用手册字典
               </button>
             </div>
 
@@ -263,13 +414,17 @@ export default function UserGuideModal({ isOpen, onClose, onStartInteractiveTour
         <div className="flex-1 overflow-y-auto">
           {activeTab === 'tour' ? (
             <div className="p-4 sm:p-6 space-y-5">
-              {/* Feature Preview Card - 统一 Subframe 高级浅灰卡片 */}
+              {/* Feature Preview Card */}
               <div className="relative rounded-2xl border border-neutral-200/90 bg-neutral-50/70 p-5 sm:p-7 overflow-hidden transition-all duration-300">
                 {/* 顶部控制栏 */}
                 <div className="flex flex-wrap items-center justify-between gap-2 relative z-10">
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border ${scene.colorBg} ${scene.colorBorder} ${scene.colorText} whitespace-nowrap`}>
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border ${scene.colorBg} ${scene.colorBorder} ${scene.colorText} whitespace-nowrap`}
+                  >
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                    <span>第 {scene.id}/4 幕 · {scene.badge}</span>
+                    <span>
+                      第 {scene.id}/{TOUR_SCENES.length} 幕 · {scene.badge}
+                    </span>
                   </span>
 
                   <button
@@ -294,7 +449,9 @@ export default function UserGuideModal({ isOpen, onClose, onStartInteractiveTour
                 {/* 核心内容展示区 */}
                 <div className="my-5 relative z-10 max-w-2xl">
                   <div className="flex items-center gap-2.5">
-                    <span className={`p-1.5 rounded-xl border ${scene.colorBg} ${scene.colorBorder} ${scene.colorText} shadow-2xs`}>
+                    <span
+                      className={`p-1.5 rounded-xl border ${scene.colorBg} ${scene.colorBorder} ${scene.colorText} shadow-2xs`}
+                    >
                       <scene.icon className="h-4 w-4" />
                     </span>
                     <h4 className="text-lg sm:text-xl font-bold text-neutral-900 tracking-tight">
@@ -350,11 +507,11 @@ export default function UserGuideModal({ isOpen, onClose, onStartInteractiveTour
                 </div>
               </div>
 
-              {/* 每日研学 4 步通关指南 - 统一浅色卡片群 */}
+              {/* 每日研学 4 步通关指南 */}
               <div>
                 <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
                   <Sparkles className="h-3.5 w-3.5 text-neutral-500" />
-                  <span>每日研学 4 步通关指南</span>
+                  <span>每日研学 4 步高分通关指南</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
                   <div
@@ -363,10 +520,10 @@ export default function UserGuideModal({ isOpen, onClose, onStartInteractiveTour
                   >
                     <span className="text-[11px] font-bold text-indigo-600">第一步 · 驾驶舱</span>
                     <h6 className="mt-1 text-xs font-bold text-neutral-900 group-hover:text-indigo-600 transition-colors">
-                      查看备考倒计时
+                      查看备考倒计时与待办
                     </h6>
                     <p className="mt-1 text-[11px] text-neutral-500 leading-relaxed">
-                      掌握初试剩余天数，全面评估笔记健康度与真题掌握率。
+                      掌握初试剩余天数，快速查看今日艾宾浩斯复习卡与薄弱考点提示。
                     </p>
                   </div>
 
@@ -374,25 +531,12 @@ export default function UserGuideModal({ isOpen, onClose, onStartInteractiveTour
                     onClick={() => handleNavigate('/quiz')}
                     className="p-3 rounded-xl bg-white border border-neutral-200/90 hover:border-neutral-300 hover:shadow-xs transition-all cursor-pointer group"
                   >
-                    <span className="text-[11px] font-bold text-amber-600">第二步 · 刷真题</span>
+                    <span className="text-[11px] font-bold text-amber-600">第二步 · 真题刷题</span>
                     <h6 className="mt-1 text-xs font-bold text-neutral-900 group-hover:text-amber-600 transition-colors">
-                      专项模拟与错因归因
+                      答题卡调色板与草稿演练
                     </h6>
                     <p className="mt-1 text-[11px] text-neutral-500 leading-relaxed">
-                      做 408 与考研数学历年真题，错题自动收录并对比解题步骤。
-                    </p>
-                  </div>
-
-                  <div
-                    onClick={() => handleNavigate('/study')}
-                    className="p-3 rounded-xl bg-white border border-neutral-200/90 hover:border-neutral-300 hover:shadow-xs transition-all cursor-pointer group"
-                  >
-                    <span className="text-[11px] font-bold text-emerald-600">第三步 · 间隔记忆</span>
-                    <h6 className="mt-1 text-xs font-bold text-neutral-900 group-hover:text-emerald-600 transition-colors">
-                      SM-2 艾宾浩斯闪卡
-                    </h6>
-                    <p className="mt-1 text-[11px] text-neutral-500 leading-relaxed">
-                      早晚各 15 分钟抗遗忘复盘，强化专业课定理与高频英语词根。
+                      做 408 与考研数学历年真题，利用调色板快速跳题，手写板即时演练。
                     </p>
                   </div>
 
@@ -400,92 +544,223 @@ export default function UserGuideModal({ isOpen, onClose, onStartInteractiveTour
                     onClick={() => handleNavigate('/graph')}
                     className="p-3 rounded-xl bg-white border border-neutral-200/90 hover:border-neutral-300 hover:shadow-xs transition-all cursor-pointer group"
                   >
-                    <span className="text-[11px] font-bold text-purple-600">第四步 · 图谱漫游</span>
-                    <h6 className="mt-1 text-xs font-bold text-neutral-900 group-hover:text-purple-600 transition-colors">
-                      双链梳理消灭盲区
+                    <span className="text-[11px] font-bold text-rose-600">第三步 · 掌握度色谱</span>
+                    <h6 className="mt-1 text-xs font-bold text-neutral-900 group-hover:text-rose-600 transition-colors">
+                      透视红黄盲区直通急救舱
                     </h6>
                     <p className="mt-1 text-[11px] text-neutral-500 leading-relaxed">
-                      高亮排查孤立笔记，用双向链接织就坚不可摧的知识网。
+                      在色谱图中查看红灯高危考点，单击呼出急救舱开展 5 题靶向速测。
+                    </p>
+                  </div>
+
+                  <div
+                    onClick={() => handleNavigate('/study')}
+                    className="p-3 rounded-xl bg-white border border-neutral-200/90 hover:border-neutral-300 hover:shadow-xs transition-all cursor-pointer group"
+                  >
+                    <span className="text-[11px] font-bold text-teal-600">第四步 · 间隔记忆</span>
+                    <h6 className="mt-1 text-xs font-bold text-neutral-900 group-hover:text-teal-600 transition-colors">
+                      SM-2 艾宾浩斯闪卡
+                    </h6>
+                    <p className="mt-1 text-[11px] text-neutral-500 leading-relaxed">
+                      早晚各 15 分钟抗遗忘复盘，强化定理公式与计算机协议细节。
                     </p>
                   </div>
                 </div>
               </div>
             </div>
           ) : (
-            /* Document Manual Tab - 统一浅色高品质排版 */
-            <div className="p-5 sm:p-7 space-y-5 text-neutral-600 text-xs sm:text-sm leading-relaxed">
-              <div className="p-4 rounded-xl bg-neutral-50 border border-neutral-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <h4 className="text-xs sm:text-sm font-bold text-neutral-900">官方使用手册笔记已就绪</h4>
-                  <p className="text-xs text-neutral-500 mt-0.5">
-                    该手册已作为 Markdown 文件保存在您的知识库根目录下，支持随时编辑或双链索引。
-                  </p>
+            /* 全功能与小功能完全使用手册字典 Tab */
+            <div className="p-4 sm:p-6 space-y-5">
+              {/* 顶部搜索与官方 Markdown 打开条 */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-neutral-50 border border-neutral-200/90">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="搜索小功能作用或说明 (如：色谱图、知识图谱、随手记、答题卡、草稿纸、仿真课件...)"
+                    className="w-full pl-9 pr-3 py-1.5 rounded-lg bg-white border border-neutral-200 text-xs text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-neutral-400 hover:text-neutral-700"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
+
                 <button
                   onClick={handleOpenDocInEditor}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-white px-3.5 py-1.5 text-xs font-semibold shadow-xs transition-all shrink-0 cursor-pointer self-start sm:self-auto"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-white border border-neutral-200 hover:bg-neutral-100 text-neutral-800 px-3.5 py-1.5 text-xs font-semibold shadow-2xs transition-all shrink-0 cursor-pointer"
+                  title="在 Obsidian 笔记编辑器中查看原始 Markdown 文件"
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
-                  <span>在笔记编辑器中打开</span>
+                  <span>在笔记编辑器中打开文档</span>
                 </button>
               </div>
 
+              {/* 分类快捷标签栏 */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
+                {MANUAL_CATEGORIES.map((cat) => (
+                  <button
+                    key={cat.key}
+                    onClick={() => setSelectedCategory(cat.key)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all cursor-pointer ${
+                      selectedCategory === cat.key
+                        ? 'bg-neutral-900 text-white font-semibold shadow-2xs'
+                        : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200/70 hover:text-neutral-900'
+                    }`}
+                  >
+                    <span>{cat.emoji}</span>
+                    <span>{cat.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* 功能卡片列表 */}
               <div className="space-y-4">
-                <h4 className="text-sm font-bold text-neutral-900">一、系统全貌与核心价值</h4>
-                <p>
-                  CoreForge 研核专为 408 计算机统考与考研数学研发，核心在于实现<strong>「笔记输入 ➔ 真题演练 ➔ 错因归因 ➔ 闪卡抗遗忘 ➔ 图谱全局透视」</strong>的完整备考闭环。
-                </p>
+                {filteredManualItems.length === 0 ? (
+                  <div className="text-center py-12 text-neutral-400 text-xs">
+                    <HelpCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    未找到与「{searchQuery}」匹配的小功能说明。您可以尝试更换关键词或清除搜索。
+                  </div>
+                ) : (
+                  filteredManualItems.map((item) => {
+                    const isExpanded = expandedFeatureId === item.id
+                    const badgeClass = getBadgeStyle(item.color)
 
-                <h4 className="text-sm font-bold text-neutral-900 pt-2">二、多用户权限与角色说明</h4>
-                <div className="space-y-2.5 text-xs">
-                  <div className="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200/80">
-                    <span className="font-bold text-neutral-900">👑 超级管理员 (admin)</span>
-                    <p className="text-neutral-600 mt-1 leading-relaxed">
-                      掌控系统全局底层物理底座、服务器挂载路径、配置各端 AI 服务商与 API 密钥、重构全库标签与用户角色晋升。
-                    </p>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200/80">
-                    <span className="font-bold text-neutral-900">✏️ 研学编辑者 (editor)</span>
-                    <p className="text-neutral-600 mt-1 leading-relaxed">
-                      具备全库笔记研读、双链拓展、知识卡片自由编辑与自选题库导入解析权限；全局系统核心 API 设置受管理员策略保护只读。
-                    </p>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200/80">
-                    <span className="font-bold text-neutral-900">🎓 研学学员 (student)</span>
-                    <p className="text-neutral-600 mt-1 leading-relaxed">
-                      自主注册默认角色。享受全科目真题模拟、智能批改评分、错题归因本沉淀、艾宾浩斯抗遗忘闪卡与 AI 伴学答疑；公共系统笔记与大模型底座享有安全防误改保护。
-                    </p>
-                  </div>
-                </div>
+                    return (
+                      <div
+                        key={item.id}
+                        id={`manual-${item.id}`}
+                        className={`rounded-2xl border transition-all duration-200 bg-white ${
+                          isExpanded
+                            ? 'border-neutral-900/40 shadow-sm ring-1 ring-neutral-900/10'
+                            : 'border-neutral-200/90 hover:border-neutral-300 hover:shadow-2xs'
+                        }`}
+                      >
+                        {/* 卡片头部 */}
+                        <div
+                          onClick={() => setExpandedFeatureId(isExpanded ? null : item.id)}
+                          className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer select-none"
+                        >
+                          <div className="flex items-start sm:items-center gap-3 min-w-0">
+                            <div className={`p-2 rounded-xl border shrink-0 ${badgeClass}`}>
+                              {renderItemIcon(item.iconName)}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h4 className="text-sm sm:text-base font-bold text-neutral-900">
+                                  {item.name}
+                                </h4>
+                                <span
+                                  className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${badgeClass}`}
+                                >
+                                  {item.badge}
+                                </span>
+                                {item.shortcuts?.map((sc, i) => (
+                                  <span
+                                    key={i}
+                                    className="px-1.5 py-0.5 rounded bg-neutral-100 border border-neutral-200 text-[10px] font-mono text-neutral-600"
+                                  >
+                                    {sc}
+                                  </span>
+                                ))}
+                              </div>
+                              <p className="mt-1 text-xs text-neutral-600 line-clamp-2">
+                                {item.summary}
+                              </p>
+                            </div>
+                          </div>
 
-                <h4 className="text-sm font-bold text-neutral-900 pt-2">三、学习激励与知识库健康度维护</h4>
-                <div className="space-y-2 text-xs text-neutral-600 leading-relaxed">
-                  <p>
-                    • <strong>打卡与学分奖励机制</strong>：每日坚持签到与刷题复盘可获得研学积分，用于解锁 AI 伴学导师深度分步推导演算与变式题强化，永久无任何商业续费门槛。
-                  </p>
-                  <p>
-                    • <strong>知识体系健康度体检</strong>：知识库整理引擎提供 8 项健康度实时巡检，智能识别孤立笔记与断链。遇到黄红警示项可直接点击「一键快速修复」，无需手工繁琐处理。
-                  </p>
-                </div>
+                          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                            {item.route && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleNavigate(item.route!)
+                                }}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors cursor-pointer"
+                              >
+                                <span>{item.routeText || '前往体验'}</span>
+                                <ArrowRight className="w-3 h-3" />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              className="p-1 rounded-md text-neutral-400 hover:text-neutral-700"
+                            >
+                              <ChevronRight
+                                className={`w-4 h-4 transition-transform duration-200 ${
+                                  isExpanded ? 'rotate-90' : ''
+                                }`}
+                              />
+                            </button>
+                          </div>
+                        </div>
 
-                <h4 className="text-sm font-bold text-neutral-900 pt-2">四、高效提效快捷键速查</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div className="p-2.5 rounded-lg bg-neutral-50 border border-neutral-200/80 flex items-center justify-between text-xs">
-                    <span className="font-medium text-neutral-700">全局智能搜索</span>
-                    <kbd className="px-2 py-0.5 rounded bg-white border border-neutral-200 font-mono text-[10.5px] font-bold text-neutral-800 shadow-2xs">Ctrl + K</kbd>
-                  </div>
-                  <div className="p-2.5 rounded-lg bg-neutral-50 border border-neutral-200/80 flex items-center justify-between text-xs">
-                    <span className="font-medium text-neutral-700">召唤 AI 伴学导师</span>
-                    <kbd className="px-2 py-0.5 rounded bg-white border border-neutral-200 font-mono text-[10.5px] font-bold text-neutral-800 shadow-2xs">Ctrl + Shift + A</kbd>
-                  </div>
-                </div>
+                        {/* 展开的详尽说明内容 */}
+                        {isExpanded && (
+                          <div className="px-4 pb-5 sm:px-5 sm:pb-5 border-t border-neutral-100 space-y-4 pt-4 text-xs text-neutral-700">
+                            {/* 解决的核心痛点 */}
+                            <div className="p-3 rounded-xl bg-amber-50/60 border border-amber-200/70 text-amber-900 flex items-start gap-2.5">
+                              <Lightbulb className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                              <div>
+                                <span className="font-bold text-[11px] block text-amber-800">
+                                  功能作用与解决的备考痛点：
+                                </span>
+                                <p className="mt-0.5 leading-relaxed">{item.problemSolved}</p>
+                              </div>
+                            </div>
+
+                            {/* 具体使用步骤与操作说明 */}
+                            <div>
+                              <div className="font-bold text-neutral-900 mb-2 flex items-center gap-1.5">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>具体使用说明与操作步骤：</span>
+                              </div>
+                              <div className="space-y-1.5 pl-1">
+                                {item.howToUse.map((step, idx) => (
+                                  <div key={idx} className="flex items-start gap-2 leading-relaxed">
+                                    <span className="h-4 w-4 rounded-full bg-neutral-100 text-neutral-700 font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">
+                                      {idx + 1}
+                                    </span>
+                                    <span>{step}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* 进阶提效与实战技巧 */}
+                            {item.proTips.length > 0 && (
+                              <div className="p-3 rounded-xl bg-neutral-50 border border-neutral-200/80">
+                                <div className="font-bold text-neutral-900 mb-1.5 flex items-center gap-1.5 text-[11px]">
+                                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                                  <span>进阶实战提效技巧 (Pro Tips)：</span>
+                                </div>
+                                <ul className="list-disc list-inside space-y-1 text-neutral-600 leading-relaxed pl-1">
+                                  {item.proTips.map((tip, idx) => (
+                                    <li key={idx}>{tip}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })
+                )}
               </div>
             </div>
           )}
         </div>
 
-        {/* Modal Footer - 明确提供【开启实战引导】与【跳过新手教程】 */}
-        <div className="border-t border-neutral-100 px-5 sm:px-6 py-3.5 bg-neutral-50/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+        {/* Modal Footer */}
+        <div className="border-t border-neutral-100 px-5 sm:px-6 py-3.5 bg-neutral-50/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shrink-0">
           <label className="flex items-center gap-2 text-neutral-500 cursor-pointer select-none">
             <input
               type="checkbox"
@@ -493,29 +768,26 @@ export default function UserGuideModal({ isOpen, onClose, onStartInteractiveTour
               onChange={(e) => setDontShowAgain(e.target.checked)}
               className="rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900 h-3.5 w-3.5"
             />
-            <span>不再自动弹出新手巡礼（可在导航栏随时点击「指引」图标再次打开）</span>
+            <span>不再自动弹出新手巡礼（可在导航栏点击「使用手册」图标随时打开）</span>
           </label>
 
           <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-            {/* 一键跳过新手教程 */}
             <button
               onClick={handleSkipTour}
               className="px-3 py-1.5 rounded-lg border border-neutral-200/80 bg-white hover:bg-neutral-50 text-neutral-600 hover:text-neutral-900 font-medium transition-colors cursor-pointer"
             >
-              跳过新手教程
+              关闭
             </button>
 
-            {/* 开启沉浸交互实战漫游 */}
             <button
               onClick={handleStartTour}
               className="px-4 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-white font-semibold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
             >
               <Compass className="h-3.5 w-3.5" />
-              <span>开始沉浸体验 (实战引导)</span>
+              <span>开启实战全景漫游</span>
             </button>
           </div>
         </div>
-
       </div>
     </div>
   )

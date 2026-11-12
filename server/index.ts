@@ -48,9 +48,9 @@ app.use(cors({
 
 app.use(express.json({ limit: '50mb' }))
 
-// 对所有页面路由注入边缘 CDN 与浏览器无缓存头，杜绝 Cloudflare 及移动端强缓存旧版本
+// 对所有页面路由注入边缘 CDN 与浏览器无缓存头，杜绝 Cloudflare 及移动端强缓存旧版本（排除 /api/ 接口以保障大文件 Range 分片缓存）
 app.use((req, res, next) => {
-  if (req.method === 'GET' && (!req.path.includes('.') || req.path.endsWith('.html'))) {
+  if (req.method === 'GET' && !req.path.startsWith('/api/') && (!req.path.includes('.') || req.path.endsWith('.html'))) {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0')
     res.setHeader('Pragma', 'no-cache')
     res.setHeader('Expires', '0')

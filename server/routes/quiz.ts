@@ -10,7 +10,40 @@ import { database } from '../db/database.js'
 import { matchSyllabusNode } from '../data/syllabus.js'
 import { MasteryEngine } from '../algorithms/mastery.js'
 import { calculateSM2 } from '../algorithms/sm2.js'
+import { normalizeQuestionMathFields } from '../utils/math-normalize.js'
 
+
+type QuizDomain = 'cs_408' | 'math' | 'english' | 'politics' | 'general'
+
+function getQuizDomainLabel(domain?: string): string {
+  switch (domain) {
+    case 'cs_408': return '408 计算机综合'
+    case 'english': return '考研英语 (英一/英二)'
+    case 'politics': return '考研政治 (马原/史纲/思修/新思想)'
+    case 'general': return '其他专业课 / 综合'
+    default: return '考研数学'
+  }
+}
+
+function getQuizDefaultSubject(domain?: string): string {
+  switch (domain) {
+    case 'cs_408': return '数据结构'
+    case 'english': return '阅读理解'
+    case 'politics': return '马克思主义基本原理'
+    case 'general': return '专业课综合'
+    default: return '高等数学'
+  }
+}
+
+function getErrorSubFolderByDomain(domain?: string): string {
+  switch (domain) {
+    case 'math': return '数学错题本'
+    case 'english': return '英语错题本'
+    case 'politics': return '政治错题本'
+    case 'general': return '专业课错题本'
+    default: return '408错题本'
+  }
+}
 
 export const quizRouter = Router()
 
@@ -84,7 +117,8 @@ function loadCustomQuestions(req?: any): any[] {
     const p = getCustomQuestionsPath(req)
     if (!fs.existsSync(p)) return []
     const raw = fs.readFileSync(p, 'utf8')
-    return JSON.parse(raw)
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed.map(q => normalizeQuestionMathFields(q)) : []
   } catch {
     return []
   }
@@ -117,10 +151,10 @@ quizRouter.post('/quiz/custom', (req, res) => {
     const current = loadCustomQuestions(req)
     const toAdd = Array.isArray(questions) ? questions : [questions]
 
-    // Assign IDs if missing
-    const formatted = toAdd.map((q, idx) => ({
+    // 规整入库题目的 LaTeX 公式定界符并补齐唯一 ID
+    const formatted = toAdd.map((q, idx) => normalizeQuestionMathFields({
       ...q,
-      id: q.id || custom--,
+      id: q.id || `custom-${Date.now()}-${idx}`,
       isCustom: true,
       importedAt: new Date().toISOString()
     }))
@@ -157,7 +191,7 @@ quizRouter.post('/quiz/parse-text', async (req, res) => {
 
     const { text, domain, subject } = req.body as {
       text: string
-      domain?: 'cs_408' | 'math'
+      domain?: QuizDomain
       subject?: string
     }
 
@@ -166,8 +200,11 @@ quizRouter.post('/quiz/parse-text', async (req, res) => {
       return
     }
 
+    const domainLabel = getQuizDomainLabel(domain)
+    const defaultSub = subject || getQuizDefaultSubject(domain)
+
     const prompt = `请将以下考研学生粘贴的文本或题目，解析提炼为标准化的考研题库 JSON 数组。
-学科领域：${domain === 'cs_408' ? '408 计算机综合' : '考研数学'}（${subject || '综合'}）
+学科领域：${domainLabel}（${defaultSub}）
 
 【原始输入文本】：
 """
@@ -175,8 +212,8 @@ ${text.slice(0, 5000)}
 """
 
 【输出规则】：
-1. 识别并提取题目、选项（如果是单选题）、正确答案和详细解析。
-2. 数学公式必须规范格式化为 KaTeX LaTeX（如 $\\lim_{x \\to 0} \\frac{\\sin x}{x} = 1$）。
+1. 识别并提取题目、选项（如果是单选题或阅读/政治选择题）、正确答案和详细解析。
+2. 数学或专业课公式必须规范格式化为 KaTeX LaTeX（如 $\\lim_{x \\to 0} \\frac{\\sin x}{x} = 1$）；英语题目保留英文原句与选项，解析中分析长难句语法结构或定位句同义替换；政治题目准确提取题干与选项，解析中说明核心考点与干扰项排除依据。
 3. 如果原文没有解析，请根据题干和答案补充严密规范的分步考研解析。
 4. 如果有多道题目，解析为多个数组元素。
 5. 必须只输出纯 JSON 数组，严禁任何额外解释或 Markdown 格式以外的文本：
@@ -184,7 +221,7 @@ ${text.slice(0, 5000)}
   {
     "id": "parsed-${Date.now()}-1",
     "domain": "${domain || 'math'}",
-    "subject": "${subject || (domain === 'cs_408' ? '数据结构' : '高等数学')}",
+    "subject": "${defaultSub}",
     "chapter": "对应章节",
     "type": "choice",
     "difficulty": "中等",
@@ -197,7 +234,7 @@ ${text.slice(0, 5000)}
     },
     "answer": "A",
     "explanation": "详细解析与考研解题通法",
-    "tags": ["自定义导入", "${subject || '核心题型'}"]
+    "tags": ["自定义导入", "${defaultSub}"]
   }
 ]`
 
@@ -215,7 +252,7 @@ ${text.slice(0, 5000)}
       return
     }
 
-    res.json({ questions: parsed })
+    res.json({ questions: parsed.map(q => normalizeQuestionMathFields(q)) })
   } catch (err: any) {
     console.error('Quiz parse-text error:', err.message)
     res.status(500).json({ error: err.message })
@@ -228,7 +265,7 @@ quizRouter.post('/quiz/parse-ocr', async (req, res) => {
     const { image, text, domain, subject } = req.body as {
       image: string
       text?: string
-      domain?: 'cs_408' | 'math'
+      domain?: QuizDomain
       subject?: string
     }
 
@@ -245,12 +282,15 @@ quizRouter.post('/quiz/parse-ocr', async (req, res) => {
       base64Data = parts[1]
     }
 
+    const domainLabel = getQuizDomainLabel(domain)
+    const defaultSub = subject || getQuizDefaultSubject(domain)
+
     if (!anthropic) {
       // 离线/未配置 AI 服务时返回模拟提取样例卡片，允许考生快速核验与编辑
       const fallbackQuestion = {
         id: `ocr-${Date.now()}-mock`,
         domain: domain || 'math',
-        subject: subject || (domain === 'cs_408' ? '数据结构' : '高等数学'),
+        subject: defaultSub,
         chapter: '截图OCR录入考点',
         type: 'choice',
         difficulty: '中等',
@@ -263,19 +303,19 @@ quizRouter.post('/quiz/parse-ocr', async (req, res) => {
         },
         answer: 'A',
         explanation: '根据积分第一中值定理，$\\int_{a}^{b} f(x)\\,dx = f(\\xi)(b - a) = 0$，因 $b > a$，必有 $f(\\xi) = 0$。',
-        tags: ['拍照导入', '积分中值定理'],
+        tags: ['拍照导入', defaultSub],
       }
       res.json({ questions: [fallbackQuestion], offline: true })
       return
     }
 
-    const ocrPrompt = `你是一位考研数学与 408 计算机考研命题与真题录入专家。
+    const ocrPrompt = `你是一位全国硕士研究生招生考试（408计算机、考研数学、考研英语、考研政治及专业课）命题与真题录入专家。
 请仔细审视图片内容（包含考研真题、模考题或错题笔记），高精度提取题目并转换为标准化的考研题库 JSON 数组。
-学科领域：${domain === 'cs_408' ? '408 计算机专业基础综合' : '全国考研数学'}（${subject || '核心考点'}）
+学科领域：${domainLabel}（${defaultSub}）
 ${text ? `学生补充的文字说明："""${text}"""` : ''}
 
 【核心视觉识别规则】：
-1. 完整识别题干：提取所有文字描述、题号、分值与已知条件。
+1. 完整识别题干：提取所有文字描述、题号、分值与已知条件；英语阅读/完形保留完整英文题干或段落节选，政治题完整保留材料与设问。
 2. 严谨 LaTeX 公式转换：所有数学公式、符号、极限、积分、矩阵、分式、几何表达式必须严格转换为 KaTeX 规范的 LaTeX（行内公式用 $...$，行间独立公式用 $$...$$）。
 3. 408 结构图与图表复刻：若图中包含数据结构拓扑图、网络协议头、指令格式或表格，请使用 Markdown 代码块（如 \`\`\`c ... \`\`\`）或清晰的文字/ASCII结构图忠实还原在题干中。
 4. 选项与题型提取：若是选择题，提取 options: { A, B, C, D }；若是填空题或综合计算题，type 置为 "blank" 或 "analysis"。
@@ -285,7 +325,7 @@ ${text ? `学生补充的文字说明："""${text}"""` : ''}
   {
     "id": "ocr-${Date.now()}-1",
     "domain": "${domain || 'math'}",
-    "subject": "${subject || (domain === 'cs_408' ? '数据结构' : '高等数学')}",
+    "subject": "${defaultSub}",
     "chapter": "精准识别章节",
     "type": "choice",
     "difficulty": "中等",
@@ -298,7 +338,7 @@ ${text ? `学生补充的文字说明："""${text}"""` : ''}
     },
     "answer": "A",
     "explanation": "详尽分步解题思路与考研考点归因",
-    "tags": ["截图OCR导入", "${subject || '真题精选'}"]
+    "tags": ["截图OCR导入", "${defaultSub}"]
   }
 ]`
 
@@ -334,7 +374,7 @@ ${text ? `学生补充的文字说明："""${text}"""` : ''}
       return
     }
 
-    res.json({ questions: parsed })
+    res.json({ questions: parsed.map(q => normalizeQuestionMathFields(q)) })
   } catch (err: any) {
     console.error('Quiz parse-ocr error:', err.message)
     res.status(500).json({ error: err.message })
@@ -473,10 +513,11 @@ quizRouter.post('/quiz/save-error', (req, res) => {
     }
 
     const domain = question.domain || (question.subject?.includes('数学') || question.scope ? 'math' : 'cs_408')
-    const subFolder = domain === 'math' ? '数学错题本' : '408错题本'
+    const subFolder = getErrorSubFolderByDomain(domain)
     const now = new Date()
-    const dateStr = now.toISOString().split('T')[0]
-    const timestamp = `${now.getHours()}${now.getMinutes()}${now.getSeconds()}`
+    const dateStr = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai' }).format(now)
+    const timeParts = new Intl.DateTimeFormat('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(now).split(':')
+    const timestamp = timeParts.join('')
     const safeTitle = (question.chapter || question.subject || '错题')
       .replace(/[\\/:*?"<>|]/g, '_')
     const fileName = `${dateStr}-${safeTitle}-${timestamp}.md`
@@ -561,6 +602,8 @@ ${question.steps ? `### 详细步骤：\n${question.steps.join('\n\n')}` : ''}
 
     // 同步将该题追加进按日期汇集的每日错题集 (错题本/YYYY-MM-DD.md 与 03-真题错题归因/每日错题集.md)
     try {
+      const today = dateStr
+      const sourceFile = targetPath
       const dailyDirs = [
         path.join(vaultPath, '错题本'),
         path.join(vaultPath, parentFolder, '每日错题集')
@@ -568,7 +611,7 @@ ${question.steps ? `### 详细步骤：\n${question.steps.join('\n\n')}` : ''}
       const optionsStr = question.options
         ? Object.entries(question.options).map(([k, v]) => `${k}. ${v}`).join(' ')
         : ''
-      const entryText = `\n## 错题 ${new Date().toISOString()}\n- **来源笔记**: ${sourceFile}\n- **题目**: ${question.question}\n- **你的回答**: ${userAnswer}\n- **正确答案**: ${question.answer}\n- **解析**: ${question.explanation || ''}\n- **复习次数**: 0\n- **下次复习**: ${today}\n`
+      const entryText = `\n## 错题 ${new Date().toISOString()}\n- **来源笔记**: ${sourceFile}\n- **科目**: ${question.subject || ''}\n- **错因类型**: ${errorType || '概念不清'}\n- **错因反思**: ${notes || '待补充复盘反思'}\n- **题目**: ${question.question}${optionsStr ? ` (${optionsStr})` : ''}\n- **你的回答**: ${userAnswer || '未作答'}\n- **正确答案**: ${question.answer || question.correctAnswer || ''}\n- **解析**: ${question.explanation || ''}\n- **复习次数**: 0\n- **下次复习**: ${today}\n`
       for (const dailyDir of dailyDirs) {
         if (!fs.existsSync(dailyDir)) {
           fs.mkdirSync(dailyDir, { recursive: true })
@@ -589,7 +632,8 @@ ${question.steps ? `### 详细步骤：\n${question.steps.join('\n\n')}` : ''}
 
     // 结构化持久化至 SQLite 数据库 & 绑定三级考点大纲
     const syllabusNode = matchSyllabusNode(question.question, question.subject)
-    const errorId = `err-${question.id || Date.now()}`
+    const rawId = String(question.id || Date.now())
+    const errorId = rawId.startsWith('err-') ? rawId : `err-${rawId}`
     try {
       database.upsertErrorQuestion({
         id: errorId,
@@ -607,6 +651,7 @@ ${question.steps ? `### 详细步骤：\n${question.steps.join('\n\n')}` : ''}
         difficulty: question.difficulty || '中等',
         sourceNote: targetPath,
         status: 'active',
+        notes: notes || '',
         createdAt: dateStr,
         updatedAt: dateStr,
       })
@@ -664,8 +709,8 @@ quizRouter.post('/quiz/variant', async (req, res) => {
       return
     }
 
-    const prompt = `你是一个深谙全国硕士研究生考试（408计算机综合与考研数学）的专家。
-学生在做以下题目时出现了错误或需要巩固。请针对该题目考察的核心概念与定理，命制 2 道考察相同核心考点、但改变题设参数、条件或考查角度的“举一反三变式训练题”。
+    const prompt = `你是一个深谙全国硕士研究生考试（408计算机综合与考研数学）的命题专家。
+学生在做以下题目时出现了错误或需要巩固。请针对该题目考察的核心概念与定理，命制 3 道考察相同核心考点、但改变题设参数、条件或考查角度的“举一反三变式训练题”。
 
 【原题信息】：
 科目：${question.subject} (${question.domain})
@@ -674,10 +719,11 @@ quizRouter.post('/quiz/variant', async (req, res) => {
 原答案与解析：${question.explanation}
 
 【变式题要求】：
-1. 考察相同的定理或算法底层逻辑，但变换参数、反向考查或增加一个易错干扰项。
-2. 公式必须规范使用 KaTeX LaTeX 语法（$...$ 或 $$...$$）。
-3. 每题必须包含：question, options (A, B, C, D), answer, explanation (详尽分步推导)。
-4. 严格只输出纯 JSON 数组：
+1. 必须严格生成 3 道相互独立的变式题（数组长度必须为 3），考察相同的定理或算法底层逻辑，变换参数、反向考查或增加一个易错干扰项。
+2. 【数学与逻辑严密性强制自检】：在生成每道题前，必须在内部完整验算所有假设与数字。涉及独立同分布、条件概率、不等式或计算机协议/调度参数时，必须保证题干前提充分且相互自洽（例如：独立同分布不能强行凑出互斥或总概率超过 1 的矛盾结论），严禁出现解析推翻题干或“题设条件有误”的自相矛盾情况！
+3. 公式必须规范使用 KaTeX LaTeX 语法（$...$ 或 $$...$$）。
+4. 每题必须包含：question, options (A, B, C, D), answer (仅填单个字母 A/B/C/D 且必须与解析最终结论完全一致), explanation (详尽分步推导)。
+5. 严格只输出纯 JSON 数组：
 [
   {
     "id": "var-${Date.now()}-1",
@@ -758,15 +804,22 @@ quizRouter.post('/quiz/submit', (req, res) => {
         subjectBreakdown[q.subject] = { total: 0, correct: 0 }
       }
       subjectBreakdown[q.subject].total++
-      if (answers[q.id] === q.answer) {
+      const userAns = (answers[q.id] || '').trim()
+      const isCorrect =
+        userAns === 'mastered' ||
+        (userAns !== 'unmastered' &&
+          userAns !== '' &&
+          (userAns.toUpperCase() === (q.answer || '').trim().toUpperCase() ||
+            userAns === (q.answer || '').replace(/[\$\s]/g, '')))
+      if (isCorrect) {
         subjectBreakdown[q.subject].correct++
       }
     }
 
     let summaryPath = ''
     const now = new Date()
-    const dateStr = now.toISOString().split('T')[0]
-    const hmStr = now.toTimeString().split(' ')[0].substring(0, 5).replace(':', '')
+    const dateStr = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai' }).format(now)
+    const hmStr = new Intl.DateTimeFormat('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false, hour: '2-digit', minute: '2-digit' }).format(now).replace(':', '')
     const quizId = `quiz-${dateStr}-${hmStr}-${Date.now().toString().slice(-4)}`
 
     // 1. 结构化持久化至 SQLite 数据库
@@ -856,13 +909,284 @@ quizRouter.get('/quiz/records', (req, res) => {
   }
 })
 
+quizRouter.get('/quiz/errors/stats', (req, res) => {
+  try {
+    const stats = database.getErrorQuestionStats(req.user?.id)
+    res.json({ success: true, stats })
+  } catch (err: any) {
+    console.error('Quiz error stats error:', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
 quizRouter.get('/quiz/errors', (req, res) => {
   try {
     const subject = req.query.subject as string | undefined
     const status = req.query.status as string | undefined
-    const errors = database.getErrorQuestions({ subject, status, userId: req.user?.id })
-    res.json({ success: true, errors })
+    const errorType = req.query.errorType as string | undefined
+    const search = req.query.search as string | undefined
+    const domain = req.query.domain as string | undefined
+
+    const rawErrors = database.getErrorQuestions({
+      subject,
+      status,
+      errorType,
+      search,
+      domain,
+      userId: req.user?.id,
+    })
+
+    const errors = rawErrors.map((item) => {
+      let options: Record<string, string> = {}
+      try {
+        if (item.optionsJson) {
+          options = JSON.parse(item.optionsJson)
+        }
+      } catch {}
+      return {
+        ...item,
+        options,
+      }
+    })
+
+    res.json({ success: true, errors, total: errors.length })
   } catch (err: any) {
+    console.error('Quiz errors fetch error:', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+quizRouter.patch('/quiz/errors/:id', (req, res) => {
+  try {
+    const { id } = req.params
+    const { status, errorType, notes, userAnswer, difficulty } = req.body as {
+      status?: 'active' | 'reviewing' | 'mastered'
+      errorType?: string
+      notes?: string
+      userAnswer?: string
+      difficulty?: string
+    }
+
+    const updated = database.updateErrorQuestion(
+      id,
+      { status, errorType, notes, userAnswer, difficulty },
+      req.user?.id
+    )
+
+    if (!updated) {
+      res.status(404).json({ error: '错题未找到或无修改权限' })
+      return
+    }
+
+    // 若标记为掌握，更新 SM-2 卡片评级与下一次复习时间
+    if (status === 'mastered') {
+      try {
+        const nextDate = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]
+        const card = database.getSM2Flashcard(id)
+        if (card) {
+          database.upsertSM2Flashcard({
+            ...card,
+            repetition: (card.repetition || 0) + 1,
+            reviewCount: (card.reviewCount || 0) + 1,
+            lastGrade: 5,
+            nextReviewAt: nextDate,
+            lastReviewAt: new Date().toISOString().split('T')[0],
+          })
+        }
+      } catch {}
+    }
+
+    res.json({ success: true, id, status, notes, errorType })
+  } catch (err: any) {
+    console.error('Update error question failed:', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+quizRouter.delete('/quiz/errors/:id', (req, res) => {
+  try {
+    const { id } = req.params
+    const deleted = database.deleteErrorQuestion(id, req.user?.id)
+    if (!deleted) {
+      res.status(404).json({ error: '错题未找到或无删除权限' })
+      return
+    }
+    res.json({ success: true, id })
+  } catch (err: any) {
+    console.error('Delete error question failed:', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+quizRouter.post('/quiz/errors/batch', (req, res) => {
+  try {
+    const { ids, action, status, errorType } = req.body as {
+      ids: string[]
+      action: 'update_status' | 'delete' | 'update_error_type'
+      status?: 'active' | 'mastered'
+      errorType?: string
+    }
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      res.status(400).json({ error: '未提供错题 ID 列表' })
+      return
+    }
+
+    if (action === 'delete') {
+      let count = 0
+      for (const id of ids) {
+        if (database.deleteErrorQuestion(id, req.user?.id)) count++
+      }
+      res.json({ success: true, count, action })
+      return
+    }
+
+    if (action === 'update_status' && status) {
+      const count = database.batchUpdateErrorQuestions(ids, { status }, req.user?.id)
+      res.json({ success: true, count, action, status })
+      return
+    }
+
+    if (action === 'update_error_type' && errorType) {
+      const count = database.batchUpdateErrorQuestions(ids, { errorType }, req.user?.id)
+      res.json({ success: true, count, action, errorType })
+      return
+    }
+
+    res.status(400).json({ error: '无效的批量操作' })
+  } catch (err: any) {
+    console.error('Batch error question operation failed:', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+quizRouter.post('/quiz/errors/sync-vault', (req, res) => {
+  try {
+    const vaultPath = getRequestVaultPath(req)
+    let importedCount = 0
+
+    const candidateDirs = [
+      path.resolve(vaultPath, '03-真题错题归因'),
+      path.resolve(vaultPath, '03-真题错题归因/408错题本'),
+      path.resolve(vaultPath, '03-真题错题归因/数学错题本'),
+      path.resolve(vaultPath, '03-真题错题归因/每日错题集'),
+      path.resolve(vaultPath, '错题本'),
+      path.resolve(vaultPath, '03-刷题与复盘/408错题本'),
+      path.resolve(vaultPath, '03-刷题与复盘/数学错题本'),
+      path.resolve(vaultPath, '03-刷题与复盘/错题集'),
+      path.resolve(vaultPath, '03-真题与错题/408错题本'),
+      path.resolve(vaultPath, '03-真题与错题/数学错题本'),
+    ]
+
+    const seenIds = new Set<string>()
+    const existing = database.getErrorQuestions({ userId: req.user?.id })
+    for (const e of existing) {
+      seenIds.add(e.id)
+      if (e.question) seenIds.add(e.question.slice(0, 40))
+    }
+
+    for (const dir of candidateDirs) {
+      if (fs.existsSync(dir)) {
+        const files = fs.readdirSync(dir).filter(f => f.endsWith('.md'))
+        for (const file of files) {
+          try {
+            const fullPath = path.join(dir, file)
+            const raw = fs.readFileSync(fullPath, 'utf-8')
+            const { data: meta, content: body } = matter(raw)
+
+            // 1. 尝试单题格式解析
+            const questionMatch = body.match(/### 题面：\s*([\s\S]*?)(?:### 选项：|## 2\.|$)/)
+            const optionsMatch = body.match(/### 选项：\s*([\s\S]*?)(?:## 2\.|$)/)
+            const notesMatch = body.match(/\*\*思维障碍\/误区复现\*\*：\s*([\s\S]*?)(?:## 3\.|$)/)
+            const userAnsMatch = body.match(/当时作答[：:*]*\s*`?([^`\r\n]+)`?/)
+            const correctAnsMatch = body.match(/标准答案[：:*]*\s*`?([^`\r\n]+)`?/)
+            const explMatch = body.match(/## 3\. 标准分步严谨推导\s*([\s\S]*?)(?:## 4\.|$)/)
+            const subjectMatch = body.match(/科目[：:*]*\s*([^\r\n*]+)/)
+            const errorTypeMatch = body.match(/诊断类型[：:*]*\s*`?([^`\r\n]+)`?/)
+
+            const parsedOptions: Record<string, string> = {}
+            if (optionsMatch) {
+              for (const line of optionsMatch[1].split('\n')) {
+                const m = line.match(/^\s*[-*]\s*\*\*([A-D])\*\*[：:]\s*(.+)/)
+                if (m) parsedOptions[m[1]] = m[2].trim()
+              }
+            }
+
+            const questionText = questionMatch ? questionMatch[1].trim() : ''
+            if (questionText && !seenIds.has(questionText.slice(0, 40))) {
+              seenIds.add(questionText.slice(0, 40))
+              const errId = `err-vault-${Date.now()}-${Math.floor(Math.random() * 10000)}`
+              const subj = meta?.subject || (subjectMatch ? subjectMatch[1].trim() : '考研真题')
+              const domain = meta?.domain || (subj.includes('数学') ? 'math' : 'cs_408')
+              const errType = meta?.error_type || (errorTypeMatch ? errorTypeMatch[1].trim() : '概念不清')
+              const syllabusNode = matchSyllabusNode(questionText, subj)
+
+              database.upsertErrorQuestion({
+                id: errId,
+                userId: req.user?.id || 'default',
+                domain,
+                subject: subj,
+                chapter: meta?.chapter || '',
+                syllabusId: syllabusNode?.id || '',
+                question: questionText,
+                optionsJson: JSON.stringify(parsedOptions),
+                userAnswer: userAnsMatch ? userAnsMatch[1].trim() : '',
+                correctAnswer: correctAnsMatch ? correctAnsMatch[1].trim() : '',
+                explanation: explMatch ? explMatch[1].trim() : '',
+                errorType: errType,
+                difficulty: meta?.difficulty || '中等',
+                sourceNote: path.relative(vaultPath, fullPath).replace(/\\/g, '/'),
+                status: 'active',
+                notes: notesMatch ? notesMatch[1].trim() : '',
+                createdAt: meta?.created || new Date().toISOString().split('T')[0],
+                updatedAt: meta?.updated || new Date().toISOString().split('T')[0],
+              })
+              importedCount++
+            } else if (!questionText && body.includes('## 错题')) {
+              // 2. 尝试解析每日汇总错题集格式
+              const blocks = body.split(/^## 错题[^\r\n]*/m).filter(Boolean)
+              for (const block of blocks) {
+                const qMatch = block.match(/\*\*题目\*\*[：:]\s*(.+)/)
+                const uMatch = block.match(/\*\*你的回答\*\*[：:]\s*(.+)/)
+                const cMatch = block.match(/\*\*正确答案\*\*[：:]\s*(.+)/)
+                const eMatch = block.match(/\*\*解析\*\*[：:]\s*(.+)/)
+                const qText = qMatch ? qMatch[1].trim() : ''
+                if (qText && !seenIds.has(qText.slice(0, 40))) {
+                  seenIds.add(qText.slice(0, 40))
+                  const errId = `err-daily-${Date.now()}-${Math.floor(Math.random() * 10000)}`
+                  const syllabusNode = matchSyllabusNode(qText, meta?.subject || '考研综合')
+                  database.upsertErrorQuestion({
+                    id: errId,
+                    userId: req.user?.id || 'default',
+                    domain: syllabusNode?.domain || 'math',
+                    subject: syllabusNode?.subject || meta?.subject || '考研综合',
+                    chapter: syllabusNode?.level2 || '',
+                    syllabusId: syllabusNode?.id || '',
+                    question: qText,
+                    optionsJson: '{}',
+                    userAnswer: uMatch ? uMatch[1].trim() : '',
+                    correctAnswer: cMatch ? cMatch[1].trim() : '',
+                    explanation: eMatch ? eMatch[1].trim() : '',
+                    errorType: '概念不清',
+                    difficulty: '中等',
+                    sourceNote: path.relative(vaultPath, fullPath).replace(/\\/g, '/'),
+                    status: 'active',
+                    notes: '',
+                    createdAt: meta?.date || new Date().toISOString().split('T')[0],
+                    updatedAt: meta?.date || new Date().toISOString().split('T')[0],
+                  })
+                  importedCount++
+                }
+              }
+            }
+          } catch {}
+        }
+      }
+    }
+
+    res.json({ success: true, importedCount })
+  } catch (err: any) {
+    console.error('Sync vault errors failed:', err.message)
     res.status(500).json({ error: err.message })
   }
 })
@@ -1036,7 +1360,7 @@ function generateFallbackVariants(question: any): any[] {
         chapter: question.chapter || '考研数学重点考点',
         type: 'choice',
         difficulty: '中等',
-        question: `【针对性变式 1 · 反向条件考查】设随机变量 $X \sim N(1, 4)$，若随机变量 $Z = \frac{X - 1}{2}$，则方差 $D(2Z - 3)$ 的值为（ ）`,
+        question: `【针对性变式 1 · 反向条件考查】设随机变量 $X \\sim N(1, 4)$，若随机变量 $Z = \\frac{X - 1}{2}$，则方差 $D(2Z - 3)$ 的值为（ ）`,
         options: {
           A: '2',
           B: '4',
@@ -1044,7 +1368,7 @@ function generateFallbackVariants(question: any): any[] {
           D: '16'
         },
         answer: 'B',
-        explanation: '由正态标准化知 $Z \sim N(0, 1)$，故 $D(Z) = 1$。根据方差性质 $D(aZ + b) = a^2 D(Z)$，可得 $D(2Z - 3) = 2^2 \times D(Z) = 4 \times 1 = 4$。本题强化考查方差齐次平方性质与标准化变量的方差不变性。',
+        explanation: '由正态标准化知 $Z \\sim N(0, 1)$，故 $D(Z) = 1$。根据方差性质 $D(aZ + b) = a^2 D(Z)$，可得 $D(2Z - 3) = 2^2 \\times D(Z) = 4 \\times 1 = 4$。本题强化考查方差齐次平方性质与标准化变量的方差不变性。',
         tags: ['举一反三变式', qSubj, '方差性质']
       },
       {
@@ -1054,15 +1378,15 @@ function generateFallbackVariants(question: any): any[] {
         chapter: question.chapter || '考研数学重点考点',
         type: 'choice',
         difficulty: '较难',
-        question: `【针对性变式 2 · 协方差与相关性衍生】设随机变量 $X, Y$ 满足 $D(X) = 2, D(Y) = 3$，且相关系数 $\rho_{XY} = 0.5$。则方差 $D(2X - Y + 5)$ 等于（ ）`,
+        question: `【针对性变式 2 · 协方差与相关性衍生】设随机变量 $X, Y$ 满足 $D(X) = 2, D(Y) = 3$，且相关系数 $\\rho_{XY} = 0.5$。则方差 $D(2X - Y + 5)$ 等于（ ）`,
         options: {
-          A: '11 - 2\sqrt{6}',
-          B: '11 - 4\sqrt{6}',
-          C: '11',
-          D: '11 + 4\sqrt{6}'
+          A: '$11 - 2\\sqrt{6}$',
+          B: '$11 - 4\\sqrt{6}$',
+          C: '$11$',
+          D: '$11 + 4\\sqrt{6}$'
         },
-        answer: 'B',
-        explanation: '根据方差的展开公式 $D(aX + bY + c) = a^2 D(X) + b^2 D(Y) + 2ab \cdot \mathrm{Cov}(X, Y)$。这里 $a = 2, b = -1$，常数项 $5$ 不影响方差。\n$\mathrm{Cov}(X, Y) = \rho_{XY} \sqrt{D(X)D(Y)} = 0.5 \times \sqrt{2 \times 3} = \frac{\sqrt{6}}{2}$。\n代入得：$D(2X - Y + 5) = 4 \times 2 + 1 \times 3 + 2(2)(-1)\frac{\sqrt{6}}{2} = 8 + 3 - 2\sqrt{6} = 11 - 2\sqrt{6}$？注意展开系数：$2ab = 2(2)(-1) = -4$，乘以 $\frac{\sqrt{6}}{2}$ 得 $-2\sqrt{6}$。若公式严格分步，选项 B 与 A 均针对交叉项系数符号设计干扰项。',
+        answer: 'A',
+        explanation: '根据方差的展开公式 $D(aX + bY + c) = a^2 D(X) + b^2 D(Y) + 2ab \\cdot \\mathrm{Cov}(X, Y)$。这里 $a = 2, b = -1$，常数项 $5$ 不影响方差。\n$\\mathrm{Cov}(X, Y) = \\rho_{XY} \\sqrt{D(X)D(Y)} = 0.5 \\times \\sqrt{2 \\times 3} = \\frac{\\sqrt{6}}{2}$。\n代入得：$D(2X - Y + 5) = 4 \\times 2 + 1 \\times 3 + 2(2)(-1)\\frac{\\sqrt{6}}{2} = 8 + 3 - 2\\sqrt{6} = 11 - 2\\sqrt{6}$，故正确选项为 A。',
         tags: ['举一反三变式', qSubj, '综合衍生']
       }
     ]

@@ -9,6 +9,13 @@ import {
   type TreeNode,
 } from '../services/api'
 
+// ── 模块级 SWR 内存快照单例缓存（跨路由切换 0 毫秒即时秒显，告别转圈） ─────────────
+let cachedStats: VaultStats | null = null
+let cachedHealth: HealthReport | null = null
+let cachedGraph: GraphData | null = null
+let cachedTree: TreeNode[] | null = null
+let cachedHealthStatus: boolean | null = null
+
 interface UseVaultGraphResult {
   data: GraphData | null
   loading: boolean
@@ -17,18 +24,21 @@ interface UseVaultGraphResult {
 }
 
 export function useVaultGraph(): UseVaultGraphResult {
-  const [data, setData] = useState<GraphData | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState<GraphData | null>(() => cachedGraph)
+  const [loading, setLoading] = useState(() => !cachedGraph)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(() => {
-    setLoading(true)
+    if (!cachedGraph) setLoading(true)
     setError(null)
     api.getGraph()
-      .then(setData)
+      .then((res) => {
+        cachedGraph = res
+        setData(res)
+      })
       .catch((err) => {
         setError(err.message)
-        setData(null)
+        if (!cachedGraph) setData(null)
       })
       .finally(() => setLoading(false))
   }, [])
@@ -46,18 +56,21 @@ interface UseVaultHealthResult {
 }
 
 export function useVaultHealth(): UseVaultHealthResult {
-  const [report, setReport] = useState<HealthReport | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [report, setReport] = useState<HealthReport | null>(() => cachedHealth)
+  const [loading, setLoading] = useState(() => !cachedHealth)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(() => {
-    setLoading(true)
+    if (!cachedHealth) setLoading(true)
     setError(null)
     api.getHealth()
-      .then(setReport)
+      .then((res) => {
+        cachedHealth = res
+        setReport(res)
+      })
       .catch((err) => {
         setError(err.message)
-        setReport(null)
+        if (!cachedHealth) setReport(null)
       })
       .finally(() => setLoading(false))
   }, [])
@@ -75,18 +88,21 @@ interface UseVaultStatsResult {
 }
 
 export function useVaultStats(): UseVaultStatsResult {
-  const [stats, setStats] = useState<VaultStats | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState<VaultStats | null>(() => cachedStats)
+  const [loading, setLoading] = useState(() => !cachedStats)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(() => {
-    setLoading(true)
+    if (!cachedStats) setLoading(true)
     setError(null)
     api.getStats()
-      .then(setStats)
+      .then((res) => {
+        cachedStats = res
+        setStats(res)
+      })
       .catch((err) => {
         setError(err.message)
-        setStats(null)
+        if (!cachedStats) setStats(null)
       })
       .finally(() => setLoading(false))
   }, [])
@@ -136,18 +152,21 @@ interface UseVaultTreeResult {
 }
 
 export function useVaultTree(): UseVaultTreeResult {
-  const [tree, setTree] = useState<TreeNode[]>([])
-  const [loading, setLoading] = useState(true)
+  const [tree, setTree] = useState<TreeNode[]>(() => cachedTree || [])
+  const [loading, setLoading] = useState(() => !cachedTree)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(() => {
-    setLoading(true)
+    if (!cachedTree) setLoading(true)
     setError(null)
     api.getTree()
-      .then(setTree)
+      .then((res) => {
+        cachedTree = res
+        setTree(res)
+      })
       .catch((err) => {
         setError(err.message)
-        setTree([])
+        if (!cachedTree) setTree([])
       })
       .finally(() => setLoading(false))
   }, [])
@@ -167,12 +186,15 @@ export function useVaultTree(): UseVaultTreeResult {
   return { tree, loading, error, reload: load }
 }
 
-// Check API connection status
+// 检查 API 后端服务连通性（带内存快照）
 export function useApiHealth() {
-  const [healthy, setHealthy] = useState<boolean | null>(null)
+  const [healthy, setHealthy] = useState<boolean | null>(() => cachedHealthStatus)
 
   useEffect(() => {
-    checkApiHealth().then(setHealthy)
+    checkApiHealth().then((res) => {
+      cachedHealthStatus = res
+      setHealthy(res)
+    })
   }, [])
 
   return healthy

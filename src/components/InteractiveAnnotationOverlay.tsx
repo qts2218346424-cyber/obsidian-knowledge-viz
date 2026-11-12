@@ -86,31 +86,31 @@ export default function InteractiveAnnotationOverlay({
   // 浮动与拖拽控制胶囊栏状态
   const toolbarRef = useRef<HTMLDivElement | null>(null)
   const [position, setPosition] = useState<{ x: number; y: number }>(() => {
-    if (typeof window === 'undefined') return { x: 100, y: 84 }
+    if (typeof window === 'undefined') return { x: 24, y: 500 }
     const mobile = window.innerWidth < 640
     try {
       const saved = localStorage.getItem('interactive_annotation_toolbar_position')
       if (saved) {
         const parsed = JSON.parse(saved)
         if (typeof parsed?.x === 'number' && typeof parsed?.y === 'number') {
-          const safeX = Math.max(8, Math.min(window.innerWidth - (mobile ? 100 : 160), parsed.x))
-          const safeY = Math.max(8, Math.min(window.innerHeight - 50, parsed.y))
+          const safeX = Math.max(8, Math.min(window.innerWidth - (mobile ? 120 : 180), parsed.x))
+          const safeY = Math.max(120, Math.min(window.innerHeight - 60, parsed.y))
           return { x: safeX, y: safeY }
         }
       }
     } catch {
       // 容错处理
     }
-    // 默认位置：停靠于右下角安全区，彻底消除对编辑器右上角「预览」「写作」按钮与顶栏操作的遮挡
+    // 默认位置：停靠于屏幕底部安全区，绝不浮在正文上方或遮挡顶栏「预览」「写作」按钮
     if (mobile) {
       return {
-        x: Math.max(8, window.innerWidth - 130),
-        y: Math.max(60, window.innerHeight - 80),
+        x: 12,
+        y: Math.max(140, window.innerHeight - 86),
       }
     }
     return {
-      x: Math.max(16, window.innerWidth - 220),
-      y: Math.max(60, window.innerHeight - 90),
+      x: Math.max(24, Math.round((window.innerWidth - 420) / 2)),
+      y: Math.max(140, window.innerHeight - 88),
     }
   })
   const [isDragging, setIsDragging] = useState(false)
@@ -505,8 +505,8 @@ export default function InteractiveAnnotationOverlay({
         className={`w-full h-full block ${isAnnotationActive ? 'cursor-crosshair' : 'cursor-auto'}`}
       />
 
-      {/* 随心拖拽批注控制胶囊栏（彻底脱离笔记文档流，解决遮挡视野与移动端关闭困难问题） */}
-      {typeof document !== 'undefined' &&
+      {/* 随心拖拽批注控制胶囊栏（仅在激活批注模式时呈现，避免常驻遮挡预览按钮或正文） */}
+      {isAnnotationActive && typeof document !== 'undefined' &&
         createPortal(
           <div
             ref={toolbarRef}
@@ -518,8 +518,8 @@ export default function InteractiveAnnotationOverlay({
               zIndex: 9999,
               touchAction: 'none',
             }}
-            className={`w-fit max-w-[98vw] flex items-center gap-1.5 px-2 py-1.5 rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-lg border border-slate-200/60 dark:border-slate-800/80 shadow-[0_4px_24px_rgba(0,0,0,0.08)] text-xs select-none transition-all duration-200 ${!isAnnotationActive ? 'opacity-85 hover:opacity-100' : ''} ${
-              isWriting ? 'opacity-20 pointer-events-none' : 'opacity-100'
+            className={`w-fit max-w-[96vw] flex items-center gap-1.5 px-2 py-1.5 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border border-slate-200/80 dark:border-slate-800/80 shadow-[0_8px_30px_rgba(0,0,0,0.14)] text-xs select-none transition-all duration-200 ${
+              isWriting ? 'opacity-0 pointer-events-none' : 'opacity-100'
             } ${isDragging ? 'shadow-2xl ring-2 ring-accent-orange/50 cursor-grabbing' : 'hover:shadow-2xl'}`}
           >
             {/* 拖动手柄 */}

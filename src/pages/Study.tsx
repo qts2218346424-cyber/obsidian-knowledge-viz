@@ -6,8 +6,6 @@ import { createPortal } from 'react-dom'
 
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from 'recharts'
-
 import {
 
   BookOpen, FileText, Code2, XCircle,
@@ -16,11 +14,15 @@ import {
 
   Download, RefreshCw, Loader2, ChevronRight,
 
-  Check, ThumbsUp, ThumbsDown, Minus, ArrowRight, Trash2, Sparkles, Edit3
+  Check, ThumbsUp, ThumbsDown, Minus, ArrowRight, Trash2, Sparkles, Edit3, ExternalLink
 
 } from 'lucide-react'
 
-import { api, type BookItem, type DailyReviewData, type SubjectStats } from '../services/api'
+import { api, type BookItem, type DailyReviewData } from '../services/api'
+
+import { getAuthHeaders } from '../services/auth'
+
+import { useAuth } from '../contexts/AuthContext'
 
 import { CURATED_HANDOUTS, type HandoutItem } from '../data/handoutsData'
 
@@ -50,6 +52,8 @@ const MasteryTopologyView = lazy(() => import('../components/study/MasteryTopolo
 
 const FlashcardsTab = lazy(() => import('../components/study/FlashcardsTab'))
 
+const ProgressDashboardTab = lazy(() => import('../components/study/ProgressDashboardTab'))
+
 const KnowledgeGraph = lazy(() => import('./KnowledgeGraph'))
 
 
@@ -61,18 +65,6 @@ let cachedBooksList: BookItem[] | null = null
 
 
 type Tab = 'graph' | 'topology' | 'mastery' | 'flashcards' | 'handouts' | 'pdfs' | 'coursewares' | 'errors' | 'progress'
-
-
-
-// Palette for charts
-
-const colorPalette = [
-
-  '#f97316', '#3b82f6', '#10b981', '#ec4899', '#8b5cf6',
-
-  '#06b6d4', '#f59e0b', '#6366f1', '#14b8a6', '#84cc16',
-
-]
 
 
 
@@ -475,6 +467,8 @@ function formatQuestionContent(raw?: string): string {
 
 export default function Study() {
 
+  const { user } = useAuth()
+
   const navigate = useNavigate()
 
   const [searchParams, setSearchParams] = useSearchParams()
@@ -563,6 +557,8 @@ export default function Study() {
 
         relativePath: b.relativePath,
 
+        scope: b.scope,
+
         mode: (b.name.includes('题') || b.name.includes('880') || b.category === '历年真题') ? 'question' as const : 'concept' as const
 
       }))
@@ -571,7 +567,11 @@ export default function Study() {
 
       if (res.success) {
 
-        setBatchResultMsg(`🎉 成功批量解析归类 ${res.count} 本教材/真题至知识库与题库！`)
+        setBatchResultMsg(
+          res.queued
+            ? `🎉 已将 ${res.count} 本教材/真题加入后台全卷队列扫描，结果将陆续沉淀至知识库与题库！`
+            : `🎉 成功批量解析归类 ${res.count} 本教材/真题至知识库与题库！`
+        )
 
         loadMaterials()
 
@@ -639,7 +639,7 @@ export default function Study() {
 
     e?.stopPropagation()
 
-    const confirmDelete = window.confirm(`确定要永久删除参考资料《${book.name}》吗？\n删除后该文件将从本地 raw-sources 归档库彻底移除。`)
+    const confirmDelete = window.confirm(`确定要永久删除参考资料《${book.name}》吗？\n删除后该文件将从归档库彻底移除。`)
 
     if (!confirmDelete) return
 
@@ -651,9 +651,9 @@ export default function Study() {
 
         method: 'DELETE',
 
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
 
-        body: JSON.stringify({ relativePath: book.relativePath }),
+        body: JSON.stringify({ relativePath: book.relativePath, scope: book.scope }),
 
       })
 
@@ -661,7 +661,9 @@ export default function Study() {
 
       if (data.success) {
 
-        setBooks(prev => prev.filter(b => b.relativePath !== book.relativePath))
+        setBooks(prev => prev.filter(b => b.id !== book.id))
+
+        cachedBooksList = null
 
         loadMaterials()
 
@@ -717,11 +719,13 @@ export default function Study() {
 
         method: 'POST',
 
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
 
         body: JSON.stringify({
 
           relativePath: renamingBook.relativePath,
+
+          scope: renamingBook.scope,
 
           newName: newBookName.trim()
 
@@ -769,9 +773,9 @@ export default function Study() {
 
         method: 'POST',
 
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
 
-        body: JSON.stringify({ relativePath: renamingBook.relativePath })
+        body: JSON.stringify({ relativePath: renamingBook.relativePath, scope: renamingBook.scope })
 
       })
 
@@ -831,9 +835,11 @@ export default function Study() {
 
   useEffect(() => {
 
+    cachedBooksList = null
+
     loadMaterials()
 
-  }, [loadMaterials])
+  }, [loadMaterials, user?.id])
 
 
 
@@ -907,13 +913,32 @@ export default function Study() {
 
           domain: b.domain,
 
-          subject: b.domain === 'cs_408' ? '综合' : '高等数学',
+          subject: b.domain === 'cs_408'
+            ? '综合'
+            : b.domain === 'english'
+              ? '考研英语'
+              : b.domain === 'politics'
+                ? '考研政治'
+                : b.domain === 'general'
+                  ? '专业课综合'
+                  : '高等数学',
 
           readTime: '15 分钟',
 
           difficulty: '核心考点',
 
-          tags: [b.domain === 'cs_408' ? '408' : '数学', b.category],
+          tags: [
+            b.domain === 'cs_408'
+              ? '408'
+              : b.domain === 'english'
+                ? '英语'
+                : b.domain === 'politics'
+                  ? '政治'
+                  : b.domain === 'general'
+                    ? '专业课'
+                    : '数学',
+            b.category,
+          ],
 
           summary: `用户导入讲义：《${b.name}》，归档于 ${b.relativePath}`,
 
@@ -948,6 +973,10 @@ export default function Study() {
         if (subjectFilter === 'math' && h.domain !== 'math') return false
 
         if (subjectFilter === 'politics' && h.domain !== 'politics') return false
+
+        if (subjectFilter === 'english' && h.domain !== 'english') return false
+
+        if (subjectFilter === 'general' && h.domain !== 'general') return false
 
         if (['数据结构', '计算机组成原理', '操作系统', '计算机网络', '高等数学', '线性代数', '概率论', '马克思主义基本原理', '马克思著作', '时事政治'].includes(subjectFilter)) {
 
@@ -992,6 +1021,12 @@ export default function Study() {
         if (subjectFilter === 'cs_408' && b.domain !== 'cs_408') return false
 
         if (subjectFilter === 'math' && b.domain !== 'math') return false
+
+        if (subjectFilter === 'english' && b.domain !== 'english') return false
+
+        if (subjectFilter === 'politics' && b.domain !== 'politics') return false
+
+        if (subjectFilter === 'general' && b.domain !== 'general') return false
 
       }
 
@@ -1425,6 +1460,10 @@ export default function Study() {
 
             <option value="时事政治">时事政治</option>
 
+            <option value="english">考研英语</option>
+
+            <option value="general">其他考研资料</option>
+
           </select>
 
         </div>
@@ -1572,6 +1611,9 @@ export default function Study() {
                 {filteredHandouts.map(handout => {
 
                   const isCs = handout.domain === 'cs_408'
+                  const isPol = handout.domain === 'politics'
+                  const isEng = handout.domain === 'english'
+                  const isGen = handout.domain === 'general'
 
                   return (
 
@@ -1599,11 +1641,17 @@ export default function Study() {
 
                                 ? 'bg-blue-500/10 text-blue-600 border-blue-500/20'
 
-                                : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                                : isPol
+                                  ? 'bg-rose-500/10 text-rose-600 border-rose-500/20'
+                                  : isEng
+                                    ? 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20'
+                                    : isGen
+                                      ? 'bg-amber-500/10 text-amber-600 border-amber-500/20'
+                                      : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
 
                             }`}>
 
-                              {isCs ? '408 计算机' : '考研数学'} · {handout.subject}
+                              {isCs ? '408 计算机' : isPol ? '考研政治' : isEng ? '考研英语' : isGen ? '专业课/综合' : '考研数学'} · {handout.subject}
 
                             </span>
 
@@ -1945,13 +1993,31 @@ export default function Study() {
 
                         <div className="flex items-center justify-between gap-2 mb-2.5">
 
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/10 text-red-600 border border-red-500/20">
+                          <div className="flex items-center gap-1.5 flex-wrap">
 
-                            PDF 电子教材
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/10 text-red-600 border border-red-500/20">
 
-                          </span>
+                              PDF 电子教材
 
-                          <span className="text-[11px] text-warm-400">
+                            </span>
+
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${
+
+                              book.scope === 'personal'
+
+                                ? 'bg-indigo-500/10 text-indigo-700 border-indigo-500/25'
+
+                                : 'bg-emerald-500/10 text-emerald-700 border-emerald-500/25'
+
+                            }`}>
+
+                              {book.scope === 'personal' ? '🔒 个人独享' : '🌐 全员共享'}
+
+                            </span>
+
+                          </div>
+
+                          <span className="text-[11px] text-warm-400 shrink-0">
 
                             {sizeMb} MB
 
@@ -2013,27 +2079,39 @@ export default function Study() {
 
                               </h3>
 
-                              <button
+                              {book.canManage !== false && (
 
-                                type="button"
+                                <button
 
-                                onClick={e => handleOpenRename(book, e)}
+                                  type="button"
 
-                                className="p-1 rounded-md text-warm-400 hover:text-amber-600 hover:bg-amber-50 transition-all opacity-0 group-hover:opacity-100 shrink-0 cursor-pointer"
+                                  onClick={e => handleOpenRename(book, e)}
 
-                                title="修改教材名称"
+                                  className="p-1 rounded-md text-warm-400 hover:text-amber-600 hover:bg-amber-50 transition-all opacity-0 group-hover:opacity-100 shrink-0 cursor-pointer"
 
-                              >
+                                  title="修改教材名称"
 
-                                <Edit3 className="w-3.5 h-3.5" />
+                                >
 
-                              </button>
+                                  <Edit3 className="w-3.5 h-3.5" />
+
+                                </button>
+
+                              )}
 
                             </div>
 
                             <div className="text-[11px] text-warm-400 mt-1">
 
-                              {isCs ? '408 计算机' : '考研数学'} · {book.category}
+                              {isCs
+                                ? '408 计算机'
+                                : book.domain === 'english'
+                                  ? '考研英语'
+                                  : book.domain === 'politics'
+                                    ? '考研政治'
+                                    : book.domain === 'general'
+                                      ? '专业课/综合'
+                                      : '考研数学'} · {book.category}
 
                             </div>
 
@@ -2091,41 +2169,49 @@ export default function Study() {
 
 
 
-                          <button
+                          {book.canManage !== false && (
 
-                            type="button"
+                            <>
 
-                            onClick={e => handleOpenRename(book, e)}
+                              <button
 
-                            className="p-1.5 rounded-lg text-warm-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer"
+                                type="button"
 
-                            title="修改/重命名教材名称"
+                                onClick={e => handleOpenRename(book, e)}
 
-                          >
+                                className="p-1.5 rounded-lg text-warm-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer"
 
-                            <Edit3 className="w-3.5 h-3.5" />
+                                title="修改/重命名教材名称"
 
-                          </button>
+                              >
 
-                          <button
+                                <Edit3 className="w-3.5 h-3.5" />
 
-                            type="button"
+                              </button>
 
-                            onClick={e => handleDeleteBook(book, e)}
+                              <button
 
-                            className="p-1.5 rounded-lg text-warm-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                                type="button"
 
-                            title="删除该教材文件"
+                                onClick={e => handleDeleteBook(book, e)}
 
-                          >
+                                className="p-1.5 rounded-lg text-warm-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
 
-                            <Trash2 className="w-3.5 h-3.5" />
+                                title="删除该教材文件"
 
-                          </button>
+                              >
+
+                                <Trash2 className="w-3.5 h-3.5" />
+
+                              </button>
+
+                            </>
+
+                          )}
 
                           <a
 
-                            href={`/api/books/raw?path=${encodeURIComponent(book.relativePath)}`}
+                            href={api.getBookRawUrl(book.relativePath, book.scope)}
 
                             target="_blank"
 
@@ -2142,6 +2228,26 @@ export default function Study() {
                           >
 
                             <Download className="w-3.5 h-3.5" />
+
+                          </a>
+
+                          <a
+
+                            href={`/pdf-reader?path=${encodeURIComponent(book.relativePath)}&scope=${encodeURIComponent(book.scope || 'shared')}&name=${encodeURIComponent(book.name)}`}
+
+                            target="_blank"
+
+                            rel="noreferrer"
+
+                            onClick={e => e.stopPropagation()}
+
+                            className="p-1.5 rounded-lg text-warm-400 hover:text-cyan-700 hover:bg-cyan-50 transition-colors"
+
+                            title="新标签页独立全屏阅读 (纯 Web 渲染，绝无白屏)"
+
+                          >
+
+                            <ExternalLink className="w-3.5 h-3.5 text-cyan-600" />
 
                           </a>
 
@@ -2371,7 +2477,15 @@ export default function Study() {
 
         {/* TAB 5: 科目研学进度 */}
 
-        {tab === 'progress' && <ProgressTab />}
+        {tab === 'progress' && (
+
+          <Suspense fallback={<div className="py-12 flex justify-center text-xs text-slate-400"><Loader2 className="w-4 h-4 animate-spin mr-2 text-neutral-700" />正在装载研学进度诊断中心...</div>}>
+
+            <ProgressDashboardTab onSwitchTab={handleTabChange} />
+
+          </Suspense>
+
+        )}
 
       </div>
 
@@ -2947,48 +3061,77 @@ function DailyErrorTab() {
 
         <div className="p-6 space-y-4">
 
-          <div className="flex items-center gap-2">
-
+          <div className="flex flex-wrap items-center gap-2">
             <XCircle className="w-4 h-4 text-rose-500" />
-
             <span className="text-xs text-warm-500 font-semibold">
-
               错题复盘 {currentIdx + 1} / {data.dueQuestions.length}
-
             </span>
-
-            {currentQ.source && (
-
-              <span className="ml-auto text-[10px] text-warm-400 truncate max-w-[200px]">
-
-                来源: {currentQ.source}
-
+            {(currentQ as any).subject && (
+              <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-bold">
+                {(currentQ as any).subject}
               </span>
-
             )}
-
+            {(currentQ as any).errorType && (
+              <span className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-600 border border-rose-200/70 text-[10px] font-semibold">
+                {(currentQ as any).errorType}
+              </span>
+            )}
+            {currentQ.source && (
+              <span className="ml-auto text-[10px] text-warm-400 truncate max-w-[200px]">
+                来源: {currentQ.source}
+              </span>
+            )}
           </div>
 
           <div className="text-sm sm:text-base text-warm-800 font-medium leading-relaxed">
-
             <MarkdownRenderer content={formatQuestionContent(currentQ.question)} />
-
           </div>
 
-          {currentQ.userAnswer && (
-
-            <div className="px-3 py-2 bg-rose-500/5 border border-rose-500/10 rounded-lg">
-
-              <span className="text-[10px] text-rose-500 block mb-1">你记录的错误解答：</span>
-
-              <div className="text-xs text-rose-700">
-
-                <MarkdownRenderer content={currentQ.userAnswer} inline />
-
-              </div>
-
+          {(currentQ as any).options && Object.keys((currentQ as any).options).length > 0 && (
+            <div className="space-y-1.5 pt-1">
+              {Object.entries((currentQ as any).options as Record<string, string>).map(([optKey, optVal]) => {
+                const isWrongPick = currentQ.userAnswer?.trim().toUpperCase() === optKey.toUpperCase()
+                const isRightAns = showAnswer && currentQ.correctAnswer?.trim().toUpperCase() === optKey.toUpperCase()
+                return (
+                  <div
+                    key={optKey}
+                    className={`flex items-start gap-2 px-3 py-2 rounded-lg border text-xs ${
+                      isRightAns
+                        ? 'bg-emerald-50 border-emerald-300 text-emerald-900 font-semibold'
+                        : isWrongPick
+                          ? 'bg-rose-50 border-rose-300 text-rose-800'
+                          : 'bg-neutral-50/70 border-neutral-200/70 text-warm-700'
+                    }`}
+                  >
+                    <span className="font-bold shrink-0">{optKey}.</span>
+                    <div className="flex-1 min-w-0">
+                      <MarkdownRenderer content={String(optVal)} inline />
+                    </div>
+                    {isWrongPick && (
+                      <span className="text-[10px] text-rose-600 font-semibold shrink-0">当时误选</span>
+                    )}
+                  </div>
+                )
+              })}
             </div>
+          )}
 
+          {currentQ.userAnswer && (
+            <div className="px-3 py-2 bg-rose-500/5 border border-rose-500/15 rounded-lg">
+              <span className="text-[10px] text-rose-500 font-semibold block mb-1">当时错误作答 / 选项：</span>
+              <div className="text-xs text-rose-700">
+                <MarkdownRenderer content={currentQ.userAnswer} inline />
+              </div>
+            </div>
+          )}
+
+          {(currentQ as any).notes && (
+            <div className="px-3 py-2 bg-amber-50/80 border border-amber-200/80 rounded-lg">
+              <span className="text-[10px] text-amber-700 font-semibold block mb-1">错因反思原文：</span>
+              <div className="text-xs text-amber-900 leading-relaxed whitespace-pre-wrap">
+                {(currentQ as any).notes}
+              </div>
+            </div>
           )}
 
         </div>
@@ -3128,182 +3271,6 @@ function DailyErrorTab() {
             <ThumbsUp className="w-4 h-4" /> 完全掌握 (归档)
 
           </button>
-
-        </div>
-
-      )}
-
-    </div>
-
-  )
-
-}
-
-
-
-// ─── Progress Tab ─────────────────────────────────────────────────────────────
-
-
-
-function ProgressTab() {
-
-  const [stats, setStats] = useState<SubjectStats[]>([])
-
-  const [loading, setLoading] = useState(true)
-
-
-
-  useEffect(() => {
-
-    api.getReviewDue()
-
-      .then(data => setStats(data.stats))
-
-      .catch(() => {})
-
-      .finally(() => setLoading(false))
-
-  }, [])
-
-
-
-  if (loading) {
-
-    return (
-
-      <div className="flex items-center gap-2 text-sm text-warm-500 py-12 justify-center">
-
-        <Loader2 className="w-4 h-4 animate-spin" /> 统计学科备考进度...
-
-      </div>
-
-    )
-
-  }
-
-
-
-  const chartData = [
-
-    { name: '408 · 数据结构', 核心讲义: 4, 习题数: 36 },
-
-    { name: '408 · 计组与流水线', 核心讲义: 3, 习题数: 28 },
-
-    { name: '408 · 操作系统', 核心讲义: 3, 习题数: 30 },
-
-    { name: '408 · 计算机网络', 核心讲义: 3, 习题数: 25 },
-
-    { name: '数学 · 高等数学', 核心讲义: 5, 习题数: 45 },
-
-    { name: '数学 · 线性代数', 核心讲义: 3, 习题数: 24 },
-
-    { name: '数学 · 概率论', 核心讲义: 2, 习题数: 18 },
-
-  ]
-
-
-
-  return (
-
-    <div className="space-y-6">
-
-      {/* Overview Cards */}
-
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
-
-        <div className="bg-surface border border-cream-200 rounded-xl p-4">
-
-          <div className="text-xs text-warm-400">权威讲义库</div>
-
-          <div className="text-2xl font-bold text-warm-800 mt-1">{CURATED_HANDOUTS.length} <span className="text-xs font-normal text-warm-400">篇精析</span></div>
-
-          <div className="text-[10px] text-accent-orange mt-1">覆盖 408 与 考研数学全科</div>
-
-        </div>
-
-        <div className="bg-surface border border-cream-200 rounded-xl p-4">
-
-          <div className="text-xs text-warm-400">交互仿真课件</div>
-
-          <div className="text-2xl font-bold text-cyan-600 mt-1">{INTERACTIVE_COURSEWARES.length} <span className="text-xs font-normal text-warm-400">个互动课件</span></div>
-
-          <div className="text-[10px] text-warm-400 mt-1">含 史纲时空轴、CPU流水线、页面置换</div>
-
-        </div>
-
-        <div className="bg-surface border border-cream-200 rounded-xl p-4">
-
-          <div className="text-xs text-warm-400">考研真题与题库</div>
-
-          <div className="text-2xl font-bold text-accent-sage mt-1">167 <span className="text-xs font-normal text-warm-400">道统考真题精选</span></div>
-
-          <div className="text-[10px] text-warm-400 mt-1">支持随时随堂一键即练</div>
-
-        </div>
-
-        <div className="bg-surface border border-cream-200 rounded-xl p-4">
-
-          <div className="text-xs text-warm-400">AI 伴学引擎</div>
-
-          <div className="text-2xl font-bold text-purple-600 mt-1">双核 <span className="text-xs font-normal text-warm-400">+ 噜噜</span></div>
-
-          <div className="text-[10px] text-warm-400 mt-1">Claude Code / Codex / DeepSeek</div>
-
-        </div>
-
-      </div>
-
-
-
-      {/* Chart */}
-
-      <div className="bg-surface border border-neutral-200/80 rounded-xl p-5 shadow-xs">
-
-        <div className="text-xs font-bold text-warm-700 mb-4">408 与 考研数学各科讲义与真题覆盖分布</div>
-
-        <ResponsiveContainer width="100%" height={260}>
-
-          <BarChart data={chartData} barCategoryGap="25%">
-
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0e8dc" />
-
-            <XAxis dataKey="name" tick={{ fill: '#8b7e74', fontSize: 11 }} axisLine={{ stroke: '#d4c8ba' }} />
-
-            <YAxis tick={{ fill: '#8b7e74', fontSize: 11 }} axisLine={{ stroke: '#d4c8ba' }} />
-
-            <Tooltip
-
-              contentStyle={{ background: '#FFFBF5', border: '1px solid #d4c8ba', borderRadius: 8, fontSize: 12 }}
-
-              labelStyle={{ color: '#3d3530' }}
-
-            />
-
-            <Bar dataKey="核心讲义" radius={[6, 6, 0, 0]}>
-
-              {chartData.map((_, i) => (
-
-                <Cell key={i} fill={colorPalette[i % colorPalette.length]} />
-
-              ))}
-
-            </Bar>
-
-          </BarChart>
-
-        </ResponsiveContainer>
-
-      </div>
-
-
-
-      {stats.length > 0 && (
-
-        <div className="bg-surface border border-cream-200 rounded-xl px-5 py-3 flex items-center justify-between text-xs text-warm-500">
-
-          <span>底层知识库关联笔记：共 {stats.reduce((acc, s) => acc + s.totalNotes, 0)} 篇（已自动整理为讲义支撑索引）</span>
-
-          <span>词汇量统计：{stats.reduce((acc, s) => acc + s.totalWords, 0).toLocaleString()} 字</span>
 
         </div>
 

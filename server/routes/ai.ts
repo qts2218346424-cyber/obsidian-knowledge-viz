@@ -299,9 +299,10 @@ function buildSystemPrompt(relevantNotes: VaultNote[], totalNotes: number): stri
 1. 回答时引用相关笔记，使用格式 **[笔记标题](笔记路径)**
 2. 如果知识库中有相关内容，优先基于知识库回答
 3. 若涉及数学公式推导，必须使用标准 LaTeX 格式（行内使用 $...$，独立块使用 $$...$$），严禁跳步
-4. 回答要简洁、严谨、准确，使用中文
+4. 全程纯中文表达习惯：必须全程使用规范、严谨、通顺的简体中文展开逻辑推导与深入解析，严格符合中文母语考生的思维与阅读习惯。除专业英文缩写、变量名与代码段外，所有原理解释、解题思路与结论必须用纯中文表达，严禁整句英文回答
 5. 适当总结多篇笔记的关联信息
-6. 排版与标点规范：严控垂直篇幅，段落间最多 1 个空行，列表不空行，杜绝碎片化诗歌体分句换行；统一使用标准中文全角标点（，。、！？：；“”），严禁中英文标点混杂；标点紧随文字不独立成行`
+6. 排版与标点规范：严控垂直篇幅，段落间最多 1 个空行，列表不空行，杜绝碎片化诗歌体分句换行；统一使用标准中文全角标点（，。、！？：；“”），严禁中英文标点混杂；标点紧随文字不独立成行
+7. 追问模式与针对性答疑规范：当处于追问模式或用户针对具体疑点进行追问时，必须针对用户的核心困惑对症下药，深入解剖卡壳关键步骤与认知偏差，严禁给出泛泛而谈、大而化之的课本概念复述与空洞套话`
 
   if (relevantNotes.length > 0) {
     prompt += '\n\n以下是与用户问题最相关的笔记内容，请基于这些内容回答：\n'
@@ -316,7 +317,7 @@ function buildSystemPrompt(relevantNotes: VaultNote[], totalNotes: number): stri
 }
 
 aiRouter.post('/chat', async (req, res) => {
-  const { message, history, model: reqModel } = req.body as { message: string; history?: ChatMessage[]; model?: string }
+  const { message, history, model: reqModel, mode } = req.body as { message: string; history?: ChatMessage[]; model?: string; mode?: string }
   if (!message) {
     res.status(400).json({ error: 'Missing message' })
     return
@@ -353,7 +354,10 @@ aiRouter.post('/chat', async (req, res) => {
     const userMemoryPath = getRequestAgentMemoryPath(req)
     const agentMemoryPrompt = getEffectiveSystemPrompt(userMemoryPath)
     const baseSystemPrompt = buildSystemPrompt(relevantNotes, notes.length)
-    const systemPrompt = `${agentMemoryPrompt}\n\n====================\n${baseSystemPrompt}`
+    const followupInstruction = (mode === 'followup')
+      ? '\n\n【当前处于：🎯 靶向追问模式】\n你必须直接针对用户的具体疑问与卡壳细节进行精准靶向解答与逻辑剖析，深入指出认知偏差，严禁给出泛泛而谈、笼统空洞的课本概念复述与宏观套话！'
+      : ''
+    const systemPrompt = `${agentMemoryPrompt}\n\n====================\n${baseSystemPrompt}${followupInstruction}`
 
     const messages: { role: 'user' | 'assistant'; content: string }[] = []
     if (history) {
@@ -394,10 +398,11 @@ aiRouter.post('/chat', async (req, res) => {
 // ===== Agent Chat (SSE Streaming) =====
 
 aiRouter.post('/agent/chat', async (req, res) => {
-  const { message, history, model: reqModel } = req.body as {
+  const { message, history, model: reqModel, mode } = req.body as {
     message: string
     history?: { role: 'user' | 'assistant'; content: string }[]
     model?: string
+    mode?: string
   }
   if (!message) {
     res.status(400).json({ error: 'Missing message' })
@@ -441,11 +446,18 @@ aiRouter.post('/agent/chat', async (req, res) => {
     }
     messages.push({ role: 'user', content: message })
 
+    const userMemoryPath = getRequestAgentMemoryPath(req)
+    let agentMemoryPrompt = getEffectiveSystemPrompt(userMemoryPath)
+    if (mode === 'followup') {
+      agentMemoryPrompt += '\n\n【当前处于：🎯 靶向追问模式】\n你必须直接针对用户的具体疑问与卡壳细节进行精准靶向解答与逻辑剖析，深入指出认知偏差，严禁给出泛泛而谈、笼统空洞的课本概念复述与宏观套话！'
+    }
+
     for await (const event of runAgentLoop(
       aiTarget.client,
       aiTarget.model,
       messages,
       config.vaultPath,
+      agentMemoryPrompt,
     )) {
       sendEvent(event)
       if (event.type === 'error') break
@@ -956,8 +968,8 @@ aiRouter.post('/ai/tutor/step', async (req, res) => {
       return
     }
 
-    if (!mode || !['hint', 'audit', 'formula'].includes(mode)) {
-      res.status(400).json({ error: '无效辅导模式，支持: hint | audit | formula' })
+    if (!mode || !['hint', 'audit', 'formula', 'followup'].includes(mode)) {
+      res.status(400).json({ error: '无效辅导模式，支持: hint | audit | formula | followup' })
       return
     }
 

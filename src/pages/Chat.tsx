@@ -1,6 +1,7 @@
 import * as authService from '../services/auth'
 import { useAuth } from '../contexts/AuthContext'
 import { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   Loader2,
   X,
@@ -51,6 +52,7 @@ const QuickPracticeModal = lazy(() => import('../components/QuickPracticeModal')
 const AIMemoryModal = lazy(() => import('../components/AIMemoryModal'))
 const LocalSkillPickerModal = lazy(() => import('../components/LocalSkillPickerModal'))
 const ModelManagerModal = lazy(() => import('../components/ModelManagerModal'))
+export type StudyTone = 'rigorous' | 'vivid' | 'exam' | 'followup'
 const StepTutorModal = lazy(() => import('../components/study/StepTutorModal'))
 
 interface ToolCallInfo {
@@ -466,6 +468,7 @@ export default function Chat() {
               formData.append('file', file)
               const res = await fetch('/api/ingest/upload', {
                 method: 'POST',
+                headers: authService.getAuthTokenHeaders(),
                 body: formData,
               })
               const data = await res.json()
@@ -541,7 +544,13 @@ export default function Chat() {
   const [cloudSettings, setCloudSettings] = useState<AppSettings['ai'] | null>(null)
 
   const [activeSkill, setActiveSkill] = useState<StudySkill | null>(null)
-  const [studyTone, setStudyTone] = useState<'rigorous' | 'vivid' | 'exam'>('rigorous')
+  const [studyTone, setStudyTone] = useState<StudyTone>(() => {
+    return (localStorage.getItem('coreforge_study_tone') as StudyTone) || 'rigorous'
+  })
+  const handleStudyToneChange = useCallback((tone: StudyTone) => {
+    setStudyTone(tone)
+    localStorage.setItem('coreforge_study_tone', tone)
+  }, [])
 
   // 双智能体协同状态
   const [isDualMode, setIsDualMode] = useState<boolean>(() => {
@@ -1424,19 +1433,29 @@ export default function Chat() {
       abortControllersRef.current.set(convId, convController)
 
       const intuitiveFormattingRules = `
-【排版与直观交付黄金法则（强制遵守）】：
-1. 结论先行：第一句直接输出核心答案/结论/计算结果，严禁任何客套开场白。
-2. 视觉分层：使用 ### 小标题划分模块，概念拆分为带加粗标签的清单项。
-3. 对比表格：多方案、多概念异同优先采用 Markdown 表格展示。
-4. 考点高亮：易错陷阱使用 > ⚠️ **考场避坑**，速记技巧使用 > 💡 **提分口诀**。`
+【排版交付与中文母语习惯黄金准则（强制遵守）】：
+1. 全程纯正中文习惯：必须全程使用规范、严谨、通顺的简体中文进行解答与解析推导，严格符合中文母语考生的思维与阅读习惯！除专业英文术语、变量名、英文缩写或代码片段本身外，所有解释、推导过程、设坑剖析与结论必须用纯中文表达，严禁整句英文回答。
+2. 结论先行：第一句直接输出核心答案/结论/计算结果，严禁“同学你好/我是XX导师”等客套开场白。
+3. 视觉分层：使用 ### 小标题划分模块，概念拆分为带加粗标签的清单项。
+4. 对比表格：多方案、多概念异同优先采用 Markdown 表格展示。
+5. 考点高亮：易错陷阱使用 > ⚠️ **考场避坑**，速记技巧使用 > 💡 **提分口诀**。`
 
       let toneInstruction = ''
-      if (studyTone === 'rigorous')
+      if (studyTone === 'followup') {
+        toneInstruction = `【作答风格要求】：🎯 针对性靶向追问模式（严格遵守：直击疑问靶心，拒绝笼统套话）！
+1. 【拒绝笼统泛谈】：严禁从头背诵整个知识点、大而化之地复述课本宏观概念定义或给出宽泛的概括，杜绝敷衍的客套话。
+2. 【靶向精准解惑】：必须精准锁定用户在本次追问中提出的具体疑问点、思维盲区、认知卡壳步骤或对前文推导的具体分歧，直击核心！
+3. 【思维偏差诊断】：一针见血剖析“为什么会有这个疑问”、“原理解存在什么偏差或忽略了什么前提/边界条件”，对比正误认知差异。
+4. 【微观逐步拆解】：针对该疑问所涉及的细节步骤进行显微镜式的深入剖析与逻辑推演，做到步步有据，条理分明，直击本质。
+5. 【针对性小自测】：在解答完该具体疑问后，给出一个极小粒度的针对性微自测问题或推导反思，检验盲点是否真正攻克。
+\n${intuitiveFormattingRules}`
+      } else if (studyTone === 'rigorous') {
         toneInstruction = `【作答风格要求】：学术严谨模式，考纲对齐，公式推导严谨规范。\n${intuitiveFormattingRules}`
-      else if (studyTone === 'vivid')
+      } else if (studyTone === 'vivid') {
         toneInstruction = `【作答风格要求】：通俗直观模式，多打比方与生动类比。\n${intuitiveFormattingRules}`
-      else
+      } else {
         toneInstruction = `【作答风格要求】：考场冲刺模式，直击采分点与答题模板。\n${intuitiveFormattingRules}`
+      }
 
       const executeStreamRequest = async (
         tgtProvider: ProviderType,
@@ -1476,6 +1495,7 @@ export default function Chat() {
           }
         }
 
+        let hasReportedStreamError = false
         try {
           const endpoint = '/api/local-agents/chat'
           const skillPrompt = selectedLocalSkill
@@ -1504,6 +1524,8 @@ export default function Chat() {
             model: tgtModel || undefined,
             sessionId: convId,
             history,
+            mode: studyTone,
+            isFollowUp: studyTone === 'followup',
             skillPrompt,
             agentPrompt: `${tgtAgent.systemPrompt}\n${toneInstruction}`,
             projectName: activeProject?.name || '考研 408 & 数学研学工作台',
@@ -1512,78 +1534,105 @@ export default function Chat() {
             pageContext: `AI 伴学主页面 (${tgtAgent.name})`,
           }
 
-          const res = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...authService.getAuthHeaders(),
-            },
-            body: JSON.stringify(body),
-            signal: convController.signal,
-          })
+          let attempt = 0
+          const maxAttempts = 2
+          let receivedAnyContent = false
 
-          if (!res.ok) {
-            if (res.status === 402) {
-              const errData = await res.json().catch(() => ({}))
-              window.dispatchEvent(new CustomEvent('open-checkin-modal'))
-              throw new Error(errData.message || '伴学积分不足（单次对话消耗 0.1 积分），请每日签到领取或联系管理员分配。')
-            }
-            if (res.status === 413) {
-              throw new Error('上传的图片或附件体积超出限制，已为您进行自动压缩，请重新尝试发送。')
-            }
-            const errData = await res.json().catch(() => ({}))
-            throw new Error(errData.error || errData.message || `服务响应异常: HTTP ${res.status}`)
-          }
+          while (attempt < maxAttempts) {
+            attempt++
+            try {
+              const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...authService.getAuthHeaders(),
+                },
+                body: JSON.stringify(body),
+                signal: convController.signal,
+              })
 
-          const reader = res.body?.getReader()
-          if (!reader) throw new Error('流式传输不可用')
-
-          const decoder = new TextDecoder()
-          let buffer = ''
-
-          while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
-
-            buffer += decoder.decode(value, { stream: true })
-            const lines = buffer.split('\n\n')
-            buffer = lines.pop() || ''
-
-            for (const line of lines) {
-              const trimmed = line.trim()
-              if (!trimmed.startsWith('data: ')) continue
-              const jsonStr = trimmed.slice(6)
-
-              try {
-                const event = JSON.parse(jsonStr)
-                if (event.type === 'points_updated' && typeof event.points === 'number') {
-                  window.dispatchEvent(new CustomEvent('points-updated', { detail: { points: event.points } }))
-                } else if (event.type === 'text' && event.content) {
-                  scheduleFlush(event.content)
-                } else if (event.type === 'status' && event.content) {
-                  onStatus?.(event.content)
-                } else if (event.type === 'tool_call') {
-                  onStatus?.(`🔍 正在调用工具「${event.tool}」探索知识库...`)
-                } else if (event.type === 'tool_result') {
-                  onStatus?.(`⚡ 工具「${event.tool}」执行完毕，正在组织回答...`)
-                } else if (event.type === 'done') {
-                  flushNow()
-                  onDone?.()
-                } else if (event.type === 'error') {
-                  flushNow()
-                  onErrorMsg?.(event.content || '智能体执行异常')
+              if (!res.ok) {
+                if (res.status === 402) {
+                  const errData = await res.json().catch(() => ({}))
+                  window.dispatchEvent(new CustomEvent('open-checkin-modal'))
+                  throw new Error(errData.message || '伴学积分不足（单次对话消耗 0.1 积分），请每日签到领取或联系管理员分配。')
                 }
-              } catch {}
+                if (res.status === 413) {
+                  throw new Error('上传的图片或附件体积超出限制，已为您进行自动压缩，请重新尝试发送。')
+                }
+                const errData = await res.json().catch(() => ({}))
+                throw new Error(errData.error || errData.message || `服务响应异常: HTTP ${res.status}`)
+              }
+
+              const reader = res.body?.getReader()
+              if (!reader) throw new Error('流式传输不可用')
+
+              const decoder = new TextDecoder()
+              let buffer = ''
+
+              while (true) {
+                const { done, value } = await reader.read()
+                if (done) break
+
+                buffer += decoder.decode(value, { stream: true })
+                const lines = buffer.split('\n\n')
+                buffer = lines.pop() || ''
+
+                for (const line of lines) {
+                  const trimmed = line.trim()
+                  if (!trimmed.startsWith('data: ')) continue
+                  const jsonStr = trimmed.slice(6)
+
+                  try {
+                    const event = JSON.parse(jsonStr)
+                    if (event.type === 'points_updated' && typeof event.points === 'number') {
+                      window.dispatchEvent(new CustomEvent('points-updated', { detail: { points: event.points } }))
+                    } else if (event.type === 'text' && event.content) {
+                      receivedAnyContent = true
+                      scheduleFlush(event.content)
+                    } else if (event.type === 'status' && event.content) {
+                      onStatus?.(event.content)
+                    } else if (event.type === 'tool_call') {
+                      onStatus?.(`🔍 正在调用工具「${event.tool}」探索知识库...`)
+                    } else if (event.type === 'tool_result') {
+                      onStatus?.(`⚡ 工具「${event.tool}」执行完毕，正在组织回答...`)
+                    } else if (event.type === 'done') {
+                      flushNow()
+                      onDone?.()
+                    } else if (event.type === 'error') {
+                      flushNow()
+                      hasReportedStreamError = true
+                      onErrorMsg?.(event.content || '智能体执行异常')
+                    }
+                  } catch {}
+                }
+              }
+              break
+            } catch (retryErr: any) {
+              const isNetworkErr =
+                retryErr?.name !== 'AbortError' &&
+                !hasReportedStreamError &&
+                !receivedAnyContent &&
+                (retryErr?.message?.includes('Failed to fetch') ||
+                  retryErr?.message?.includes('NetworkError') ||
+                  /network error/i.test(retryErr?.message || '') ||
+                  retryErr?.message?.includes('流式传输不可用'))
+              if (attempt < maxAttempts && isNetworkErr && !convController.signal.aborted) {
+                onStatus?.('⚡ 网络连接短暂波动，正在自动重连...')
+                await new Promise(r => setTimeout(r, 800))
+                continue
+              }
+              throw retryErr
             }
           }
           flushNow()
           onDone?.()
         } catch (err: any) {
           flushNow()
-          if (err.name !== 'AbortError') {
+          if (err.name !== 'AbortError' && !hasReportedStreamError) {
             let msg = err?.message || '网络连接异常'
-            if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('fetch')) {
-              msg = '手机端网络传输中断或连接超时，系统已自动对图片进行自适应轻量压缩，请检查网络后点击重新发送。'
+            if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || /network error/i.test(msg) || msg.includes('fetch')) {
+              msg = '服务响应中断或网络连接异常，建议检查网络状态后点击重新生成。'
             }
             onErrorMsg?.(msg)
           }
@@ -1905,6 +1954,66 @@ export default function Chat() {
       peerAgent,
     ]
   )
+
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // 监听实战引导或外部直达的提问事件
+  useEffect(() => {
+    const onPrefill = (e: any) => {
+      const q = e?.detail?.question
+      if (q) {
+        setInput(q)
+        if (e?.detail?.autoSend) {
+          setTimeout(() => {
+            handleSend(q)
+          }, 350)
+        }
+      }
+    }
+    window.addEventListener('chat-prefill-question', onPrefill)
+    return () => window.removeEventListener('chat-prefill-question', onPrefill)
+  }, [handleSend])
+
+  // 读取 URL query 中的提问内容 (?q=... 或 ?prompt=... &auto=1) 以及 sessionStorage 中的追问缓存
+  useEffect(() => {
+    let pendingPrompt = ''
+    try {
+      const sessPrompt = sessionStorage.getItem('pending_chat_prompt') || sessionStorage.getItem('prefilled_chat_prompt')
+      if (sessPrompt) {
+        pendingPrompt = sessPrompt
+        sessionStorage.removeItem('pending_chat_prompt')
+        sessionStorage.removeItem('prefilled_chat_prompt')
+      }
+    } catch {}
+
+    const queryPrompt = searchParams.get('prompt') || searchParams.get('q')
+    const modeParam = searchParams.get('mode')
+    if (modeParam === 'followup') {
+      setStudyTone('followup')
+      localStorage.setItem('coreforge_study_tone', 'followup')
+    }
+    const finalPrompt = pendingPrompt || queryPrompt
+    const auto = searchParams.get('auto') === '1' || Boolean(pendingPrompt)
+
+    if (queryPrompt || modeParam) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('q')
+      next.delete('prompt')
+      next.delete('auto')
+      next.delete('mode')
+      setSearchParams(next, { replace: true })
+    }
+
+    if (finalPrompt) {
+      setInput(finalPrompt)
+      if (auto) {
+        const timer = setTimeout(() => {
+          handleSend(finalPrompt)
+        }, 450)
+        return () => clearTimeout(timer)
+      }
+    }
+  }, [searchParams, setSearchParams, handleSend])
 
   // 点击知识库笔记：仅挂载为伴读上下文并预览，绝不污染用户输入框
   const handleNoteClick = useCallback(async (notePath: string) => {
@@ -2235,7 +2344,7 @@ export default function Chat() {
         onScanModels={handleScanModels}
         onOpenModelManager={() => setShowModelManagerModal(true)}
         studyTone={studyTone}
-        onStudyToneChange={setStudyTone}
+        onStudyToneChange={handleStudyToneChange}
         isDualMode={isDualMode}
         onToggleDualMode={() => {
           const next = !isDualMode
@@ -2637,6 +2746,26 @@ export default function Chat() {
             <div ref={messagesEndRef} />
           </div>
 
+          {/* 追问模式专属全局高亮指引条 */}
+          {studyTone === 'followup' && (
+            <div className="mx-2 sm:mx-4 mb-1 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 flex items-center justify-between text-xs animate-fade-in shadow-2xs">
+              <div className="flex items-center gap-2">
+                <span className="flex h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+                <span className="font-bold text-amber-800">🎯 追问模式已激活</span>
+                <span className="text-[11px] text-amber-700 hidden sm:inline">
+                  导师将锁定您的具体疑问做靶向深度解答，拒绝笼统套话与大段概念复述
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleStudyToneChange('rigorous')}
+                className="text-[11px] text-amber-800 hover:text-amber-950 font-medium underline underline-offset-2 cursor-pointer"
+              >
+                退出追问模式
+              </button>
+            </div>
+          )}
+
           {/* 一体化智能输入舱 (Smart Composer Dock) */}
           <ChatComposerDock
             input={input}
@@ -2647,7 +2776,7 @@ export default function Chat() {
             runningStatus={runningConvs[activeConvId]?.status}
             activeAgent={activeAgent}
             studyTone={studyTone}
-            onStudyToneChange={setStudyTone}
+            onStudyToneChange={handleStudyToneChange}
             promptsList={promptsList}
             promptLabel={promptLabel}
             promptTopic={promptTopic}
@@ -2745,19 +2874,25 @@ export default function Chat() {
               <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 伴学风格与语调
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
                   { key: 'rigorous', label: '📐 学术严谨' },
                   { key: 'vivid', label: '💡 通俗直观' },
                   { key: 'exam', label: '⚡ 考场冲刺' },
+                  { key: 'followup', label: '🎯 针对追问' },
                 ].map(tone => (
                   <button
                     key={tone.key}
                     type="button"
-                    onClick={() => setStudyTone(tone.key as any)}
+                    onClick={() => {
+                      setStudyTone(tone.key as any)
+                      localStorage.setItem('coreforge_study_tone', tone.key)
+                    }}
                     className={`py-2 px-1 text-center rounded-xl text-xs font-semibold border transition-all ${
                       studyTone === tone.key
-                        ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                        ? tone.key === 'followup'
+                          ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                          : 'bg-slate-900 text-white border-slate-900 shadow-xs'
                         : 'bg-slate-50 text-slate-700 border-slate-200'
                     }`}
                   >

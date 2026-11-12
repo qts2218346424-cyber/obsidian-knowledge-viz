@@ -74,7 +74,7 @@ export const BookExtractModal: React.FC<BookExtractModalProps> = ({
       setLoadingOutline(true)
       setError(null)
       try {
-        const data = await api.getBookOutline(book.relativePath)
+        const data = await api.getBookOutline(book.relativePath, book.scope)
         if (isMounted && data && data.success) {
           setOutlineData(data)
           // 默认全选所有章节
@@ -150,6 +150,7 @@ export const BookExtractModal: React.FC<BookExtractModalProps> = ({
     try {
       const res = await api.deepExtractBook({
         relativePath: book.relativePath,
+        scope: book.scope,
         domain: outlineData?.domain || book.domain,
         subject: outlineData?.subject,
         selectedChapterIds,
@@ -272,7 +273,15 @@ export const BookExtractModal: React.FC<BookExtractModalProps> = ({
                   全书全卷智能深度拆解与成套入库工作台
                 </h3>
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 border border-cyan-500/20">
-                  {book.domain === 'cs_408' ? '408 计算机统考' : '全国统考数学'}
+                  {book.domain === 'cs_408'
+                    ? '408 计算机统考'
+                    : book.domain === 'english'
+                      ? '考研英语'
+                      : book.domain === 'politics'
+                        ? '考研政治'
+                        : book.domain === 'general'
+                          ? '专业课/综合'
+                          : '全国统考数学'}
                 </span>
                 {outlineData && (
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 border border-blue-500/20">

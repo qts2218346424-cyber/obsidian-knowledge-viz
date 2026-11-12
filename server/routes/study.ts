@@ -1,4 +1,4 @@
-import { getRequestVaultPath } from '../services/user-sandbox.js'
+import { getRequestVaultPath, getUserVaultDir } from '../services/user-sandbox.js'
 import { Router } from 'express'
 import fs from 'fs'
 import path from 'path'
@@ -369,6 +369,9 @@ function parseErrorLog(content: string): { questions: any[]; meta: Record<string
     const q: Record<string, string> = {}
     const fieldMap: Record<string, string> = {
       '来源笔记': 'source',
+      '科目': 'subject',
+      '错因类型': 'errorType',
+      '错因反思': 'notes',
       '题目': 'question',
       '你的回答': 'userAnswer',
       '正确答案': 'correctAnswer',
@@ -417,15 +420,30 @@ function parseSingleErrorNote(content: string, fileName: string): any | null {
     const correctAnsMatch = body.match(/标准答案[：:*]*\s*`?([^`\r\n]+)`?/)
     const explMatch = body.match(/## 3\. 标准分步严谨推导\s*([\s\S]*?)(?:## 4\.|$)/)
     const subjectMatch = body.match(/科目[：:*]*\s*([^\r\n*]+)/)
+    const errorTypeMatch = body.match(/诊断类型[：:*]*\s*`?([^`\r\n]+)`?/)
+    const notesMatch = body.match(/思维障碍\/误区复现[：:*]*\s*([\s\S]*?)(?:## 3\.|$)/)
+    const optionsBlockMatch = body.match(/### 选项：\s*([\s\S]*?)(?:## 2\.|$)/)
+    let parsedOptions: Record<string, string> | undefined
+    if (optionsBlockMatch) {
+      const opts: Record<string, string> = {}
+      for (const line of optionsBlockMatch[1].split('\n')) {
+        const m = line.match(/^-\s*\*\*([A-Da-d])\*\*\s*[:：]\s*(.+)$/)
+        if (m) opts[m[1].toUpperCase()] = m[2].trim()
+      }
+      if (Object.keys(opts).length > 0) parsedOptions = opts
+    }
 
     return {
       source: fileName,
       question,
+      options: parsedOptions,
       userAnswer: userAnsMatch ? userAnsMatch[1].trim() : '',
       correctAnswer: correctAnsMatch ? correctAnsMatch[1].trim() : '',
       explanation: explMatch ? explMatch[1].trim() : '',
+      errorType: meta?.error_type || (errorTypeMatch ? errorTypeMatch[1].trim() : ''),
+      notes: notesMatch ? notesMatch[1].trim() : '',
       reviewCount: '0',
-      nextReview: meta?.created || new Date().toISOString().split('T')[0],
+      nextReview: meta?.created || new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai' }).format(new Date()),
       _sourceFile: fileName,
       subject: meta?.subject || (subjectMatch ? subjectMatch[1].trim() : '')
     }
@@ -495,7 +513,7 @@ studyRouter.post('/study/error-log', async (req, res) => {
 
 studyRouter.get('/study/error-log', (req, res) => {
   try {
-    const date = String(req.query.date || new Date().toISOString().split('T')[0])
+    const date = String(req.query.date || new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai' }).format(new Date()))
     const logPath = `${getErrorLogDir()}/${date}.md`
     try {
       const vaultPath = getRequestVaultPath(req)
@@ -516,7 +534,7 @@ studyRouter.get('/study/error-log', (req, res) => {
 
 studyRouter.get('/study/daily-review', (req, res) => {
   try {
-    const todayStr = new Date().toISOString().split('T')[0]
+    const todayStr = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai' }).format(new Date())
     const vaultPath = getRequestVaultPath(req)
     const allQuestions: any[] = []
     const seenQuestionKeys = new Set<string>()
@@ -584,12 +602,16 @@ studyRouter.get('/study/daily-review', (req, res) => {
           seenQuestionKeys.add(dedupeKey)
           allQuestions.push({
             source: errItem.sourceNote || errItem.subject,
+            subject: errItem.subject,
             question: errItem.question,
+            options: errItem.options,
             userAnswer: errItem.userAnswer || '',
             correctAnswer: errItem.correctAnswer,
             explanation: errItem.explanation || '详尽分步解析已同步至错题本',
-            reviewCount: '0',
-            nextReview: todayStr,
+            errorType: errItem.errorType,
+            notes: errItem.notes,
+            reviewCount: String(errItem.reviewCount || 0),
+            nextReview: errItem.nextReviewAt || todayStr,
             _sourceFile: errItem.sourceNote || '数据库错题库',
             _id: errItem.id,
           })
@@ -817,6 +839,8 @@ studyRouter.get('/study/vocabulary', (_req, res) => {
         exampleCn: entry?.exampleCn || '',
         frequency: entry?.frequency || '中频',
         unit: entry?.unit || 0,
+        roots: (entry as any)?.roots || '',
+        synonyms: (entry as any)?.synonyms || '',
         reviews: p.reviews,
         nextReview: p.nextReview,
       }
@@ -830,8 +854,11 @@ studyRouter.get('/study/vocabulary', (_req, res) => {
         definition: w.definition,
         phonetic: w.phonetic,
         example: w.example,
+        exampleCn: (w as any).exampleCn || '',
         frequency: w.frequency,
         unit: w.unit,
+        roots: (w as any).roots || '',
+        synonyms: (w as any).synonyms || '',
       }))
 
     const mastered = learnedWords.filter(w => progress[w].reviews >= 5).length
@@ -1204,5 +1231,571 @@ studyRouter.post('/vocab/import', (req, res) => {
     res.json({ imported, skipped, errors: errors.slice(0, 10), total: VOCAB_POOL.length })
   } catch (err: any) {
     res.status(500).json({ error: err.message })
+  }
+})
+
+// ===== 研学进度全景聚合与备考目标 (Progress Overview & Goals) =====
+
+type ProgressDomainKey = 'cs_408' | 'math' | 'english' | 'politics' | 'general'
+
+function toChinaDateStr(input?: string | Date): string {
+  const ts = input ? new Date(input).getTime() : Date.now()
+  const safeTs = Number.isNaN(ts) ? Date.now() : ts
+  return new Date(safeTs + 8 * 3600 * 1000).toISOString().slice(0, 10)
+}
+
+function classifyProgressDomain(domain?: string, subject?: string, textHint?: string): ProgressDomainKey {
+  const d = (domain || '').toLowerCase()
+  const s = ((subject || '') + ' ' + (textHint || '')).toLowerCase()
+
+  if (d === 'cs_408' || /408|数据结构|计算机组成|计组|操作系统|计算机网络|缓存|流水线|tcp|进程|二叉树/.test(s)) {
+    return 'cs_408'
+  }
+  if (d === 'math' || /数学|高数|高等数学|线代|线性代数|概率|微积分|矩阵|极限|级数|微分/.test(s)) {
+    return 'math'
+  }
+  if (d === 'english' || /英语|阅读理解|完形|长难句|作文|翻译|词汇|单词|英一|英二/.test(s)) {
+    return 'english'
+  }
+  if (d === 'politics' || /政治|马原|马克思|毛中特|史纲|思修|新思想|时政|肖秀荣|肖四|肖八/.test(s)) {
+    return 'politics'
+  }
+  return 'general'
+}
+
+function inferBookDomainAndExtracted(vaultRoot: string, user?: any): {
+  totalBooks: number
+  extractedBooks: number
+  byDomain: Record<ProgressDomainKey, { total: number; extracted: number }>
+  unextractedSamples: Array<{ name: string; domain: ProgressDomainKey; relativePath: string }>
+} {
+  const byDomain: Record<ProgressDomainKey, { total: number; extracted: number }> = {
+    cs_408: { total: 0, extracted: 0 },
+    math: { total: 0, extracted: 0 },
+    english: { total: 0, extracted: 0 },
+    politics: { total: 0, extracted: 0 },
+    general: { total: 0, extracted: 0 },
+  }
+  const unextractedSamples: Array<{ name: string; domain: ProgressDomainKey; relativePath: string }> = []
+  let totalBooks = 0
+  let extractedBooks = 0
+
+  try {
+    const isAdmin = user?.role === 'admin'
+    const isLoggedInRegular = Boolean(user && !isAdmin)
+    const recordVaultRoot = isLoggedInRegular ? getUserVaultDir(user.id) : config.vaultPath
+    const extPath = path.join(recordVaultRoot, 'raw-sources', '.extractions.json')
+    let extractions: Record<string, any> = {}
+    if (fs.existsSync(extPath)) {
+      try {
+        extractions = JSON.parse(fs.readFileSync(extPath, 'utf8'))
+      } catch {}
+    }
+
+    const seen = new Set<string>()
+    const scanDirs: Array<{ root: string; dir: string; scope: string }> = []
+    if (isLoggedInRegular && user) {
+      const uv = getUserVaultDir(user.id)
+      scanDirs.push({ root: uv, dir: path.join(uv, 'raw-sources'), scope: 'personal' })
+    }
+    scanDirs.push(
+      { root: config.vaultPath, dir: path.join(config.vaultPath, 'raw-sources'), scope: 'shared' },
+      { root: config.vaultPath, dir: path.join(config.vaultPath, '06-原始资料库'), scope: 'shared' }
+    )
+
+    const walk = (root: string, dir: string, scope: string) => {
+      if (!fs.existsSync(dir)) return
+      const entries = fs.readdirSync(dir, { withFileTypes: true })
+      for (const entry of entries) {
+        const full = path.join(dir, entry.name)
+        if (entry.isDirectory()) {
+          walk(root, full, scope)
+        } else if (entry.isFile()) {
+          if (entry.name.startsWith('.')) continue
+          if (seen.has(entry.name)) continue
+          seen.add(entry.name)
+
+          const relPath = path.relative(root, full).replace(/\\/g, '/')
+          const domain = classifyProgressDomain(undefined, undefined, relPath)
+          const alt1 = relPath.replace('06-原始资料库', 'raw-sources')
+          const alt2 = relPath.replace('raw-sources', '06-原始资料库')
+          const isExtracted = Boolean(
+            extractions[`${scope}:${relPath}`] ||
+            extractions[`${scope}:${alt1}`] ||
+            extractions[`${scope}:${alt2}`] ||
+            extractions[relPath]
+          )
+
+          totalBooks++
+          byDomain[domain].total++
+          if (isExtracted) {
+            extractedBooks++
+            byDomain[domain].extracted++
+          } else if (unextractedSamples.length < 5) {
+            unextractedSamples.push({ name: entry.name, domain, relativePath: relPath })
+          }
+        }
+      }
+    }
+
+    for (const item of scanDirs) {
+      walk(item.root, item.dir, item.scope)
+    }
+  } catch (err: any) {
+    console.warn('[ProgressOverview] scan books warning:', err.message)
+  }
+
+  return { totalBooks, extractedBooks, byDomain, unextractedSamples }
+}
+
+studyRouter.get('/study/progress-overview', (req, res) => {
+  try {
+    const userId = req.user?.id || 'default'
+    const vaultPath = getRequestVaultPath(req)
+    const todayStr = toChinaDateStr()
+
+    // 1. 获取做题记录 (最近 200 场)
+    const quizRecords = database.getQuizRecords(200, undefined, req.user?.id ? req.user.id : undefined)
+
+    let totalQuestionsAttempted = 0
+    let totalCorrect = 0
+    let totalTimeSpentSec = 0
+    let weeklyQuestionsDone = 0
+
+    // 近 7 天每日统计
+    const dayKeys: string[] = []
+    const nowMs = Date.now()
+    for (let i = 6; i >= 0; i--) {
+      dayKeys.push(toChinaDateStr(new Date(nowMs - i * 86400000)))
+    }
+    const dailyStatsMap: Record<string, { date: string; label: string; attempted: number; correct: number; sessions: number }> = {}
+    for (const dk of dayKeys) {
+      const [, m, d] = dk.split('-')
+      dailyStatsMap[dk] = { date: dk, label: `${Number(m)}/${Number(d)}`, attempted: 0, correct: 0, sessions: 0 }
+    }
+
+    const domainQuizStats: Record<ProgressDomainKey, {
+      sessions: number
+      attempted: number
+      correct: number
+      timeSec: number
+      lastPracticedAt: string | null
+    }> = {
+      cs_408: { sessions: 0, attempted: 0, correct: 0, timeSec: 0, lastPracticedAt: null },
+      math: { sessions: 0, attempted: 0, correct: 0, timeSec: 0, lastPracticedAt: null },
+      english: { sessions: 0, attempted: 0, correct: 0, timeSec: 0, lastPracticedAt: null },
+      politics: { sessions: 0, attempted: 0, correct: 0, timeSec: 0, lastPracticedAt: null },
+      general: { sessions: 0, attempted: 0, correct: 0, timeSec: 0, lastPracticedAt: null },
+    }
+
+    const activeDateSet = new Set<string>()
+    const weekStartStr = dayKeys[0]
+
+    for (const rec of quizRecords) {
+      const qTotal = Number(rec.totalQuestions) || 0
+      const qCorrect = Number(rec.correctCount) || 0
+      const qTime = Number(rec.timeTaken) || 0
+      totalQuestionsAttempted += qTotal
+      totalCorrect += qCorrect
+      totalTimeSpentSec += qTime
+
+      const recDay = toChinaDateStr(rec.createdAt)
+      activeDateSet.add(recDay)
+      if (recDay >= weekStartStr) {
+        weeklyQuestionsDone += qTotal
+      }
+      if (dailyStatsMap[recDay]) {
+        dailyStatsMap[recDay].attempted += qTotal
+        dailyStatsMap[recDay].correct += qCorrect
+        dailyStatsMap[recDay].sessions += 1
+      }
+
+      const dom = classifyProgressDomain(rec.domain)
+      domainQuizStats[dom].sessions += 1
+      domainQuizStats[dom].attempted += qTotal
+      domainQuizStats[dom].correct += qCorrect
+      domainQuizStats[dom].timeSec += qTime
+      if (!domainQuizStats[dom].lastPracticedAt || rec.createdAt > domainQuizStats[dom].lastPracticedAt!) {
+        domainQuizStats[dom].lastPracticedAt = rec.createdAt
+      }
+    }
+
+    const overallAccuracy = totalQuestionsAttempted > 0
+      ? Math.round((totalCorrect / totalQuestionsAttempted) * 100)
+      : 0
+
+    // 计算连续学习天数（基于做题活跃日或今日签到）
+    const userPoints = req.user?.id ? database.getUserPoints(req.user.id) : null
+    if (userPoints?.lastCheckinAt) {
+      activeDateSet.add(userPoints.lastCheckinAt)
+    }
+    let streakDays = 0
+    for (let i = 0; i < 60; i++) {
+      const checkDay = toChinaDateStr(new Date(nowMs - i * 86400000))
+      if (activeDateSet.has(checkDay)) {
+        streakDays++
+      } else if (i > 0) {
+        break
+      }
+    }
+
+    // 2. 错题本真实状态与错因诊断
+    const dbErrors = database.getErrorQuestions(req.user?.id ? { userId: req.user.id } : undefined)
+    let errorPendingCount = 0
+    let errorMasteredCount = 0
+    const errorTypeCounts: Record<string, number> = {
+      '概念不清': 0,
+      '公式记错': 0,
+      '计算失误': 0,
+      '审题疏忽': 0,
+    }
+    const domainErrorStats: Record<ProgressDomainKey, { total: number; pending: number; mastered: number }> = {
+      cs_408: { total: 0, pending: 0, mastered: 0 },
+      math: { total: 0, pending: 0, mastered: 0 },
+      english: { total: 0, pending: 0, mastered: 0 },
+      politics: { total: 0, pending: 0, mastered: 0 },
+      general: { total: 0, pending: 0, mastered: 0 },
+    }
+
+    for (const err of dbErrors) {
+      const isMastered = err.status === 'mastered'
+      if (isMastered) errorMasteredCount++
+      else errorPendingCount++
+
+      const et = err.errorType || '概念不清'
+      errorTypeCounts[et] = (errorTypeCounts[et] || 0) + 1
+
+      const dom = classifyProgressDomain(err.domain, err.subject, err.question)
+      domainErrorStats[dom].total++
+      if (isMastered) domainErrorStats[dom].mastered++
+      else domainErrorStats[dom].pending++
+    }
+
+    const recentErrors = dbErrors
+      .filter(e => e.status !== 'mastered')
+      .slice(0, 6)
+      .map(e => ({
+        id: e.id,
+        domain: classifyProgressDomain(e.domain, e.subject, e.question),
+        subject: e.subject || '综合',
+        chapter: e.chapter || '',
+        question: (e.question || '').replace(/\s+/g, ' ').slice(0, 90),
+        errorType: e.errorType || '概念不清',
+        updatedAt: e.updatedAt,
+      }))
+
+    // 3. 易忘闪卡真实状态 (flashcards.json)
+    let flashcardsTotal = 0
+    let flashcardsDue = 0
+    let flashcardsForgotten = 0
+    let flashcardsMastered = 0
+    const domainFlashStats: Record<ProgressDomainKey, { total: number; due: number; forgotten: number }> = {
+      cs_408: { total: 0, due: 0, forgotten: 0 },
+      math: { total: 0, due: 0, forgotten: 0 },
+      english: { total: 0, due: 0, forgotten: 0 },
+      politics: { total: 0, due: 0, forgotten: 0 },
+      general: { total: 0, due: 0, forgotten: 0 },
+    }
+
+    try {
+      const fcPath = path.resolve(config.vaultPath, '做题记录', 'flashcards.json')
+      if (fs.existsSync(fcPath)) {
+        const cards = JSON.parse(fs.readFileSync(fcPath, 'utf8'))
+        if (Array.isArray(cards)) {
+          const nowDate = new Date()
+          for (const c of cards) {
+            flashcardsTotal++
+            const isDue = !c.nextReviewAt || new Date(c.nextReviewAt) <= nowDate
+            if (isDue) flashcardsDue++
+            if (c.isForgotten) flashcardsForgotten++
+            if ((Number(c.masteryLevel) || 0) >= 80 || (Number(c.repetition) || 0) >= 3) {
+              flashcardsMastered++
+            }
+            const dom = classifyProgressDomain(c.domain, c.subject)
+            domainFlashStats[dom].total++
+            if (isDue) domainFlashStats[dom].due++
+            if (c.isForgotten) domainFlashStats[dom].forgotten++
+          }
+        }
+      }
+    } catch {}
+
+    // 4. 考点大纲掌握度与最薄弱 Top 考点
+    const masterySummaries = MasteryEngine.getHierarchyHeatmap()
+    const allDbMastery = database.getAllMasteryRecords()
+    let totalSyllabusPoints = 0
+    let masteredPoints = 0
+    let inProgressPoints = 0
+    let weakPoints = 0
+
+    const domainMasteryStats: Record<'cs_408' | 'math', { total: number; green: number; yellow: number; red: number; avgScore: number }> = {
+      cs_408: { total: 0, green: 0, yellow: 0, red: 0, avgScore: 0 },
+      math: { total: 0, green: 0, yellow: 0, red: 0, avgScore: 0 },
+    }
+
+    for (const s of masterySummaries) {
+      totalSyllabusPoints += s.totalPoints
+      masteredPoints += s.masteredCount
+      inProgressPoints += s.inProgressCount
+      weakPoints += s.weakCount
+      if (s.domain === 'cs_408' || s.domain === 'math') {
+        domainMasteryStats[s.domain] = {
+          total: s.totalPoints,
+          green: s.masteredCount,
+          yellow: s.inProgressCount,
+          red: s.weakCount,
+          avgScore: s.averageScore,
+        }
+      }
+    }
+
+    const weakestNodes = allDbMastery
+      .filter(m => m.totalAttempted > 0 && m.status !== 'green')
+      .sort((a, b) => a.masteryScore - b.masteryScore)
+      .slice(0, 6)
+      .map(m => ({
+        syllabusId: m.syllabusId,
+        domain: m.domain,
+        subject: m.subject,
+        topic: `${m.level1} · ${m.level3}`,
+        score: m.masteryScore,
+        status: m.status,
+        attempted: m.totalAttempted,
+        wrongCount: m.wrongCount,
+      }))
+
+    // 5. 考研英语词汇背诵进度
+    const vocabProgress = readVocabProgress()
+    const vocabKeys = Object.keys(vocabProgress)
+    let vocabDueToday = 0
+    let vocabMastered = 0
+    let vocabLearning = 0
+    for (const k of vocabKeys) {
+      const p = vocabProgress[k]
+      if (!p.nextReview || p.nextReview <= todayStr) vocabDueToday++
+      if (p.reviews >= 5) vocabMastered++
+      else if (p.reviews > 0) vocabLearning++
+    }
+
+    // 6. 资料解析与自定义导题数
+    const booksSummary = inferBookDomainAndExtracted(vaultPath, req.user)
+    let customQuestionsTotal = 0
+    const customQuestionsByDomain: Record<ProgressDomainKey, number> = {
+      cs_408: 0,
+      math: 0,
+      english: 0,
+      politics: 0,
+      general: 0,
+    }
+    try {
+      const cqPath = path.resolve(vaultPath, '做题记录', 'custom-questions.json')
+      if (fs.existsSync(cqPath)) {
+        const arr = JSON.parse(fs.readFileSync(cqPath, 'utf8'))
+        if (Array.isArray(arr)) {
+          customQuestionsTotal = arr.length
+          for (const q of arr) {
+            const dom = classifyProgressDomain(q.domain, q.subject)
+            customQuestionsByDomain[dom]++
+          }
+        }
+      }
+    } catch {}
+
+    // 7. 个人研学目标与今日待办清单
+    const goals = database.getStudyGoal(userId)
+
+    // 8. 构建四大学科结构化面板数据
+    const subjectDefinitions: Array<{ key: 'cs_408' | 'math' | 'english' | 'politics'; name: string; subtitle: string; maxScore: number }> = [
+      { key: 'cs_408', name: '408 计算机综合', subtitle: '数据结构 · 计组 · 操作系统 · 计网', maxScore: 150 },
+      { key: 'math', name: '考研数学', subtitle: '高等数学 · 线性代数 · 概率统计', maxScore: 150 },
+      { key: 'english', name: '考研英语', subtitle: '核心词库 · 阅读长难句 · 大小作文批改', maxScore: 100 },
+      { key: 'politics', name: '考研政治', subtitle: '马原 · 史纲时空轴 · 肖1000题', maxScore: 100 },
+    ]
+
+    const subjects = subjectDefinitions.map(def => {
+      const qStat = domainQuizStats[def.key]
+      const eStat = domainErrorStats[def.key]
+      const fStat = domainFlashStats[def.key]
+      const bStat = booksSummary.byDomain[def.key]
+      const goalCfg = goals.subjectGoals[def.key]
+      const accuracy = qStat.attempted > 0 ? Math.round((qStat.correct / qStat.attempted) * 100) : null
+      const masteryInfo = (def.key === 'cs_408' || def.key === 'math') ? domainMasteryStats[def.key] : null
+
+      return {
+        key: def.key,
+        name: def.name,
+        subtitle: def.subtitle,
+        maxScore: def.maxScore,
+        stage: goalCfg.stage,
+        targetScore: goalCfg.targetScore,
+        manualProgress: goalCfg.manualProgress || 0,
+        quizSessions: qStat.sessions,
+        attemptedQuestions: qStat.attempted,
+        correctQuestions: qStat.correct,
+        accuracy,
+        lastPracticedAt: qStat.lastPracticedAt,
+        errorsTotal: eStat.total,
+        errorsPending: eStat.pending,
+        errorsMastered: eStat.mastered,
+        flashcardsTotal: fStat.total,
+        flashcardsDue: fStat.due,
+        booksTotal: bStat.total,
+        booksExtracted: bStat.extracted,
+        customQuestionsCount: customQuestionsByDomain[def.key],
+        mastery: masteryInfo,
+      }
+    })
+
+    // 9. 智能今日行动建议队列
+    const todayActions: Array<{
+      id: string
+      priority: 'urgent' | 'recommended' | 'advance'
+      title: string
+      description: string
+      actionLabel: string
+      targetType: 'tab' | 'route'
+      target: string
+    }> = []
+
+    if (errorPendingCount > 0) {
+      todayActions.push({
+        id: 'act-errors',
+        priority: 'urgent',
+        title: `消灭 ${errorPendingCount} 道待复盘错题`,
+        description: `当前错题消灭率 ${dbErrors.length > 0 ? Math.round((errorMasteredCount / dbErrors.length) * 100) : 0}%，趁记忆未退化及时重做复盘`,
+        actionLabel: '进入每日错题',
+        targetType: 'tab',
+        target: 'errors',
+      })
+    }
+
+    if (flashcardsDue > 0) {
+      todayActions.push({
+        id: 'act-flashcards',
+        priority: flashcardsForgotten > 0 ? 'urgent' : 'recommended',
+        title: `复习 ${flashcardsDue} 张到期记忆闪卡`,
+        description: flashcardsForgotten > 0 ? `其中包含 ${flashcardsForgotten} 张你重点标注为“容易遗忘”的核心卡片` : '遵循 SM-2 记忆曲线及时巩固防遗忘',
+        actionLabel: '开启闪卡速记',
+        targetType: 'tab',
+        target: 'flashcards',
+      })
+    }
+
+    if (weakestNodes.length > 0) {
+      const topWeak = weakestNodes[0]
+      todayActions.push({
+        id: 'act-weakest',
+        priority: 'urgent',
+        title: `攻坚薄弱考点：${topWeak.topic}`,
+        description: `${topWeak.subject}当前掌握度仅 ${topWeak.score} 分（错 ${topWeak.wrongCount} 次），建议先让 AI 串讲再刷变式题`,
+        actionLabel: 'AI 靶向精讲',
+        targetType: 'route',
+        target: `/chat?prompt=${encodeURIComponent(`我在「${topWeak.topic}」（${topWeak.subject}）总是容易丢分，请帮我系统梳理核心原理、常见命题陷阱，并出 2 道针对性训练题。`)}`,
+      })
+    }
+
+    if (vocabDueToday > 0) {
+      todayActions.push({
+        id: 'act-vocab',
+        priority: 'recommended',
+        title: `背诵今日 ${vocabDueToday} 个到期考研词汇`,
+        description: `词库总池 ${VOCAB_POOL.length} 词，当前已彻底掌握 ${vocabMastered} 词，每日坚持保持语感`,
+        actionLabel: '去背单词',
+        targetType: 'route',
+        target: '/vocabulary',
+      })
+    }
+
+    if (booksSummary.unextractedSamples.length > 0) {
+      todayActions.push({
+        id: 'act-extract',
+        priority: 'advance',
+        title: `还有 ${booksSummary.totalBooks - booksSummary.extractedBooks} 份资料未 AI 提取归档`,
+        description: `例如《${booksSummary.unextractedSamples[0].name}》，一键解析可将真题注入个人题库`,
+        actionLabel: '去教材专架解析',
+        targetType: 'tab',
+        target: 'pdfs',
+      })
+    }
+
+    if (weeklyQuestionsDone < goals.weeklyQuestionGoal) {
+      const remain = goals.weeklyQuestionGoal - weeklyQuestionsDone
+      todayActions.push({
+        id: 'act-quiz',
+        priority: totalQuestionsAttempted === 0 ? 'urgent' : 'recommended',
+        title: totalQuestionsAttempted === 0 ? '开启第一组摸底刷题诊断' : `本周刷题目标还差 ${remain} 题`,
+        description: totalQuestionsAttempted === 0
+          ? '完成一组 10 道真题测试后，系统将为你点亮考纲热力图与薄弱点雷达'
+          : `本周已完成 ${weeklyQuestionsDone} / ${goals.weeklyQuestionGoal} 题，继续保持节奏`,
+        actionLabel: '前往做题中心',
+        targetType: 'route',
+        target: '/quiz',
+      })
+    }
+
+    res.json({
+      generatedAt: new Date().toISOString(),
+      today: todayStr,
+      summary: {
+        totalQuizSessions: quizRecords.length,
+        totalQuestionsAttempted,
+        totalCorrect,
+        overallAccuracy,
+        totalTimeMinutes: Math.round(totalTimeSpentSec / 60),
+        weeklyQuestionsDone,
+        streakDays,
+        checkedInToday: userPoints?.lastCheckinAt === todayStr,
+        errorTotal: dbErrors.length,
+        errorPending: errorPendingCount,
+        errorMastered: errorMasteredCount,
+        flashcardsTotal,
+        flashcardsDue,
+        flashcardsForgotten,
+        flashcardsMastered,
+        syllabusTotal: totalSyllabusPoints,
+        syllabusMastered: masteredPoints,
+        syllabusInProgress: inProgressPoints,
+        syllabusWeak: weakPoints,
+        vocabPoolTotal: VOCAB_POOL.length,
+        vocabLearned: vocabKeys.length,
+        vocabMastered,
+        vocabLearning,
+        vocabDueToday,
+        booksTotal: booksSummary.totalBooks,
+        booksExtracted: booksSummary.extractedBooks,
+        customQuestionsTotal,
+      },
+      weeklyTrend: dayKeys.map(dk => {
+        const d = dailyStatsMap[dk]
+        return {
+          date: d.date,
+          label: d.label,
+          attempted: d.attempted,
+          correct: d.correct,
+          accuracy: d.attempted > 0 ? Math.round((d.correct / d.attempted) * 100) : 0,
+          sessions: d.sessions,
+        }
+      }),
+      errorTypeDistribution: Object.entries(errorTypeCounts).map(([name, count]) => ({ name, count })),
+      subjects,
+      weakestNodes,
+      recentErrors,
+      todayActions: todayActions.slice(0, 6),
+      goals,
+    })
+  } catch (err: any) {
+    console.error('[ProgressOverview Error]:', err)
+    res.status(500).json({ error: err.message || '获取研学进度失败' })
+  }
+})
+
+studyRouter.put('/study/progress-goals', (req, res) => {
+  try {
+    const userId = req.user?.id || 'default'
+    const updated = database.upsertStudyGoal(userId, req.body || {})
+    res.json({ success: true, goals: updated })
+  } catch (err: any) {
+    console.error('[ProgressGoals Update Error]:', err)
+    res.status(500).json({ error: err.message || '保存研学目标失败' })
   }
 })

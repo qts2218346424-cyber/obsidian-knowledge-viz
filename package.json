@@ -1,7 +1,7 @@
 {
   "name": "coreforge",
   "productName": "CoreForge 研核",
-  "description": "CoreForge 研核 · 408 & 考研数学 智能双核研学工作台",
+  "description": "CoreForge 研核 · 408计算机与考研数学/英语/政治全栈智能研学操作系统 & Obsidian知识大脑",
   "private": true,
   "version": "1.4.0",
   "type": "module",
@@ -92,6 +92,7 @@
     "lucide-react": "^1.21.0",
     "multer": "^2.2.0",
     "pdf-parse": "^2.4.5",
+    "pdfjs-dist": "^4.10.38",
     "qrcode": "^1.5.4",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",

@@ -1,34 +1,382 @@
 import React, { memo, useState, useEffect, useMemo } from 'react'
-
 import ReactMarkdown from 'react-markdown'
-
 import remarkGfm from 'remark-gfm'
-
 import remarkMath from 'remark-math'
-
 import rehypeHighlight from 'rehype-highlight'
-
 import rehypeKatex from 'rehype-katex'
-
 import { Copy, Check, ChevronDown, Sparkles } from 'lucide-react'
 
+const LATEX_CMD_DOUBLE_BS_RE = /\\\\(?=(?:frac|dfrac|tfrac|cfrac|int|iint|iiint|oint|lim|sum|prod|sqrt|sin|cos|tan|cot|sec|csc|arcsin|arccos|arctan|ln|log|exp|alpha|beta|gamma|delta|epsilon|varepsilon|zeta|eta|theta|vartheta|iota|kappa|lambda|mu|nu|xi|pi|rho|sigma|tau|upsilon|phi|varphi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega|infty|partial|nabla|cdot|cdots|ldots|vdots|ddots|times|div|pm|mp|le|ge|leq|geq|ne|neq|approx|equiv|sim|simeq|cong|propto|to|rightarrow|leftarrow|Rightarrow|Leftarrow|leftrightarrow|Leftrightarrow|mapsto|in|notin|subset|subseteq|cup|cap|setminus|emptyset|forall|exists|neg|land|lor|left|right|big|Big|bigg|Bigg|text|textrm|textbf|mathrm|mathbf|boldsymbol|mathit|mathcal|mathbb|vec|hat|bar|tilde|overline|underline|overbrace|underbrace|begin|end|binom|choose|det|dim|gcd|hom|ker|max|min|sup|inf|arg|deg|mod|pmod|operatorname|quad|qquad|,)\b)/g
 
-
-interface MarkdownRendererProps {
-
-  content: string
-
-  className?: string
-
-  inline?: boolean
-
-  isStreaming?: boolean
-
-  defaultThinkingOpen?: boolean
-
+function readBracedGroup(src: string, openIdx: number): { content: string; nextIdx: number } | null {
+  if (openIdx >= src.length || src[openIdx] !== '{') return null
+  let depth = 0
+  let i = openIdx
+  while (i < src.length) {
+    const ch = src[i]
+    if (ch === '\\') {
+      i += 2
+      continue
+    }
+    if (ch === '{') depth++
+    else if (ch === '}') {
+      depth--
+      if (depth === 0) {
+        return { content: src.slice(openIdx + 1, i), nextIdx: i + 1 }
+      }
+    }
+    i++
+  }
+  return null
 }
 
+/**
+ * 将行内公式里结构复杂的顶层 \frac（包含积分/求和/根式/嵌套分式/上下标等）自动升级为 \dfrac，
+ * 避免 KaTeX textstyle 默认极度压缩导致积分上限或括弧碰撞分数线；同时保留上下标里的 e^{-\frac{1}{x}} 保持紧凑。
+ */
+function upgradeComplexInlineFractions(latex: string, inScript = false): string {
+  if (!latex || !latex.includes('\\frac')) return latex
+  let out = ''
+  let i = 0
+  while (i < latex.length) {
+    const ch = latex[i]
+    // 跳过转义字符（如 \{ \} \\）
+    if (ch === '\\') {
+      if (!inScript && latex.startsWith('\\frac', i) && !/[a-zA-Z]/.test(latex[i + 5] || '')) {
+        let pos = i + 5
+        while (pos < latex.length && latex[pos] === ' ') pos++
+        const numGrp = readBracedGroup(latex, pos)
+        if (numGrp) {
+          let pos2 = numGrp.nextIdx
+          while (pos2 < latex.length && latex[pos2] === ' ') pos2++
+          const denGrp = readBracedGroup(latex, pos2)
+          if (denGrp) {
+            const combined = numGrp.content + denGrp.content
+            const isComplex =
+              /\\(?:int|iint|iiint|oint|sum|prod|lim|frac|dfrac|sqrt|left|begin)\b|[\^_]/.test(combined) ||
+              combined.replace(/\\[a-zA-Z]+|\s+/g, '').length >= 10
+            const upgradedNum = upgradeComplexInlineFractions(numGrp.content, false)
+            const upgradedDen = upgradeComplexInlineFractions(denGrp.content, false)
+            out += `${isComplex ? '\\dfrac' : '\\frac'}{${upgradedNum}}{${upgradedDen}}`
+            i = denGrp.nextIdx
+            continue
+          }
+        }
+      }
+      // 其他反斜杠命令（原样消耗 \x 或 \command）
+      out += ch + (latex[i + 1] ?? '')
+      i += 2
+      continue
+    }
 
+    // 遇到 ^ 或 _ 时，保护其后紧随的花括号脚本组不被升级为 \dfrac（如 e^{-\frac{1}{x}}）
+    if (ch === '^' || ch === '_') {
+      out += ch
+      let pos = i + 1
+      while (pos < latex.length && latex[pos] === ' ') {
+        out += latex[pos]
+        pos++
+      }
+      if (latex[pos] === '{') {
+        const grp = readBracedGroup(latex, pos)
+        if (grp) {
+          out += `{${grp.content}}`
+          i = grp.nextIdx
+          continue
+        }
+      }
+      i = pos
+      continue
+    }
+
+    out += ch
+    i++
+  }
+  return out
+}
+
+/**
+ * 在保护代码块与行内代码的前提下，规整非标准 LaTeX 公式定界符与导入转义残留：
+ * 1. \[...\] -> $$...$$，\(...\) -> $...$
+ * 2. $ formula $ 首尾多出空格导致 remark-math 不识别 -> $formula$
+ * 3. 数学定界符内误保留的 JSON 双反斜杠命令（如 \\frac）-> \frac（不影响 cases/matrix 行尾 \\ 换行）
+ */
+function normalizeMathSegments(text: string): string {
+  if (!text) return ''
+  const segments = text.split(/(^```[\s\S]*?^```|```[\s\S]*?```|`[^`\n]+`)/gm)
+  return segments
+    .map((seg, segIdx) => {
+      if (segIdx % 2 === 1) return seg
+
+      let s = seg
+        // 1) \[ ... \] -> 独立块级公式 $$ ... $$
+        .replace(/\\\[([\s\S]*?)\\\]/g, (_m, inner) => {
+          const body = String(inner || '').trim()
+          return body ? '\n$$\n' + body + '\n$$\n' : ''
+        })
+        // 2) \( ... \) -> 行内公式 $ ... $
+        .replace(/\\\(([\s\S]*?)\\\)/g, (_m, inner) => {
+          const body = String(inner || '').trim().replace(/\n+/g, ' ')
+          return body ? '$' + body + '$' : ''
+        })
+
+      // 3) 修复跨行 $$...$$ 块级公式内部多余双反斜杠命令及前后独立成行
+      s = s.replace(/\$\$([\s\S]*?)\$\$/g, (_m, inner) => {
+        const cleaned = String(inner || '').replace(LATEX_CMD_DOUBLE_BS_RE, '\\').trim()
+        return '\n$$\n' + cleaned + '\n$$\n'
+      })
+
+      // 4) 逐行修复行内 $...$ 内侧多余空格与命令前多余双反斜杠
+      s = s
+        .split('\n')
+        .map((line) => {
+          if (!line.includes('$') || line.trim() === '$$') return line
+          return line.replace(/(?<!\\)(?<!\$)\$(?!\$)([^\$\n]+?)(?<!\\)(?<!\$)\$(?!\$)/g, (full, inner) => {
+            const rawInner = String(inner)
+            const trimmed = rawInner.trim()
+            if (!trimmed) return full
+            if (rawInner !== trimmed) {
+              const looksLikeCurrency = /^\d+(?:\.\d+)?\s*[\u4e00-\u9fa5]/.test(trimmed)
+              const looksLikeMath =
+                /[\\^_{}=<>±×÷∑∫∏√∞∂∇α-ωΑ-Ω]/.test(trimmed) ||
+                /^[a-zA-Z](?:[\s,()'"+\-*/0-9a-zA-Z]*)$/.test(trimmed)
+              if (looksLikeCurrency || !looksLikeMath) {
+                return full
+              }
+            }
+            const fixedInner = upgradeComplexInlineFractions(
+              trimmed.replace(LATEX_CMD_DOUBLE_BS_RE, '\\')
+            )
+            return '$' + fixedInner + '$'
+          })
+        })
+        .join('\n')
+
+      return s
+    })
+    .join('')
+}
+
+/**
+ * 智能识别行内紧密堆叠的小项列表并主动换行：
+ * 例如题干中常见的组合选择题：
+ * "...的是___。 I. 指令格式规整且长度一致 II. 指令和数据按边界对齐存放 III. 只有Load/Store指令才能对操作数进行存储访问"
+ * 自动切分为分行结构，使题干与小项、小项与小项之间层次分明。
+ */
+function breakInlineSubItems(text: string): string {
+  if (!text) return ''
+
+  // 1. 保护行内数学公式 $...$
+  const mathTokens: string[] = []
+  const safeText = text.replace(/(?<!\\)\$(?!\$)[^\$\n]+?(?<!\\)\$(?!\$)/g, (m) => {
+    mathTokens.push(m)
+    return `\u0000MATH_${mathTokens.length - 1}\u0000`
+  })
+
+  // 2. 匹配小项标号（防误伤数学函数与行内变量）
+  const subitemRegex = /(?<![a-zA-Z0-9_\'\$\\\u0000])(?:([IⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+|[VvXxIi]{1,4})\s*[\.、]|[(（](?:[IⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+|[VvXxIi]{1,4})[)）]|[①②③④⑤⑥⑦⑧⑨⑩]|[(（](?:[1-9]\d?)[)）])(?:\s*)/g
+
+  const lines = safeText.split('\n')
+  const newLines: string[] = []
+
+  for (const line of lines) {
+    if (!line.trim()) {
+      newLines.push(line)
+      continue
+    }
+
+    const matches: { index: number; length: number; text: string }[] = []
+    let match: RegExpExecArray | null
+    subitemRegex.lastIndex = 0
+    while ((match = subitemRegex.exec(line)) !== null) {
+      matches.push({
+        index: match.index,
+        length: match[0].length,
+        text: match[0]
+      })
+    }
+
+    let shouldBreak = false
+    if (matches.length >= 2) {
+      shouldBreak = true
+    } else if (matches.length === 1) {
+      const prefix = line.slice(0, matches[0].index).trimEnd()
+      if (/[。？！：；___＿＿＿o°\)]$/.test(prefix) || prefix.endsWith('（ ）') || prefix.endsWith('()')) {
+        shouldBreak = true
+      }
+    }
+
+    if (shouldBreak) {
+      let res = ''
+      let lastIdx = 0
+      for (let i = 0; i < matches.length; i++) {
+        const m = matches[i]
+        const prefix = line.slice(lastIdx, m.index)
+        if (i === 0) {
+          if (prefix.trim()) {
+            res += prefix.trimEnd() + '\n\n'
+          } else {
+            res += prefix
+          }
+        } else {
+          res += prefix.trimEnd() + '\n'
+        }
+
+        let label = m.text.trim()
+        if (!label.endsWith(' ') && (label.endsWith('.') || label.endsWith('、') || /^[①②③④⑤⑥⑦⑧⑨⑩]/.test(label))) {
+          label += ' '
+        }
+        res += label
+        lastIdx = m.index + m.length
+      }
+      res += line.slice(lastIdx)
+      newLines.push(res)
+    } else {
+      newLines.push(line)
+    }
+  }
+
+  let result = newLines.join('\n')
+  result = result.replace(/\u0000MATH_(\d+)\u0000/g, (_, idx) => mathTokens[Number(idx)] || '')
+  return result
+}
+
+/**
+ * 在保护已有代码块、行内代码与块级公式 $$...$$ 的前提下：
+ * 1. 自动识别并包裹未用反引号围起来的连续 C/C++ 裸代码块（如 408 数据结构 typedef struct / 算法题代码）；
+ * 2. 识别高数小题编号（如 (I)/(1)/①/【参考解析】/基本设计思想 等）与中文句末标点后的换行，升级为独立分段 \n\n；
+ * 3. 对其余普通非列表/非表格/非引用单换行转为 Markdown 硬换行 `  \n`，彻底解决单换行被折叠成一团的凌乱问题。
+ */
+function normalizeReadableLayout(text: string, inline: boolean): string {
+  if (!text || inline) return text
+
+  const preProcessedText = breakInlineSubItems(text)
+  const segments = preProcessedText.split(/(^```[\s\S]*?^```|```[\s\S]*?```|\$\$[\s\S]*?\$\$|`[^`\n]+`)/gm)
+
+  const isCodeLikeLine = (line: string): boolean => {
+    const t = line.trim()
+    if (!t) return false
+    if (/^(?:#|>|\||[-*+]\s|\d+\.\s)/.test(t)) return false
+    const hasChineseWords = /[\u4e00-\u9fa5]{2,}/.test(t.replace(/\/\/.*$|\/\*[\s\S]*?\*\//g, ''))
+    if (hasChineseWords && !/^(?:typedef\s+struct|struct\s+\w+|int\s+\w+|void\s+\w+|bool\s+\w+|char\s+\w+|float\s+\w+|double\s+\w+|return\b|if\s*\(|for\s*\(|while\s*\(|#include)/.test(t)) {
+      return false
+    }
+    return (
+      /^(?:#include\b|typedef\s+struct\b|struct\s+\w*|class\s+\w*|int\s+\w+|void\s+\w+|bool\s+\w+|char\s+\w+|float\s+\w+|double\s+\w+|long\s+\w+|const\s+\w+|return\b|if\s*\(|else\b|for\s*\(|while\s*\(|switch\s*\(|break;|continue;)/.test(t) ||
+      /^[{}];?$/.test(t) ||
+      /^}\s*\w+\s*;$/.test(t) ||
+      (/;\s*(?:\/\/.*)?$/.test(t) && /[a-zA-Z_]\w*/.test(t) && !/\$/.test(t)) ||
+      (/\)\s*\{?\s*$/.test(t) && /[a-zA-Z_]\w*\s*\(/.test(t) && !/\$/.test(t) && !/[\u4e00-\u9fa5]/.test(t))
+    )
+  }
+
+  const wrapBareCodeLines = (lines: string[]): string[] => {
+    const out: string[] = []
+    let i = 0
+    while (i < lines.length) {
+      if (isCodeLikeLine(lines[i])) {
+        let j = i
+        let braceBalance = 0
+        let semicolonOrBraceCount = 0
+        while (j < lines.length) {
+          const cur = lines[j]
+          const t = cur.trim()
+          if (t === '') {
+            if (j + 1 < lines.length && isCodeLikeLine(lines[j + 1])) {
+              j++
+              continue
+            }
+            break
+          }
+          if (isCodeLikeLine(cur) || (braceBalance > 0 && !/[\u4e00-\u9fa5]{4,}/.test(t) && !/\$/.test(t))) {
+            for (const ch of t) {
+              if (ch === '{') braceBalance++
+              else if (ch === '}') braceBalance--
+            }
+            if (/[;{}]/.test(t)) semicolonOrBraceCount++
+            j++
+            continue
+          }
+          break
+        }
+        const block = lines.slice(i, j)
+        const nonEmptyCount = block.filter(l => l.trim().length > 0).length
+        if (nonEmptyCount >= 2 && semicolonOrBraceCount >= 2) {
+          out.push('', '```c', ...block, '```', '')
+          i = j
+          continue
+        }
+      }
+      out.push(lines[i])
+      i++
+    }
+    return out
+  }
+
+  const isMarkdownBlockLine = (line: string): boolean => {
+    const t = line.trim()
+    return /^(?:#{1,6}\s|>\s?|\||[-*+]\s|\d+[.)]\s|```|\$\$)/.test(t)
+  }
+
+  const isSubItemOrSectionStart = (line: string): boolean => {
+    const t = line.trim()
+    return /^(?:(?:[IⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+|[VvXxIi]{1,4})\s*[\.、]|[(（](?:[IⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]+|[VvXxIi]{1,4}|[1-9]\d?)[)）]|[①②③④⑤⑥⑦⑧⑨⑩]|【[^】]{1,18}】|(?:基本设计思想|设计思想|算法思想|分步解析|分步推导|解题思路|时间与空间复杂度|时间复杂度|空间复杂度|复杂度分析|证明|解答|解|答)[:：])/.test(t)
+  }
+
+  return segments
+    .map((seg, idx) => {
+      if (idx % 2 === 1) return seg
+
+      const lines = wrapBareCodeLines(seg.split('\n'))
+      const reJoined = lines.join('\n')
+      const subSegs = reJoined.split(/(^```[\s\S]*?^```|```[\s\S]*?```)/gm)
+
+      return subSegs
+        .map((sub, sIdx) => {
+          if (sIdx % 2 === 1) return sub
+          const subLines = sub.split('\n')
+          const rebuilt: string[] = []
+          for (let i = 0; i < subLines.length; i++) {
+            const cur = subLines[i]
+            if (i === 0) {
+              rebuilt.push(cur)
+              continue
+            }
+            const prev = subLines[i - 1]
+            const prevTrim = prev.trim()
+            const curTrim = cur.trim()
+
+            if (!prevTrim || !curTrim) {
+              rebuilt.push('\n' + cur)
+              continue
+            }
+
+            if (isMarkdownBlockLine(prev) || isMarkdownBlockLine(cur)) {
+              rebuilt.push('\n' + cur)
+              continue
+            }
+
+            if (isSubItemOrSectionStart(curTrim) || /[。；：？！]$/.test(prevTrim)) {
+              rebuilt.push('\n\n' + cur)
+              continue
+            }
+
+            rebuilt.push('  \n' + cur)
+          }
+          return rebuilt.join('')
+        })
+        .join('')
+    })
+    .join('')
+}
+
+interface MarkdownRendererProps {
+  content: string
+  className?: string
+  inline?: boolean
+  isStreaming?: boolean
+  defaultThinkingOpen?: boolean
+}
 
 /**
 
@@ -554,6 +902,16 @@ function extractThinking(text: string): {
 
  */
 
+/**
+ * 为标题元素提取干净纯文本并生成稳定 ID 与锚点属性
+ */
+function getHeadingAnchorProps(children: any) {
+  const rawText = extractTextFromChildren(children).trim()
+  const cleanText = rawText.replace(/\*\*/g, '').replace(/`/g, '')
+  const id = 'heading-' + encodeURIComponent(cleanText)
+  return { id, 'data-heading-text': cleanText }
+}
+
 export const MarkdownRenderer = memo(function MarkdownRenderer({
 
   content,
@@ -590,53 +948,38 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
 
     if (!mainContent) return ''
 
-    let processed = mainContent
-
+    let processed = normalizeMathSegments(mainContent)
       // 1. 规整图片双链 ![[xxx.png]] -> ![](/api/vault/attachment?path=xxx.png)
-
       .replace(
-
         /!\[\[(.*?\.(?:png|jpg|jpeg|gif|webp|svg|bmp))\]\]/gi,
-
         (_match, filename) => `![${filename}](/api/vault/attachment?path=${encodeURIComponent(filename)})`
-
       )
-
       // 2. 规整普通带别名双链 [[笔记名|显示别名]] -> [显示别名](#wikilink:笔记名)
-
       .replace(
-
         /\[\[([^\]\|]+)\|([^\]]+)\]\]/g,
-
         (_match, note, alias) => `[${alias}](#wikilink:${encodeURIComponent(note.trim())})`
-
       )
-
       // 3. 规整普通单向双链 [[笔记名]] -> [笔记名](#wikilink:笔记名)
-
       .replace(
-
         /\[\[([^\]]+)\]\]/g,
-
         (_match, note) => `[${note.trim()}](#wikilink:${encodeURIComponent(note.trim())})`
-
       )
-
       // 4. 规整连续多余空行：防止上下被拉得太长（至多允许 1 个空行，即 2 个 \n）
-
       .replace(/\n{3,}/g, '\n\n')
-
       // 5. 清理每行行尾多余的空白字符
-
       .replace(/[ \t]+\n/g, '\n')
       // 6. 中文排版避头尾规整：修复孤立掉落在行首的标点符号（，。！？；：、）将其上移贴回上一行行末
-      .replace(/\n([，。！？；：、])/g, '')
+      .replace(/\n([，。！？；：、])/g, '$1')
       // 7. 规整中文全角标点后紧随的多余普通空格（符合中文观察阅读习惯）
-      .replace(/([，。！？；：、”《》]) +/g, '')
+      .replace(/([，。！？；：、”《》]) +/g, '$1')
       // 8. 确保中文字符与行内公式 $ 之间拥有清晰边界，防止 remark-math 将 $...$ 误判为普通文本
-      .replace(/([\u4e00-\u9fa5，。！？；：、”《》])(\$\S[^\$\n]*?\$)/g, '$1 $2')
-      .replace(/(\$\S[^\$\n]*?\$)([\u4e00-\u9fa5，。！？；：、”《》])/g, '$1 $2')
-if (isStreaming) {
+      .replace(/([\u4e00-\u9fa5，。！？；：、”《》])((?<!\$)\$(?!\$)[^\$\n]+?(?<!\$)\$(?!\$))/g, '$1 $2')
+      .replace(/((?<!\$)\$(?!\$)[^\$\n]+?(?<!\$)\$(?!\$))([\u4e00-\u9fa5，。！？；：、”《》])/g, '$1 $2')
+
+    processed = normalizeReadableLayout(processed, inline)
+      .replace(/\n{3,}/g, '\n\n')
+
+    if (isStreaming) {
 
       const blockMathMatches = processed.match(/\$\$/g)
 
@@ -650,7 +993,7 @@ if (isStreaming) {
 
     return processed
 
-  }, [mainContent, isStreaming])
+  }, [mainContent, inline, isStreaming])
 
 
 
@@ -766,52 +1109,64 @@ if (isStreaming) {
 
       },
 
-      h1({ children }: any) {
-
+      h1({ children, ...props }: any) {
+        const { id, ...dataProps } = getHeadingAnchorProps(children)
         return (
-
-          <h1 className="text-[13px] sm:text-[14px] font-bold text-warm-900 dark:text-white mt-1.5 mb-0.5 pb-0.5 border-b border-cream-300 dark:border-white/10 flex items-center gap-1.5">
-
+          <h1
+            id={id}
+            {...dataProps}
+            {...props}
+            className="scroll-mt-6 text-[13px] sm:text-[14px] font-bold text-warm-900 dark:text-white mt-1.5 mb-0.5 pb-0.5 border-b border-cream-300 dark:border-white/10 flex items-center gap-1.5 transition-all duration-300"
+          >
             <span className="w-1.5 h-3 rounded-full bg-accent-orange shrink-0" />
-
             <span>{children}</span>
-
           </h1>
-
         )
-
       },
 
-      h2({ children }: any) {
-
+      h2({ children, ...props }: any) {
+        const { id, ...dataProps } = getHeadingAnchorProps(children)
         return (
-
-          <h2 className="text-[12px] sm:text-[13px] font-bold text-warm-900 dark:text-white mt-1.2 mb-0.5 flex items-center gap-1.2">
-
+          <h2
+            id={id}
+            {...dataProps}
+            {...props}
+            className="scroll-mt-6 text-[12px] sm:text-[13px] font-bold text-warm-900 dark:text-white mt-1.2 mb-0.5 flex items-center gap-1.2 transition-all duration-300"
+          >
             <span className="w-1.5 h-2.5 rounded-full bg-blue-400 shrink-0" />
-
             <span>{children}</span>
-
           </h2>
-
         )
-
       },
 
-      h3({ children }: any) {
-
+      h3({ children, ...props }: any) {
+        const { id, ...dataProps } = getHeadingAnchorProps(children)
         return (
-
-          <h3 className="text-[11.5px] sm:text-xs font-bold text-warm-900 dark:text-slate-100 mt-1 mb-0.5 flex items-center gap-1">
-
+          <h3
+            id={id}
+            {...dataProps}
+            {...props}
+            className="scroll-mt-6 text-[11.5px] sm:text-xs font-bold text-warm-900 dark:text-slate-100 mt-1 mb-0.5 flex items-center gap-1 transition-all duration-300"
+          >
             <span className="w-1 h-2 rounded-full bg-purple-400 shrink-0" />
-
             <span>{children}</span>
-
           </h3>
-
         )
+      },
 
+      h4({ children, ...props }: any) {
+        const { id, ...dataProps } = getHeadingAnchorProps(children)
+        return (
+          <h4
+            id={id}
+            {...dataProps}
+            {...props}
+            className="scroll-mt-6 text-[11px] sm:text-[11.5px] font-bold text-warm-900 dark:text-slate-200 mt-1 mb-0.5 flex items-center gap-1 transition-all duration-300"
+          >
+            <span className="w-1 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+            <span>{children}</span>
+          </h4>
+        )
       },
 
       p({ children }: any) {
@@ -1022,46 +1377,26 @@ if (isStreaming) {
 
   return (
 
-    <div className={`prose-math ${inline ? 'inline-block [&>p]:inline [&>p]:m-0' : ''} ${className}`}>
-
+    <div className={`prose-math min-w-0 max-w-full ${inline ? 'inline-block align-middle [&>p]:inline [&>p]:m-0' : ''} ${className}`}>
       {/* 渲染思考链手风琴面板（如果有） */}
-
       {thinking && (
-
         <ThinkingAccordion
-
           thinking={thinking}
-
           isThinkingActive={isThinkingActive || (isStreaming && !mainContent)}
-
           defaultOpen={defaultThinkingOpen}
-
         />
-
       )}
-
-
 
       {/* 渲染正文内容 */}
-
       {normalizedContent && (
-
         <ReactMarkdown
-
-          remarkPlugins={[remarkGfm, remarkMath]}
-
-          rehypePlugins={[rehypeHighlight, rehypeKatex]}
-
+          remarkPlugins={[remarkGfm, [remarkMath, { singleDollarTextMath: true }]]}
+          rehypePlugins={[rehypeHighlight, [rehypeKatex, { strict: false, throwOnError: false }]]}
           components={components}
-
         >
-
           {normalizedContent}
-
         </ReactMarkdown>
-
       )}
-
     </div>
 
   )
@@ -1071,4 +1406,3 @@ if (isStreaming) {
 
 
 export default MarkdownRenderer
-

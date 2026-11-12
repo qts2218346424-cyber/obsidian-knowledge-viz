@@ -155,6 +155,8 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
       agentPrompt?: string
       history?: Array<{ role: 'user' | 'assistant'; content: string }>
       images?: string[]
+      mode?: string
+      isFollowUp?: boolean
     }
     const hasText = Boolean(body.prompt?.trim())
     const hasImages = Boolean(Array.isArray(body.images) && body.images.length > 0)
@@ -200,6 +202,16 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
       `项目说明：${body.projectDescription || '当前 Obsidian 知识库项目'}`,
       `工作目录：${cwd}`,
       body.agentPrompt ? `【当前研学智能体定位与人设要求】：\n${body.agentPrompt}` : '',
+      (body.mode === 'followup' || body.isFollowUp || body.agentPrompt?.includes('追问模式'))
+        ? '【🎯 针对性追问模式核心铁律（强制执行）】：\n' +
+          '1. 靶向解惑：用户当前处于追问模式，提出的问题是针对前文推导或特定考点的具体疑问、认知卡壳点或困惑细节！\n' +
+          '2. 拒绝笼统：严禁从头背诵或大段复述课本宏观概念，严禁给出泛泛而谈、大而化之的敷衍套话，必须直击用户的疑问核心靶心！\n' +
+          '3. 偏差剖析：一针见血指出用户为什么会卡壳、混淆了什么概念或遗漏了什么边界前提，对比正误认知差异；\n' +
+          '4. 微观拆解：针对该疑问所涉步骤进行显微镜式的深入推演，步步有据，严谨闭环；\n' +
+          '5. 针对性自测：解答完该疑问后，给出一个极小粒度的针对性微自测问题，检验用户是否真正弄懂。'
+        : '',
+      '【母语习惯与语言交付绝对铁律（最高优先级）】：\n' +
+      '★ 全程纯中文作答：必须全程使用规范、严谨、通顺、地道的简体中文进行深度解析推导，严格符合中文母语考生的思维与阅读习惯！除专业技术原语、C/C++代码段与专有英文缩写（如 TCP/IP, TLB, Cache, O(n)）保留外，所有问题剖析、原理解释、步骤推演、设坑分析与总结一律采用纯中文表达，严禁出现整句英文或中英夹生翻译腔！\n' +
       '【排版交付强制准则】：\n' +
       '1. 结论先行：首句直击答案，严禁“同学你好/我是XX导师/根据历年命题规律”等客套废话；\n' +
       '2. 严控垂直篇幅：正文紧凑精炼，杜绝过度拉长页面；段落之间最多 1 个空行，严禁连续多空行；严禁一句话一换行的诗歌体，同一要点需在同一段内自然连续书写；列表项之间严禁空行；\n' +
@@ -215,7 +227,22 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8')
     res.setHeader('Cache-Control', 'no-cache')
     res.setHeader('Connection', 'keep-alive')
+    res.setHeader('X-Accel-Buffering', 'no')
     res.flushHeaders()
+    res.write(': connected\n\n')
+
+    const heartbeatTimer = setInterval(() => {
+      if (!res.writableEnded && !res.destroyed) {
+        try {
+          res.write(': keep-alive\n\n')
+        } catch {
+          // ignore write error on closed stream
+        }
+      }
+    }, 5000)
+    const cleanupHeartbeat = () => clearInterval(heartbeatTimer)
+    res.on('close', cleanupHeartbeat)
+    res.on('finish', cleanupHeartbeat)
 
   let totalGeneratedChars = 0
   let hasSettledDeduction = false
@@ -277,16 +304,16 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
 
   let hasProducedContent = false
   const safeRefundPointsIfNeeded = (reason: string) => {
-    if (deductInfo && !hasProducedContent && req.user) {
+    if (hasSettledDeduction && !hasProducedContent && req.user) {
       try {
-        const refundRes = database.refundUserPoints(req.user.id, deductInfo.deducted, `提问异常自动原路返还 (${reason})`)
+        const refundRes = database.refundUserPoints(req.user.id, 0.1, `提问异常自动原路返还 (${reason})`)
         sendEvent({
           type: 'points_updated',
           points: refundRes.points,
-          refunded: deductInfo.deducted,
-          refundMessage: `💡 本次提问因服务响应异常未生成有效解答，已自动为您原路返还 ${deductInfo.deducted} 伴学积分。`,
+          refunded: 0.1,
+          refundMessage: `💡 本次提问因服务响应异常未生成有效解答，已自动为您原路返还 0.1 伴学积分。`,
         })
-        deductInfo = null // 避免重复退款
+        hasSettledDeduction = false // 避免重复退款
       } catch (refundErr: any) {
         console.warn('[AutoRefund Error]:', refundErr.message)
       }
@@ -359,13 +386,18 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
     const client = new OpenAICompatibleClient(apiKey, baseURL)
     const model = body.model || (body.provider === 'ollama' ? 'deepseek-r1:latest' : 'local-model')
 
+    const localAgentPrompt = [
+      '【语言与回答习惯铁律】：必须全程使用规范、严谨、通顺的简体中文展开深度解答与解析推导，严格符合中文母语考生的思维与阅读习惯，除专业代码/英文缩写外严禁输出整句英文。',
+      body.agentPrompt || '',
+    ].filter(Boolean).join('\n')
+
     try {
       for await (const event of runAgentLoop(
         client,
         model,
         conversationMessages,
         config.vaultPath,
-        body.agentPrompt
+        localAgentPrompt
       )) {
         sendEvent(event)
         if (event.type === 'error') break
@@ -409,7 +441,7 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
       '【智能体核心身份】：你是 Google Antigravity 2.0 研学双核智能体，现已深度结合至 CoreForge 研核知识库系统中。',
       `【知识库工作区】：当前绑定的本地 Obsidian Vault 路径为：${config.vaultPath}。`,
       '【核心交互准则】：',
-      '1. 直接使用规范严谨的纯中文作答，思维清晰、逻辑严密；',
+      '1. 全程母语习惯：直接使用规范严谨、通顺地道的纯中文作答，思维清晰、逻辑严密，严格符合中文母语考生的思维与阅读习惯，除专业代码/英文缩写外严禁整句英文；',
       '2. 工具调用规范：对于通识问答、考研理论概念讲解、普通打招呼交流，请直接运用你的专业知识深入作答，【严禁】在无明确需求时无故调用文件工具；仅在用户明确提出“查找笔记”、“读取某笔记”、“创建笔记”或“整理知识库”时，才调用对应的知识库工具。',
       body.agentPrompt || '',
     ].filter(Boolean).join('\n')
@@ -509,7 +541,7 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
     const codexPrompt = [
       '【智能体核心身份】：你是 OpenAI Codex 软件系统架构师与工程代码专家，现已深度结合至 CoreForge 研核系统中。',
       `【知识库工作区】：当前绑定的本地 Obsidian Vault 路径为：${config.vaultPath}。`,
-      '【核心交互准则】：使用规范严谨的纯中文，专注于计算机底层原理、408 计算机学科核心、算法与数据结构、系统设计与工程代码实战。',
+      '【核心交互准则】：全程必须使用规范严谨、通顺地道的纯中文作答，严格符合中文母语考生的思维与阅读习惯，除专业代码/英文缩写外严禁整句英文。专注于计算机底层原理、408 计算机学科核心、算法与数据结构、系统设计与工程代码实战。',
       body.agentPrompt || '',
     ].filter(Boolean).join('\n')
 
@@ -548,13 +580,17 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
       return
     }
     const { client, model } = aiTarget
+    const webPrompt = [
+      '【语言与回答习惯铁律】：必须全程使用规范、严谨、通顺的简体中文展开深度解答与解析推导，严格符合中文母语考生的思维与阅读习惯，除专业代码/英文缩写外严禁输出整句英文。',
+      body.agentPrompt || '',
+    ].filter(Boolean).join('\n')
     try {
       for await (const event of runAgentLoop(
         client,
         model,
         conversationMessages,
         config.vaultPath,
-        body.agentPrompt
+        webPrompt
       )) {
         sendEvent(event)
         if (event.type === 'error') break
@@ -575,8 +611,90 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
     return
   }
 
-  try {
+  if (body.provider === 'claude-code') {
+    let hasLocalCli = false
+    try {
+      const st = detectLocalAgents(config.localAgents)
+      const claudeObj = st.find(s => s.provider === 'claude-code')
+      hasLocalCli = Boolean(claudeObj?.available && claudeObj?.version)
+    } catch {}
 
+    let cliSucceeded = false
+    if (hasLocalCli) {
+      try {
+        for await (const event of runLocalAgent({
+          provider: 'claude-code',
+          prompt: context,
+          cwd,
+          sessionId: body.sessionId,
+          model: body.model,
+          config: config.localAgents,
+          signal: abortController.signal,
+        })) {
+          cliSucceeded = true
+          if (event.type === 'text' && event.content) hasProducedContent = true
+          sendEvent(event)
+          if (event.type === 'error') {
+            cliSucceeded = false
+            break
+          }
+        }
+        if (cliSucceeded) {
+          res.end()
+          return
+        }
+      } catch (err: any) {
+        console.warn('[Claude Code CLI fallback to AgentLoop]:', err?.message)
+      }
+    }
+
+    // 若本地 CLI 不可用、未登录或异常退出，优雅启动 Claude 架构师云端双核 Loop
+    const aiTarget = getAiClientForModel(body.model) || getAiClientForModel()
+    if (!aiTarget) {
+      handleRunFailure('Claude 智能体所需 AI 接口尚未配置，请在系统设置中配置 API Key')
+      res.end()
+      return
+    }
+    let { client, model } = aiTarget
+    if (aiTarget.endpoint && !aiTarget.endpoint.models?.includes(model) && !aiTarget.endpoint.baseURL?.includes('anthropic')) {
+      model = aiTarget.endpoint.defaultModel || aiTarget.endpoint.models?.[0] || model
+    }
+    const claudePrompt = [
+      '【智能体核心身份】：你是 Anthropic Claude 全栈系统专家与高级伴学导师，现已深度结合至 CoreForge 研核系统中。',
+      `【知识库工作区】：当前绑定的本地 Obsidian Vault 路径为：${config.vaultPath}。\n` +
+      '【核心交互准则】：使用规范严谨的纯中文，专注于考研数学、408 核心考点深度解析与逻辑推演。',
+      body.agentPrompt || '',
+    ].filter(Boolean).join('\n')
+
+    try {
+      for await (const event of runAgentLoop(
+        client,
+        model,
+        conversationMessages,
+        config.vaultPath,
+        claudePrompt
+      )) {
+        if (event.type === 'text' && event.content) hasProducedContent = true
+        sendEvent(event)
+        if (event.type === 'error') break
+      }
+    } catch (error: any) {
+      handleRunFailure(`Claude 智能体运行异常: ${error?.message || '未知错误'}`)
+    } finally {
+      if (!hasSettledDeduction && req.user) {
+        const userPts = database.getUserPoints(req.user.id)?.points ?? req.user.points ?? 0
+        sendEvent({
+          type: 'points_updated',
+          points: userPts,
+          deducted: 0,
+        })
+      }
+      res.end()
+    }
+    return
+  }
+
+  try {
     for await (const event of runLocalAgent({
       provider: body.provider,
       prompt: context,
@@ -586,6 +704,7 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
       config: config.localAgents,
       signal: abortController.signal,
     })) {
+      if (event.type === 'text' && event.content) hasProducedContent = true
       sendEvent(event)
       if (event.type === 'error') break
     }

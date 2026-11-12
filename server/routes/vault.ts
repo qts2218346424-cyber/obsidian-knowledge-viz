@@ -602,8 +602,9 @@ vaultRouter.post('/ingest/upload', upload.single('file'), async (req, res) => {
       markdown = `# ${path.basename(originalName, ext)}\n\n> 资料导入完成，原文件名: ${originalName}`
     }
 
-    // 2. 调用参考 AgriciDaniel/claude-obsidian 的自组织第二大脑整理引擎
-    const organized = await organizeDocumentIntoWiki(markdown, originalName)
+    // 2. 调用参考 AgriciDaniel/claude-obsidian 的自组织第二大脑整理引擎（按用户隔离写入对应 Vault）
+    const targetVaultPath = getRequestVaultPath(req)
+    const organized = await organizeDocumentIntoWiki(markdown, originalName, undefined, targetVaultPath)
 
     res.json({
       originalName,

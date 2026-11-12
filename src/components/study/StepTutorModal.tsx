@@ -16,7 +16,7 @@ interface StepTutorModalProps {
   syllabusId?: string
 }
 
-type TutorMode = 'hint' | 'audit' | 'formula'
+type TutorMode = 'hint' | 'audit' | 'formula' | 'followup'
 
 export default function StepTutorModal({
   isOpen,
@@ -145,6 +145,17 @@ export default function StepTutorModal({
               <BookOpen className="w-3.5 h-3.5" />
               公式定理反查
             </button>
+            <button
+              onClick={() => setMode('followup')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                mode === 'followup'
+                  ? 'bg-surface text-amber-600 shadow-xs font-bold'
+                  : 'text-warm-600 hover:text-warm-900'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              针对追问
+            </button>
           </div>
 
           <div className="flex items-center gap-2">
@@ -221,6 +232,31 @@ export default function StepTutorModal({
               >
                 {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldAlert className="w-3.5 h-3.5" />}
                 开始步骤逻辑挑刺与排查
+              </button>
+            </div>
+          )}
+
+          {/* Followup mode: student specific doubts */}
+          {mode === 'followup' && (
+            <div className="space-y-1.5 animate-fade-in">
+              <label className="text-xs font-semibold text-amber-700 flex items-center justify-between">
+                <span>你的具体疑问与卡壳细节（针对性解答，拒绝笼统）:</span>
+                <span className="text-[10px] text-warm-400">提出针对该题的微观疑惑点或推导分歧</span>
+              </label>
+              <textarea
+                value={studentSteps}
+                onChange={e => setStudentSteps(e.target.value)}
+                placeholder="例如：为什么第二步可以直接用等价无穷小代换，而不需要先验证极限非零？我的疑问是..."
+                rows={4}
+                className="w-full text-xs p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 focus:outline-hidden focus:border-amber-500 resize-none leading-relaxed text-warm-800"
+              />
+              <button
+                onClick={() => handleRunTutor('followup')}
+                disabled={loading || !questionText.trim()}
+                className="w-full py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+              >
+                {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                开启针对性靶向解惑
               </button>
             </div>
           )}

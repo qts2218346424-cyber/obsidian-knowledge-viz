@@ -29,8 +29,8 @@ interface ChatComposerDockProps {
   isCurrentRunning: boolean
   runningStatus?: string
   activeAgent: StudyAgent
-  studyTone: 'rigorous' | 'vivid' | 'exam'
-  onStudyToneChange: (tone: 'rigorous' | 'vivid' | 'exam') => void
+  studyTone: 'rigorous' | 'vivid' | 'exam' | 'followup'
+  onStudyToneChange: (tone: 'rigorous' | 'vivid' | 'exam' | 'followup') => void
   promptsList: string[]
   promptLabel: string
   promptTopic: string | null
@@ -393,7 +393,9 @@ export const ChatComposerDock = memo(function ChatComposerDock({
                 }
               }}
               placeholder={
-                selectedNote
+                studyTone === 'followup'
+                  ? '🎯 追问模式：输入您的具体疑问、卡壳细节或推导困惑（AI针对性解答，拒绝笼统套话）...'
+                  : selectedNote
                   ? `围绕《${selectedNote.title || selectedNote.path.split('/').pop()}》提问...`
                   : `向 ${activeAgent.name} 提问，或粘贴题目...`
               }
@@ -476,18 +478,21 @@ export const ChatComposerDock = memo(function ChatComposerDock({
                     { key: 'rigorous', label: '严谨' },
                     { key: 'vivid', label: '直观' },
                     { key: 'exam', label: '冲刺' },
+                    { key: 'followup', label: '🎯追问' },
                   ] as const
                 ).map(t => (
                   <button
                     key={t.key}
                     type="button"
                     onClick={() => onStudyToneChange(t.key)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
+                    className={`px-2 sm:px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
                       studyTone === t.key
-                        ? 'bg-white text-slate-900 shadow-2xs font-semibold'
+                        ? t.key === 'followup'
+                          ? 'bg-amber-500 text-white shadow-2xs font-bold'
+                          : 'bg-white text-slate-900 shadow-2xs font-semibold'
                         : 'text-slate-500 hover:text-slate-800'
                     }`}
-                    title={`切换作答风格为：${t.label}`}
+                    title={t.key === 'followup' ? '切换为：🎯追问模式（针对性解答疑问，拒绝笼统套话）' : `切换作答风格为：${t.label}`}
                   >
                     {t.label}
                   </button>

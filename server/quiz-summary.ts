@@ -35,24 +35,40 @@ export function generateQuizSummary(params: QuizSummaryParams): QuizSummaryResul
   const { mode, questions, answers, timeTaken } = params
 
   const now = new Date()
-  const dateStr = now.toISOString().split('T')[0]
-  const timeStr = now.toTimeString().split(' ')[0].substring(0, 5)
+  const dateStr = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai' }).format(now)
+  const timeStr = new Intl.DateTimeFormat('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false, hour: '2-digit', minute: '2-digit' }).format(now)
 
-  // Grade questions
+  // Grade questions (distinguish answered, mastered, unmastered, and unanswered)
   const wrongItems: Array<{
     question: QuizSummaryParams['questions'][0]
     userAnswer: string
     isCorrect: boolean
   }> = []
   let correctCount = 0
+  let answeredCount = 0
+  let unansweredCount = 0
+
+  const isAnswerCorrect = (q: QuizSummaryParams['questions'][0], rawAns?: string) => {
+    const trimmed = (rawAns || '').trim()
+    if (!trimmed) return false
+    if (trimmed === 'mastered') return true
+    if (trimmed === 'unmastered') return false
+    return trimmed.toUpperCase() === (q.answer || '').trim().toUpperCase() ||
+      trimmed === (q.answer || '').replace(/[\$\s]/g, '')
+  }
 
   for (const q of questions) {
-    const userAns = answers[q.id] || '未作答'
-    const isCorrect = userAns === q.answer
+    const rawAns = answers[q.id]
+    if (!rawAns || !String(rawAns).trim()) {
+      unansweredCount++
+      continue
+    }
+    answeredCount++
+    const isCorrect = isAnswerCorrect(q, rawAns)
     if (isCorrect) {
       correctCount++
     } else {
-      wrongItems.push({ question: q, userAnswer: userAns, isCorrect })
+      wrongItems.push({ question: q, userAnswer: rawAns === 'unmastered' ? '自评未掌握' : rawAns, isCorrect })
     }
   }
 
@@ -67,7 +83,7 @@ export function generateQuizSummary(params: QuizSummaryParams): QuizSummaryResul
       subjectBreakdown[q.subject] = { total: 0, correct: 0 }
     }
     subjectBreakdown[q.subject].total++
-    if (answers[q.id] === q.answer) {
+    if (isAnswerCorrect(q, answers[q.id])) {
       subjectBreakdown[q.subject].correct++
     }
   }

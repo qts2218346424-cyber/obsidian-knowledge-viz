@@ -1,6 +1,7 @@
 import type { UnifiedQuestion, SubjectDomain, MathCategory } from '../../types/subject'
 
-export type PaperCategory = '数一' | '数二' | '408'
+export type PaperCategory = '数一' | '数二' | '408' | '英语一'
+export type PaperType = 'real' | 'mock'
 export type PaperFilterSection = 'all' | 'choice' | 'analysis' | 'blank'
 
 export interface ExamPaperQuestion extends UnifiedQuestion {
@@ -19,6 +20,10 @@ export interface ExamPaper {
   category: PaperCategory
   title: string
   subtitle?: string
+  /** 试卷性质：历年真题或模拟冲刺卷 */
+  paperType?: PaperType
+  /** 卡片左上角徽标自定义文案（如 "2026 冲刺模拟"） */
+  badgeLabel?: string
   totalScore: number
   durationMinutes: number
   description: string

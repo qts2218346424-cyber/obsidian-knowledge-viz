@@ -90,8 +90,8 @@ interface ChatStudioHeaderProps {
   modelSyncFeedback: string | null
   onScanModels?: () => void
   onOpenModelManager: () => void
-  studyTone: 'rigorous' | 'vivid' | 'exam'
-  onStudyToneChange: (tone: 'rigorous' | 'vivid' | 'exam') => void
+  studyTone: 'rigorous' | 'vivid' | 'exam' | 'followup'
+  onStudyToneChange: (tone: 'rigorous' | 'vivid' | 'exam' | 'followup') => void
   isDualMode: boolean
   onToggleDualMode: () => void
   peerAgent: StudyAgent
@@ -251,39 +251,39 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
         </div>
       )}
 
-      {/* 📱 移动端展开态完整顶栏 */}
-      <div className={`${isHeaderCollapsed ? 'hidden' : 'flex'} md:hidden items-center justify-between gap-1.5 px-2.5 py-1.5 bg-white border-b border-slate-200/90 relative z-20`}>
-        <div className="flex items-center gap-1 min-w-0">
+      {/* 📱 移动端展开态完整顶栏 (精致微缩自适应，防横向撑破) */}
+      <div className={`${isHeaderCollapsed ? 'hidden' : 'flex'} md:hidden items-center justify-between gap-1 px-2 py-1 bg-white border-b border-slate-200/90 relative z-20 max-w-full overflow-x-auto no-scrollbar`}>
+        <div className="flex items-center gap-1 min-w-0 shrink-0">
           <button
             type="button"
             onClick={onToggleSessions}
-            className={`h-9 w-9 inline-flex items-center justify-center rounded-xl border transition-all active:scale-95 shrink-0 ${
+            className={`h-8 w-8 inline-flex items-center justify-center rounded-lg border transition-all active:scale-95 shrink-0 ${
               showSessions
                 ? 'bg-indigo-50 border-indigo-200 text-indigo-600'
                 : 'bg-slate-50 border-slate-200/80 text-slate-600'
             }`}
             title="历史对话列表"
           >
-            <MessageSquare className="w-4 h-4" />
+            <MessageSquare className="w-3.5 h-3.5" />
           </button>
 
           <button
             type="button"
             onClick={onOpenAgentPicker}
-            className="flex items-center gap-1 h-9 px-2.5 rounded-xl bg-slate-100/90 border border-slate-200/80 text-slate-800 text-xs font-bold active:scale-95 transition-all min-w-0"
+            className="flex items-center gap-1 h-8 px-2 rounded-lg bg-slate-100/90 border border-slate-200/80 text-slate-800 text-[11px] font-bold active:scale-95 transition-all min-w-0"
           >
             <span className="shrink-0">{activeAgent.icon}</span>
-            <span className="truncate max-w-[72px]">{activeAgent.name}</span>
+            <span className="truncate max-w-[60px]">{activeAgent.name}</span>
             <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
           </button>
         </div>
 
         {/* 中间：快速模型切换胶囊 */}
-        <div className="relative flex items-center min-w-0 flex-1 max-w-[150px]">
-          <div className="w-full flex items-center justify-between gap-1 h-9 px-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-[11px] text-slate-700 font-medium truncate pointer-events-none">
+        <div className="relative flex items-center min-w-0 flex-1 max-w-[115px] sm:max-w-[140px] mx-0.5">
+          <div className="w-full flex items-center justify-between gap-1 h-8 px-2 rounded-lg bg-slate-50 border border-slate-200/80 text-[10.5px] text-slate-700 font-medium truncate pointer-events-none">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
             <span className="font-mono truncate flex-1">{displayModelName}</span>
-            <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
+            <ChevronDown className="w-2.5 h-2.5 text-slate-400 shrink-0" />
           </div>
           <select
             value={isCustomModel ? '__custom__' : selectedModel}
@@ -376,38 +376,38 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
           <button
             type="button"
             onClick={onToggleFiles}
-            className={`h-9 w-9 inline-flex items-center justify-center rounded-xl border transition-all active:scale-95 ${
+            className={`h-8 w-8 inline-flex items-center justify-center rounded-lg border transition-all active:scale-95 ${
               selectedNote || showFiles
                 ? 'bg-amber-50 border-amber-300 text-amber-700'
                 : 'bg-slate-50 border-slate-200/80 text-slate-600'
             }`}
             title="知识库笔记伴读"
           >
-            <FolderTree className="w-4 h-4" />
+            <FolderTree className="w-3.5 h-3.5" />
           </button>
           <button
             type="button"
             onClick={onOpenMobileConfig}
-            className="h-9 w-9 inline-flex items-center justify-center rounded-xl bg-slate-50 border border-slate-200/80 text-slate-600 active:scale-95 transition-all"
+            className="h-8 w-8 inline-flex items-center justify-center rounded-lg bg-slate-50 border border-slate-200/80 text-slate-600 active:scale-95 transition-all"
             title="引擎与技能控制台"
           >
-            <Settings className="w-4 h-4 text-indigo-600" />
+            <Settings className="w-3.5 h-3.5 text-indigo-600" />
           </button>
           <button
             type="button"
             onClick={onCreateNewConversation}
-            className="h-9 w-9 inline-flex items-center justify-center rounded-xl bg-slate-900 text-white active:scale-95 transition-all shadow-2xs"
+            className="h-8 w-8 inline-flex items-center justify-center rounded-lg bg-slate-900 text-white active:scale-95 transition-all shadow-2xs"
             title="新建对话"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" />
           </button>
           <button
             type="button"
             onClick={toggleHeaderCollapse}
-            className="h-9 px-1.5 inline-flex items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 active:scale-95 transition-all border border-slate-200/80"
+            className="h-8 px-1 inline-flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 active:scale-95 transition-all border border-slate-200/80"
             title="收起顶部设置栏，扩大聊天视窗"
           >
-            <ChevronUp className="w-3.5 h-3.5" />
+            <ChevronUp className="w-3 h-3" />
           </button>
         </div>
       </div>
@@ -1000,11 +1000,12 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                     <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                       导师作答风格
                     </div>
-                    <div className="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-xl">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 bg-slate-100 p-1 rounded-xl">
                       {[
                         { key: 'rigorous' as const, label: '📐 学术严谨' },
                         { key: 'vivid' as const, label: '💡 通俗直观' },
                         { key: 'exam' as const, label: '⚡ 考场冲刺' },
+                        { key: 'followup' as const, label: '🎯 针对追问' },
                       ].map(t => (
                         <button
                           key={t.key}

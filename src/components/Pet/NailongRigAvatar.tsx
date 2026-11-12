@@ -45,7 +45,8 @@ export const NAILONG_DIALOGUES: Record<string, DialogueLine[]> = {
     { mood: 'happy', text: '咚！平安着陆~ 幸好俺肚皮肉厚不怕摔，嘿嘿！', subtext: '触发重力墩地回弹' },
   ],
   quizStreak: [
-    { mood: 'happy', text: '芜湖！连对三题！你脑子怎么长的呀，分奶龙一点呗！🎉', subtext: '考神附体 · 奖励大鸡腿一根' },
+    { mood: 'happy', text: '小天才养成记！芜湖~ 连对三题，你脑子怎么长的呀，高数408稳稳拿下！🎉', subtext: '考神附体 · 奖励大鸡腿一根' },
+    { mood: 'happy', text: '芜湖！连对三题！关键时刻还得看你呀，快让奶龙蹭蹭喜气，冲鸭！💪', subtext: '答题开挂 · 状态拉满 ✨' },
   ],
   eyeCare: [
     {

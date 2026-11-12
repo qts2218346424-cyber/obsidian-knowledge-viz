@@ -326,7 +326,26 @@ function isValidUuid(id?: string): boolean {
   return Boolean(id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
 }
 
-function buildClaudeArgs(options: LocalAgentRunOptions, safeSessionId: string) {
+export function doesClaudeSessionExist(sessionId?: string): boolean {
+  if (!sessionId || !isValidUuid(sessionId)) return false
+  const userHome = process.env.USERPROFILE || process.env.HOME || ''
+  const projectsDir = path.join(userHome, '.claude', 'projects')
+  if (!fs.existsSync(projectsDir)) return false
+  try {
+    const entries = fs.readdirSync(projectsDir, { withFileTypes: true })
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        const candidate = path.join(projectsDir, entry.name, `${sessionId}.jsonl`)
+        if (fs.existsSync(candidate)) return true
+      }
+    }
+  } catch {
+    return false
+  }
+  return false
+}
+
+function buildClaudeArgs(options: LocalAgentRunOptions, safeSessionId: string, forceNewSession = false) {
   const command = commandFromConfig(options.config, 'claude-code')
   const args = [
     '--print',
@@ -337,7 +356,8 @@ function buildClaudeArgs(options: LocalAgentRunOptions, safeSessionId: string) {
     '--add-dir', options.cwd,
   ]
   if (options.model) args.push('--model', options.model)
-  if (isValidUuid(options.sessionId)) {
+  const shouldResume = !forceNewSession && isValidUuid(options.sessionId) && doesClaudeSessionExist(options.sessionId)
+  if (shouldResume) {
     args.push('--resume', options.sessionId!)
   } else {
     args.push('--session-id', safeSessionId)
@@ -388,120 +408,157 @@ function terminateProcess(child: ChildProcessWithoutNullStreams) {
 
 export async function* runLocalAgent(options: LocalAgentRunOptions): AsyncGenerator<LocalAgentEvent> {
   const safeSessionId = isValidUuid(options.sessionId) ? options.sessionId! : randomUUID()
-  const built = options.provider === 'antigravity'
-    ? buildAntigravityArgs(options, safeSessionId)
-    : options.provider === 'claude-code'
-      ? buildClaudeArgs(options, safeSessionId)
-      : buildCodexArgs(options)
 
-  const providerLabel = options.provider === 'antigravity' ? 'Antigravity' : options.provider === 'claude-code' ? 'Claude Code' : 'Codex'
-  yield {
-    type: 'status',
-    provider: options.provider,
-    content: `${providerLabel} 正在运行…`,
-  }
+  async function* executeAttempt(forceNewSession = false): AsyncGenerator<LocalAgentEvent & { _needsSessionRetry?: boolean }> {
+    const built = options.provider === 'antigravity'
+      ? buildAntigravityArgs(options, safeSessionId)
+      : options.provider === 'claude-code'
+        ? buildClaudeArgs(options, safeSessionId, forceNewSession)
+        : buildCodexArgs(options)
 
-  let child: ChildProcessWithoutNullStreams
-  try {
-    child = spawn(built.executable, built.args, {
-      cwd: options.cwd,
-      windowsHide: true,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    })
-    try { child.stdin.end() } catch {}
-  } catch (error: any) {
-    yield { type: 'error', provider: options.provider, content: error?.message || '本地 Agent 启动失败' }
-    return
-  }
-
-
-  let emittedText = ''
-  let stderr = ''
-  let emittedSessionId = ''
-  let spawnError: Error | null = null
-  child.once('error', error => {
-    spawnError = error
-  })
-  const closePromise = new Promise<number | null>(resolve => {
-    child.once('close', resolve)
-  })
-  const abortHandler = () => terminateProcess(child)
-  options.signal?.addEventListener('abort', abortHandler, { once: true })
-
-  const emitJsonEvent = async function* (value: any): AsyncGenerator<LocalAgentEvent> {
-    const eventSessionId = value?.session_id || value?.sessionId || value?.thread_id || value?.threadId
-    if (eventSessionId) {
-      emittedSessionId = String(eventSessionId)
-      yield { type: 'session', provider: options.provider, sessionId: emittedSessionId }
-    }
-
-    const text = isTextJsonEvent(value)
-      ? extractTextFromJson(value)
-      : isFinalJsonEvent(value) && !emittedText ? extractTextFromJson(value) : ''
-    if (text) {
-      emittedText += text
-      yield { type: 'text', provider: options.provider, content: text }
-    }
-  }
-
-  const stdoutLines = readline.createInterface({ input: child.stdout })
-  for await (const line of stdoutLines) {
-    const trimmed = line.trim()
-    if (!trimmed) continue
-    try {
-      for await (const event of emitJsonEvent(JSON.parse(trimmed))) yield event
-    } catch {
-      emittedText += `${line}\n`
-      yield { type: 'text', provider: options.provider, content: `${line}\n` }
-    }
-  }
-
-  const stderrPromise = (async () => {
-    for await (const line of readline.createInterface({ input: child.stderr })) {
-      stderr += `${line}\n`
-    }
-  })()
-
-  await stderrPromise
-
-  const exitCode = await closePromise
-  options.signal?.removeEventListener('abort', abortHandler)
-
-  if (spawnError) {
-    let friendlyMessage = spawnError.message || '本地 Agent 启动失败'
-    if (friendlyMessage.includes('ENOENT')) {
-      if (options.provider === 'claude-code') {
-        friendlyMessage = `未在系统环境变量 PATH 中检测到 Claude Code 命令行程序 (claude)。\n\n💡 **快速解决指引**：\n1. **直接聊天（推荐）**：请点击页面顶部的【☁️ 云端双核】标签，即可直接使用配置的 DeepSeek / Claude 云端大模型进行伴学问答；\n2. **如需本地 Agent**：请在电脑终端中执行 \`npm install -g @anthropic-ai/claude-code\` 完成全局安装。`
-      } else if (options.provider === 'codex') {
-        friendlyMessage = `未在系统环境变量 PATH 中检测到 Codex 命令行程序 (codex)。\n\n💡 **快速解决指引**：\n1. **直接聊天（推荐）**：请点击页面顶部的【☁️ 云端双核】标签；\n2. **如需使用 Codex**：请检查本地 Codex 安装与系统 PATH 环境变量配置。`
+    const providerLabel = options.provider === 'antigravity' ? 'Antigravity' : options.provider === 'claude-code' ? 'Claude Code' : 'Codex'
+    if (!forceNewSession) {
+      yield {
+        type: 'status',
+        provider: options.provider,
+        content: `${providerLabel} 正在运行…`,
       }
     }
-    yield {
-      type: 'error',
-      provider: options.provider,
-      content: friendlyMessage,
+
+    let child: ChildProcessWithoutNullStreams
+    try {
+      child = spawn(built.executable, built.args, {
+        cwd: options.cwd,
+        windowsHide: true,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      })
+      try { child.stdin.end() } catch {}
+    } catch (error: any) {
+      yield { type: 'error', provider: options.provider, content: error?.message || '本地 Agent 启动失败' }
+      return
     }
-    return
+
+    let emittedText = ''
+    let stderr = ''
+    let emittedSessionId = ''
+    let spawnError: Error | null = null
+    child.once('error', error => {
+      spawnError = error
+    })
+    const closePromise = new Promise<number | null>(resolve => {
+      child.once('close', resolve)
+    })
+    const abortHandler = () => terminateProcess(child)
+    options.signal?.addEventListener('abort', abortHandler, { once: true })
+
+    const emitJsonEvent = async function* (value: any): AsyncGenerator<LocalAgentEvent> {
+      const eventSessionId = value?.session_id || value?.sessionId || value?.thread_id || value?.threadId
+      if (eventSessionId) {
+        emittedSessionId = String(eventSessionId)
+        yield { type: 'session', provider: options.provider, sessionId: emittedSessionId }
+      }
+
+      const text = isTextJsonEvent(value)
+        ? extractTextFromJson(value)
+        : isFinalJsonEvent(value) && !emittedText ? extractTextFromJson(value) : ''
+      if (text) {
+        emittedText += text
+        yield { type: 'text', provider: options.provider, content: text }
+      }
+    }
+
+    const stdoutLines = readline.createInterface({ input: child.stdout })
+    for await (const line of stdoutLines) {
+      const trimmed = line.trim()
+      if (!trimmed) continue
+      try {
+        for await (const event of emitJsonEvent(JSON.parse(trimmed))) yield event
+      } catch {
+        // 过滤 CLI 底层由于未登录或无会话等产生的裸错误文本，杜绝误作为正常回答呈现
+        if (/no conversation found with session id/i.test(line) || /not logged in/i.test(line) || /\[claude-code:/i.test(line)) {
+          stderr += `${line}\n`
+          continue
+        }
+        emittedText += `${line}\n`
+        yield { type: 'text', provider: options.provider, content: `${line}\n` }
+      }
+    }
+
+    const stderrPromise = (async () => {
+      for await (const line of readline.createInterface({ input: child.stderr })) {
+        stderr += `${line}\n`
+      }
+    })()
+
+    await stderrPromise
+
+    const exitCode = await closePromise
+    options.signal?.removeEventListener('abort', abortHandler)
+
+    if (spawnError) {
+      let friendlyMessage = (spawnError as any)?.message || '本地 Agent 启动失败'
+      if (friendlyMessage.includes('ENOENT')) {
+        if (options.provider === 'claude-code') {
+          friendlyMessage = `未在系统环境变量 PATH 中检测到 Claude Code 命令行程序 (claude)。\n\n💡 **快速解决指引**：\n1. **直接聊天（推荐）**：请点击页面顶部的【☁️ 云端双核】标签，即可直接使用配置的 DeepSeek / Claude 云端大模型进行伴学问答；\n2. **如需本地 Agent**：请在电脑终端中执行 \`npm install -g @anthropic-ai/claude-code\` 完成全局安装。`
+        } else if (options.provider === 'codex') {
+          friendlyMessage = `未在系统环境变量 PATH 中检测到 Codex 命令行程序 (codex)。\n\n💡 **快速解决指引**：\n1. **直接聊天（推荐）**：请点击页面顶部的【☁️ 云端双核】标签；\n2. **如需使用 Codex**：请检查本地 Codex 安装与系统 PATH 环境变量配置。`
+        }
+      }
+      yield {
+        type: 'error',
+        provider: options.provider,
+        content: friendlyMessage,
+      }
+      return
+    }
+
+    // 若因会话 ID 不存在失败且当前允许重试
+    if (options.provider === 'claude-code' && !forceNewSession && !emittedText && /no conversation found with session id/i.test(stderr)) {
+      yield {
+        type: 'status',
+        provider: options.provider,
+        content: '检测到历史会话不存在，正在自动创建新会话继续推演…',
+        _needsSessionRetry: true,
+      }
+      return
+    }
+
+    if (exitCode !== 0 && !options.signal?.aborted) {
+      let errText = stderr.trim()
+      if (errText.includes('models_cache.json') || errText.includes('model_catalog_json')) {
+        errText = `Codex 运行时缓存文件损坏 (缺少新版字段)。\n\n💡 **解决指引**：\n1. **直接聊天**：请点击页面顶部的【☁️ 云端双核】标签；\n2. **修复 Codex**：请删除或重命名 \`C:\\Users\\QTS的天选\\.codex\\models_cache.json\` 缓存文件，让 Codex 自动重新同步。`
+      } else if (/not logged in/i.test(errText) || /please run \/login/i.test(errText)) {
+        errText = `Claude Code 尚未登录。\n\n💡 **解决指引**：请在终端中运行 \`claude login\` 完成认证，或直接使用顶部的云端大模型进行伴学。`
+      }
+      yield {
+        type: 'error',
+        provider: options.provider,
+        content: errText || `${options.provider} 进程异常退出 (退出码：${exitCode})`,
+      }
+      return
+    }
+
+    if (!emittedText && stderr.trim() && !/no conversation found/i.test(stderr)) {
+      yield { type: 'text', provider: options.provider, content: stderr.trim() }
+    }
+    if (!emittedSessionId) {
+      yield { type: 'session', provider: options.provider, sessionId: safeSessionId }
+    }
+    yield { type: 'done', provider: options.provider }
   }
 
-  if (exitCode !== 0 && !options.signal?.aborted) {
-    let errText = stderr.trim()
-    if (errText.includes('models_cache.json') || errText.includes('model_catalog_json')) {
-      errText = `Codex 运行时缓存文件损坏 (缺少新版字段)。\n\n💡 **解决指引**：\n1. **直接聊天**：请点击页面顶部的【☁️ 云端双核】标签；\n2. **修复 Codex**：请删除或重命名 \`C:\\Users\\QTS的天选\\.codex\\models_cache.json\` 缓存文件，让 Codex 自动重新同步。`
+  let retryNeeded = false
+  for await (const event of executeAttempt(false)) {
+    if (event._needsSessionRetry) {
+      retryNeeded = true
+      break
     }
-    yield {
-      type: 'error',
-      provider: options.provider,
-      content: errText || `${options.provider} 进程异常退出 (退出码：${exitCode})`,
-    }
-    return
+    yield event
   }
 
-  if (!emittedText && stderr.trim()) {
-    yield { type: 'text', provider: options.provider, content: stderr.trim() }
+  if (retryNeeded) {
+    for await (const event of executeAttempt(true)) {
+      yield event
+    }
   }
-  if (!emittedSessionId) {
-    yield { type: 'session', provider: options.provider, sessionId }
-  }
-  yield { type: 'done', provider: options.provider }
 }

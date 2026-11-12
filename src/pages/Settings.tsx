@@ -7,7 +7,8 @@ import { api, type AppSettings, type CloudEndpoint } from '../services/api'
 import {
   Save, RefreshCw, CheckCircle, AlertCircle, FolderOpen, Globe, Cpu, Palette,
   Eye, EyeOff, Folder, AlertTriangle, Zap, ChevronRight, ArrowUp,
-  Loader2, X, HardDrive, Check, Download, Plug, Plus, Trash2, Star, KeyRound, ShieldCheck, Lock, Copy, ShieldAlert
+  Loader2, X, HardDrive, Check, Download, Plug, Plus, Trash2, Star, KeyRound, ShieldCheck, Lock, Copy, ShieldAlert,
+  Moon, Leaf
 } from 'lucide-react'
 
 declare global {
@@ -92,7 +93,7 @@ export default function Settings() {
     }
   })
   const [adminTab, setAdminTab] = useState<'student' | 'system'>('student')
-  const { themeStyle, isVibrant, setThemeStyle } = useThemeStyle()
+  const { themeStyle, isVibrant, isMinimal, isEyecare, isDark, setThemeStyle } = useThemeStyle()
 
   // 考生账号安全与密码找回（密保与救援码）状态
   const [securityInfo, setSecurityInfo] = useState<{
@@ -864,14 +865,15 @@ export default function Settings() {
               </span>
             </div>
             <p className="text-xs text-slate-500">
-              定制您偏好的工作台界面色彩风格，告别单一黑白，赋予学科鲜明生命力：
+              定制您偏好的工作台界面色彩风格，自由切换活力、极简、护眼与暗黑模式，全天候守护备考视力：
             </p>
-            <div className="grid grid-cols-2 gap-2.5 pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+              {/* 1. 鲜艳活力风 */}
               <button
                 type="button"
                 onClick={() => setThemeStyle('vibrant')}
                 className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer relative overflow-hidden ${
-                  isVibrant
+                  themeStyle === 'vibrant'
                     ? 'border-indigo-600 bg-gradient-to-br from-indigo-50/80 via-purple-50/30 to-pink-50/20 ring-1 ring-indigo-500 shadow-xs'
                     : 'border-slate-200 bg-white hover:bg-slate-50'
                 }`}
@@ -879,32 +881,77 @@ export default function Settings() {
                 <div className="flex items-center justify-between mb-1">
                   <div className="font-bold text-xs text-indigo-950 flex items-center gap-1.5">
                     <span>🎨 鲜艳活力风</span>
-                    <span className="text-[10px] bg-indigo-600 text-white px-1.5 py-0.2 rounded font-normal">推荐</span>
+                    <span className="text-[10px] bg-indigo-600 text-white px-1.5 py-0.2 rounded font-normal">多彩</span>
                   </div>
-                  {isVibrant && <CheckCircle className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
+                  {themeStyle === 'vibrant' && <CheckCircle className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
                 </div>
                 <div className="text-[11px] text-slate-500 leading-relaxed">
-                  408科技蓝、政治正气红、数学极光紫、英语薄荷绿，告别黑白沉闷，记忆更高效。
+                  408科技蓝、政治正气红、数学极光紫，色彩鲜明，多巴胺记忆更高效。
                 </div>
               </button>
 
+              {/* 2. 经典极简黑白风 */}
               <button
                 type="button"
                 onClick={() => setThemeStyle('minimal')}
                 className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer relative overflow-hidden ${
-                  !isVibrant
+                  themeStyle === 'minimal'
                     ? 'border-slate-800 bg-slate-50 ring-1 ring-slate-800 shadow-xs'
                     : 'border-slate-200 bg-white hover:bg-slate-50'
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
                   <div className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
-                    <span>♟️ 经典极简黑白风</span>
+                    <span>♟️ 经典极简黑白</span>
                   </div>
-                  {!isVibrant && <CheckCircle className="w-3.5 h-3.5 text-slate-800 shrink-0" />}
+                  {themeStyle === 'minimal' && <CheckCircle className="w-3.5 h-3.5 text-slate-800 shrink-0" />}
                 </div>
                 <div className="text-[11px] text-slate-500 leading-relaxed">
                   严谨冷淡灰度 Subframe 黑白极简设计，专注纯文本与低饱和沉浸排版。
+                </div>
+              </button>
+
+              {/* 3. 温润纸质护眼风 */}
+              <button
+                type="button"
+                onClick={() => setThemeStyle('eyecare')}
+                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer relative overflow-hidden ${
+                  themeStyle === 'eyecare'
+                    ? 'border-emerald-600 bg-gradient-to-br from-emerald-50/90 via-teal-50/40 to-green-50/30 ring-1 ring-emerald-500 shadow-xs'
+                    : 'border-slate-200 bg-white hover:bg-slate-50'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <div className="font-bold text-xs text-emerald-950 flex items-center gap-1.5">
+                    <span>🍃 温润纸质护眼</span>
+                    <span className="text-[10px] bg-emerald-600 text-white px-1.5 py-0.2 rounded font-normal">护眼</span>
+                  </div>
+                  {themeStyle === 'eyecare' && <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+                </div>
+                <div className="text-[11px] text-slate-500 leading-relaxed">
+                  精调柔和豆沙绿与纸质色温，有效过滤高能蓝光，长时备考不酸胀。
+                </div>
+              </button>
+
+              {/* 4. 深邃夜间暗黑风 */}
+              <button
+                type="button"
+                onClick={() => setThemeStyle('dark')}
+                className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer relative overflow-hidden ${
+                  themeStyle === 'dark'
+                    ? 'border-sky-500 bg-slate-900 text-white ring-1 ring-sky-400 shadow-xs'
+                    : 'border-slate-200 bg-white hover:bg-slate-50'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <div className={`font-bold text-xs flex items-center gap-1.5 ${themeStyle === 'dark' ? 'text-sky-300' : 'text-slate-900'}`}>
+                    <span>🌙 深邃夜间暗黑</span>
+                    <span className="text-[10px] bg-sky-600 text-white px-1.5 py-0.2 rounded font-normal">夜战</span>
+                  </div>
+                  {themeStyle === 'dark' && <CheckCircle className="w-3.5 h-3.5 text-sky-400 shrink-0" />}
+                </div>
+                <div className={`text-[11px] leading-relaxed ${themeStyle === 'dark' ? 'text-slate-300' : 'text-slate-500'}`}>
+                  纯净深空夜色搭配柔和温润白字，消除刺眼强光，夜战沉浸专注。
                 </div>
               </button>
             </div>

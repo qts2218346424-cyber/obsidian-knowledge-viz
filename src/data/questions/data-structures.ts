@@ -1,6 +1,7 @@
 export interface QuizQuestion {
   id: string
   subject: '数据结构' | '计算机组成原理' | '操作系统' | '计算机网络'
+  chapter?: string
   difficulty: '简单' | '中等' | '困难'
   question: string
   options: { A: string; B: string; C: string; D: string }

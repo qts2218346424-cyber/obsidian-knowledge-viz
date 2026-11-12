@@ -23,6 +23,8 @@ import {
   Search,
   Code2,
   Palette,
+  Moon,
+  Leaf,
 } from 'lucide-react'
 import { api, type FileListItem } from '../services/api'
 import { useVaultHealth, useVaultStats } from '../hooks/useVaultData'
@@ -30,9 +32,9 @@ import { useThemeStyle } from '../hooks/useThemeStyle'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { useAuth } from '../contexts/AuthContext'
 import MobileDashboardView from '../components/mobile/MobileDashboardView'
-import { QUESTION_BANK } from '../data/questions'
-import { MATH_QUESTION_BANK } from '../data/questions/math'
-import { XIAO_1000_POLITICS_QUESTIONS } from '../data/politicsQuestions'
+import { getQuestionCounts, calibrateQuestionCounts } from '../data/questionCounts'
+
+
 import { useExamCountdown } from '../utils/examDate'
 
 function getVaultName(vaultPath?: string) {
@@ -133,7 +135,7 @@ function MetricCard({ label, value, subtext, icon: Icon, to, colorTheme = 'amber
 export default function Dashboard() {
   const { isMobile } = useIsMobile()
   const { user, points } = useAuth()
-  const { isVibrant, toggleThemeStyle } = useThemeStyle()
+  const { themeStyle, isVibrant, isMinimal, isEyecare, isDark, currentThemeMeta, toggleThemeStyle } = useThemeStyle()
   const { stats, loading: statsLoading, reload: reloadStats } = useVaultStats()
   const { report, loading: healthLoading, reload: reloadHealth } = useVaultHealth()
   const [recentFiles, setRecentFiles] = useState<FileListItem[]>([])
@@ -141,6 +143,21 @@ export default function Dashboard() {
   const [searchFilter, setSearchFilter] = useState('')
   const [activeMode, setActiveMode] = useState<'cs' | 'math' | 'politics' | 'english' | 'ai'>('cs')
   const [customCount, setCustomCount] = useState(0)
+  const [qCounts, setQCounts] = useState(() => getQuestionCounts())
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      const handle = (window as any).requestIdleCallback(() => {
+        calibrateQuestionCounts().then(setQCounts)
+      })
+      return () => (window as any).cancelIdleCallback(handle)
+    } else {
+      const timer = setTimeout(() => {
+        calibrateQuestionCounts().then(setQCounts)
+      }, 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [])
 
   const loadCustomCount = useCallback(() => {
     api.getCustomQuestions().then(res => {
@@ -201,7 +218,7 @@ export default function Dashboard() {
     () => report?.categories.reduce((total, category) => total + category.issues.length, 0) ?? 0,
     [report],
   )
-  const totalQuestions = QUESTION_BANK.length + MATH_QUESTION_BANK.length + customCount
+  const totalQuestions = qCounts.cs + qCounts.math + customCount
 
   // 考研初试统一倒计时
   const countdown = useExamCountdown()
@@ -225,7 +242,7 @@ export default function Dashboard() {
       badge: (
         <>
           <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-          <span>当前激活：<strong>408 统考舱</strong> — 已就绪 {QUESTION_BANK.length} 道真题演练与算法推演</span>
+          <span>当前激活：<strong>408 统考舱</strong> — 已就绪 {qCounts.cs} 道真题演练与算法推演</span>
         </>
       ),
       actionPrimary: '/quiz?domain=cs_408',
@@ -239,7 +256,7 @@ export default function Dashboard() {
       badge: (
         <>
           <span className="w-1.5 h-1.5 rounded-full bg-indigo-600" />
-          <span>当前激活：<strong>考研数学舱</strong> — KaTeX 学术级公式排版与步骤推导（{MATH_QUESTION_BANK.length} 题）</span>
+          <span>当前激活：<strong>考研数学舱</strong> — KaTeX 学术级公式排版与步骤推导（{qCounts.math} 题）</span>
         </>
       ),
       actionPrimary: '/quiz?domain=math',
@@ -300,9 +317,9 @@ export default function Dashboard() {
         statsLoading={statsLoading}
         healthScore={healthScore}
         totalQuestions={totalQuestions}
-        csQuestionsCount={QUESTION_BANK.length}
-        mathQuestionsCount={MATH_QUESTION_BANK.length}
-        politicsQuestionsCount={XIAO_1000_POLITICS_QUESTIONS.length}
+        csQuestionsCount={qCounts.cs}
+        mathQuestionsCount={qCounts.math}
+        politicsQuestionsCount={qCounts.politics}
         user={user}
         points={points}
         onOpenCheckin={() => window.dispatchEvent(new CustomEvent('open-checkin-modal'))}
@@ -341,19 +358,31 @@ export default function Dashboard() {
           <span className="font-mono font-extrabold text-sm text-rose-600">{daysToExam} 天</span>
         </div>
 
-        {/* Style Switcher Pill: 视觉风格鲜艳风 / 极简风一键切换 */}
+        {/* Style Switcher Pill: 视觉风格鲜艳风 / 极简风 / 护眼风 / 暗黑风 一键切换 */}
         <button
           type="button"
           onClick={toggleThemeStyle}
           className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.06)] border text-xs font-bold transition-all active:scale-95 cursor-pointer ${
-            isVibrant
+            isDark
+              ? 'border-sky-500/50 text-sky-400 bg-slate-900 hover:border-sky-400 shadow-sky-500/20'
+              : isEyecare
+              ? 'border-emerald-300 text-emerald-800 bg-gradient-to-r from-emerald-50 via-teal-50 to-green-50 hover:border-emerald-400 shadow-emerald-500/10'
+              : isVibrant
               ? 'border-indigo-300 text-indigo-700 bg-gradient-to-r from-indigo-50/90 via-purple-50/70 to-pink-50/90 hover:border-indigo-400'
               : 'border-zinc-200/80 text-zinc-700 bg-white hover:bg-zinc-50'
           }`}
-          title={isVibrant ? '当前风格：鲜艳活力风（点击切换为经典黑白极简风）' : '当前风格：经典黑白极简风（点击切换为鲜艳活力风）'}
+          title={`当前风格：${currentThemeMeta.name}（点击循环切换为下一模式）`}
         >
-          <Palette className={`w-3.5 h-3.5 ${isVibrant ? 'text-indigo-600 animate-pulse' : 'text-zinc-500'}`} />
-          <span>{isVibrant ? '🎨 鲜艳风 (开启中)' : '极简风'}</span>
+          {isDark ? (
+            <Moon className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
+          ) : isEyecare ? (
+            <Leaf className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
+          ) : isVibrant ? (
+            <Palette className="w-3.5 h-3.5 text-indigo-600 animate-pulse" />
+          ) : (
+            <Palette className="w-3.5 h-3.5 text-zinc-500" />
+          )}
+          <span>{currentThemeMeta.icon} {currentThemeMeta.shortName}</span>
         </button>
 
         {/* Top-Right Pill: Multi-AI Connection Icons + Avatar (Screen 3 Connect to code replica) */}
@@ -565,7 +594,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <span className={isVibrant ? 'text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200' : 'subframe-pill text-[10.5px]'}>
-                {QUESTION_BANK.length} 道真题
+                {qCounts.cs} 道真题
               </span>
             </div>
 
@@ -653,7 +682,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <span className={isVibrant ? 'text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200' : 'subframe-pill text-[10.5px]'}>
-                {XIAO_1000_POLITICS_QUESTIONS.length} 道真题精选
+                {qCounts.politics} 道真题精选
               </span>
             </div>
 
@@ -735,7 +764,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <span className={isVibrant ? 'text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200' : 'subframe-pill text-[10.5px]'}>
-                {MATH_QUESTION_BANK.length} 道真题
+                {qCounts.math} 道真题
               </span>
             </div>
 

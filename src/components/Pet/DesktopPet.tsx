@@ -63,6 +63,22 @@ const NAILONG_VOICE_PACK: PetVoiceItem[] = [
     text: '芜湖！你居然学了这么久，太酷啦！快看奶龙给你跳个扭屁股舞，12月19号咱们妥妥考上岸，耶！🌟',
     audio: '/pets/voices/nailong_6.mp3?v=3',
   },
+  {
+    text: '小天才养成记！芜湖~ 连对题目太酷啦，考神附体，高数408稳稳拿下！🎉✨',
+    audio: '/pets/voices/nailong_7.mp3?v=3',
+  },
+  {
+    text: '哼哼~ 关键时刻还得看奶龙！冲刺上岸秘籍都在俺的大肚皮里，跟着奶龙稳稳上岸！💪🔥',
+    audio: '/pets/voices/nailong_8.mp3?v=3',
+  },
+  {
+    text: '遇到难题别难过，一切很快就会好起来的！深呼吸眨眨眼，奶龙会一直陪着你考上岸的哟~ 🌸',
+    audio: '/pets/voices/nailong_9.mp3?v=3',
+  },
+  {
+    text: '学累了吗？医生帮你打针，奶龙帮你打气呀！元气加满，今天也是超棒的一天，冲鸭！🎈🐾',
+    audio: '/pets/voices/nailong_10.mp3?v=3',
+  },
 ]
 
 export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
@@ -230,12 +246,20 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
   const [bubbleAction, setBubbleAction] = useState<{ label: string; onClick: () => void } | null>(null)
   const [minimized, setMinimized] = useState(false)
 
-  // 📱 移动端做题中心自动微缩贴边，避免遮挡科目卡片右上角或做题正文
+  const petBoxWidth = minimized ? (isMobile ? 124 : 138) : petSize
+
+  // 📱 移动端做题中心自动微缩贴边，并钳位 X 防止微缩胶囊宽出右边界
   useEffect(() => {
     if (isMobile && isQuizPage) {
       setMinimized(true)
     }
   }, [isMobile, isQuizPage])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const maxSafeX = Math.max(8, window.innerWidth - petBoxWidth - 10)
+    setPosition(prev => (prev.x > maxSafeX ? { x: maxSafeX, y: prev.y } : prev))
+  }, [petBoxWidth, isMobile])
   const [isSquishing, setIsSquishing] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [bellyJiggle, setBellyJiggle] = useState(false)
@@ -580,8 +604,10 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
       playPetSynthSound('cheer', voiceMuted)
       setBellyJiggle(true)
       setMood('happy')
-      const streakLine = NAILONG_DIALOGUES.quizStreak[0]
-      showBubbleWithVoice(streakLine.text, undefined, 4500, false, streakLine.subtext)
+      const streakLines = NAILONG_DIALOGUES.quizStreak
+      const streakLine = streakLines[Math.floor(Math.random() * streakLines.length)]
+      const cheerAudio = Math.random() < 0.6 ? '/pets/voices/nailong_7.mp3?v=3' : '/pets/voices/nailong_8.mp3?v=3'
+      showBubbleWithVoice(streakLine.text, cheerAudio, 4800, false, streakLine.subtext)
       setTimeout(() => {
         setBellyJiggle(false)
         setMood('idle')
@@ -768,7 +794,8 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
       setMood('happy')
       const list = NAILONG_DIALOGUES.headPat
       const line = list[Math.floor(Math.random() * list.length)]
-      showBubbleWithVoice(line.text, undefined, 4200, false, line.subtext)
+      const headAudio = Math.random() < 0.5 ? '/pets/voices/nailong_9.mp3?v=3' : undefined
+      showBubbleWithVoice(line.text, headAudio, 4200, false, line.subtext)
       setTimeout(() => {
         setHeadPatting(false)
         setMood(focusActive ? 'focus' : 'idle')
@@ -834,7 +861,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
   }
 
-  if (isChatPage) {
+  if (isChatPage || (isMobile && isQuizPage)) {
     return null
   }
 
@@ -870,6 +897,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
 
   const isRightSide = position.x > (typeof window !== 'undefined' ? window.innerWidth / 2 : 200)
   const isNearTop = position.y < 110
+  const isNearBottom = typeof window !== 'undefined' && position.y > window.innerHeight - 360
 
   return (
     <>
@@ -888,13 +916,13 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
         onPointerCancel={handlePointerCancel}
       >
         {/* 对话与语音气泡 */}
-        {bubbleText && (
+        {bubbleText && !(isMobile && isQuizPage && minimized) && (
           <div
             className={`pet-interactive absolute ${
               isNearTop ? 'top-20 sm:top-24' : 'bottom-full mb-2.5 sm:mb-3'
             } ${
               isRightSide ? 'right-0' : 'left-0'
-            } w-[min(240px,calc(100vw-2rem))] sm:w-72 p-2.5 sm:p-3.5 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-amber-200/90 dark:border-amber-800/60 shadow-xl shadow-amber-500/10 text-xs text-slate-800 dark:text-slate-100 animate-in fade-in zoom-in-95 pointer-events-auto z-20`}
+            } w-[min(230px,calc(100vw-2rem))] sm:w-72 p-2.5 sm:p-3.5 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-amber-200/90 dark:border-amber-800/60 shadow-xl shadow-amber-500/10 text-xs text-slate-800 dark:text-slate-100 animate-in fade-in zoom-in-95 pointer-events-auto z-20`}
           >
             <div className="flex items-start justify-between gap-1.5 sm:gap-2">
               <div className="flex flex-col min-w-0">
@@ -996,9 +1024,11 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
               onPointerMove={e => e.stopPropagation()}
               onPointerUp={e => e.stopPropagation()}
               onClick={e => e.stopPropagation()}
-              className={`pet-action-panel absolute top-0 ${
+              className={`pet-action-panel absolute ${
+                isNearBottom ? 'bottom-0' : 'top-0'
+              } ${
                 isRightSide ? '-left-10' : '-right-10'
-              } flex flex-col gap-1.5 transition-all duration-200 z-20 ${
+              } flex flex-col gap-1.5 transition-all duration-200 z-20 max-h-[calc(100vh-60px)] overflow-y-auto scrollbar-none py-1 overscroll-contain ${
                 showMobileMenu
                   ? 'opacity-100 scale-100 pointer-events-auto'
                   : 'opacity-0 scale-95 pointer-events-none group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto'

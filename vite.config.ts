@@ -18,8 +18,14 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        // 精细化分包策略：隔离重型渲染引擎，提升首屏加载与缓存命中率
+        // 精细化分包策略：隔离重型渲染引擎与超大静态数据，提升首屏加载与缓存命中率
         manualChunks(id: string) {
+          if (id.includes('vocab-part') || id.includes('vocabulary')) {
+            return 'data-vocab'
+          }
+          if (id.includes('examPapers') || id.includes('lilin6') || id.includes('cs408Papers')) {
+            return 'data-papers'
+          }
           if (id.includes('node_modules')) {
             if (id.includes('react-markdown') || id.includes('remark-') || id.includes('rehype-') || id.includes('katex') || id.includes('highlight.js')) {
               return 'vendor-markdown'

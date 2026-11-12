@@ -1,8 +1,17 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 @import "./styles/tokens.css";
 @import "./styles/animations.css";
 @import "./styles/prose-academic.css";
+
+/* 本地优先高质感现代抗锯齿字体栈 */
+:root {
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+body {
+  font-family: var(--font-sans);
+}
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -950,15 +959,29 @@ body {
     scrollbar-width: none;
   }
 
-  /* 防止 iOS Safari / 微信内置浏览器在聚焦小于 16px 的输入框时强制放大视口 */
+  /* 移动端排版基准微调与文本大小平滑适配：让整体界面更精致完整，消除巨大笨重感 */
+  html {
+    font-size: 14.5px;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* 输入控件精致紧凑化，保持舒适手感的同时不强行放大撑破横向边界 */
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
   textarea,
   select {
-    font-size: 16px !important;
+    font-size: 14px;
+    box-sizing: border-box;
   }
 
   button, a {
     touch-action: manipulation;
+  }
+
+  /* 移动端卡片与面板适度紧凑微缩，消除过度空旷感，显著提升精致度与单屏完整度 */
+  .bento-card {
+    padding: 0.85rem 0.95rem;
+    border-radius: 0.875rem;
   }
 
   /* 关闭移动端卡片悬停位移，改用干脆的按压缩放反馈 */
@@ -968,42 +991,62 @@ body {
 
   .prose-math {
     font-size: inherit;
-    line-height: 1.55;
+    line-height: 1.85;
     line-break: strict;
     word-break: normal;
     overflow-wrap: break-word;
     text-wrap: pretty;
+    max-width: 100% !important;
+    overflow-x: clip;
   }
   .prose-math p {
-    margin: 0.22rem 0 !important;
-    line-height: 1.55 !important;
+    margin: 0.4rem 0 !important;
+    line-height: 1.85 !important;
   }
 
   .prose-math .katex-display {
-    margin: 0.6rem 0;
-    padding: 0.65rem 0.75rem;
+    margin: 0.5rem 0;
+    padding: 0.5rem 0.4rem;
     font-size: 0.92em;
-    max-width: 100%;
+    max-width: 100% !important;
     overflow-x: auto;
+    overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
-    border-radius: 0.75rem;
+    border-radius: 0.65rem;
   }
 
   .prose-math pre {
-    padding: 0.75rem 0.85rem;
-    font-size: 0.8rem;
-    max-width: 100%;
-    border-radius: 0.75rem;
+    padding: 0.65rem 0.75rem;
+    font-size: 0.78rem;
+    max-width: 100% !important;
+    border-radius: 0.65rem;
+    overflow-x: auto;
   }
 
-  .rich-note-editor h1 { font-size: 1.35rem; margin-top: 1rem; }
-  .rich-note-editor h2 { font-size: 1.18rem; margin-top: 0.85rem; }
-  .rich-note-editor h3 { font-size: 1.05rem; margin-top: 0.7rem; }
-  .rich-note-editor p { margin: 0.45rem 0; line-height: 1.7; }
-  .rich-note-editor pre { padding: 0.75rem; font-size: 0.8em; }
+  /* 📱 富文本笔记编辑器移动端精致微缩与绝对防撑破规则 */
+  .rich-note-editor {
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    font-size: 14px !important;
+    line-height: 1.7 !important;
+  }
+  .rich-note-editor h1 { font-size: 1.25rem !important; margin: 0.8rem 0 0.35rem !important; line-height: 1.3 !important; font-weight: 700; }
+  .rich-note-editor h2 { font-size: 1.12rem !important; margin: 0.7rem 0 0.3rem !important; line-height: 1.35 !important; font-weight: 650; }
+  .rich-note-editor h3 { font-size: 1.02rem !important; margin: 0.6rem 0 0.25rem !important; line-height: 1.4 !important; font-weight: 650; }
+  .rich-note-editor p { margin: 0.35rem 0 !important; line-height: 1.65 !important; }
+  .rich-note-editor pre { padding: 0.6rem 0.75rem !important; font-size: 0.8em !important; max-width: 100% !important; overflow-x: auto !important; border-radius: 0.6rem !important; }
+  .rich-note-editor code { font-size: 0.88em !important; padding: 0.1rem 0.25rem !important; word-break: break-all; }
+  .rich-note-editor img { max-width: 100% !important; height: auto !important; border-radius: 0.5rem; }
+  .rich-note-editor blockquote { margin: 0.5rem 0 !important; padding-left: 0.65rem !important; }
 
   .prose-math table {
     width: 100%;
+    max-width: 100% !important;
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .prose-math th {
@@ -1335,6 +1378,329 @@ input[type="range"].history-range-slider:focus-visible {
 }
 
 /* ==========================================================================
+   🍃 温润纸质护眼风全局增强规则 (Eyecare Theme Global Rules)
+   ========================================================================== */
+.theme-eyecare {
+  --color-brand-primary: #2d6a4f;
+  background-color: #f4f7f2 !important;
+  color: #243329 !important;
+}
+
+.theme-eyecare body {
+  background-color: #f4f7f2 !important;
+  color: #243329 !important;
+}
+
+/* 护眼温润竹韵网格背景 */
+.theme-eyecare .aurora-mesh {
+  background-color: #f4f7f2 !important;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(45, 106, 79, 0.08) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(82, 183, 136, 0.06) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(216, 243, 220, 0.22) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(116, 198, 157, 0.07) 0px, transparent 50%) !important;
+}
+
+/* 护眼卡片与微光 */
+.theme-eyecare .bento-card,
+.theme-eyecare .bg-white {
+  background-color: #fafbf8 !important;
+  border-color: #e2e9df !important;
+}
+
+.theme-eyecare .bento-card {
+  box-shadow: 0 4px 18px -2px rgba(45, 106, 79, 0.05), 0 1px 3px 0 rgba(0, 0, 0, 0.02) !important;
+}
+
+.theme-eyecare .bento-card-hover:hover {
+  box-shadow: 0 10px 24px -4px rgba(45, 106, 79, 0.12), 0 2px 4px 0 rgba(0, 0, 0, 0.03) !important;
+}
+
+/* 顶栏与浮层毛玻璃 */
+.theme-eyecare .glass-header,
+.theme-eyecare header {
+  background-color: rgba(244, 247, 242, 0.94) !important;
+  border-color: #e1e9df !important;
+}
+
+/* 文本墨绿色阶调和，舒缓阅读视觉压力 */
+.theme-eyecare .text-slate-900,
+.theme-eyecare .text-neutral-900,
+.theme-eyecare .text-zinc-900,
+.theme-eyecare .text-slate-800,
+.theme-eyecare .text-neutral-800 {
+  color: #243329 !important;
+}
+
+.theme-eyecare .text-slate-700,
+.theme-eyecare .text-neutral-700,
+.theme-eyecare .text-zinc-700,
+.theme-eyecare .text-slate-600,
+.theme-eyecare .text-neutral-600 {
+  color: #4a5d50 !important;
+}
+
+.theme-eyecare .text-slate-500,
+.theme-eyecare .text-neutral-500,
+.theme-eyecare .text-zinc-500 {
+  color: #6e8274 !important;
+}
+
+/* 边框柔化 */
+.theme-eyecare .border-slate-200,
+.theme-eyecare .border-neutral-200,
+.theme-eyecare .border-zinc-200,
+.theme-eyecare .border-slate-100 {
+  border-color: #e2e9df !important;
+}
+
+/* 次级与浅底背景 */
+.theme-eyecare .bg-slate-50,
+.theme-eyecare .bg-neutral-50,
+.theme-eyecare .bg-zinc-50,
+.theme-eyecare .bg-slate-100,
+.theme-eyecare .bg-neutral-100 {
+  background-color: #ebf1e8 !important;
+}
+
+/* 护眼模式核心行动按钮：温润翡翠渐变 */
+.theme-eyecare .subframe-btn-black {
+  background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px 0 rgba(45, 106, 79, 0.25) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+.theme-eyecare .subframe-btn-black:hover {
+  background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 100%) !important;
+  box-shadow: 0 6px 20px 0 rgba(45, 106, 79, 0.35) !important;
+}
+
+/* 次级按钮：清雅豆沙白微绿光泽 */
+.theme-eyecare .subframe-btn-secondary {
+  background: #fafbf8 !important;
+  border-color: #d8e4d5 !important;
+  color: #2d6a4f !important;
+  box-shadow: 0 1px 3px rgba(45, 106, 79, 0.05) !important;
+}
+
+.theme-eyecare .subframe-btn-secondary:hover {
+  background: #ebf2e8 !important;
+  border-color: #c4d7c0 !important;
+  color: #1b4332 !important;
+}
+
+/* 导航激活项 */
+.theme-eyecare nav a.bg-neutral-900 {
+  background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%) !important;
+  box-shadow: 0 2px 8px rgba(45, 106, 79, 0.25) !important;
+}
+
+/* ==========================================================================
+   🌙 深邃夜间暗黑风全局增强规则 (Dark Night Theme Global Rules)
+   ========================================================================== */
+.dark,
+.theme-dark {
+  --color-brand-primary: #38bdf8;
+  background-color: #0b0f19 !important;
+  color: #f1f5f9 !important;
+}
+
+.dark body,
+.theme-dark body {
+  background-color: #0b0f19 !important;
+  color: #f1f5f9 !important;
+}
+
+/* 暗黑深空极光星尘背景 */
+.dark .aurora-mesh,
+.theme-dark .aurora-mesh {
+  background-color: #0b0f19 !important;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.08) 0px, transparent 45%),
+    radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.07) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(139, 92, 246, 0.06) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(16, 185, 129, 0.05) 0px, transparent 50%) !important;
+}
+
+/* 暗黑卡片与面板 */
+.dark .bento-card,
+.theme-dark .bento-card,
+.dark .bg-white,
+.theme-dark .bg-white {
+  background-color: #131926 !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dark .bento-card,
+.theme-dark .bento-card {
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4), 0 1px 3px 0 rgba(255, 255, 255, 0.02) !important;
+}
+
+.dark .bento-card-hover:hover,
+.theme-dark .bento-card-hover:hover {
+  box-shadow: 0 10px 28px -4px rgba(56, 189, 248, 0.12), 0 2px 4px 0 rgba(0, 0, 0, 0.6) !important;
+  border-color: rgba(56, 189, 248, 0.25) !important;
+}
+
+/* 顶栏与浮动条半透明暗黑毛玻璃 */
+.dark .glass-header,
+.theme-dark .glass-header,
+.dark header,
+.theme-dark header {
+  background-color: rgba(11, 15, 25, 0.88) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* 暗黑模式文本颜色：明亮温润白，杜绝纯白刺眼，告别黑底黑字 */
+.dark .text-slate-900,
+.theme-dark .text-slate-900,
+.dark .text-neutral-900,
+.theme-dark .text-neutral-900,
+.dark .text-zinc-900,
+.theme-dark .text-zinc-900,
+.dark .text-slate-800,
+.theme-dark .text-slate-800,
+.dark .text-neutral-800,
+.theme-dark .text-neutral-800 {
+  color: #f1f5f9 !important;
+}
+
+.dark .text-slate-700,
+.theme-dark .text-slate-700,
+.dark .text-neutral-700,
+.theme-dark .text-neutral-700,
+.dark .text-zinc-700,
+.theme-dark .text-zinc-700,
+.dark .text-slate-600,
+.theme-dark .text-slate-600,
+.dark .text-neutral-600,
+.theme-dark .text-neutral-600 {
+  color: #cbd5e1 !important;
+}
+
+.dark .text-slate-500,
+.theme-dark .text-slate-500,
+.dark .text-neutral-500,
+.theme-dark .text-neutral-500,
+.dark .text-zinc-500,
+.theme-dark .text-zinc-500 {
+  color: #94a3b8 !important;
+}
+
+.dark .text-slate-400,
+.theme-dark .text-slate-400,
+.dark .text-neutral-400,
+.theme-dark .text-neutral-400 {
+  color: #64748b !important;
+}
+
+/* 暗黑模式次级底色 */
+.dark .bg-slate-50,
+.theme-dark .bg-slate-50,
+.dark .bg-neutral-50,
+.theme-dark .bg-neutral-50,
+.dark .bg-zinc-50,
+.theme-dark .bg-zinc-50 {
+  background-color: #182030 !important;
+}
+
+.dark .bg-slate-100,
+.theme-dark .bg-slate-100,
+.dark .bg-neutral-100,
+.theme-dark .bg-neutral-100,
+.dark .bg-zinc-100,
+.theme-dark .bg-zinc-100 {
+  background-color: #1e293b !important;
+}
+
+/* 暗黑模式边框线 */
+.dark .border-slate-200,
+.theme-dark .border-slate-200,
+.dark .border-neutral-200,
+.theme-dark .border-neutral-200,
+.dark .border-zinc-200,
+.theme-dark .border-zinc-200,
+.dark .border-slate-100,
+.theme-dark .border-slate-100 {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* 核心行动按钮：暗夜深空光感 */
+.dark .subframe-btn-black,
+.theme-dark .subframe-btn-black {
+  background: linear-gradient(135deg, #0284c7 0%, #2563eb 50%, #4f46e5 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 16px 0 rgba(2, 132, 199, 0.35) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+.dark .subframe-btn-black:hover,
+.theme-dark .subframe-btn-black:hover {
+  background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 50%, #4338ca 100%) !important;
+  box-shadow: 0 6px 22px 0 rgba(2, 132, 199, 0.45) !important;
+}
+
+/* 次级按钮：深色卡片质感 */
+.dark .subframe-btn-secondary,
+.theme-dark .subframe-btn-secondary {
+  background: #182030 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: #e2e8f0 !important;
+}
+
+.dark .subframe-btn-secondary:hover,
+.theme-dark .subframe-btn-secondary:hover {
+  background: #1e293b !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+}
+
+/* 导航激活项 */
+.dark nav a.bg-neutral-900,
+.theme-dark nav a.bg-neutral-900 {
+  background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
+  box-shadow: 0 2px 10px rgba(2, 132, 199, 0.35) !important;
+}
+
+/* 代码块与 Markdown 在黑夜模式下的深色调优 */
+.dark pre,
+.theme-dark pre,
+.dark .rich-note-editor pre,
+.theme-dark .rich-note-editor pre {
+  background-color: #070a10 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #e2e8f0 !important;
+}
+
+.dark code,
+.theme-dark code,
+.dark .rich-note-editor code,
+.theme-dark .rich-note-editor code {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: #38bdf8 !important;
+}
+
+/* 输入框与选择器暗黑适配 */
+.dark input:not([type="checkbox"]):not([type="radio"]),
+.theme-dark input:not([type="checkbox"]):not([type="radio"]),
+.dark textarea,
+.theme-dark textarea,
+.dark select,
+.theme-dark select {
+  background-color: #0f1523 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: #f1f5f9 !important;
+}
+
+.dark input::placeholder,
+.theme-dark input::placeholder,
+.dark textarea::placeholder,
+.theme-dark textarea::placeholder {
+  color: #64748b !important;
+}
+
+/* ==========================================================================
    移动端专属视觉与触控交互规范 (Mobile-First Native App Rules)
    ========================================================================== */
 @media (max-width: 767px) {
@@ -1343,14 +1709,16 @@ input[type="range"].history-range-slider:focus-visible {
     padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
   }
 
-  /* 消除移动端横向溢出抖动：通过全局最大宽度保护，严禁锁死 html/body 滚动 */
+  /* 消除移动端横向溢出抖动：严禁给通配符 * 加 max-width: 100%，以免破坏 KaTeX 内部精密盒模型与分数线 */
   html, body {
+    max-width: 100%;
+    overflow-x: clip;
     -webkit-tap-highlight-color: transparent;
     touch-action: auto;
   }
 
-  /* 移动端所有块级元素防超出保护 */
-  *, ::before, ::after {
+  /* 仅对常见外部媒体/容器元素做防超出保护（严格豁免 .katex 内部 svg 与公式盒子） */
+  img, video, canvas, iframe {
     max-width: 100%;
   }
 
@@ -1360,6 +1728,17 @@ input[type="range"].history-range-slider:focus-visible {
   .academic-body table {
     max-width: 100% !important;
     overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 移动端题干与选项容器防溢出，垂直方向留出公式呼吸内边距防止积分上下限与高分式贴边裁切 */
+  .quiz-stem-scroll,
+  .quiz-option-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-block: 0.35rem;
     -webkit-overflow-scrolling: touch;
   }
 
@@ -1398,15 +1777,52 @@ input[type="range"].history-range-slider:focus-visible {
 /* ==========================================================================
    Linear/Notion 风格视觉规范升级：学术题干行高、等宽字体与 LaTeX 公式排版
    ========================================================================== */
+/* 保护 KaTeX 自身盒模型与行高，杜绝外部 CSS（如 border-box/line-height/word-break/max-width）破坏分式与积分上下限定位 */
+.katex,
+.katex *,
+.katex ::before,
+.katex ::after {
+  box-sizing: content-box;
+  max-width: none !important;
+  word-break: normal;
+  overflow-wrap: normal;
+}
+
 .prose-math .katex,
 .markdown-body .katex,
 .katex {
-  font-size: 1.05em !important;
+  font-size: 1.16em !important;
+  line-height: 1.2 !important;
   text-rendering: auto;
 }
 
+/* 移除极小上标分式中 1px min-height 带来的多余加厚，避免压住小字号分子分母 */
+.katex .mfrac .frac-line {
+  min-height: 0 !important;
+}
+
+.prose-math .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.55rem 0.25rem;
+  margin: 0.6rem 0;
+  -webkit-overflow-scrolling: touch;
+}
+
 .prose-math .katex-display > .katex {
-  font-size: 1.1em !important;
+  font-size: 1.18em !important;
+  display: inline-block;
+  padding: 0.15rem 0;
+}
+
+@media (max-width: 767px) {
+  .prose-math .katex,
+  .katex {
+    font-size: 1.13em !important;
+  }
+  .prose-math .katex-display > .katex {
+    font-size: 1.15em !important;
+  }
 }
 
 /* 统一代码与等宽字体栈 */
@@ -1419,7 +1835,9 @@ code, pre, kbd, samp, .font-mono {
 .ai-explanation,
 .quiz-content,
 .prose-math {
-  line-height: 1.58 !important;
+  min-width: 0;
+  max-width: 100%;
+  line-height: 1.85 !important;
   line-break: strict;
   word-break: normal;
   overflow-wrap: break-word;
@@ -1430,8 +1848,8 @@ code, pre, kbd, samp, .font-mono {
 .ai-explanation p,
 .quiz-content p,
 .prose-math p {
-  line-height: 1.58 !important;
-  margin: 0.26rem 0 !important;
+  line-height: 1.88 !important;
+  margin: 0.45rem 0 !important;
 }
 
 .academic-body p:first-child,
@@ -1464,6 +1882,15 @@ code, pre, kbd, samp, .font-mono {
     background-color: #f8fafc !important;
     background-image: none !important;
   }
+  .theme-eyecare .aurora-mesh {
+    background-color: #f4f7f2 !important;
+    background-image: none !important;
+  }
+  .dark .aurora-mesh,
+  .theme-dark .aurora-mesh {
+    background-color: #0b0f19 !important;
+    background-image: none !important;
+  }
 
   /* 移动端降级高消耗 backdrop-blur，改用纯净高质感实色，滑屏帧率提升 300% */
   .glass-header,
@@ -1486,4 +1913,14 @@ code, pre, kbd, samp, .font-mono {
   .scroll-gpu {
     -webkit-overflow-scrolling: touch;
   }
+}
+
+/* 现代化视口外内容跳过布局与绘制（彻底消除题目卡片/长笔记/长列表滚动卡顿） */
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 160px;
+}
+.cv-auto-large {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 320px;
 }

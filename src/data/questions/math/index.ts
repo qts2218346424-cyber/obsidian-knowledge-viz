@@ -1,19 +1,37 @@
 import { calculusQuestions } from './calculus'
 import { linearAlgebraQuestions } from './linear-algebra'
 import { probabilityQuestions } from './probability'
+import { lilin6CalculusQuestions } from './lilin6-calculus'
+import { lilin6LinearAlgebraQuestions } from './lilin6-linear-algebra'
+import { lilin6ProbabilityQuestions } from './lilin6-probability'
+import { classic1993Questions } from './classic-1993'
+import { meizaleLinearAlgebraQuestions } from './meizale-linear-algebra'
+import { jiumingProbabilityQuestions } from './jiuming-probability'
 import type { MathCategory, MathSubject, UnifiedQuestion } from '../../../types/subject'
 
 export { calculusQuestions } from './calculus'
 export { linearAlgebraQuestions } from './linear-algebra'
 export { probabilityQuestions } from './probability'
+export { lilin6CalculusQuestions } from './lilin6-calculus'
+export { lilin6LinearAlgebraQuestions } from './lilin6-linear-algebra'
+export { lilin6ProbabilityQuestions } from './lilin6-probability'
+export { classic1993Questions } from './classic-1993'
+export { meizaleLinearAlgebraQuestions } from './meizale-linear-algebra'
+export { jiumingProbabilityQuestions } from './jiuming-probability'
 
 /**
- * 考研数学全题库（高等数学 + 线性代数 + 概率论与数理统计）
+ * 考研数学全题库（高等数学 + 线性代数 + 概率论与数理统计，含历年真题、26李林六套卷、1993真题及救命课专项题库）
  */
 export const MATH_QUESTION_BANK: UnifiedQuestion[] = [
   ...calculusQuestions,
+  ...lilin6CalculusQuestions,
   ...linearAlgebraQuestions,
+  ...lilin6LinearAlgebraQuestions,
+  ...meizaleLinearAlgebraQuestions,
   ...probabilityQuestions,
+  ...lilin6ProbabilityQuestions,
+  ...jiumingProbabilityQuestions,
+  ...classic1993Questions,
 ]
 
 /**

@@ -1,5 +1,6 @@
 import { authService } from '../services/auth'
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, lazy, Suspense } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   BookOpen,
   FileEdit,
@@ -46,13 +47,23 @@ import { gradeEssayLocally, type EssayGradingResult } from '../services/essayGra
 import VocabTab from '../components/study/VocabTab'
 import WordBrowser from '../components/vocab/WordBrowser'
 import VocabStats from '../components/vocab/VocabStats'
-import WordRelations from '../components/vocab/WordRelations'
+const WordRelations = lazy(() => import('../components/vocab/WordRelations'))
 import DailyReadingTab from '../components/english/DailyReadingTab'
+import EnglishPracticeView from '../components/english/EnglishPracticeView'
+import EnglishFullPaperView from '../components/english/EnglishFullPaperView'
 
-type EnglishMainTab = 'dailyReading' | 'templates' | 'grading' | 'papers' | 'vocab'
+type EnglishMainTab = 'practice' | 'papers' | 'dailyReading' | 'grading' | 'templates' | 'vocab'
 
 export default function English() {
-  const [activeTab, setActiveTab] = useState<EnglishMainTab>('dailyReading')
+  const [searchParams] = useSearchParams()
+  const [activeTab, setActiveTab] = useState<EnglishMainTab>('practice')
+
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (tab === 'papers' || tab === 'practice' || tab === 'dailyReading' || tab === 'grading' || tab === 'templates' || tab === 'vocab') {
+      setActiveTab(tab)
+    }
+  }, [searchParams])
 
   // -------------------------------------------------------------
   // 1. 词汇子选项卡
@@ -391,23 +402,33 @@ ${essayInput.trim()}
             </h1>
 
             <p className="text-xs sm:text-sm text-slate-500 max-w-2xl leading-relaxed">
-              汇聚真题大纲词汇艾宾浩斯复盘、英语一图画与英语二图表作文高分模板、历年真题长难句树状语法透析、以及 AI 智能多维度作文即时批改。
+              汇聚真题分题型刷题（完型·传统阅读·新题型·翻译）、历年官方真题套卷全真模考、大纲词汇艾宾浩斯复盘、万能高分作文模板与 AI 智能多维度精批。
             </p>
           </div>
 
           {/* 快捷数据统计徽章 */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 shrink-0 text-center">
-            <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 shadow-2xs">
-              <div className="text-[10px] font-semibold text-slate-400">大纲真题词</div>
-              <div className="text-base font-black font-mono text-indigo-600 mt-0.5">2,000+</div>
+            <div
+              onClick={() => setActiveTab('vocab')}
+              className={`rounded-2xl border p-3 shadow-2xs cursor-pointer transition-all active:scale-95 ${
+                activeTab === 'vocab'
+                  ? 'border-indigo-500 bg-indigo-50/70 ring-2 ring-indigo-500/30'
+                  : 'border-slate-200/80 bg-white/90 hover:border-indigo-300 hover:bg-indigo-50/20'
+              }`}
+            >
+              <div className="text-[10px] font-semibold text-indigo-600 flex items-center justify-center gap-1">
+                <Sparkles className="w-3 h-3 text-amber-500" />
+                <span>核心词汇打卡</span>
+              </div>
+              <div className="text-base font-black font-mono text-indigo-700 mt-0.5">2000+ 真题词</div>
             </div>
             <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 shadow-2xs">
-              <div className="text-[10px] font-semibold text-slate-400">万能作文模板</div>
-              <div className="text-base font-black font-mono text-emerald-600 mt-0.5">18 套</div>
+              <div className="text-[10px] font-semibold text-slate-400">分题型题库</div>
+              <div className="text-base font-black font-mono text-indigo-600 mt-0.5">完型·阅读·新题</div>
             </div>
             <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 shadow-2xs">
-              <div className="text-[10px] font-semibold text-slate-400">闪光金句库</div>
-              <div className="text-base font-black font-mono text-amber-600 mt-0.5">60+ 条</div>
+              <div className="text-[10px] font-semibold text-slate-400">历年真题套卷</div>
+              <div className="text-base font-black font-mono text-emerald-600 mt-0.5">全真模考</div>
             </div>
             <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 shadow-2xs">
               <div className="text-[10px] font-semibold text-slate-400">AI 智能批改</div>
@@ -418,6 +439,55 @@ ${essayInput.trim()}
 
         {/* 主功能导航切换药丸 */}
         <div className="mt-5 sm:mt-6 flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar border-t border-slate-200/60 pt-3 sm:pt-4">
+          <button
+            type="button"
+            onClick={() => setActiveTab('vocab')}
+            className={`inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+              activeTab === 'vocab'
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                : 'bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80 ring-1 ring-amber-400/40'
+            }`}
+          >
+            <BookOpen className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span className="sm:hidden">背单词</span>
+            <span className="hidden sm:inline">核心词汇背单词 (艾宾浩斯)</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950 font-black">
+              每日必刷
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('practice')}
+            className={`inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+              activeTab === 'practice'
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80 ring-1 ring-indigo-500/20'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5 text-amber-300 shrink-0" />
+            <span className="sm:hidden">分题型刷题</span>
+            <span className="hidden sm:inline">分题型刷题 (完型/阅读/新题型)</span>
+            <span className="hidden sm:inline text-[10px] px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950 font-black">
+              专项突破
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('papers')}
+            className={`inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+              activeTab === 'papers'
+                ? 'bg-slate-900 text-white shadow-md'
+                : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80'
+            }`}
+          >
+            <FileEdit className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+            <span className="sm:hidden">真题套卷</span>
+            <span className="hidden sm:inline">历年真题套卷模考</span>
+            <span className="hidden sm:inline text-[10px] px-1.5 py-0.2 rounded-md bg-white/20">180分钟</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setActiveTab('dailyReading')}
@@ -433,21 +503,6 @@ ${essayInput.trim()}
             <span className="hidden sm:inline text-[10px] px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950 font-black">
               外刊题源
             </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('papers')}
-            className={`inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-              activeTab === 'papers'
-                ? 'bg-slate-900 text-white shadow-md'
-                : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80'
-            }`}
-          >
-            <FileEdit className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-            <span className="sm:hidden">历年真题</span>
-            <span className="hidden sm:inline">历年真题精析与模考</span>
-            <span className="hidden sm:inline text-[10px] px-1.5 py-0.2 rounded-md bg-white/20">长难句</span>
           </button>
 
           <button
@@ -481,23 +536,15 @@ ${essayInput.trim()}
             <span className="hidden sm:inline">作文高分模板库</span>
             <span className="hidden sm:inline text-[10px] px-1.5 py-0.2 rounded-md bg-white/20">大小作文</span>
           </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('vocab')}
-            className={`inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-              activeTab === 'vocab'
-                ? 'bg-slate-900 text-white shadow-md'
-                : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80'
-            }`}
-          >
-            <BookOpen className="w-3.5 h-3.5 shrink-0" />
-            <span className="sm:hidden">核心词汇</span>
-            <span className="hidden sm:inline">核心词汇打卡复盘</span>
-            <span className="hidden sm:inline text-[10px] px-1.5 py-0.2 rounded-md bg-white/20">艾宾浩斯</span>
-          </button>
         </div>
       </section>
+
+      {/* ─────────────────────────────────────────────────────────────
+          板块 -1: 考研英语分题型专项刷题 (完形填空 / 传统阅读 / 新题型 / 翻译)
+          ───────────────────────────────────────────────────────────── */}
+      {activeTab === 'practice' && (
+        <EnglishPracticeView onGoToPapers={() => setActiveTab('papers')} />
+      )}
 
       {/* ─────────────────────────────────────────────────────────────
           板块 0: 每日文献精读 (AI长难句拆解 + 考研AI伴读导师)
@@ -1466,201 +1513,14 @@ ${essayInput.trim()}
         </div>
       )}
 
-      {/* 板块 3: 历年真题精读与长难句树状解析 */}
+      {/* ─────────────────────────────────────────────────────────────
+          板块 3: 历年真题套卷全真模考舱与精析
+          ───────────────────────────────────────────────────────────── */}
       {activeTab === 'papers' && (
-        <div className="space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-400">选择真题篇目:</span>
-              <select
-                value={selectedPaperId}
-                onChange={(e) => setSelectedPaperId(e.target.value)}
-                className="h-8 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none"
-              >
-                {ENGLISH_PAST_PAPERS.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.source} · {p.title.slice(0, 30)}...
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setShowHardGrammarOnly(!showHardGrammarOnly)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                showHardGrammarOnly
-                  ? 'bg-amber-500 text-white shadow-sm'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              {showHardGrammarOnly ? '⚡ 仅看重点长难句 (已过滤)' : '显示全部语句'}
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-            {/* 左侧：文章逐句对照 (8列) */}
-            <div className="lg:col-span-8 space-y-4">
-              <div className="rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-8 shadow-xs space-y-6">
-                <div>
-                  <div className="flex items-center gap-2 text-xs font-bold text-indigo-600">
-                    <span className="px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-200/60">
-                      {activePaper.examType}
-                    </span>
-                    <span>{activePaper.source}</span>
-                  </div>
-                  <h2 className="text-xl font-black text-slate-900 mt-2">{activePaper.title}</h2>
-                  <p className="text-xs text-slate-500 mt-1 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-200/60">
-                    📖 <strong>篇章梗概:</strong> {activePaper.summary}
-                  </p>
-                </div>
-
-                {/* 逐段逐句 */}
-                <div className="space-y-6">
-                  {activePaper.paragraphs.map((para) => (
-                    <div key={para.paraIndex} className="space-y-3">
-                      <div className="text-[11px] font-bold text-slate-400 font-mono">
-                        PARAGRAPH {para.paraIndex}
-                      </div>
-
-                      <div className="space-y-3">
-                        {para.sentences
-                          .filter((s) => !showHardGrammarOnly || s.isHardSentence)
-                          .map((sen, sIdx) => {
-                            const isSelected =
-                              activeSentenceIdx?.p === para.paraIndex && activeSentenceIdx?.s === sIdx
-
-                            return (
-                              <div
-                                key={sIdx}
-                                onClick={() => setActiveSentenceIdx({ p: para.paraIndex, s: sIdx })}
-                                className={`p-4 rounded-2xl border transition-all cursor-pointer space-y-2 ${
-                                  isSelected
-                                    ? 'border-indigo-600 bg-indigo-50/20 shadow-xs ring-2 ring-indigo-500/10'
-                                    : 'border-slate-200/80 hover:border-slate-300 bg-white'
-                                }`}
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <p className="text-xs sm:text-[13px] font-mono text-slate-900 leading-relaxed">
-                                    {sen.en}
-                                  </p>
-                                  {sen.isHardSentence && (
-                                    <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-700">
-                                      长难句
-                                    </span>
-                                  )}
-                                </div>
-
-                                <p className="text-xs text-slate-500 leading-relaxed border-t border-slate-100 pt-2">
-                                  {sen.zh}
-                                </p>
-
-                                {/* 展开长难句语法剖析 */}
-                                {sen.isHardSentence && sen.hardAnalysis && (
-                                  <div className="mt-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-700 leading-relaxed space-y-1">
-                                    <div className="font-bold text-indigo-700 flex items-center gap-1">
-                                      <span>🔍 语法主干与从句剖析:</span>
-                                    </div>
-                                    <p>{sen.hardAnalysis}</p>
-                                    {sen.keyWords && sen.keyWords.length > 0 && (
-                                      <div className="pt-2 border-t border-slate-200 flex flex-wrap gap-1.5">
-                                        {sen.keyWords.map((kw, kwIdx) => (
-                                          <span
-                                            key={kwIdx}
-                                            className="px-2 py-0.5 rounded bg-white border border-slate-200 text-[10.5px] font-mono text-slate-800"
-                                          >
-                                            <strong>{kw.word}</strong>: {kw.meaning}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            )
-                          })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* 右侧：真题四选题解与命题归因 (4列) */}
-            <div className="lg:col-span-4 space-y-4">
-              <div className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xs space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                    <Award className="w-3.5 h-3.5 text-amber-500" />
-                    <span>真题对应单选精炼 ({activePaper.questions.length})</span>
-                  </h3>
-                  <span className="text-[10px] text-slate-400">考点溯源</span>
-                </div>
-
-                <div className="space-y-4">
-                  {activePaper.questions.map((q, qIdx) => {
-                    const chosen = userAnswers[q.id]
-                    const isSubmitted = chosen !== undefined
-                    const isCorrect = chosen === q.answer
-
-                    return (
-                      <div key={q.id} className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-3">
-                        <div className="flex items-center justify-between text-[11px] font-bold">
-                          <span className="text-slate-400">第 {qIdx + 1} 题</span>
-                          <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 text-[10px]">
-                            {q.questionType}
-                          </span>
-                        </div>
-
-                        <p className="text-xs font-semibold text-slate-900 leading-snug">{q.stem}</p>
-
-                        <div className="space-y-1.5">
-                          {(['A', 'B', 'C', 'D'] as const).map((optKey) => (
-                            <button
-                              key={optKey}
-                              type="button"
-                              onClick={() => setUserAnswers((prev) => ({ ...prev, [q.id]: optKey }))}
-                              className={`w-full text-left p-2.5 rounded-xl border text-xs font-mono transition-all flex items-start gap-2 cursor-pointer ${
-                                chosen === optKey
-                                  ? optKey === q.answer
-                                    ? 'border-emerald-500 bg-emerald-50 text-emerald-900 font-bold'
-                                    : 'border-rose-500 bg-rose-50 text-rose-900 font-bold'
-                                  : isSubmitted && optKey === q.answer
-                                  ? 'border-emerald-500 bg-emerald-50/50 text-emerald-900 font-bold'
-                                  : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
-                              }`}
-                            >
-                              <span className="w-4 h-4 rounded-full bg-slate-100 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
-                                {optKey}
-                              </span>
-                              <span className="leading-snug">{q.options[optKey]}</span>
-                            </button>
-                          ))}
-                        </div>
-
-                        {/* 答案解析 */}
-                        {isSubmitted && (
-                          <div
-                            className={`p-3 rounded-xl text-[11px] leading-relaxed border ${
-                              isCorrect
-                                ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
-                                : 'bg-rose-50 border-rose-200 text-rose-900'
-                            }`}
-                          >
-                            <div className="font-bold mb-1">
-                              {isCorrect ? '✅ 回答正确！' : `❌ 遗憾答错，正确答案为: [${q.answer}]`}
-                            </div>
-                            <p>{q.analysis}</p>
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <EnglishFullPaperView
+          onGoToPractice={() => setActiveTab('practice')}
+          onGoToEssayGrading={() => setActiveTab('grading')}
+        />
       )}
 
       {/* ─────────────────────────────────────────────────────────────
@@ -1695,7 +1555,11 @@ ${essayInput.trim()}
             {vocabSubTab === 'review' && <VocabTab />}
             {vocabSubTab === 'browse' && <WordBrowser />}
             {vocabSubTab === 'stats' && <VocabStats />}
-            {vocabSubTab === 'relations' && <WordRelations />}
+            {vocabSubTab === 'relations' && (
+              <Suspense fallback={<div className="py-12 text-center text-xs text-slate-400">正在装载词根词缀衍生树...</div>}>
+                <WordRelations />
+              </Suspense>
+            )}
           </div>
         </div>
       )}

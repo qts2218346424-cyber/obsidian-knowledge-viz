@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CoreForge 研核 (Knowledge Viz) · 官方实机高清宣传片演示舱</title>
+  <style>
+    :root {
+      --bg: #07090e;
+      --card-bg: rgba(13, 17, 27, 0.88);
+      --primary: #6366f1;
+      --primary-glow: rgba(99, 102, 241, 0.45);
+      --accent: #06b6d4;
+      --accent-glow: rgba(6, 182, 212, 0.4);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: rgba(255, 255, 255, 0.12);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #canvas-bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    header {
+      position: relative;
+      z-index: 20;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 28px;
+      background: rgba(9, 13, 24, 0.9);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .brand-badge {
+      background: linear-gradient(135deg, #6366f1, #06b6d4);
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      box-shadow: 0 0 16px var(--primary-glow);
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border);
+      color: #fff;
+      padding: 7px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.16);
+      border-color: rgba(255, 255, 255, 0.3);
+      transform: translateY(-1px);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1, #3b82f6);
+      border: none;
+      box-shadow: 0 0 20px rgba(99, 102, 241, 0.5);
+      font-weight: 600;
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #4f46e5, #2563eb);
+      box-shadow: 0 0 28px rgba(99, 102, 241, 0.7);
+    }
+
+    #stage-container {
+      position: relative;
+      flex: 1;
+      z-index: 10;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 24px 36px;
+      perspective: 1200px;
+    }
+
+    .scene {
+      position: absolute;
+      width: 92%;
+      max-width: 1280px;
+      height: 86%;
+      background: var(--card-bg);
+      backdrop-filter: blur(28px);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      box-shadow: 0 25px 70px rgba(0, 0, 0, 0.75), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+      padding: 24px 32px;
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      transform: scale(0.94) translateY(24px);
+      transition: all 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .scene.active {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+      pointer-events: auto;
+    }
+
+    .scene-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding-bottom: 10px;
+    }
+    .scene-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .scene-tag {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+    .scene-title {
+      font-size: 24px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #ffffff 40%, #c7d2fe 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .scene-badges {
+      display: flex;
+      gap: 8px;
+    }
+    .badge-pill {
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      color: #c7d2fe;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    /* 实机视窗容器 (配备电影感运镜与光影) */
+    .real-screen-frame {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .real-screen-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top center;
+      transform: scale(1);
+      transition: transform 12s cubic-bezier(0.1, 0.8, 0.2, 1);
+    }
+    .scene.active .real-screen-img {
+      transform: scale(1.05) translateY(-1%);
+    }
+
+    /* 浮动聚焦标签 */
+    .screen-overlay-tag {
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      background: rgba(10, 15, 29, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 12px;
+      color: #38bdf8;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+    }
+    .screen-overlay-tag::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+    }
+
+    /* 尾声定格 */
+    .hero-finale {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+    }
+    .hero-logo-box {
+      width: 96px;
+      height: 96px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, #6366f1, #06b6d4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 46px;
+      box-shadow: 0 0 60px rgba(99, 102, 241, 0.6);
+      margin-bottom: 20px;
+      animation: pulse-glow 3s infinite alternate;
+    }
+    @keyframes pulse-glow {
+      from { transform: scale(1); box-shadow: 0 0 40px rgba(99, 102, 241, 0.5); }
+      to { transform: scale(1.08); box-shadow: 0 0 80px rgba(6, 182, 212, 0.8); }
+    }
+
+    /* 底部旁白与时间轴指示器 */
+    footer {
+      position: relative;
+      z-index: 20;
+      background: rgba(9, 13, 24, 0.95);
+      backdrop-filter: blur(16px);
+      border-top: 1px solid var(--border);
+      padding: 14px 28px;
+    }
+    .voiceover-box {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 10px;
+    }
+    .voice-tag {
+      background: rgba(6, 182, 212, 0.15);
+      color: #38bdf8;
+      border: 1px solid rgba(6, 182, 212, 0.35);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .voice-text {
+      font-size: 15px;
+      color: #f8fafc;
+      font-weight: 500;
+      line-height: 1.5;
+      flex: 1;
+      min-height: 24px;
+    }
+    .timeline-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .timeline-bar {
+      flex: 1;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+      overflow: hidden;
+      cursor: pointer;
+      position: relative;
+    }
+    .timeline-progress {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #6366f1, #06b6d4);
+      transition: width 0.1s linear;
+    }
+    .time-digits {
+      font-family: monospace;
+      font-size: 12px;
+      color: var(--text-muted);
+      width: 88px;
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="canvas-bg"></canvas>
+
+  <header>
+    <div class="brand">
+      <div class="brand-badge">REAL-CAPTURE SHOWCASE</div>
+      <span>CoreForge 研核 · 真实实机宣传片演示舱</span>
+    </div>
+    <div class="controls">
+      <button class="btn" id="btn-prev">⏮ 上一镜</button>
+      <button class="btn btn-primary" id="btn-play">▶ 自动巡航演示</button>
+      <button class="btn" id="btn-next">下一镜 ⏭</button>
+      <button class="btn" id="btn-fullscreen">⛶ 全屏录制模式</button>
+    </div>
+  </header>
+
+  <main id="stage-container">
+
+    <!-- 镜头 1: 登录与产品封面 -->
+    <section class="scene active" id="scene-0">
+      <div class="scene-header">
+        <div class="scene-meta">
+          <div class="scene-tag">SCENE 01 · 00:00 - 00:08 · 实机封面</div>
+          <h1 class="scene-title">登入智能研学空间 · 破局亮相</h1>
+        </div>
+        <div class="scene-badges">
+          <span class="badge-pill">408 计算机 & 数学双核</span>
+          <span class="badge-pill">Subframe 极客质感</span>
+        </div>
+      </div>
+      <div class="real-screen-frame">
+        <img class="real-screen-img" src="promo_assets/01_landing.png" alt="登录与研学空间实机">
+        <div class="screen-overlay-tag">实机实录 · 登入研学空间</div>
+      </div>
+    </section>
+
+    <!-- 镜头 2: 主驾驶舱 Dashboard -->
+    <section class="scene" id="scene-1">
+      <div class="scene-header">
+        <div class="scene-meta">
+          <div class="scene-tag">SCENE 02 · 00:08 - 00:20 · 核心中枢</div>
+          <h1 class="scene-title">备考主驾驶舱 Dashboard · 全景掌控</h1>
+        </div>
+        <div class="scene-badges">
+          <span class="badge-pill">480 篇考研讲义在线</span>
+          <span class="badge-pill">617 组跨章节双链索引</span>
+          <span class="badge-pill">初试倒计时</span>
+        </div>
+      </div>
+      <div class="real-screen-frame">
+        <img class="real-screen-img" src="promo_assets/02_dashboard.png" alt="备考驾驶舱实机">
+        <div class="screen-overlay-tag">实机实录 · 备考驾驶舱</div>
+      </div>
+    </section>
+
+    <!-- 镜头 3: 做题中心与 408 真题 -->
+    <section class="scene" id="scene-2">
+      <div class="scene-header">
+        <div class="scene-meta">
+          <div class="scene-tag">SCENE 03 · 00:20 - 00:34 · 硬核真题</div>
+          <h1 class="scene-title">做题中心 · 历年真题精练与智能归因</h1>
+        </div>
+        <div class="scene-badges">
+          <span class="badge-pill">37 年考研真题</span>
+          <span class="badge-pill">毫秒级 LaTeX 渲染</span>
+          <span class="badge-pill">错题反向穿透笔记</span>
+        </div>
+      </div>
+      <div class="real-screen-frame">
+        <img class="real-screen-img" src="promo_assets/03_quiz_real.png" alt="做题中心实机">
+        <div class="screen-overlay-tag">实机实录 · 做题中心</div>
+      </div>
+    </section>
+
+    <!-- 镜头 4: 3D 知识星图 -->
+    <section class="scene" id="scene-3">
+      <div class="scene-header">
+        <div class="scene-meta">
+          <div class="scene-tag">SCENE 04 · 00:34 - 00:48 · 知识拓扑</div>
+          <h1 class="scene-title">力导向 3D 知识星图 · 击碎认知孤岛</h1>
+        </div>
+        <div class="scene-badges">
+          <span class="badge-pill">D3 / xyflow 拓扑</span>
+          <span class="badge-pill">考点动态聚类</span>
+          <span class="badge-pill">盲区脉络排查</span>
+        </div>
+      </div>
+      <div class="real-screen-frame">
+        <img class="real-screen-img" src="promo_assets/05_knowledge_graph.png" alt="知识图谱星空实机">
+        <div class="screen-overlay-tag">实机实录 · 3D 知识星图</div>
+      </div>
+    </section>
+
+    <!-- 镜头 5: 艾宾浩斯智能闪卡 -->
+    <section class="scene" id="scene-4">
+      <div class="scene-header">
+        <div class="scene-meta">
+          <div class="scene-tag">SCENE 05 · 00:48 - 00:58 · 科学记忆</div>
+          <h1 class="scene-title">SM-2 艾宾浩斯智能闪卡 · 精准抗遗忘</h1>
+        </div>
+        <div class="scene-badges">
+          <span class="badge-pill">遗忘曲线推算法</span>
+          <span class="badge-pill">自适应间隔复习</span>
+        </div>
+      </div>
+      <div class="real-screen-frame">
+        <img class="real-screen-img" src="promo_assets/04_study_flashcards.png" alt="艾宾浩斯复习实机">
+        <div class="screen-overlay-tag">实机实录 · 智能闪卡</div>
+      </div>
+    </section>
+
+    <!-- 镜头 6: 考研英语衍生树 -->
+    <section class="scene" id="scene-5">
+      <div class="scene-header">
+        <div class="scene-meta">
+          <div class="scene-tag">SCENE 06 · 00:58 - 01:08 · 学科专攻</div>
+          <h1 class="scene-title">考研英语 · 大纲高频词与词根衍生树</h1>
+        </div>
+        <div class="scene-badges">
+          <span class="badge-pill">词根词缀生长树</span>
+          <span class="badge-pill">真题语境例句</span>
+        </div>
+      </div>
+      <div class="real-screen-frame">
+        <img class="real-screen-img" src="promo_assets/06_english_vocab.png" alt="英语词根树实机">
+        <div class="screen-overlay-tag">实机实录 · 英语词根树</div>
+      </div>
+    </section>
+
+    <!-- 镜头 7: 考研政治时空轴 -->
+    <section class="scene" id="scene-6">
+      <div class="scene-header">
+        <div class="scene-meta">
+          <div class="scene-tag">SCENE 07 · 01:08 - 01:18 · 历史脉络</div>
+          <h1 class="scene-title">考研政治 · 百年史纲全景时空轴</h1>
+        </div>
+        <div class="scene-badges">
+          <span class="badge-pill">全景时间轴横移</span>
+          <span class="badge-pill">肖秀荣考点直达</span>
+        </div>
+      </div>
+      <div class="real-screen-frame">
+        <img class="real-screen-img" src="promo_assets/07_politics_timeline.png" alt="政治时空轴实机">
+        <div class="screen-overlay-tag">实机实录 · 史纲时空轴</div>
+      </div>
+    </section>
+
+    <!-- 镜头 8: 沉浸自习与声学氛围 -->
+    <section class="scene" id="scene-7">
+      <div class="scene-header">
+        <div class="scene-meta">
+          <div class="scene-tag">SCENE 08 · 01:18 - 01:28 · 心流场域</div>
+          <h1 class="scene-title">沉浸自习室 · 番茄钟与声学专注氛围</h1>
+        </div>
+        <div class="scene-badges">
+          <span class="badge-pill">专属 Lofi 伴学电台</span>
+          <span class="badge-pill">专注番茄钟统计</span>
+        </div>
+      </div>
+      <div class="real-screen-frame">
+        <img class="real-screen-img" src="promo_assets/10_music_lofi.png" alt="声学专注氛围实机">
+        <div class="screen-overlay-tag">实机实录 · 声学自习舱</div>
+      </div>
+    </section>
+
+    <!-- 镜头 9: 尾声定格与号召 -->
+    <section class="scene" id="scene-8">
+      <div class="hero-finale">
+        <div class="hero-logo-box">🎓</div>
+        <h1 style="font-size: 44px; font-weight: 900; background: linear-gradient(135deg, #fff 40%, #38bdf8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 12px;">
+          CoreForge 研核
+        </h1>
+        <p style="font-size: 22px; color: #c7d2fe; font-weight: 700; margin-bottom: 24px;">
+          用科技重塑研学 · 助你一战成硕
+        </p>
+        <div style="display: flex; gap: 20px; font-size: 14px; color: #94a3b8;">
+          <span>⭐ 开源项目 / 自由部署</span>
+          <span>•</span>
+          <span>⚡ 毫秒响应 / 本地离线可用</span>
+          <span>•</span>
+          <span>🔗 深度融合 Obsidian 知识库生态</span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="voiceover-box">
+      <div class="voice-tag">🎙️ 旁白解说 (建议音色: 云希 / 质感青年)</div>
+      <div class="voice-text" id="voice-text">考研路上，你是否也曾被堆积如山的真题卷、零散割裂的笔记，和背了又忘的盲区反复折磨？</div>
+    </div>
+    <div class="timeline-container">
+      <div class="timeline-bar" id="timeline-bar">
+        <div class="timeline-progress" id="timeline-progress"></div>
+      </div>
+      <div class="time-digits" id="time-digits">00:00 / 01:30</div>
+    </div>
+  </footer>
+
+  <script>
+    const scenesData = [
+      { id: 0, title: "登入智能研学空间", dur: 8, voice: "考研路上，你是否也曾被堆积如山的真题卷、零散割裂的笔记，和背了又忘的盲区反复折磨？是时候，用真正的硬核科技开启研学新纪元。" },
+      { id: 1, title: "备考主驾驶舱", dur: 12, voice: "进入备考主驾驶舱，480 篇考研讲义在线，超 600 组双链网络自生长。初试倒计时、每日掌握度与多学科舱无缝切换，全景进度尽在掌控。" },
+      { id: 2, title: "做题中心与真题精练", dur: 14, voice: "做题中心汇聚 408 统考与历年数学真题，支持毫秒级 LaTeX 公式排版。每一道错题，都自动完成错因诊断，反向穿透到你的专属笔记。" },
+      { id: 3, title: "3D 知识星图", dur: 14, voice: "拒绝孤立死记。力导向 3D 知识星图，将碎片化知识点编织成一张自生长的星空脉络，一目了然看清考点联系与知识盲区。" },
+      { id: 4, title: "SM-2 艾宾浩斯智能闪卡", dur: 10, voice: "SM-2 艾宾浩斯记忆算法驱动，自适应动态推算复习间隔，让每一张考点闪卡都击中记忆薄弱点，精准抗击遗忘。" },
+      { id: 5, title: "考研英语衍生树", dur: 10, voice: "考研英语大纲高频词汇全覆盖，依托词根词缀衍生生长树，串联同根衍生词，背单词快人一步。" },
+      { id: 6, title: "考研政治史纲时空轴", dur: 10, voice: "政治史纲全景时空轴，纵向贯通百年历史脉络，横向链接核心考点与模拟真题，框架清晰无死角。" },
+      { id: 7, title: "沉浸自习与声学氛围", dur: 10, voice: "搭配专注番茄钟与专属声学专注电台，为你筑起不受外界干扰的纯粹学习心流场域。" },
+      { id: 8, title: "尾声定格与号召", dur: 7, voice: "CoreForge 研核。用科技重塑研学，助你一战成硕！立即开启全栈备考新时代。" }
+    ];
+
+    let currentScene = 0;
+    let isPlaying = false;
+    let timer = null;
+    let elapsedInScene = 0;
+
+    const totalSeconds = scenesData.reduce((acc, cur) => acc + cur.dur, 0);
+
+    function switchScene(index) {
+      if (index < 0) index = 0;
+      if (index >= scenesData.length) index = scenesData.length - 1;
+      
+      document.querySelectorAll('.scene').forEach((sc, idx) => {
+        sc.classList.toggle('active', idx === index);
+      });
+
+      currentScene = index;
+      elapsedInScene = 0;
+      updateVoiceAndTimeline();
+    }
+
+    function updateVoiceAndTimeline() {
+      const data = scenesData[currentScene];
+      document.getElementById('voice-text').textContent = data.voice;
+      
+      let passedSeconds = 0;
+      for (let i = 0; i < currentScene; i++) {
+        passedSeconds += scenesData[i].dur;
+      }
+      passedSeconds += elapsedInScene;
+
+      const pct = (passedSeconds / totalSeconds) * 100;
+      document.getElementById('timeline-progress').style.width = pct + '%';
+
+      const m = Math.floor(passedSeconds / 60).toString().padStart(2, '0');
+      const s = Math.floor(passedSeconds % 60).toString().padStart(2, '0');
+      const totM = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+      const totS = Math.floor(totalSeconds % 60).toString().padStart(2, '0');
+      document.getElementById('time-digits').textContent = `${m}:${s} / ${totM}:${totS}`;
+    }
+
+    function togglePlay() {
+      isPlaying = !isPlaying;
+      const btn = document.getElementById('btn-play');
+      if (isPlaying) {
+        btn.textContent = "⏸ 暂停巡航";
+        btn.classList.add('active');
+        runTimer();
+      } else {
+        btn.textContent = "▶ 自动巡航演示";
+        btn.classList.remove('active');
+        clearInterval(timer);
+      }
+    }
+
+    function runTimer() {
+      clearInterval(timer);
+      timer = setInterval(() => {
+        elapsedInScene += 0.2;
+        if (elapsedInScene >= scenesData[currentScene].dur) {
+          if (currentScene < scenesData.length - 1) {
+            switchScene(currentScene + 1);
+          } else {
+            togglePlay();
+            switchScene(0);
+          }
+        } else {
+          updateVoiceAndTimeline();
+        }
+      }, 200);
+    }
+
+    document.getElementById('btn-prev').addEventListener('click', () => switchScene(currentScene - 1));
+    document.getElementById('btn-next').addEventListener('click', () => switchScene(currentScene + 1));
+    document.getElementById('btn-play').addEventListener('click', togglePlay);
+    document.getElementById('btn-fullscreen').addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    });
+
+    document.getElementById('timeline-bar').addEventListener('click', (e) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const clickRatio = (e.clientX - rect.left) / rect.width;
+      const targetSec = clickRatio * totalSeconds;
+      
+      let acc = 0;
+      for (let i = 0; i < scenesData.length; i++) {
+        if (targetSec <= acc + scenesData[i].dur) {
+          currentScene = i;
+          elapsedInScene = targetSec - acc;
+          switchScene(currentScene);
+          break;
+        }
+        acc += scenesData[i].dur;
+      }
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        togglePlay();
+      } else if (e.code === 'ArrowRight') {
+        switchScene(currentScene + 1);
+      } else if (e.code === 'ArrowLeft') {
+        switchScene(currentScene - 1);
+      }
+    });
+
+    // 粒子背景
+    const bgCanvas = document.getElementById('canvas-bg');
+    const ctx = bgCanvas.getContext('2d');
+    let width, height, stars = [];
+
+    function resizeCanvas() {
+      width = bgCanvas.width = window.innerWidth;
+      height = bgCanvas.height = window.innerHeight;
+      stars = Array.from({ length: 80 }, () => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        radius: Math.random() * 1.5 + 0.5,
+        vx: (Math.random() - 0.5) * 0.25,
+        vy: (Math.random() - 0.5) * 0.25,
+        alpha: Math.random() * 0.6 + 0.2
+      }));
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function drawBg() {
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = "#ffffff";
+      stars.forEach(s => {
+        s.x += s.vx;
+        s.y += s.vy;
+        if (s.x < 0) s.x = width;
+        if (s.x > width) s.x = 0;
+        if (s.y < 0) s.y = height;
+        if (s.y > height) s.y = 0;
+
+        ctx.globalAlpha = s.alpha;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      requestAnimationFrame(drawBg);
+    }
+    drawBg();
+  </script>
+</body>
+</html>

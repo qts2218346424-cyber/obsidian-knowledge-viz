@@ -1,5 +1,6 @@
-import ChinaHistoricalMap from '../components/ChinaHistoricalMap'
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
+import { useSearchParams } from 'react-router-dom'
+const ChinaHistoricalMap = lazy(() => import('../components/ChinaHistoricalMap'))
 import { useAuth } from '../contexts/AuthContext'
 import { useIsMobile } from '../hooks/useIsMobile'
 import {
@@ -71,9 +72,24 @@ function getAnniversaryInfo(year: number, mode: AnniversaryMode): { matched: boo
 }
 
 export default function Politics() {
+  const [searchParams] = useSearchParams()
   const { isMobile } = useIsMobile()
   const [showMobileMap, setShowMobileMap] = useState(false)
   const [activeTab, setActiveTab] = useState<PoliticsTab>('timeline')
+
+  useEffect(() => {
+    const tab = searchParams.get('tab')
+    if (tab === 'xiao1000' || tab === 'quiz' || tab === 'practice') {
+      setActiveTab('xiao1000')
+    } else if (tab === 'timeline') {
+      setActiveTab('timeline')
+    } else if (tab === 'favorites') {
+      setActiveTab('favorites')
+    } else if (tab === 'matrices') {
+      setActiveTab('matrices')
+    }
+  }, [searchParams])
+
   const [isFullscreen, setIsFullscreen] = useState(false)
   const fullScreenContainerRef = useRef<HTMLDivElement | null>(null)
 
@@ -460,8 +476,8 @@ export default function Politics() {
                 }`}
               >
                 <FileCheck2 className="w-3.5 h-3.5 shrink-0" />
-                <span className="sm:hidden">肖1000题</span>
-                <span className="hidden sm:inline">肖秀荣精选 (15题)</span>
+                <span className="sm:hidden">肖1000题刷题</span>
+                <span className="hidden sm:inline">肖秀荣 1000 题核心刷题</span>
                 <span className="hidden sm:inline px-1.5 py-0.2 rounded-full text-[10px] bg-rose-500/15 text-rose-700 font-extrabold">
                   刷题
                 </span>
@@ -761,12 +777,14 @@ export default function Politics() {
               <div className={`relative my-1 flex-1 flex items-center justify-center ${
                 !showMobileMap ? 'hidden sm:flex min-h-[290px] sm:min-h-[320px]' : 'flex min-h-[250px]'
               }`}>
-                <ChinaHistoricalMap
-                  activeCoordinates={activeItem?.coordinates}
-                  activeCityName={activeItem?.cityName}
-                  activeDate={activeItem?.date}
-                  onCityClick={handleMapCityClick}
-                />
+                <Suspense fallback={<div className="h-64 flex items-center justify-center text-xs text-amber-500/60 font-mono">正在渲染高精矢量历史地图...</div>}>
+                  <ChinaHistoricalMap
+                    activeCoordinates={activeItem?.coordinates}
+                    activeCityName={activeItem?.cityName}
+                    activeDate={activeItem?.date}
+                    onCityClick={handleMapCityClick}
+                  />
+                </Suspense>
               </div>
 
               {/* ── 🗺️ 地图底沿贴身时空微控滑轨 (0 距离手眼合一 · 实时拖动点亮地图) ── */}

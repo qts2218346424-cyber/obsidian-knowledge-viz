@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
   Network, Flame, CheckCircle2, AlertTriangle,
   Search, ChevronRight, ChevronDown, Sparkles,
-  RefreshCw, Loader2, ArrowRight, X, Target
+  RefreshCw, Loader2, ArrowRight, X, Target, HelpCircle, BookOpen
 } from 'lucide-react'
 import { api } from '../../services/api'
 import StepTutorModal from './StepTutorModal'
@@ -298,6 +298,21 @@ export default function MasteryTopologyView() {
               className="text-xs pl-8 pr-3 py-1.5 rounded-xl bg-cream-100/50 border border-cream-200 text-warm-800 placeholder-warm-400 focus:outline-hidden focus:border-accent-orange/60 w-48"
             />
           </div>
+
+          <button
+            onClick={() => {
+              window.dispatchEvent(
+                new CustomEvent('open-user-guide', {
+                  detail: { tab: 'doc', category: 'spectrum_graph', featureId: 'mastery-spectrum' }
+                })
+              )
+            }}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold border border-rose-200 transition-colors cursor-pointer"
+            title="查看考点掌握度热力色谱图的使用说明"
+          >
+            <HelpCircle className="w-3.5 h-3.5 text-rose-600" />
+            <span className="hidden sm:inline">色谱图说明</span>
+          </button>
 
           <button
             onClick={loadData}

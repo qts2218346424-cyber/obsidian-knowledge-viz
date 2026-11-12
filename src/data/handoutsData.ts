@@ -1,10 +1,11 @@
 import { POLITICS_HANDOUTS } from './politicsHandouts'
+import { MATH_EXTRA_HANDOUTS } from './mathExtraHandouts'
 
 export interface HandoutItem {
   id: string
   title: string
-  domain: 'cs_408' | 'math' | 'politics'
-  subject: '数据结构' | '计算机组成原理' | '操作系统' | '计算机网络' | '高等数学' | '线性代数' | '概率论' | '综合' | '马克思主义基本原理' | '马克思著作' | '时事政治'
+  domain: 'cs_408' | 'math' | 'politics' | 'english' | 'general'
+  subject: '数据结构' | '计算机组成原理' | '操作系统' | '计算机网络' | '高等数学' | '线性代数' | '概率论' | '综合' | '马克思主义基本原理' | '马克思著作' | '时事政治' | '考研英语' | '考研政治' | '专业课综合'
   readTime: string
   difficulty: '核心考点' | '高频重难点' | '真题必考'
   tags: string[]
@@ -410,5 +411,5 @@ $$\\lim_{n \\to \\infty} P\\left( \\frac{\\sum_{i=1}^n X_i - n\\mu}{\\sigma \\sq
   }
 ]
 
-// 合并考研政治讲义（马原 / 经典著作 / 时政）
-CURATED_HANDOUTS.push(...POLITICS_HANDOUTS)
+// 合并考研政治讲义（马原 / 经典著作 / 时政）与考研数学专题强化讲义
+CURATED_HANDOUTS.push(...POLITICS_HANDOUTS, ...MATH_EXTRA_HANDOUTS)

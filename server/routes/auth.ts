@@ -716,10 +716,19 @@ authRouter.get('/admin/users/:id/point-logs', requireAuth, requireRole('admin'),
 })
 
 /**
- * 用户自主充值伴学积分接口
+ * 用户自主充值伴学积分接口（已对普通学员暂时关闭，仅管理员可作为调试使用）
  */
 authRouter.post('/user/recharge', requireAuth, (req, res) => {
-  const userId = req.user!.id
+  const user = req.user!
+  if (user.role !== 'admin') {
+    res.status(403).json({
+      success: false,
+      error: '自主充值通道已暂时关闭。如需增加伴学积分，请参与每日签到打卡或联系管理员获取卡密兑换码。',
+    })
+    return
+  }
+
+  const userId = user.id
   const { amount, channel } = req.body || {}
   const numAmount = Number(amount)
   if (isNaN(numAmount) || numAmount <= 0) {
@@ -729,7 +738,7 @@ authRouter.post('/user/recharge', requireAuth, (req, res) => {
   const result = database.rechargeUserPoints(
     userId,
     numAmount,
-    typeof channel === 'string' ? channel.trim() : '研学自主充值'
+    typeof channel === 'string' ? channel.trim() : '研学充值(管理员调试)'
   )
   if (!result.success) {
     res.status(400).json(result)

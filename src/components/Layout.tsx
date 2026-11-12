@@ -28,6 +28,9 @@ import {
   Coins,
   Palette,
   Bot,
+  Headphones,
+  Moon,
+  Leaf,
 } from 'lucide-react'
 import { useVaultStats, useApiHealth } from '../hooks/useVaultData'
 import { useThemeStyle } from '../hooks/useThemeStyle'
@@ -36,11 +39,11 @@ import { useExamCountdown } from '../utils/examDate'
 import { useVaultEvents } from '../hooks/useVaultEvents'
 import DesktopPet from './Pet/DesktopPet'
 import { useAuth } from '../contexts/AuthContext'
-import UserManagementModal from './UserManagementModal'
-import UserGuideModal from './UserGuideModal'
-import CheckinModal from './CheckinModal'
-import ChangePasswordModal from './ChangePasswordModal'
-import InteractiveTourGuide from './InteractiveTourGuide'
+const UserManagementModal = lazy(() => import('./UserManagementModal'))
+const UserGuideModal = lazy(() => import('./UserGuideModal'))
+const CheckinModal = lazy(() => import('./CheckinModal'))
+const ChangePasswordModal = lazy(() => import('./ChangePasswordModal'))
+const InteractiveTourGuide = lazy(() => import('./InteractiveTourGuide'))
 import { HelpCircle, Compass, KeyRound, History as HistoryIcon } from 'lucide-react'
 import { LogOut, Users as UsersIcon, ShieldAlert as ShieldAlertIcon } from 'lucide-react'
 import { prefetchRoute } from '../App'
@@ -71,9 +74,10 @@ const subjectSpecialties = [
 
 const primaryNavItems: NavItem[] = [
   { to: '/dashboard', label: '首页', shortLabel: '首页', icon: Home, emoji: '🏠', desc: '备考驾驶舱与每日概览' },
+  { to: '/vocabulary', label: '背单词', shortLabel: '单词', icon: Headphones, emoji: '⚡', badge: '2000+真题词', desc: '大纲核心词汇、艾宾浩斯复盘与随堂测验' },
+  { to: '/english', label: '考研英语', shortLabel: '英语', icon: BookOpen, emoji: '📖', badge: '作文批改+真题', desc: '写作模板、AI智能批改、历年真题精读与大纲词库' },
   { to: '/quiz', label: '做题中心', shortLabel: '做题', icon: ClipboardList, emoji: '📝', badge: '408+数学', desc: '真题精练、AI 组卷与错题本' },
   { to: '/politics', label: '考研政治', shortLabel: '政治', icon: Landmark, emoji: '🏛️', badge: '史纲+1000题', desc: '全屏时空轴、肖秀荣1000题与考点收藏' },
-  { to: '/english', label: '考研英语', shortLabel: '英语', icon: BookOpen, emoji: '📖', badge: '作文批改+真题', desc: '写作模板、AI智能批改、历年真题精读与大纲词库' },
   { to: '/study', label: '学习中心', shortLabel: '讲义', icon: GraduationCap, emoji: '📚', desc: '讲义精读、闪卡记忆与掌握度' },
   { to: '/graph', label: '知识图谱', shortLabel: '图谱', icon: Network, emoji: '🕸️', desc: '全库双链网络可视化探索' },
   { to: '/editor', label: '笔记编辑', shortLabel: '笔记', icon: FileEdit, emoji: '✏️', desc: 'Markdown 写作与手写批注' },
@@ -102,7 +106,17 @@ function navClass(isActive: boolean) {
 }
 
 export default function Layout({ children }: LayoutProps) {
-  const { isVibrant, toggleThemeStyle } = useThemeStyle()
+  const {
+    themeStyle,
+    isVibrant,
+    isMinimal,
+    isEyecare,
+    isDark,
+    currentThemeMeta,
+    themeConfigs,
+    toggleThemeStyle,
+    setThemeStyle,
+  } = useThemeStyle()
   const { isMobile } = useIsMobile()
   const countdown = useExamCountdown()
   const location = useLocation()
@@ -117,6 +131,11 @@ export default function Layout({ children }: LayoutProps) {
   const [moreOpen, setMoreOpen] = useState(false)
   const { activeModals, openModal, closeModal } = useUIModalStore()
   const [assistantOpen, setAssistantOpen] = useState(false)
+  const [assistantLaunchState, setAssistantLaunchState] = useState<{
+    contextPrompt?: string | null
+    defaultInput?: string | null
+    triggerKey?: number
+  }>({})
   const [importModalOpen, setImportModalOpen] = useState(false)
   const [mobileModalOpen, setMobileModalOpen] = useState(false)
   const [syncNotice, setSyncNotice] = useState<string | null>(null)
@@ -126,6 +145,11 @@ export default function Layout({ children }: LayoutProps) {
   const [userManagementOpen, setUserManagementOpen] = useState(false)
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
   const [guideOpen, setGuideOpen] = useState(false)
+  const [guideOptions, setGuideOptions] = useState<{
+    tab?: 'tour' | 'doc'
+    category?: string
+    featureId?: string
+  }>({})
   const [interactiveTourOpen, setInteractiveTourOpen] = useState(false)
   const [checkinOpen, setCheckinOpen] = useState(false)
   const [checkinTab, setCheckinTab] = useState<'checkin' | 'redeem' | 'recharge' | 'logs'>('checkin')
@@ -145,7 +169,16 @@ export default function Layout({ children }: LayoutProps) {
   useEffect(() => {
     const onOpenQuickNote = () => openModal('quick-note')
     window.addEventListener('open-quick-note', onOpenQuickNote)
-    const onOpenGuide = () => openModal('user-guide')
+    const onOpenGuide = (e?: Event) => {
+      const custom = e as CustomEvent<{ tab?: 'tour' | 'doc'; category?: string; featureId?: string }>
+      if (custom?.detail) {
+        setGuideOptions(custom.detail)
+      } else {
+        setGuideOptions({})
+      }
+      setGuideOpen(true)
+      openModal('user-guide')
+    }
     window.addEventListener('open-user-guide', onOpenGuide)
     const onStartTour = () => setInteractiveTourOpen(true)
     window.addEventListener('start-interactive-tour', onStartTour)
@@ -161,18 +194,31 @@ export default function Layout({ children }: LayoutProps) {
       openModal('checkin')
     }
     window.addEventListener('open-checkin-modal', onOpenCheckin)
+    const onOpenAiAssistant = (e: Event) => {
+      const custom = e as CustomEvent<{ contextPrompt?: string; defaultInput?: string }>
+      if (custom?.detail) {
+        setAssistantLaunchState({
+          contextPrompt: custom.detail.contextPrompt ?? null,
+          defaultInput: custom.detail.defaultInput ?? null,
+          triggerKey: Date.now(),
+        })
+      }
+      setAssistantOpen(true)
+      openModal('ai-assistant')
+    }
+    window.addEventListener('open-ai-assistant', onOpenAiAssistant)
     const onNotesUpdated = () => {
       reloadStats()
     }
     window.addEventListener('vault-notes-updated', onNotesUpdated)
     window.addEventListener('vault-stats-updated', onNotesUpdated)
 
-    // 新用户首次登录智能唤起指引
+    // 新用户首次登录智能唤起指引（避免提前 return 导致后续快捷键与事件监听器失效）
+    let onboardingTimer: ReturnType<typeof setTimeout> | undefined
     try {
       const dismissed = localStorage.getItem('coreforge_onboarding_dismissed')
       if (!dismissed) {
-        const timer = setTimeout(() => openModal('user-guide'), 1200)
-        return () => clearTimeout(timer)
+        onboardingTimer = setTimeout(() => openModal('user-guide'), 1200)
       }
     } catch {}
     const handler = (event: KeyboardEvent) => {
@@ -187,25 +233,39 @@ export default function Layout({ children }: LayoutProps) {
       }
       if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'a') {
         event.preventDefault()
-        if (activeModals['ai-assistant']) {
+        if (activeModals['ai-assistant'] || assistantOpen) {
+          setAssistantOpen(false)
           closeModal('ai-assistant')
         } else {
+          setAssistantOpen(true)
+          openModal('ai-assistant')
+        }
+      }
+      if (!event.defaultPrevented && (event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === 'j') {
+        event.preventDefault()
+        if (activeModals['ai-assistant'] || assistantOpen) {
+          setAssistantOpen(false)
+          closeModal('ai-assistant')
+        } else {
+          setAssistantOpen(true)
           openModal('ai-assistant')
         }
       }
     }
     window.addEventListener('keydown', handler)
     return () => {
+      if (onboardingTimer) clearTimeout(onboardingTimer)
       window.removeEventListener('keydown', handler)
       window.removeEventListener('open-quick-note', onOpenQuickNote)
       window.removeEventListener('open-user-guide', onOpenGuide)
       window.removeEventListener('start-interactive-tour', onStartTour)
       window.removeEventListener('open-change-password-modal', onOpenChangePassword)
       window.removeEventListener('open-checkin-modal', onOpenCheckin)
+      window.removeEventListener('open-ai-assistant', onOpenAiAssistant)
       window.removeEventListener('vault-notes-updated', onNotesUpdated)
       window.removeEventListener('vault-stats-updated', onNotesUpdated)
     }
-  }, [openModal, closeModal, activeModals])
+  }, [openModal, closeModal, activeModals, assistantOpen])
 
   useEffect(() => {
     const ROUTE_PAGE_TITLES: Record<string, string> = {
@@ -268,33 +328,33 @@ export default function Layout({ children }: LayoutProps) {
   ]
 
   return (
-    <div className="min-h-dvh aurora-mesh w-full max-w-full text-slate-900 selection:bg-accent-orange/20 selection:text-accent-orange font-sans antialiased relative">
+    <div className="min-h-dvh aurora-mesh w-full max-w-full overflow-x-clip text-slate-900 selection:bg-accent-orange/20 selection:text-accent-orange font-sans antialiased relative">
       {/* Top Global Header */}
       <header className="sticky top-0 z-40 bg-white/90 glass-header border-b border-slate-200/80 pt-[env(safe-area-inset-top,0px)]">
-        {/* ── 📱 移动端专属精炼 Header (防挤压、高审美、大单手热区) ── */}
-        <div className="flex md:hidden w-full h-12 items-center justify-between gap-2 px-3 max-w-full">
-          {/* 左侧：Logo + 考研倒计时金牌 (绝对 shrink-0，独立保护不挤压) */}
-          <div className="flex items-center gap-2 select-none shrink-0 min-w-0">
-            <Link to="/dashboard" className="flex items-center gap-1.5 shrink-0 active:scale-95 transition-transform">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-neutral-950 p-1 shadow-2xs shrink-0">
+        {/* ── 📱 移动端专属精炼 Header (精致轻盈防挤压) ── */}
+        <div className="flex md:hidden w-full h-11 items-center justify-between gap-1.5 px-2.5 max-w-full">
+          {/* 左侧：Logo + 考研倒计时金牌 */}
+          <div className="flex items-center gap-1.5 select-none shrink-0 min-w-0">
+            <Link to="/dashboard" className="flex items-center gap-1 shrink-0 active:scale-95 transition-transform">
+              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-neutral-950 p-1 shadow-2xs shrink-0">
                 <img src="/favicon.svg" alt="研核" className="h-full w-full object-contain" />
               </div>
-              <span className="text-[14px] font-extrabold tracking-tight text-neutral-900">
+              <span className="text-[13px] font-extrabold tracking-tight text-neutral-900">
                 研核
               </span>
             </Link>
             <div 
-              className="inline-flex items-center gap-1 text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/10 text-amber-900 border border-amber-300/80 shadow-2xs shrink-0"
+              className="inline-flex items-center gap-0.5 text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/10 text-amber-900 border border-amber-300/80 shadow-2xs shrink-0"
               title={`${countdown.targetLabel}：剩余 ${countdown.days} 天`}
             >
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
-              <span className="text-amber-800 font-sans text-[10px] font-medium">考研</span>
+              <span className="text-amber-800 font-sans text-[9px] font-medium">考研</span>
               <span>{countdown.days}天</span>
             </div>
           </div>
 
           {/* 右侧：精炼高效工具组 (随手记 + 积分打卡 + 全局搜索) */}
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             {/* 顶栏快速随手记笔记胶囊 */}
             <button
               type="button"
@@ -302,11 +362,26 @@ export default function Layout({ children }: LayoutProps) {
                 setQuickNoteOpen(true)
                 openModal('quick-note')
               }}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[11px] font-extrabold shadow-2xs active:scale-95 transition-all shrink-0 cursor-pointer"
-              title="随手记笔记 · 极速入库"
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10.5px] font-extrabold shadow-2xs active:scale-95 transition-all shrink-0 cursor-pointer"
+              title="随手记笔记 · 极速入库 (支持拍照、LaTeX公式与快捷标签)"
             >
-              <PenLine className="w-3.5 h-3.5" />
+              <PenLine className="w-3 h-3" />
               <span>随手记</span>
+            </button>
+
+            {/* 顶栏使用手册快捷胶囊 */}
+            <button
+              type="button"
+              onClick={() => {
+                setGuideOptions({ tab: 'doc' })
+                setGuideOpen(true)
+                openModal('user-guide')
+              }}
+              className="hidden lg:inline-flex items-center gap-1 px-2 py-1 rounded-xl bg-neutral-100 hover:bg-neutral-200/80 text-neutral-700 text-[11px] font-bold shadow-2xs active:scale-95 transition-all shrink-0 cursor-pointer"
+              title="全功能使用手册与小功能作用说明"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
+              <span>手册</span>
             </button>
 
             <button
@@ -315,10 +390,10 @@ export default function Layout({ children }: LayoutProps) {
                 setCheckinTab('checkin')
                 setCheckinOpen(true)
               }}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded-xl bg-amber-50 border border-amber-200/90 text-amber-800 text-[11px] font-bold shadow-2xs active:scale-95 cursor-pointer shrink-0"
+              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg bg-amber-50 border border-amber-200/90 text-amber-800 text-[10.5px] font-bold shadow-2xs active:scale-95 cursor-pointer shrink-0"
               title="签到打卡领积分"
             >
-              <Coins className="w-3.5 h-3.5 text-amber-600" />
+              <Coins className="w-3 h-3 text-amber-600" />
               <span className="font-mono">{points.toFixed(1)}</span>
             </button>
 
@@ -330,7 +405,7 @@ export default function Layout({ children }: LayoutProps) {
               }}
               aria-label="搜索"
               title="全站搜索"
-              className="w-8 h-8 inline-flex items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:text-slate-900 active:scale-95 cursor-pointer shrink-0"
+              className="w-7 h-7 inline-flex items-center justify-center rounded-lg bg-slate-100 text-slate-600 hover:text-slate-900 active:scale-95 cursor-pointer shrink-0"
             >
               <Search className="w-3.5 h-3.5" />
             </button>
@@ -497,19 +572,31 @@ export default function Layout({ children }: LayoutProps) {
           {/* ── 右侧极简工具矩阵：视觉风格、搜索 ⌘K、算力积分胶囊与用户矩阵头像 ── */}
           <div className="ml-auto flex items-center gap-2 shrink-0">
 
-            {/* 0.1 视觉风格一键切换胶囊 (鲜艳风 / 极简风) */}
+            {/* 0.1 视觉风格一键切换胶囊 (鲜艳风 / 极简风 / 护眼风 / 黑夜风) */}
             <button
               type="button"
               onClick={toggleThemeStyle}
               className={`inline-flex items-center gap-1.5 h-8 px-2.5 rounded-xl border text-xs font-bold shadow-2xs transition-all cursor-pointer active:scale-95 shrink-0 ${
-                isVibrant
+                isDark
+                  ? 'border-sky-500/40 bg-slate-900/90 text-sky-400 hover:border-sky-400 shadow-sky-500/20'
+                  : isEyecare
+                  ? 'border-emerald-300 bg-gradient-to-r from-emerald-50 via-teal-50 to-green-50 text-emerald-800 hover:border-emerald-400 shadow-emerald-500/10'
+                  : isVibrant
                   ? 'border-indigo-200 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 text-indigo-700 hover:border-indigo-300 shadow-indigo-500/10'
                   : 'border-slate-200 bg-slate-50 hover:bg-white text-slate-600 hover:text-slate-900'
               }`}
-              title={isVibrant ? '当前风格：鲜艳活力风（点击切换为黑白极简风）' : '当前风格：经典极简风（点击切换为鲜艳活力风）'}
+              title={`当前风格：${currentThemeMeta.name}（点击循环切换为下一模式）`}
             >
-              <Palette className={`h-3.5 w-3.5 ${isVibrant ? 'text-indigo-600 animate-pulse' : 'text-slate-400'}`} />
-              <span className="hidden lg:inline">{isVibrant ? '🎨 鲜艳风' : '极简风'}</span>
+              {isDark ? (
+                <Moon className="h-3.5 w-3.5 text-sky-400 animate-pulse" />
+              ) : isEyecare ? (
+                <Leaf className="h-3.5 w-3.5 text-emerald-600 animate-pulse" />
+              ) : isVibrant ? (
+                <Palette className="h-3.5 w-3.5 text-indigo-600 animate-pulse" />
+              ) : (
+                <Palette className="h-3.5 w-3.5 text-slate-400" />
+              )}
+              <span className="hidden lg:inline">{currentThemeMeta.icon} {currentThemeMeta.shortName}</span>
             </button>
 
             {/* 1. 全局快捷搜索框 ⌘K */}
@@ -649,21 +736,74 @@ export default function Layout({ children }: LayoutProps) {
                       界面与偏好
                     </div>
                     <div className="space-y-0.5">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          toggleThemeStyle()
-                        }}
-                        className="w-full flex items-center justify-between rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Palette className={`h-3.5 w-3.5 ${isVibrant ? 'text-indigo-600' : 'text-slate-500'}`} />
-                          <span className="font-medium">视觉风格</span>
+                      <div className="rounded-xl p-1.5 bg-slate-50/70 border border-slate-100 dark:bg-slate-800/40 dark:border-slate-700/50 space-y-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            toggleThemeStyle()
+                          }}
+                          className="w-full flex items-center justify-between rounded-lg px-1.5 py-1 text-xs text-slate-700 dark:text-slate-200 hover:bg-white/80 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                          title="点击循环切换视觉风格"
+                        >
+                          <div className="flex items-center gap-2">
+                            {isDark ? (
+                              <Moon className="h-3.5 w-3.5 text-sky-400" />
+                            ) : isEyecare ? (
+                              <Leaf className="h-3.5 w-3.5 text-emerald-600" />
+                            ) : isVibrant ? (
+                              <Palette className="h-3.5 w-3.5 text-indigo-600" />
+                            ) : (
+                              <Palette className="h-3.5 w-3.5 text-slate-500" />
+                            )}
+                            <span className="font-medium">视觉风格</span>
+                          </div>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md border flex items-center gap-1 ${
+                            isDark
+                              ? 'bg-slate-900 border-sky-500/40 text-sky-300'
+                              : isEyecare
+                              ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                              : isVibrant
+                              ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                              : 'bg-white border-slate-200 text-slate-700'
+                          }`}>
+                            <span>{currentThemeMeta.icon}</span>
+                            <span>{currentThemeMeta.name}</span>
+                          </span>
+                        </button>
+
+                        {/* 4 风格快捷网格切换按钮 */}
+                        <div className="grid grid-cols-4 gap-1">
+                          {(['vibrant', 'minimal', 'eyecare', 'dark'] as const).map(styleKey => {
+                            const meta = themeConfigs[styleKey]
+                            const isActive = themeStyle === styleKey
+                            return (
+                              <button
+                                key={styleKey}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setThemeStyle(styleKey)
+                                }}
+                                className={`flex flex-col items-center justify-center py-1 px-1 rounded-lg text-[10px] border transition-all cursor-pointer ${
+                                  isActive
+                                    ? styleKey === 'dark'
+                                      ? 'bg-slate-900 border-sky-400 text-sky-300 shadow-2xs font-bold scale-[1.02]'
+                                      : styleKey === 'eyecare'
+                                      ? 'bg-emerald-100/90 border-emerald-400 text-emerald-800 shadow-2xs font-bold scale-[1.02]'
+                                      : styleKey === 'vibrant'
+                                      ? 'bg-indigo-100/90 border-indigo-400 text-indigo-800 shadow-2xs font-bold scale-[1.02]'
+                                      : 'bg-slate-200 border-slate-400 text-slate-900 shadow-2xs font-bold scale-[1.02]'
+                                    : 'bg-white/90 border-slate-200/80 text-slate-600 hover:bg-white hover:text-slate-900 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'
+                                }`}
+                                title={meta.description}
+                              >
+                                <span className="text-xs leading-none mb-0.5">{meta.icon}</span>
+                                <span className="leading-none text-[9px] font-medium">{meta.shortName}</span>
+                              </button>
+                            )
+                          })}
                         </div>
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 border border-slate-200">
-                          {isVibrant ? '鲜艳活力' : '经典极简'}
-                        </span>
-                      </button>
+                      </div>
 
                       <button
                         type="button"
@@ -797,26 +937,45 @@ export default function Layout({ children }: LayoutProps) {
           </div>
         </div>
       </header>
-      <ChangePasswordModal isOpen={changePasswordOpen} onClose={() => setChangePasswordOpen(false)} />
-      <UserManagementModal isOpen={Boolean(userManagementOpen || activeModals['user-management'])} onClose={() => { setUserManagementOpen(false); closeModal('user-management') }} />
-      <UserGuideModal
-        isOpen={Boolean(guideOpen || activeModals['user-guide'])}
-        onClose={() => { setGuideOpen(false); closeModal('user-guide') }}
-        onStartInteractiveTour={() => {
-          setGuideOpen(false)
-          closeModal('user-guide')
-          setInteractiveTourOpen(true)
-        }}
-      />
-      <InteractiveTourGuide
-        isOpen={interactiveTourOpen}
-        onClose={() => setInteractiveTourOpen(false)}
-      />
-      <CheckinModal
-        isOpen={Boolean(checkinOpen || activeModals['checkin'])}
-        onClose={() => { setCheckinOpen(false); closeModal('checkin') }}
-        defaultTab={checkinTab}
-      />
+      <Suspense fallback={null}>
+        {changePasswordOpen && (
+          <ChangePasswordModal isOpen={changePasswordOpen} onClose={() => setChangePasswordOpen(false)} />
+        )}
+        {Boolean(userManagementOpen || activeModals['user-management']) && (
+          <UserManagementModal isOpen={Boolean(userManagementOpen || activeModals['user-management'])} onClose={() => { setUserManagementOpen(false); closeModal('user-management') }} />
+        )}
+        {Boolean(guideOpen || activeModals['user-guide']) && (
+          <UserGuideModal
+            isOpen={Boolean(guideOpen || activeModals['user-guide'])}
+            onClose={() => {
+              setGuideOpen(false)
+              closeModal('user-guide')
+              setGuideOptions({})
+            }}
+            initialTab={guideOptions.tab}
+            initialCategory={guideOptions.category}
+            initialFeatureId={guideOptions.featureId}
+            onStartInteractiveTour={() => {
+              setGuideOpen(false)
+              closeModal('user-guide')
+              setInteractiveTourOpen(true)
+            }}
+          />
+        )}
+        {interactiveTourOpen && (
+          <InteractiveTourGuide
+            isOpen={interactiveTourOpen}
+            onClose={() => setInteractiveTourOpen(false)}
+          />
+        )}
+        {Boolean(checkinOpen || activeModals['checkin']) && (
+          <CheckinModal
+            isOpen={Boolean(checkinOpen || activeModals['checkin'])}
+            onClose={() => { setCheckinOpen(false); closeModal('checkin') }}
+            defaultTab={checkinTab}
+          />
+        )}
+      </Suspense>
 
       {/* Mobile Full-Featured Bottom Sheet Navigation */}
       {mobileNavOpen && (
@@ -955,30 +1114,30 @@ export default function Layout({ children }: LayoutProps) {
       )}
 
       {/* Main Content Area */}
-      <main className={`mx-auto max-w-[1600px] w-full min-w-0 ${
+      <main className={`mx-auto max-w-[1600px] w-full min-w-0 max-w-full overflow-x-clip ${
         isFullHeightPage
-          ? 'h-[calc(100dvh-3.25rem-env(safe-area-inset-top,0px))] sm:h-[calc(100dvh-3.5rem-env(safe-area-inset-top,0px))] overflow-hidden flex flex-col pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] xl:pb-0'
-          : 'min-h-[calc(100dvh-3.25rem)] pb-[calc(6.5rem+env(safe-area-inset-bottom,0px))] xl:pb-8'
+          ? 'h-[calc(100dvh-2.75rem-env(safe-area-inset-top,0px))] sm:h-[calc(100dvh-3.5rem-env(safe-area-inset-top,0px))] overflow-hidden flex flex-col pb-[calc(3.75rem+env(safe-area-inset-bottom,0px))] xl:pb-0'
+          : 'min-h-[calc(100dvh-2.75rem)] pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] xl:pb-8'
       }`}>
         {syncNotice && (
-          <div className="fixed right-3 sm:right-5 top-[4rem] z-30 flex items-center gap-2 rounded-full border border-emerald-200 bg-white/95 px-3.5 py-1.5 text-xs font-medium text-emerald-700 shadow-lg backdrop-blur-xl animate-fade-in-up">
+          <div className="fixed right-3 sm:right-5 top-[3.5rem] sm:top-[4rem] z-30 flex items-center gap-2 rounded-full border border-emerald-200 bg-white/95 px-3 py-1 sm:px-3.5 sm:py-1.5 text-[11px] sm:text-xs font-medium text-emerald-700 shadow-lg backdrop-blur-xl animate-fade-in-up">
             <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate max-w-[240px]">{syncNotice}</span>
+            <span className="truncate max-w-[200px] sm:max-w-[240px]">{syncNotice}</span>
           </div>
         )}
-        <div className={`min-w-0 ${
+        <div className={`min-w-0 w-full max-w-full overflow-x-clip ${
           isFullHeightPage
             ? 'flex-1 h-full min-h-0 p-0 sm:px-4 sm:py-2.5 overflow-hidden flex flex-col'
-            : 'px-3.5 py-3.5 sm:px-6 sm:py-6 lg:px-8 lg:py-7'
+            : 'px-2.5 py-2.5 sm:px-6 sm:py-6 lg:px-8 lg:py-7'
         }`}>
           {children}
         </div>
       </main>
 
-      {/* ── 📱 移动端专属吸底 TabBar 导航 (5大考研核心专区，原生级手势与触控响应) ── */}
+      {/* ── 📱 移动端专属吸底 TabBar 导航 (精致微缩，高审美与原生触感) ── */}
       <nav
         aria-label="移动端底部导航"
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 border-t border-slate-200/90 px-1.5 pt-1 flex items-center justify-around shadow-[0_-4px_24px_rgba(15,23,42,0.06)] backdrop-blur-2xl pb-[max(0.45rem,env(safe-area-inset-bottom))]"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 border-t border-slate-200/90 px-1 pt-0.5 flex items-center justify-around shadow-[0_-4px_20px_rgba(15,23,42,0.05)] backdrop-blur-2xl pb-[max(0.35rem,env(safe-area-inset-bottom))]"
       >
         {mobileBottomTabs.map(tab => {
           if ((tab as any).isAction) {
@@ -987,13 +1146,13 @@ export default function Layout({ children }: LayoutProps) {
                 key={tab.label}
                 type="button"
                 onClick={() => setMobileNavOpen(true)}
-                className="flex flex-col items-center justify-center flex-1 py-1 select-none group cursor-pointer"
+                className="flex flex-col items-center justify-center flex-1 py-0.5 select-none group cursor-pointer"
                 title="打开全站所有功能矩阵"
               >
-                <div className="relative flex items-center justify-center w-11 h-7 rounded-xl bg-slate-100 text-slate-700 group-active:scale-95 transition-transform">
-                  <tab.icon className="h-4 w-4" />
+                <div className="relative flex items-center justify-center w-9.5 h-6 rounded-lg bg-slate-100 text-slate-700 group-active:scale-95 transition-transform">
+                  <tab.icon className="h-3.5 w-3.5" />
                 </div>
-                <span className="text-[10px] tracking-tight mt-0.5 text-slate-700 font-extrabold">
+                <span className="text-[9.5px] tracking-tight mt-0.5 text-slate-700 font-bold">
                   {tab.label}
                 </span>
               </button>
@@ -1007,12 +1166,12 @@ export default function Layout({ children }: LayoutProps) {
                 key={tab.label}
                 type="button"
                 onClick={() => setMobileSubjectOpen(prev => !prev)}
-                className="flex flex-col items-center justify-center flex-1 py-1 select-none group cursor-pointer"
+                className="flex flex-col items-center justify-center flex-1 py-0.5 select-none group cursor-pointer"
                 title="考研学科专攻：408、数学、政治、英语"
                 aria-expanded={mobileSubjectOpen}
               >
                 <div
-                  className={`relative flex items-center justify-center w-11 h-7 rounded-xl transition-all duration-150 ${
+                  className={`relative flex items-center justify-center w-9.5 h-6 rounded-lg transition-all duration-150 ${
                     active
                       ? isVibrant
                         ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-xs scale-105'
@@ -1020,15 +1179,15 @@ export default function Layout({ children }: LayoutProps) {
                       : 'text-neutral-500 group-active:scale-95 hover:text-neutral-700'
                   }`}
                 >
-                  <tab.icon className="h-4 w-4" />
+                  <tab.icon className="h-3.5 w-3.5" />
                 </div>
                 <span
-                  className={`text-[10px] tracking-tight mt-0.5 transition-colors flex items-center gap-0.5 ${
+                  className={`text-[9.5px] tracking-tight mt-0.5 transition-colors flex items-center gap-0.5 ${
                     active ? 'text-neutral-900 font-extrabold' : 'text-neutral-500 font-medium'
                   }`}
                 >
                   <span>{tab.label}</span>
-                  <ChevronUp className={`w-2.5 h-2.5 transition-transform duration-200 ${mobileSubjectOpen ? 'rotate-180' : ''}`} />
+                  <ChevronUp className={`w-2 h-2 transition-transform duration-200 ${mobileSubjectOpen ? 'rotate-180' : ''}`} />
                 </span>
               </button>
             )
@@ -1041,26 +1200,26 @@ export default function Layout({ children }: LayoutProps) {
                 to={tab.to}
                 onPointerEnter={() => prefetchRoute(tab.to)}
                 onTouchStart={() => prefetchRoute(tab.to)}
-                className="flex flex-col items-center justify-center flex-1 py-1 select-none group cursor-pointer relative -top-2"
+                className="flex flex-col items-center justify-center flex-1 py-0.5 select-none group cursor-pointer relative -top-1.5"
                 title="进入考研 AI 伴学导师"
               >
                 {({ isActive }) => (
                   <>
                     <div
-                      className={`relative flex items-center justify-center w-12 h-10 rounded-2xl transition-all duration-200 shadow-md ${
+                      className={`relative flex items-center justify-center w-10.5 h-8.5 rounded-xl transition-all duration-200 shadow-sm ${
                         isActive
                           ? 'bg-gradient-to-tr from-indigo-600 via-indigo-700 to-purple-600 text-white ring-2 ring-indigo-400 scale-105'
                           : 'bg-gradient-to-tr from-slate-900 to-indigo-950 text-amber-300 border border-indigo-400/40 group-active:scale-95'
                       }`}
                     >
-                      <tab.icon className="h-5 w-5" />
-                      <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                      <tab.icon className="h-4 w-4" />
+                      <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-400" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400" />
                       </span>
                     </div>
                     <span
-                      className={`text-[10px] tracking-tight mt-0.5 transition-colors font-black ${
+                      className={`text-[9.5px] tracking-tight mt-0.5 transition-colors font-black ${
                         isActive ? 'text-indigo-600' : 'text-slate-800'
                       }`}
                     >
@@ -1078,21 +1237,21 @@ export default function Layout({ children }: LayoutProps) {
               to={tab.to}
               onPointerEnter={() => prefetchRoute(tab.to)}
               onTouchStart={() => prefetchRoute(tab.to)}
-              className="flex flex-col items-center justify-center flex-1 py-1 select-none group cursor-pointer"
+              className="flex flex-col items-center justify-center flex-1 py-0.5 select-none group cursor-pointer"
             >
               {({ isActive }) => (
                 <>
                   <div
-                    className={`relative flex items-center justify-center w-11 h-7 rounded-xl transition-all duration-150 ${
+                    className={`relative flex items-center justify-center w-9.5 h-6 rounded-lg transition-all duration-150 ${
                       isActive
                         ? 'bg-neutral-900 text-white shadow-xs scale-105'
                         : 'text-neutral-500 group-active:scale-95'
                     }`}
                   >
-                    <tab.icon className="h-4 w-4" />
+                    <tab.icon className="h-3.5 w-3.5" />
                   </div>
                   <span
-                    className={`text-[10.5px] tracking-tight mt-0.5 transition-colors ${
+                    className={`text-[9.5px] tracking-tight mt-0.5 transition-colors ${
                       isActive ? 'text-neutral-900 font-extrabold' : 'text-neutral-500 font-medium'
                     }`}
                   >
@@ -1155,11 +1314,17 @@ export default function Layout({ children }: LayoutProps) {
                     onClick={() => setMobileSubjectOpen(false)}
                     className={`flex items-center gap-3 p-3 rounded-2xl border transition-all active:scale-[0.98] cursor-pointer ${
                       isSubActive
-                        ? isVibrant
+                        ? isDark
+                          ? 'bg-sky-950/50 border-sky-500/50 text-sky-200 shadow-sm shadow-sky-500/10'
+                          : isEyecare
+                          ? 'bg-emerald-100/70 border-emerald-300 text-emerald-950 shadow-sm shadow-emerald-500/10'
+                          : isVibrant
                           ? 'bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 border-indigo-300 shadow-sm shadow-indigo-500/10'
                           : 'bg-indigo-50/80 border-indigo-200/90 text-indigo-950 font-bold'
-                        : isVibrant
-                          ? 'bg-white hover:bg-slate-50 border-slate-200/80 shadow-2xs'
+                        : isDark
+                          ? 'bg-slate-900/90 hover:bg-slate-800 border-slate-800 text-slate-200'
+                          : isEyecare
+                          ? 'bg-[#fafbf8] hover:bg-[#ebf1e8] border-[#e2e9df] text-[#243329]'
                           : 'bg-white hover:bg-slate-50 border-slate-200/80'
                     }`}
                   >
@@ -1209,7 +1374,19 @@ export default function Layout({ children }: LayoutProps) {
 
       <Suspense fallback={null}>
         {(searchOpen || activeModals['search']) && <SearchModal isOpen={true} onClose={() => { setSearchOpen(false); closeModal('search') }} />}
-        {(assistantOpen || activeModals['ai-assistant']) && <AIAssistantModal isOpen={true} onClose={() => { setAssistantOpen(false); closeModal('ai-assistant') }} pagePath={location.pathname} />}
+        {(assistantOpen || activeModals['ai-assistant']) && (
+          <AIAssistantModal
+            isOpen={true}
+            onClose={() => {
+              setAssistantOpen(false)
+              closeModal('ai-assistant')
+            }}
+            pagePath={location.pathname}
+            initialContextPrompt={assistantLaunchState.contextPrompt}
+            initialDefaultInput={assistantLaunchState.defaultInput}
+            initialTriggerKey={assistantLaunchState.triggerKey}
+          />
+        )}
         {(importModalOpen || activeModals['import-resource']) && <ImportResourceModal isOpen={true} onClose={() => { setImportModalOpen(false); closeModal('import-resource') }} />}
         {(mobileModalOpen || activeModals['mobile-device']) && <MobileDeviceModal isOpen={true} onClose={() => { setMobileModalOpen(false); closeModal('mobile-device') }} />}
         {(quickNoteOpen || activeModals['quick-note']) && <QuickNoteDrawer isOpen={true} onClose={() => { setQuickNoteOpen(false); closeModal('quick-note') }} />}

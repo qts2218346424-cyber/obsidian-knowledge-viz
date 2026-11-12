@@ -4,13 +4,14 @@ import { AudioProvider } from './contexts/AudioContext'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import Layout from './components/Layout'
 import MiniPlayer from './components/music/MiniPlayer'
-import Dashboard from './pages/Dashboard'
-import Chat from './pages/Chat'
 import Login from './pages/Login'
-import LandingPage from './pages/LandingPage'
+import TopProgressBar from './components/ui/TopProgressBar'
 
 // 路由加载器定义，支持按需加载与空闲/悬浮即时预取 (Route Prefetching)
 export const routeLoaders = {
+  dashboard: () => import('./pages/Dashboard'),
+  chat: () => import('./pages/Chat'),
+  landingPage: () => import('./pages/LandingPage'),
   knowledgeGraph: () => import('./pages/KnowledgeGraph'),
   workflow: () => import('./pages/Workflow'),
   editor: () => import('./pages/Editor'),
@@ -23,6 +24,7 @@ export const routeLoaders = {
   music: () => import('./pages/Music'),
   pomodoro: () => import('./pages/Pomodoro'),
   english: () => import('./pages/English'),
+  pdfReader: () => import('./pages/PdfReaderPage'),
 }
 
 // 供全局导航栏悬浮（Hover）与空闲时预热路由模块
@@ -115,6 +117,9 @@ function safeLazy<T extends React.ComponentType<any>>(
   })
 }
 
+const Dashboard = safeLazy(routeLoaders.dashboard, 'dashboard')
+const Chat = safeLazy(routeLoaders.chat, 'chat')
+const LandingPage = safeLazy(routeLoaders.landingPage, 'landingPage')
 const KnowledgeGraph = safeLazy(routeLoaders.knowledgeGraph, 'knowledgeGraph')
 const Workflow = safeLazy(routeLoaders.workflow, 'workflow')
 const Editor = safeLazy(routeLoaders.editor, 'editor')
@@ -127,15 +132,19 @@ const Politics = safeLazy(routeLoaders.politics, 'politics')
 const Music = safeLazy(routeLoaders.music, 'music')
 const Pomodoro = safeLazy(routeLoaders.pomodoro, 'pomodoro')
 const English = safeLazy(routeLoaders.english, 'english')
+const PdfReaderPage = safeLazy(routeLoaders.pdfReader, 'pdfReader')
 
 function PageFallback() {
   return (
-    <div className="flex h-[60vh] w-full items-center justify-center">
-      <div className="flex items-center gap-2.5 rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-2.5 text-xs font-medium text-slate-600 shadow-xs">
-        <span className="h-2 w-2 rounded-full bg-indigo-500 animate-ping" />
-        <span>正在加载研学空间...</span>
+    <>
+      <TopProgressBar />
+      <div className="flex h-[45vh] w-full items-center justify-center animate-fade-in">
+        <div className="flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/80 backdrop-blur-md px-3.5 py-1.5 text-xs font-medium text-slate-500 shadow-xs">
+          <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-ping" />
+          <span>研学空间准备中...</span>
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 
@@ -183,26 +192,28 @@ function ProtectedRoutes() {
 
 function App() {
   useEffect(() => {
-    // 立即在后台静默预热政治专区与做题中心，彻底消除导航点击延迟感
-    const timer = setTimeout(() => {
-      try {
-        prefetchRoute('/politics')
+    // 浏览器空闲时再预热核心路由，避免首屏并发争抢带宽
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      const handle = (window as any).requestIdleCallback(() => {
         prefetchRoute('/quiz')
-      } catch {}
-    }, 150)
-    return () => clearTimeout(timer)
+      })
+      return () => (window as any).cancelIdleCallback(handle)
+    }
   }, [])
 
   return (
     <AuthProvider>
       <AudioProvider>
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/home" element={<LandingPage />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/*" element={<ProtectedRoutes />} />
-          </Routes>
+          <Suspense fallback={<PageFallback />}>
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/home" element={<LandingPage />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/pdf-reader" element={<PdfReaderPage />} />
+              <Route path="/*" element={<ProtectedRoutes />} />
+            </Routes>
+          </Suspense>
         </BrowserRouter>
       </AudioProvider>
     </AuthProvider>

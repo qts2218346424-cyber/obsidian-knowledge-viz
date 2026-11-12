@@ -90,10 +90,11 @@ function robustParseAiJson(rawText: string): any {
 export async function organizeDocumentIntoWiki(
   markdownContent: string,
   originalFilename: string,
-  preferredDomain?: 'cs_408' | 'math' | 'general'
+  preferredDomain?: 'cs_408' | 'math' | 'general',
+  targetVaultPath?: string
 ): Promise<OrganizedWikiResult> {
-  const vaultPath = config.vaultPath
-  const notes = getNotes()
+  const vaultPath = targetVaultPath || config.vaultPath
+  const notes = getNotes(vaultPath)
   const baseName = path.basename(originalFilename, path.extname(originalFilename))
 
   // 1. 整理现有笔记标题用于双向链接匹配

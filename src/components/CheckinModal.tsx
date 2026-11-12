@@ -31,8 +31,11 @@ interface CheckinModalProps {
 }
 
 export default function CheckinModal({ isOpen, onClose, defaultTab = 'checkin' }: CheckinModalProps) {
-  const { points, canCheckinToday, checkin, redeemCoupon, recharge, refreshPoints } = useAuth()
-  const [activeTab, setActiveTab] = useState<'checkin' | 'redeem' | 'recharge' | 'logs'>(defaultTab)
+  const { points, canCheckinToday, checkin, redeemCoupon, recharge, refreshPoints, isAdmin } = useAuth()
+  const [activeTab, setActiveTab] = useState<'checkin' | 'redeem' | 'recharge' | 'logs'>(() => {
+    if (!isAdmin && defaultTab === 'recharge') return 'checkin'
+    return defaultTab
+  })
 
   const [logs, setLogs] = useState<PointLogItem[]>([])
   const [loadingLogs, setLoadingLogs] = useState(false)
@@ -96,8 +99,13 @@ export default function CheckinModal({ isOpen, onClose, defaultTab = 'checkin' }
       setCouponCodeInput('')
       setRechargeSuccess(false)
       fetchPointLogs()
+      if (!isAdmin && defaultTab === 'recharge') {
+        setActiveTab('checkin')
+      } else {
+        setActiveTab(defaultTab)
+      }
     }
-  }, [isOpen])
+  }, [isOpen, defaultTab, isAdmin])
 
   if (!isOpen) return null
 
@@ -149,6 +157,11 @@ export default function CheckinModal({ isOpen, onClose, defaultTab = 'checkin' }
 
   // 自主充值
   const handleRechargePoints = async () => {
+    if (!isAdmin) {
+      setMessage({ type: 'error', text: '自主充值功能已暂时关闭，如需增加积分请联系管理员获取兑换码' })
+      return
+    }
+
     const amount = customAmountText.trim()
       ? Number(customAmountText)
       : selectedPlanAmount
@@ -161,7 +174,7 @@ export default function CheckinModal({ isOpen, onClose, defaultTab = 'checkin' }
     setIsSubmitting(true)
     setMessage(null)
     try {
-      const res = await recharge(amount, '研友自主充值通道')
+      const res = await recharge(amount, '研学充值(管理员测试)')
       if (res.success) {
         setMessage({ type: 'success', text: res.message })
         setRechargeSuccess(true)
@@ -199,7 +212,7 @@ export default function CheckinModal({ isOpen, onClose, defaultTab = 'checkin' }
             </span>
           </div>
 
-          <h2 className="text-xl font-bold tracking-tight">伴学积分与充值兑换</h2>
+          <h2 className="text-xl font-bold tracking-tight">伴学积分与兑换打卡</h2>
           <p className="text-xs text-amber-100/90 mt-0.5">
             单次 AI 导师深度问答消耗 0.1 积分 · 每日签到免费送 1 积分
           </p>
@@ -279,17 +292,19 @@ export default function CheckinModal({ isOpen, onClose, defaultTab = 'checkin' }
             <span>优惠码兑换</span>
           </button>
 
-          <button
-            onClick={() => setActiveTab('recharge')}
-            className={`flex-1 py-2.5 text-center flex items-center justify-center gap-1.5 border-b-2 transition-all cursor-pointer ${
-              activeTab === 'recharge'
-                ? 'border-emerald-600 text-emerald-800 bg-white'
-                : 'border-transparent hover:text-slate-900'
-            }`}
-          >
-            <Zap className="h-3.5 w-3.5 text-emerald-600" />
-            <span>自主充值</span>
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => setActiveTab('recharge')}
+              className={`flex-1 py-2.5 text-center flex items-center justify-center gap-1.5 border-b-2 transition-all cursor-pointer ${
+                activeTab === 'recharge'
+                  ? 'border-emerald-600 text-emerald-800 bg-white'
+                  : 'border-transparent hover:text-slate-900'
+              }`}
+            >
+              <Zap className="h-3.5 w-3.5 text-emerald-600" />
+              <span>自主充值 (管理)</span>
+            </button>
+          )}
 
           <button
             onClick={() => setActiveTab('logs')}
@@ -353,7 +368,7 @@ export default function CheckinModal({ isOpen, onClose, defaultTab = 'checkin' }
                 <div className="space-y-1 text-[11px] leading-relaxed">
                   <p>• <strong>单次提问消耗</strong>：向 408 导师/考研数学导师发起提问扣除 <strong>0.1 积分</strong>。</p>
                   <p>• <strong>每日打卡刷新</strong>：北京时间每日 00:00 自动刷新打卡资格，每日限领 1 次。</p>
-                  <p>• <strong>额度用尽解决</strong>：可切换到「优惠码兑换」输入活动码，或通过「自主充值」一键补充。</p>
+                  <p>• <strong>额度用尽解决</strong>：可参与每日签到领分，或在「优惠码兑换」输入卡密券码，如需更多额度请联系管理员。</p>
                 </div>
               </div>
             </div>
@@ -402,80 +417,106 @@ export default function CheckinModal({ isOpen, onClose, defaultTab = 'checkin' }
 
           {/* 3. 自主充值面板 */}
           {activeTab === 'recharge' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-800">选择研学充值套餐</span>
-                <span className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-semibold">
-                  ⚡ 自主即时到账通道
-                </span>
-              </div>
-
-              {/* 充值套餐卡片网格 */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {rechargePlans.map((plan) => {
-                  const isSelected = selectedPlanAmount === plan.amount && !customAmountText
-                  return (
-                    <div
-                      key={plan.amount}
-                      onClick={() => {
-                        setSelectedPlanAmount(plan.amount)
-                        setCustomAmountText('')
-                      }}
-                      className={`relative p-3 rounded-xl border-2 transition-all cursor-pointer ${
-                        isSelected
-                          ? 'border-emerald-500 bg-emerald-50/40 shadow-xs'
-                          : 'border-slate-200/80 bg-white hover:border-emerald-200 hover:bg-slate-50/60'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-900">{plan.title}</span>
-                        <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.2 rounded">
-                          {plan.tag}
-                        </span>
-                      </div>
-                      <div className="text-xl font-black text-slate-900 mt-1 flex items-baseline gap-1">
-                        <span>+{plan.amount}</span>
-                        <span className="text-xs font-normal text-slate-500">积分</span>
-                      </div>
-                      <p className="text-[11px] text-slate-500 mt-1">{plan.desc}</p>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* 自定义充值额度 */}
-              <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
-                <div className="text-xs font-bold text-slate-700">自定义充值积分数量</div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    placeholder="输入需要补充的积分数 (如 30)"
-                    value={customAmountText}
-                    onChange={(e) => setCustomAmountText(e.target.value)}
-                    className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-emerald-500"
-                  />
+            !isAdmin ? (
+              <div className="py-10 px-4 text-center space-y-3">
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-600 shadow-xs">
+                  <ShieldAlert className="h-6 w-6" />
+                </div>
+                <h3 className="text-sm font-bold text-slate-800">自主充值通道已暂时关闭</h3>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+                  系统已暂时关闭普通学员的自主充值通道。如需补充伴学积分，请参与每日签到打卡领分，或联系管理员获取专属卡密兑换码。
+                </p>
+                <div className="pt-2">
                   <button
                     type="button"
-                    onClick={handleRechargePoints}
-                    disabled={isSubmitting}
-                    className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs cursor-pointer disabled:opacity-50 active:scale-95"
+                    onClick={() => setActiveTab('checkin')}
+                    className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-xs cursor-pointer active:scale-95 transition-all"
                   >
-                    {isSubmitting ? '正在到账...' : '立即确认充值'}
+                    前往每日打卡签到
                   </button>
                 </div>
               </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-center gap-2">
+                  <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0" />
+                  <span>自主充值通道已对普通学员关闭，当前仅超级管理员可见并作为调试测试使用。</span>
+                </div>
 
-              <div className="p-3 rounded-xl bg-amber-50/60 border border-amber-200/80 text-[11px] text-amber-900 space-y-1">
-                <p className="font-semibold flex items-center gap-1">
-                  <CreditCard className="h-3.5 w-3.5 text-amber-700" /> 研学公益与个人 API 额度支持：
-                </p>
-                <p className="text-slate-600 leading-relaxed">
-                  本系统调用个人部署的 DeepSeek / Claude 高性能大模型 API。考研期间为保障每一位同学能够充足刷题答疑，支持自主充值快速补充算力，祝各位研友一战成硕！
-                </p>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-800">选择研学充值套餐 (管理员测试)</span>
+                  <span className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-semibold">
+                    ⚡ 管理员调试通道
+                  </span>
+                </div>
+
+                {/* 充值套餐卡片网格 */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {rechargePlans.map((plan) => {
+                    const isSelected = selectedPlanAmount === plan.amount && !customAmountText
+                    return (
+                      <div
+                        key={plan.amount}
+                        onClick={() => {
+                          setSelectedPlanAmount(plan.amount)
+                          setCustomAmountText('')
+                        }}
+                        className={`relative p-3 rounded-xl border-2 transition-all cursor-pointer ${
+                          isSelected
+                            ? 'border-emerald-500 bg-emerald-50/40 shadow-xs'
+                            : 'border-slate-200/80 bg-white hover:border-emerald-200 hover:bg-slate-50/60'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-900">{plan.title}</span>
+                          <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.2 rounded">
+                            {plan.tag}
+                          </span>
+                        </div>
+                        <div className="text-xl font-black text-slate-900 mt-1 flex items-baseline gap-1">
+                          <span>+{plan.amount}</span>
+                          <span className="text-xs font-normal text-slate-500">积分</span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-1">{plan.desc}</p>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* 自定义充值额度 */}
+                <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
+                  <div className="text-xs font-bold text-slate-700">自定义充值积分数量</div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      placeholder="输入需要补充的积分数 (如 30)"
+                      value={customAmountText}
+                      onChange={(e) => setCustomAmountText(e.target.value)}
+                      className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-mono font-bold text-slate-800 focus:outline-none focus:border-emerald-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRechargePoints}
+                      disabled={isSubmitting}
+                      className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs cursor-pointer disabled:opacity-50 active:scale-95"
+                    >
+                      {isSubmitting ? '正在到账...' : '立即确认充值'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-amber-50/60 border border-amber-200/80 text-[11px] text-amber-900 space-y-1">
+                  <p className="font-semibold flex items-center gap-1">
+                    <CreditCard className="h-3.5 w-3.5 text-amber-700" /> 研学公益与个人 API 额度支持：
+                  </p>
+                  <p className="text-slate-600 leading-relaxed">
+                    本系统调用个人部署的 DeepSeek / Claude 高性能大模型 API。考研期间为保障每一位同学能够充足刷题答疑，支持自主充值快速补充算力，祝各位研友一战成硕！
+                  </p>
+                </div>
               </div>
-            </div>
+            )
           )}
 
           {/* 4. 收支明细面板 */}

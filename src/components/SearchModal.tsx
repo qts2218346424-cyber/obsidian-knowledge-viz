@@ -48,7 +48,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
   }
 
   const handleOpen = (path: string) => {
-    navigate(`/editor?path=${encodeURIComponent(path)}`)
+    navigate(`/editor?path=${encodeURIComponent(path)}&mode=preview&from=search`)
     onClose()
   }
 
