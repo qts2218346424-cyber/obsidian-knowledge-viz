@@ -1689,7 +1689,7 @@ export default function LandingPage() {
                 />
               </div>
             ) : activeMode === 'math' ? (
-              <div className="w-full h-full overflow-y-auto flex bg-[#0b1020]">
+              <div className="w-full h-full flex flex-col overflow-hidden bg-[#0b0f19]">
                 <MathTrialDemo
                   fullscreen
                   onEnter={() => {
@@ -1700,7 +1700,7 @@ export default function LandingPage() {
                 />
               </div>
             ) : activeMode === 'ai' ? (
-              <div className="w-full h-full overflow-y-auto flex bg-[#0a0f1c]">
+              <div className="w-full h-full flex flex-col overflow-hidden bg-[#0a0f1c]">
                 <AgentTrialDemo
                   fullscreen
                   onEnter={() => {
