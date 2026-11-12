@@ -5,6 +5,16 @@
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", system-ui, sans-serif;
 
+
+  /* 字号阶梯：最小 11px，替代散落的 9 / 10 / 10.5 / 11.5px */
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+
+  /* 阴影只保留三级：xs 卡片 / sm 悬停 / xl 浮层 */
+  --shadow-xs: 0 1px 2px 0 rgb(15 23 42 / 0.04);
+  --shadow-sm: 0 1px 3px 0 rgb(15 23 42 / 0.06), 0 1px 2px -1px rgb(15 23 42 / 0.04);
+  --shadow-xl: 0 12px 32px -8px rgb(15 23 42 / 0.14), 0 4px 12px -4px rgb(15 23 42 / 0.06);
+
   /* 基础核心调色板 (Core Palette) */
   --color-blue-600: #0071E3;
   --color-blue-500: #0A84FF;

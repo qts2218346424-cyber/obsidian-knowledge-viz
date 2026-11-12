@@ -77,7 +77,7 @@ export default function FolderPickerModal({
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/45 backdrop-blur-sm animate-fade-in">
-      <div className="bg-surface border border-cream-200 rounded-2xl w-full max-w-[500px] max-h-[88dvh] sm:max-h-[540px] flex flex-col shadow-2xl overflow-hidden">
+      <div className="bg-surface border border-cream-200 rounded-2xl w-full max-w-[500px] max-h-[88dvh] sm:max-h-[540px] flex flex-col shadow-xl overflow-hidden">
         {/* 标题栏 */}
         <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 border-b border-cream-200 bg-cream-50/70">
           <div className="flex items-center gap-2 min-w-0">
@@ -127,7 +127,7 @@ export default function FolderPickerModal({
             </button>
           )}
           <span
-            className="text-warm-500 truncate flex-1 font-mono text-[11px] select-all"
+            className="text-warm-500 truncate flex-1 font-mono text-2xs select-all"
             title={currentPath || '根目录'}
           >
             {currentPath || '此电脑 (磁盘驱动器列表)'}
@@ -181,7 +181,7 @@ export default function FolderPickerModal({
 
         {/* 底部操作栏 */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 px-4 sm:px-5 py-3 border-t border-cream-200 bg-cream-50/60">
-          <div className="text-[11px] text-warm-500 truncate flex-1">
+          <div className="text-2xs text-warm-500 truncate flex-1">
             {currentPath ? (
               <span>当前选中: <strong className="font-mono text-warm-700">{currentPath}</strong></span>
             ) : (

@@ -853,7 +853,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
             ? 'rounded-r-2xl border-l-0 pl-1.5 pr-2.5'
             : 'rounded-l-2xl border-r-0 pl-2.5 pr-1.5'
         } py-1.5 bg-gradient-to-r from-amber-400 to-amber-500 text-amber-950 font-bold shadow-xl border border-amber-300 flex items-center gap-1 active:scale-95 transition-transform ${
-          isHiddenDragging ? 'scale-105 shadow-2xl opacity-90' : ''
+          isHiddenDragging ? 'scale-105 shadow-xl opacity-90' : ''
         }`}
         onPointerDown={handleHiddenPointerDown}
         onPointerMove={handleHiddenPointerMove}
@@ -863,7 +863,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
       >
         <GripVertical className="w-3 h-3 text-amber-900/40 shrink-0" />
         <span className="text-sm">🐲</span>
-        <span className="text-[10px] font-extrabold">奶龙</span>
+        <span className="text-2xs font-extrabold">奶龙</span>
       </div>
     )
   }
@@ -898,19 +898,19 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
           >
             <div className="flex items-start justify-between gap-1.5 sm:gap-2">
               <div className="flex flex-col min-w-0">
-                <div className="flex items-center gap-1.5 font-extrabold text-amber-600 dark:text-amber-400 text-[11px] sm:text-xs">
+                <div className="flex items-center gap-1.5 font-extrabold text-amber-600 dark:text-amber-400 text-2xs sm:text-xs">
                   <span>{persona.emoji} {persona.name}</span>
             {eyeCareActive && (
-              <span className="text-[10px] text-sky-600 font-mono">
+              <span className="text-2xs text-sky-600 font-mono">
                 (👀 {eyeCareSecondsLeft}s)
               </span>
             )}
                 </div>
-                <div className="mt-1 leading-snug sm:leading-relaxed font-medium break-words text-[11.5px] sm:text-xs text-slate-800 dark:text-slate-100 max-h-[120px] sm:max-h-none overflow-y-auto overscroll-contain line-clamp-4 sm:line-clamp-none">
+                <div className="mt-1 leading-snug sm:leading-relaxed font-medium break-words text-2xs sm:text-xs text-slate-800 dark:text-slate-100 max-h-[120px] sm:max-h-none overflow-y-auto overscroll-contain line-clamp-4 sm:line-clamp-none">
                   {bubbleText}
                 </div>
                 {bubbleSubtext && (
-                  <div className="text-[11px] font-semibold text-amber-600/90 dark:text-amber-400/90 mt-1">
+                  <div className="text-2xs font-semibold text-amber-600/90 dark:text-amber-400/90 mt-1">
                     {bubbleSubtext}
                   </div>
                 )}
@@ -942,7 +942,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                   setBubbleText(null)
                   setBubbleSubtext(null)
                 }}
-                className="mt-2 w-full py-1.5 text-[11px] font-semibold bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all shadow-sm cursor-pointer"
+                className="mt-2 w-full py-1.5 text-2xs font-semibold bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all shadow-sm cursor-pointer"
               >
                 {bubbleAction.label}
               </button>
@@ -978,14 +978,14 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
 
             {/* 护眼闭目倒计时徽章 */}
             {eyeCareActive && (
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-sky-500 text-white font-mono text-[10px] font-bold shadow-md whitespace-nowrap animate-bounce border border-white/40 pointer-events-none">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-sky-500 text-white font-mono text-2xs font-bold shadow-sm whitespace-nowrap animate-bounce border border-white/40 pointer-events-none">
                 👀 闭目 {eyeCareSecondsLeft}s
               </div>
             )}
 
             {/* 番茄钟专注药丸徽章 */}
             {focusActive && (
-              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-amber-500 text-white font-mono text-[10px] font-bold shadow-md whitespace-nowrap animate-pulse border border-white/40 pointer-events-none">
+              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-amber-500 text-white font-mono text-2xs font-bold shadow-sm whitespace-nowrap animate-pulse border border-white/40 pointer-events-none">
                 ⏱️ {formatTimer(focusSecondsLeft)}
               </div>
             )}
@@ -1011,7 +1011,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                   e.stopPropagation()
                   navigate('/chat')
                 }}
-                className="w-8 h-8 rounded-full bg-white/95 dark:bg-slate-800 text-indigo-600 shadow-lg border border-indigo-200 dark:border-slate-700 flex items-center justify-center hover:bg-indigo-50 hover:scale-110 active:scale-95 transition-all cursor-pointer select-none"
+                className="w-8 h-8 rounded-full bg-white/95 dark:bg-slate-800 text-indigo-600 shadow-xl border border-indigo-200 dark:border-slate-700 flex items-center justify-center hover:bg-indigo-50 hover:scale-110 active:scale-95 transition-all cursor-pointer select-none"
                 title="进入全屏 AI 伴学空间"
               >
                 <Bot className="w-4 h-4 text-indigo-500" />
@@ -1025,7 +1025,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                   setDrawerOpen(prev => !prev)
                   setShowMobileMenu(false)
                 }}
-                className="w-8 h-8 rounded-full bg-white/95 dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center hover:bg-amber-50 hover:text-amber-600 hover:scale-110 active:scale-95 transition-all cursor-pointer select-none"
+                className="w-8 h-8 rounded-full bg-white/95 dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center hover:bg-amber-50 hover:text-amber-600 hover:scale-110 active:scale-95 transition-all cursor-pointer select-none"
                 title={`呼出${persona.name}快捷伴学抽屉`}
               >
                 <MessageSquare className="w-4 h-4" />
@@ -1038,7 +1038,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                   e.stopPropagation()
                   handleFeedDrumstick()
                 }}
-                className="w-8 h-8 rounded-full bg-white/95 dark:bg-slate-800 text-amber-600 shadow-lg border border-amber-200 dark:border-slate-700 flex items-center justify-center hover:bg-amber-50 hover:scale-110 active:scale-95 transition-all cursor-pointer select-none"
+                className="w-8 h-8 rounded-full bg-white/95 dark:bg-slate-800 text-amber-600 shadow-xl border border-amber-200 dark:border-slate-700 flex items-center justify-center hover:bg-amber-50 hover:scale-110 active:scale-95 transition-all cursor-pointer select-none"
                 title="投喂香喷喷大烤鸡腿 🍗"
               >
                 <Utensils className="w-4 h-4 text-amber-600" />
@@ -1056,7 +1056,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                   }
                   setShowMobileMenu(false)
                 }}
-                className="w-8 h-8 rounded-full bg-white/95 dark:bg-slate-800 text-emerald-600 shadow-lg border border-emerald-200 dark:border-slate-700 flex items-center justify-center hover:bg-emerald-50 hover:scale-110 active:scale-95 transition-all cursor-pointer select-none"
+                className="w-8 h-8 rounded-full bg-white/95 dark:bg-slate-800 text-emerald-600 shadow-xl border border-emerald-200 dark:border-slate-700 flex items-center justify-center hover:bg-emerald-50 hover:scale-110 active:scale-95 transition-all cursor-pointer select-none"
                 title="开启考研做题中心 / 随堂测验"
               >
                 <Award className="w-4 h-4 text-emerald-600" />
@@ -1069,7 +1069,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                   e.stopPropagation()
                   toggleVoiceMute()
                 }}
-                className={`w-8 h-8 rounded-full shadow-lg border flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer select-none ${
+                className={`w-8 h-8 rounded-full shadow-xl border flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer select-none ${
                   !voiceMuted
                     ? 'bg-amber-50 dark:bg-slate-800 text-amber-600 border-amber-300 dark:border-amber-700'
                     : 'bg-white/95 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700'
@@ -1097,10 +1097,10 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                   }
                   setShowMobileMenu(false)
                 }}
-                className={`w-8 h-8 rounded-full shadow-lg border flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer select-none ${
+                className={`w-8 h-8 rounded-full shadow-xl border flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer select-none ${
                   eyeCareActive
                     ? "bg-sky-500 text-white border-sky-400 animate-pulse"
-                    : "bg-white/95 dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-lg border border-sky-200 dark:border-slate-700 hover:bg-sky-50"
+                    : "bg-white/95 dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-xl border border-sky-200 dark:border-slate-700 hover:bg-sky-50"
                 }`}
                 title={
                   eyeCareActive
@@ -1135,7 +1135,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                     return next
                   })
                 }}
-                className={`w-8 h-8 rounded-full shadow-lg border flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer select-none ${
+                className={`w-8 h-8 rounded-full shadow-xl border flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer select-none ${
                   focusActive
                     ? 'bg-amber-500 text-white border-amber-600'
                     : 'bg-white/95 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-amber-50 hover:text-amber-600'
@@ -1153,7 +1153,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                   setMinimized(true)
                   setShowMobileMenu(false)
                 }}
-                className="w-8 h-8 rounded-full bg-white/95 dark:bg-slate-800 text-slate-400 hover:text-slate-700 shadow-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer select-none"
+                className="w-8 h-8 rounded-full bg-white/95 dark:bg-slate-800 text-slate-400 hover:text-slate-700 shadow-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer select-none"
                 title="收起为迷你萌宠胶囊"
               >
                 <Minimize2 className="w-3.5 h-3.5" />
@@ -1170,7 +1170,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                   } catch {}
                   setShowMobileMenu(false)
                 }}
-                className="w-8 h-8 rounded-full bg-white/95 dark:bg-slate-800 text-slate-400 hover:text-rose-500 shadow-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer select-none"
+                className="w-8 h-8 rounded-full bg-white/95 dark:bg-slate-800 text-slate-400 hover:text-rose-500 shadow-xl border border-slate-200 dark:border-slate-700 flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer select-none"
                 title="暂时隐藏（可在屏幕右侧边缘随时点开）"
               >
                 <EyeOff className="w-3.5 h-3.5" />
@@ -1207,14 +1207,14 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                 showBubbleWithVoice(line.text, line.audio, 4800)
               }
             }}
-            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-full bg-white/95 dark:bg-slate-900/95 text-amber-900 dark:text-amber-300 text-[11px] sm:text-xs font-bold shadow-xl border border-amber-300 dark:border-amber-700/60 hover:scale-105 active:scale-95 transition-all cursor-grab active:cursor-grabbing whitespace-nowrap select-none backdrop-blur-md max-w-[min(200px,calc(100vw-3rem))] touch-none"
+            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-full bg-white/95 dark:bg-slate-900/95 text-amber-900 dark:text-amber-300 text-2xs sm:text-xs font-bold shadow-xl border border-amber-300 dark:border-amber-700/60 hover:scale-105 active:scale-95 transition-all cursor-grab active:cursor-grabbing whitespace-nowrap select-none backdrop-blur-md max-w-[min(200px,calc(100vw-3rem))] touch-none"
             title="按住自由拖拽位置，轻点展开伴学奶龙"
           >
             <GripVertical className="w-3 h-3 text-amber-500/70 shrink-0" />
             <LuluAvatar size="xs" showAccessories={false} />
             <span>{persona.name}</span>
             {focusActive && (
-              <span className="text-[10px] text-amber-600 font-mono">
+              <span className="text-2xs text-amber-600 font-mono">
                 ({formatTimer(focusSecondsLeft)})
               </span>
             )}

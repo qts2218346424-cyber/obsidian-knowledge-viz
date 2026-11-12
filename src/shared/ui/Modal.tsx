@@ -70,7 +70,7 @@ export function Modal({
     >
       <div
         ref={dialogRef}
-        className={`relative flex flex-col w-full ${SIZE_CLASSES[size]} bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden ${
+        className={`relative flex flex-col w-full ${SIZE_CLASSES[size]} bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden ${
           mobileSheet
             ? 'rounded-t-3xl sm:rounded-2xl max-h-[90dvh] animate-sheet-up sm:animate-fade-in-up'
             : 'rounded-2xl max-h-[90dvh] animate-fade-in-up'

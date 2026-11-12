@@ -60,7 +60,7 @@ export function Drawer({
     >
       <div
         ref={drawerRef}
-        className={`fixed flex flex-col bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden ${positionClasses[position]} ${className}`}
+        className={`fixed flex flex-col bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden ${positionClasses[position]} ${className}`}
       >
         {(title || subtitle) && (
           <div className="flex items-start justify-between gap-4 px-5 py-4 border-b border-slate-100 dark:border-slate-800 shrink-0">

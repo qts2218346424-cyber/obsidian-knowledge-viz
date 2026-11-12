@@ -526,7 +526,7 @@ export default function Settings() {
               type="button"
               onClick={() => setAdminTab('student')}
               className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                adminTab === 'student' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-900'
+                adminTab === 'student' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-500 hover:text-slate-900'
               }`}
             >
               🎓 备考偏好
@@ -535,7 +535,7 @@ export default function Settings() {
               type="button"
               onClick={() => setAdminTab('system')}
               className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                adminTab === 'system' ? 'bg-white text-indigo-700 shadow-2xs font-bold' : 'text-slate-500 hover:text-slate-900'
+                adminTab === 'system' ? 'bg-white text-indigo-700 shadow-xs font-bold' : 'text-slate-500 hover:text-slate-900'
               }`}
             >
               ⚙️ 系统底座 (管理员)
@@ -545,7 +545,7 @@ export default function Settings() {
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center h-64 bg-white/60 border border-slate-200/80 rounded-2xl p-8 space-y-3 shadow-2xs">
+        <div className="flex flex-col items-center justify-center h-64 bg-white/60 border border-slate-200/80 rounded-2xl p-8 space-y-3 shadow-xs">
           <RefreshCw className="w-6 h-6 text-indigo-600 animate-spin" />
           <span className="text-xs text-slate-500 font-medium">正在同步研学偏好与系统配置...</span>
         </div>
@@ -556,13 +556,13 @@ export default function Settings() {
       {(!isAdmin || adminTab === 'student') && (
         <div className="space-y-5 animate-in fade-in">
           {/* 研学账号与安全沙箱 */}
-          <section className="bento-card bg-white border border-neutral-200/80 rounded-xl shadow-xs p-5 space-y-3">
+          <section className="bento-card bg-white border border-slate-200/80 rounded-xl shadow-xs p-5 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2 text-sm font-bold text-slate-800">
                 <HardDrive className="w-4 h-4 text-emerald-600" />
                 <span>研学空间与个人账号</span>
               </div>
-              <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+              <span className="text-2xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
                 云端沙箱隔离已就绪
               </span>
             </div>
@@ -575,7 +575,7 @@ export default function Settings() {
                 <button
                   type="button"
                   onClick={() => window.dispatchEvent(new CustomEvent('open-change-password-modal'))}
-                  className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 text-slate-700 hover:text-indigo-600 text-xs font-semibold shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+                  className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 text-slate-700 hover:text-indigo-600 text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
                   title="修改当前账号的登录密码"
                 >
                   <KeyRound className="w-3.5 h-3.5 text-indigo-500" />
@@ -587,19 +587,19 @@ export default function Settings() {
                 <p className="font-bold text-emerald-700 text-sm">{typeof user?.points === 'number' ? user.points.toFixed(1) : '5.0'} <span className="text-xs text-slate-500 font-normal">积分 (每日签到可领 1 积分)</span></p>
               </div>
             </div>
-            <p className="text-[11px] text-slate-400 leading-relaxed">
+            <p className="text-2xs text-slate-400 leading-relaxed">
               🔒 隐私保证：您的自建笔记、错题本复盘记录以及每日模考成绩均受沙箱加密隔离保护，仅您个人账号可见。
             </p>
           </section>
 
           {/* 账号安全与密码找回（密保与专属救援码） */}
-          <section className="bento-card bg-white border border-neutral-200/80 rounded-xl shadow-xs p-5 space-y-4">
+          <section className="bento-card bg-white border border-slate-200/80 rounded-xl shadow-xs p-5 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2 text-sm font-bold text-slate-800">
                 <ShieldCheck className="w-4 h-4 text-indigo-600" />
                 <span>账号安全与密码找回凭证</span>
               </div>
-              <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
+              <span className={`text-2xs font-semibold px-2.5 py-0.5 rounded-full border ${
                 securityInfo?.hasSecurityQuestion
                   ? 'text-indigo-700 bg-indigo-50 border-indigo-200'
                   : 'text-amber-700 bg-amber-50 border-amber-200'
@@ -625,7 +625,7 @@ export default function Settings() {
                   <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
                   <span>公开演示沙箱安全防护已生效</span>
                 </div>
-                <p className="text-[11.5px] text-amber-800 leading-relaxed">
+                <p className="text-2xs text-amber-800 leading-relaxed">
                   当前账号为公共演示体验环境，系统已开启凭证隔离保护。专属恢复码与密保凭证已安全锁定隐藏，禁止公开查看或重置。如需管理个人专属安全凭据，请退出后注册属于您的独立考生账号。
                 </p>
               </div>
@@ -642,7 +642,7 @@ export default function Settings() {
                       <button
                         type="button"
                         onClick={() => setShowRecoveryCode(prev => !prev)}
-                        className="px-2 py-1 rounded-lg bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-semibold shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
+                        className="px-2 py-1 rounded-lg bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-semibold shadow-xs transition-all flex items-center gap-1 cursor-pointer"
                         title={showRecoveryCode ? '隐藏救援码' : '显示救援码'}
                       >
                         {showRecoveryCode ? <EyeOff className="w-3 h-3 text-slate-500" /> : <Eye className="w-3 h-3 text-slate-500" />}
@@ -651,7 +651,7 @@ export default function Settings() {
                       <button
                         type="button"
                         onClick={handleRegenerateRecoveryCode}
-                        className="px-2 py-1 rounded-lg bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-semibold shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
+                        className="px-2 py-1 rounded-lg bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-semibold shadow-xs transition-all flex items-center gap-1 cursor-pointer"
                         title="换发新的救援码"
                       >
                         <RefreshCw className="w-3 h-3 text-slate-500" />
@@ -661,7 +661,7 @@ export default function Settings() {
                         type="button"
                         onClick={handleCopyRecoveryCode}
                         disabled={!securityInfo?.recoveryCode}
-                        className="px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold shadow-2xs transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                        className="px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold shadow-xs transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
                         title="点击复制救援码"
                       >
                         <Copy className="w-3 h-3 text-indigo-600" />
@@ -675,11 +675,11 @@ export default function Settings() {
                         ? (securityInfo?.recoveryCode || '未绑定救援码')
                         : 'CF-••••-••••'}
                     </span>
-                    <span className="text-[10px] text-emerald-600 font-sans font-medium bg-emerald-50 px-1.5 py-0.5 rounded">
+                    <span className="text-2xs text-emerald-600 font-sans font-medium bg-emerald-50 px-1.5 py-0.5 rounded">
                       {showRecoveryCode ? '一键应急重置' : '密文防护中'}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                  <p className="text-2xs text-slate-400 leading-relaxed">
                     📌 提示：救援码是忘记密码时的终极应急凭据。默认脱敏显示，请点击「查看」或「换发」并在安全环境下抄写备份，切勿截图公开发布！
                   </p>
                 </div>
@@ -691,7 +691,7 @@ export default function Settings() {
               <div className="flex items-center justify-between text-xs font-bold text-slate-700">
                 <span>绑定 / 修改安全密保问答</span>
                 {securityInfo?.hasSecurityQuestion && (
-                  <span className="text-[11px] font-normal text-slate-400">
+                  <span className="text-2xs font-normal text-slate-400">
                     当前问题：{securityInfo.securityQuestion}
                   </span>
                 )}
@@ -713,7 +713,7 @@ export default function Settings() {
                         key={q}
                         type="button"
                         onClick={() => setSecQuestionInput(q)}
-                        className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
+                        className="text-2xs px-2 py-0.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors cursor-pointer"
                       >
                         + {q}
                       </button>
@@ -746,7 +746,7 @@ export default function Settings() {
           </section>
 
           {/* 备考目标学科定制 */}
-          <section className="bento-card bg-white border border-neutral-200/80 rounded-xl shadow-xs p-5 space-y-3">
+          <section className="bento-card bg-white border border-slate-200/80 rounded-xl shadow-xs p-5 space-y-3">
             <div className="text-sm font-bold text-slate-800 flex items-center gap-2">
               <Cpu className="w-4 h-4 text-indigo-600" />
               <span>目标专业与重点攻坚学科</span>
@@ -771,14 +771,14 @@ export default function Settings() {
                   }`}
                 >
                   <div className="font-bold text-xs text-slate-900">{item.title}</div>
-                  <div className="text-[10.5px] text-slate-400 mt-1">{item.desc}</div>
+                  <div className="text-2xs text-slate-400 mt-1">{item.desc}</div>
                 </button>
               ))}
             </div>
           </section>
 
           {/* 每日自律刷题与背词量 */}
-          <section className="bento-card bg-white border border-neutral-200/80 rounded-xl shadow-xs p-5 space-y-3">
+          <section className="bento-card bg-white border border-slate-200/80 rounded-xl shadow-xs p-5 space-y-3">
             <div className="text-sm font-bold text-slate-800 flex items-center gap-2">
               <Zap className="w-4 h-4 text-amber-500" />
               <span>每日自律与刷题目标</span>
@@ -815,7 +815,7 @@ export default function Settings() {
           </section>
 
           {/* 考研笔记与编辑器偏好 */}
-          <section className="bento-card bg-white border border-neutral-200/80 rounded-xl shadow-xs p-5 space-y-3">
+          <section className="bento-card bg-white border border-slate-200/80 rounded-xl shadow-xs p-5 space-y-3">
             <div className="text-sm font-bold text-slate-800 flex items-center gap-2">
               <Save className="w-4 h-4 text-purple-600" />
               <span>笔记编辑器偏好</span>
@@ -833,7 +833,7 @@ export default function Settings() {
                   }`}
                 >
                   <div className="font-bold text-xs text-slate-900">交互式富文本讲义纸</div>
-                  <div className="text-[10.5px] text-slate-400 mt-0.5">支持手写批注、实时公式与插图渲染</div>
+                  <div className="text-2xs text-slate-400 mt-0.5">支持手写批注、实时公式与插图渲染</div>
                 </button>
 
                 <button
@@ -846,20 +846,20 @@ export default function Settings() {
                   }`}
                 >
                   <div className="font-bold text-xs text-slate-900">极客 Markdown 源码模式</div>
-                  <div className="text-[10.5px] text-slate-400 mt-0.5">纯文本双链极速录入与快捷键编辑</div>
+                  <div className="text-2xs text-slate-400 mt-0.5">纯文本双链极速录入与快捷键编辑</div>
                 </button>
               </div>
             </div>
           </section>
 
           {/* 研学视觉色彩风格偏好 */}
-          <section className="bento-card bg-white border border-neutral-200/80 rounded-xl shadow-xs p-5 space-y-3">
+          <section className="bento-card bg-white border border-slate-200/80 rounded-xl shadow-xs p-5 space-y-3">
             <div className="text-sm font-bold text-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Palette className="w-4 h-4 text-indigo-600" />
                 <span>研学界面视觉风格</span>
               </div>
-              <span className="text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full">
+              <span className="text-2xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full">
                 实时生效并跨端同步
               </span>
             </div>
@@ -879,11 +879,11 @@ export default function Settings() {
                 <div className="flex items-center justify-between mb-1">
                   <div className="font-bold text-xs text-indigo-950 flex items-center gap-1.5">
                     <span>🎨 鲜艳活力风</span>
-                    <span className="text-[10px] bg-indigo-600 text-white px-1.5 py-0.2 rounded font-normal">推荐</span>
+                    <span className="text-2xs bg-indigo-600 text-white px-1.5 py-0.2 rounded font-normal">推荐</span>
                   </div>
                   {isVibrant && <CheckCircle className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
                 </div>
-                <div className="text-[11px] text-slate-500 leading-relaxed">
+                <div className="text-2xs text-slate-500 leading-relaxed">
                   408科技蓝、政治正气红、数学极光紫、英语薄荷绿，告别黑白沉闷，记忆更高效。
                 </div>
               </button>
@@ -903,7 +903,7 @@ export default function Settings() {
                   </div>
                   {!isVibrant && <CheckCircle className="w-3.5 h-3.5 text-slate-800 shrink-0" />}
                 </div>
-                <div className="text-[11px] text-slate-500 leading-relaxed">
+                <div className="text-2xs text-slate-500 leading-relaxed">
                   严谨冷淡灰度 Subframe 黑白极简设计，专注纯文本与低饱和沉浸排版。
                 </div>
               </button>
@@ -917,7 +917,7 @@ export default function Settings() {
                 <ShieldCheck className="w-4 h-4 text-emerald-600" />
                 <span>考生专属云端沙盒与数据隐私保护 (Personal Sandbox)</span>
               </div>
-              <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-100/70 border border-emerald-300 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+              <span className="text-2xs font-semibold text-emerald-700 bg-emerald-100/70 border border-emerald-300 px-2.5 py-0.5 rounded-full flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 物理多租户隔离已生效
               </span>
@@ -928,22 +928,22 @@ export default function Settings() {
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
-              <div className="p-3 rounded-xl bg-white/90 border border-emerald-200/60 shadow-2xs">
-                <div className="text-[11px] text-slate-500 mb-0.5">沙箱隔离等级</div>
+              <div className="p-3 rounded-xl bg-white/90 border border-emerald-200/60 shadow-xs">
+                <div className="text-2xs text-slate-500 mb-0.5">沙箱隔离等级</div>
                 <div className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                   <span>独立用户沙箱 (独占)</span>
                 </div>
               </div>
-              <div className="p-3 rounded-xl bg-white/90 border border-emerald-200/60 shadow-2xs">
-                <div className="text-[11px] text-slate-500 mb-0.5">物理路径屏蔽</div>
+              <div className="p-3 rounded-xl bg-white/90 border border-emerald-200/60 shadow-xs">
+                <div className="text-2xs text-slate-500 mb-0.5">物理路径屏蔽</div>
                 <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                   <Lock className="w-3.5 h-3.5 text-indigo-600" />
                   <span>100% 宿主机路径脱敏</span>
                 </div>
               </div>
-              <div className="p-3 rounded-xl bg-white/90 border border-emerald-200/60 shadow-2xs">
-                <div className="text-[11px] text-slate-500 mb-0.5">离线数据自持</div>
+              <div className="p-3 rounded-xl bg-white/90 border border-emerald-200/60 shadow-xs">
+                <div className="text-2xs text-slate-500 mb-0.5">离线数据自持</div>
                 <div className="text-xs font-bold text-teal-800 flex items-center gap-1.5">
                   <Download className="w-3.5 h-3.5 text-teal-600" />
                   <span>支持一键导出 Zip</span>
@@ -991,7 +991,7 @@ export default function Settings() {
       {/* 仅在管理员身份且激活「系统底座」Tab 时渲染底层复杂配置 */}
       {isAdmin && adminTab === 'system' && (
         <div className="space-y-6 animate-in fade-in">
-          <section className="bento-card bg-white border border-neutral-200/80 rounded-xl shadow-xs p-5">
+          <section className="bento-card bg-white border border-slate-200/80 rounded-xl shadow-xs p-5">
             <div className="flex items-center gap-2 text-sm font-medium text-warm-700 mb-4">
               <Zap className="w-4 h-4 text-accent-amber" />
               系统底座配置状态
@@ -1053,7 +1053,7 @@ export default function Settings() {
       )}
 
       {/* Vault Settings */}
-      <section className="bento-card bg-white border border-neutral-200/80 rounded-xl shadow-xs p-5 space-y-4">
+      <section className="bento-card bg-white border border-slate-200/80 rounded-xl shadow-xs p-5 space-y-4">
         <div className="flex items-center gap-2 text-sm font-medium text-warm-700">
           <FolderOpen className="w-4 h-4 text-accent-orange" />
           Vault 配置
@@ -1072,7 +1072,7 @@ export default function Settings() {
                   className="flex-1 px-3 py-2 rounded-lg bg-cream-100 border border-cream-300 text-warm-700 text-sm placeholder:text-warm-400 focus:outline-none focus:border-accent-orange/40 focus:ring-1 focus:ring-accent-orange/15"
                 />
               ) : (
-                <div className="flex-1 px-3 py-2 rounded-lg bg-zinc-100 border border-zinc-200 text-zinc-500 text-xs font-mono select-none">
+                <div className="flex-1 px-3 py-2 rounded-lg bg-slate-100 border border-slate-200 text-slate-500 text-xs font-mono select-none">
                   [云端研学知识库 · 安全沙箱隔离已就绪]
                 </div>
               )}
@@ -1088,7 +1088,7 @@ export default function Settings() {
                 </button>
               )}
             </div>
-            <p className="text-[11px] text-warm-400 mt-1">你的 Obsidian 笔记所在的文件夹路径</p>
+            <p className="text-2xs text-warm-400 mt-1">你的 Obsidian 笔记所在的文件夹路径</p>
           </div>
 
           <div>
@@ -1132,7 +1132,7 @@ export default function Settings() {
                 </span>
               )}
             </div>
-            <p className="text-[11px] text-warm-400 mt-1">
+            <p className="text-2xs text-warm-400 mt-1">
               用于网页抓取（如 YouTube 等需要代理访问的站点）。留空则直接访问。
             </p>
           </div>
@@ -1160,12 +1160,12 @@ export default function Settings() {
       </section>
 
       {/* AI Settings (Multi-Endpoint Architecture) */}
-      <section className="bento-card bg-white border border-neutral-200/80 rounded-xl shadow-xs p-5 space-y-4">
+      <section className="bento-card bg-white border border-slate-200/80 rounded-xl shadow-xs p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-cream-200/60 pb-3">
           <div className="flex items-center gap-2 text-sm font-medium text-warm-700">
             <Cpu className="w-4 h-4 text-accent-sage" />
             <span>AI 云端接口与多模型配置</span>
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-cream-100 text-warm-500 font-normal">
+            <span className="text-2xs px-2 py-0.5 rounded-full bg-cream-100 text-warm-500 font-normal">
               支持配置多个不同接口，聊天中随时自由切换
             </span>
           </div>
@@ -1204,9 +1204,9 @@ export default function Settings() {
                   <Globe className={`w-3.5 h-3.5 ${isActive ? 'text-accent-orange' : 'text-warm-400'}`} />
                   <span className="font-semibold">{ep.name || '未命名接口'}</span>
                   {isGlobalPrimary && (
-                    <span className="text-[10px] text-amber-500" title="系统默认主接口">★</span>
+                    <span className="text-2xs text-amber-500" title="系统默认主接口">★</span>
                   )}
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                  <span className={`text-2xs px-1.5 py-0.2 rounded-full ${
                     isActive ? 'bg-accent-orange/15 text-accent-orange' : 'bg-cream-200 text-warm-500'
                   }`}>
                     {ep.models?.length || 0} 模型
@@ -1239,7 +1239,7 @@ export default function Settings() {
                 placeholder="例如: DeepSeek 官方"
                 className="px-2.5 py-1 text-xs font-semibold rounded-md bg-cream-100 border border-cream-300 text-warm-800 focus:outline-none focus:border-accent-orange"
               />
-              <span className="text-[11px] text-warm-400 font-mono">({currentEp.id})</span>
+              <span className="text-2xs text-warm-400 font-mono">({currentEp.id})</span>
             </div>
             <div className="flex items-center gap-2">
               {activeEndpointId !== (settings?.ai?.activeEndpointId || endpoints[0]?.id) ? (
@@ -1255,13 +1255,13 @@ export default function Settings() {
                     }
                     setMessage({ type: 'success', text: `已将「${currentEp.name}」设为系统默认主接口，记得点击保存！` })
                   }}
-                  className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded bg-cream-100 hover:bg-cream-200 text-warm-600 transition-colors"
+                  className="flex items-center gap-1 text-2xs px-2.5 py-1 rounded bg-cream-100 hover:bg-cream-200 text-warm-600 transition-colors"
                 >
                   <Star className="w-3 h-3 text-warm-400" />
                   设为系统默认接口
                 </button>
               ) : (
-                <span className="flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded bg-amber-500/10 text-amber-600 font-medium border border-amber-500/20">
+                <span className="flex items-center gap-1 text-2xs px-2.5 py-0.5 rounded bg-amber-500/10 text-amber-600 font-medium border border-amber-500/20">
                   <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
                   当前系统默认主接口
                 </span>
@@ -1280,7 +1280,7 @@ export default function Settings() {
                 <option value="openai">OpenAI 兼容 Chat Completions API (/v1/chat/completions)</option>
                 <option value="anthropic">Anthropic Messages API (/v1/messages)</option>
               </select>
-              <p className="text-[11px] text-warm-400 mt-1">
+              <p className="text-2xs text-warm-400 mt-1">
                 {currentEp.apiFormat === 'openai'
                   ? '支持 DeepSeek、OpenAI、Moonshot、硅基流动、通义千问、Ollama 等几乎所有兼容服务。'
                   : '支持 Anthropic Claude 官方原生 API 及兼容 Claude 格式的中转服务。'}
@@ -1311,7 +1311,7 @@ export default function Settings() {
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="text-xs text-warm-500 font-medium">API Base URL</label>
-              <div className="flex items-center gap-1.5 text-[11px]">
+              <div className="flex items-center gap-1.5 text-2xs">
                 <span className="text-warm-400">快速填入:</span>
                 <button
                   type="button"
@@ -1355,7 +1355,7 @@ export default function Settings() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <label className="text-xs text-warm-700 font-bold block">此接口导入的模型列表</label>
-                <p className="text-[11px] text-warm-400">可拉取服务商提供的模型，或手动输入任意代号；保存后可在聊天中随意切换</p>
+                <p className="text-2xs text-warm-400">可拉取服务商提供的模型，或手动输入任意代号；保存后可在聊天中随意切换</p>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -1383,7 +1383,7 @@ export default function Settings() {
             {/* 拉取到的模型下拉抽屉 */}
             {showModelList && availableModels.length > 0 && (
               <div className="border border-cream-200 rounded-lg bg-surface max-h-52 overflow-auto shadow-sm divide-y divide-cream-100">
-                <div className="p-2 bg-cream-100/60 flex items-center justify-between text-[11px] text-warm-500 font-medium">
+                <div className="p-2 bg-cream-100/60 flex items-center justify-between text-2xs text-warm-500 font-medium">
                   <span>从「{currentEp.name}」拉取到 {availableModels.length} 个模型</span>
                   <button
                     type="button"
@@ -1406,7 +1406,7 @@ export default function Settings() {
                       <div className="flex items-center gap-2">
                         {isDefault && <Star className="w-3 h-3 text-amber-500 fill-amber-500" />}
                         <span className="text-xs font-mono font-medium text-warm-700">{m.name || m.id}</span>
-                        {m.name !== m.id && <span className="text-[10px] text-warm-400 font-mono">({m.id})</span>}
+                        {m.name !== m.id && <span className="text-2xs text-warm-400 font-mono">({m.id})</span>}
                       </div>
                       <button
                         type="button"
@@ -1417,7 +1417,7 @@ export default function Settings() {
                             handleAddModel(m.id)
                           }
                         }}
-                        className={`text-[10px] px-2 py-0.5 rounded font-medium transition-colors cursor-pointer ${
+                        className={`text-2xs px-2 py-0.5 rounded font-medium transition-colors cursor-pointer ${
                           isImported
                             ? 'bg-emerald-500/10 text-emerald-600 hover:bg-red-500/10 hover:text-red-500'
                             : 'bg-cream-200 text-warm-600 hover:bg-accent-orange hover:text-white'
@@ -1432,12 +1432,12 @@ export default function Settings() {
             )}
 
             {showModelList && fetchingModels && (
-              <p className="text-[11px] text-warm-400 flex items-center gap-1 py-1">
+              <p className="text-2xs text-warm-400 flex items-center gap-1 py-1">
                 <Loader2 className="w-3 h-3 animate-spin" /> 正在从远端接口拉取模型列表...
               </p>
             )}
             {showModelList && modelFetchError && (
-              <p className="text-[11px] text-red-500 py-1">{modelFetchError}</p>
+              <p className="text-2xs text-red-500 py-1">{modelFetchError}</p>
             )}
 
             {/* 已导入模型徽章展示区 */}
@@ -1445,11 +1445,11 @@ export default function Settings() {
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-warm-700 flex items-center gap-1.5">
                   <span>「{currentEp.name}」已导入的模型</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cream-200 text-warm-600 font-bold">
+                  <span className="text-2xs px-1.5 py-0.5 rounded-full bg-cream-200 text-warm-600 font-bold">
                     {currentEp.models?.length || 0}
                   </span>
                 </span>
-                <span className="text-[11px] text-warm-400">点击 ★ 可设为此接口默认模型</span>
+                <span className="text-2xs text-warm-400">点击 ★ 可设为此接口默认模型</span>
               </div>
 
               {(!currentEp.models || currentEp.models.length === 0) ? (
@@ -1530,7 +1530,7 @@ export default function Settings() {
               <Zap className={`w-3.5 h-3.5 ${aiTesting ? 'animate-pulse' : ''}`} />
               {aiTesting ? `正在测试「${currentEp.name}」连接…` : `测试「${currentEp.name}」连接`}
             </button>
-            <span className="text-[11px] text-warm-400">
+            <span className="text-2xs text-warm-400">
               配置完成后，请点击页面底部「保存设置」持久化保存所有接口
             </span>
           </div>
@@ -1538,7 +1538,7 @@ export default function Settings() {
       </section>
 
       {/* Obsidian Plugin Import */}
-      <section className="bento-card bg-white border border-neutral-200/80 rounded-xl shadow-xs p-5 space-y-4">
+      <section className="bento-card bg-white border border-slate-200/80 rounded-xl shadow-xs p-5 space-y-4">
         <div className="flex items-center gap-2 text-sm font-medium text-warm-700">
           <Plug className="w-4 h-4 text-accent-mint" />
           从 Obsidian 插件导入
@@ -1574,7 +1574,7 @@ export default function Settings() {
               <div key={plugin.pluginId} className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-cream-100/80 border border-cream-200">
                 <div className="flex-1 min-w-0">
                   <div className="text-sm text-warm-700 font-medium">{plugin.displayName}</div>
-                  <div className="text-[11px] text-warm-400 mt-0.5 truncate">
+                  <div className="text-2xs text-warm-400 mt-0.5 truncate">
                     Key: {plugin.apiKey}
                     {plugin.baseURL && ` · ${plugin.baseURL}`}
                     {plugin.model && ` · ${plugin.model}`}
@@ -1595,7 +1595,7 @@ export default function Settings() {
 
       {/* 管理员保存按钮与配置文件受控信息 */}
       <div className="flex items-center justify-between pt-2">
-        <div className="text-[11px] text-slate-400 font-mono">
+        <div className="text-2xs text-slate-400 font-mono">
           [服务端系统参数已受控保护]
         </div>
         <button
@@ -1666,7 +1666,7 @@ function FolderPickerModal({
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
-      <div className="bg-surface border border-cream-200 rounded-2xl w-full max-w-[480px] max-h-[85dvh] flex flex-col shadow-2xl overflow-hidden animate-scale-up">
+      <div className="bg-surface border border-cream-200 rounded-2xl w-full max-w-[480px] max-h-[85dvh] flex flex-col shadow-xl overflow-hidden animate-scale-up">
         {/* Header */}
         <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 border-b border-cream-200 shrink-0">
           <div className="flex items-center gap-2 min-w-0">
@@ -1740,7 +1740,7 @@ function FolderPickerModal({
 
         {/* Footer */}
         <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5 py-3 border-t border-cream-200 bg-cream-50/50 shrink-0">
-          <div className="text-[11px] text-warm-400 truncate max-w-full sm:max-w-[240px]">
+          <div className="text-2xs text-warm-400 truncate max-w-full sm:max-w-[240px]">
             {currentPath ? `当前: ${currentPath}` : '请选择一个磁盘或文件夹'}
           </div>
           <div className="flex items-center gap-2 ml-auto">
@@ -1788,7 +1788,7 @@ function StatusCard({
         <div className={`w-2 h-2 rounded-full ${configured ? 'bg-accent-sage' : 'bg-warm-300'}`} />
         <span className="text-xs font-medium text-warm-600">{label}</span>
       </div>
-      <div className={`text-[11px] truncate ${configured ? 'text-accent-sage/80' : 'text-warm-400'}`}>
+      <div className={`text-2xs truncate ${configured ? 'text-accent-sage/80' : 'text-warm-400'}`}>
         {configured ? configuredText : detail}
       </div>
     </div>

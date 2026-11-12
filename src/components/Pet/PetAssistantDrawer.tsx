@@ -473,7 +473,7 @@ export default function PetAssistantDrawer({
   return (
     <div
       style={{ width: isMaximized ? '95vw' : `${drawerWidth}px` }}
-      className={`fixed inset-y-0 right-0 z-50 bg-white dark:bg-slate-900 border-l border-cream-200 dark:border-slate-800 shadow-2xl flex flex-col transition-all duration-150 ${
+      className={`fixed inset-y-0 right-0 z-50 bg-white dark:bg-slate-900 border-l border-cream-200 dark:border-slate-800 shadow-xl flex flex-col transition-all duration-150 ${
         isResizing ? 'select-none' : ''
       }`}
     >
@@ -495,11 +495,11 @@ export default function PetAssistantDrawer({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-warm-900 dark:text-slate-100 text-sm">奶龙 · 考研伴学与笔记管家</h3>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${activeAgent.badgeClass}`}>
+              <span className={`text-2xs px-2 py-0.5 rounded-full font-semibold border ${activeAgent.badgeClass}`}>
                 {activeAgent.icon} {activeAgent.title}
               </span>
             </div>
-            <p className="text-[11px] text-warm-500 dark:text-slate-400 flex items-center gap-1.5">
+            <p className="text-2xs text-warm-500 dark:text-slate-400 flex items-center gap-1.5">
               <span>{activeAgent.role}</span>
             </p>
           </div>
@@ -549,12 +549,12 @@ export default function PetAssistantDrawer({
       <div className="px-5 py-2.5 bg-slate-50 dark:bg-slate-950/70 border-b border-cream-200 dark:border-slate-800 space-y-2 shrink-0">
         {/* Row 0: Agent Persona Switcher */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-          <span className="text-[10px] font-bold text-slate-400 shrink-0">智能体:</span>
+          <span className="text-2xs font-bold text-slate-400 shrink-0">智能体:</span>
           {STUDY_AGENTS.map(agent => (
             <button
               key={agent.id}
               onClick={() => setActiveAgent(agent)}
-              className={`px-2 py-0.5 rounded-lg text-[11px] font-medium shrink-0 transition-all flex items-center gap-1 cursor-pointer ${
+              className={`px-2 py-0.5 rounded-lg text-2xs font-medium shrink-0 transition-all flex items-center gap-1 cursor-pointer ${
                 activeAgent.id === agent.id
                   ? 'bg-orange-500 text-white shadow-xs font-bold'
                   : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-orange-300'
@@ -598,14 +598,14 @@ export default function PetAssistantDrawer({
 
           <div className="flex items-center gap-1.5">
             {syncFeedback && (
-              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium animate-in fade-in">
+              <span className="text-2xs text-emerald-600 dark:text-emerald-400 font-medium animate-in fade-in">
                 {syncFeedback}
               </span>
             )}
             <button
               onClick={handleSyncLocalModels}
               disabled={syncingModels}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-2xs font-semibold bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-colors cursor-pointer"
               title="一键深度扫描并同步您本地电脑中已配置的 Claude Code / Codex / CC-Switch 模型"
             >
               <RefreshCw className={`w-3 h-3 ${syncingModels ? 'animate-spin' : ''}`} />
@@ -616,7 +616,7 @@ export default function PetAssistantDrawer({
 
         {/* Row 2: Dynamic Local Model Selector Pills */}
         <div className="flex items-center gap-1.5 text-xs overflow-x-auto py-0.5 custom-scrollbar">
-          <span className="text-slate-400 text-[11px] shrink-0 flex items-center gap-1">
+          <span className="text-slate-400 text-2xs shrink-0 flex items-center gap-1">
             <Cpu className="w-3 h-3 text-indigo-500" />
             模型:
           </span>
@@ -624,7 +624,7 @@ export default function PetAssistantDrawer({
           {currentAvailableModels.map(m => (
             <div
               key={m}
-              className={`inline-flex items-center rounded-lg text-[11px] font-mono transition-all shrink-0 border ${
+              className={`inline-flex items-center rounded-lg text-2xs font-mono transition-all shrink-0 border ${
                 selectedModel === m && !isCustomModel
                   ? 'bg-amber-500 text-white font-bold border-amber-600 shadow-xs'
                   : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-amber-300'
@@ -642,7 +642,7 @@ export default function PetAssistantDrawer({
                   handleDeleteModelDirectly(m)
                 }}
                 title={`删除模型 ${m}`}
-                className={`pr-1.5 pl-0.5 py-0.5 text-[10px] hover:text-red-500 transition-colors cursor-pointer ${
+                className={`pr-1.5 pl-0.5 py-0.5 text-2xs hover:text-red-500 transition-colors cursor-pointer ${
                   selectedModel === m && !isCustomModel ? 'text-white/80 hover:text-white' : 'text-slate-400'
                 }`}
               >
@@ -656,7 +656,7 @@ export default function PetAssistantDrawer({
             <button
               onClick={() => setShowModelManagerModal(true)}
               title="管理模型仓库（可删除不需要的模型）"
-              className="px-2 py-0.5 rounded-lg text-[10px] font-medium bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shrink-0 flex items-center gap-1 cursor-pointer"
+              className="px-2 py-0.5 rounded-lg text-2xs font-medium bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shrink-0 flex items-center gap-1 cursor-pointer"
             >
               <Settings className="w-3 h-3 text-orange-500" />
               <span>管理</span>
@@ -673,12 +673,12 @@ export default function PetAssistantDrawer({
                   value={customModelInput}
                   onChange={e => setCustomModelInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleCustomModelApply()}
-                  className="w-24 text-[11px] font-mono px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 outline-none focus:border-indigo-400"
+                  className="w-24 text-2xs font-mono px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 outline-none focus:border-indigo-400"
                 />
                 {customModelInput.trim() && (
                   <button
                     onClick={handleCustomModelApply}
-                    className="px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold hover:bg-indigo-100"
+                    className="px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 text-2xs font-bold hover:bg-indigo-100"
                   >
                     应用
                   </button>
@@ -689,14 +689,14 @@ export default function PetAssistantDrawer({
         </div>
 
         {/* Active Provider detail indicator */}
-        <div className="flex items-center justify-between text-[11px] text-slate-400 pt-0.5 border-t border-slate-200/60 dark:border-slate-800">
+        <div className="flex items-center justify-between text-2xs text-slate-400 pt-0.5 border-t border-slate-200/60 dark:border-slate-800">
           <div className="flex items-center gap-1.5 truncate">
             <Terminal className="w-3 h-3 text-emerald-500 shrink-0" />
             <span className="truncate">
               {currentProviderStatus?.version || (provider === 'web' ? '云端 AI 智算网络' : `${provider} 命令行已连接`)}
             </span>
           </div>
-          <div className="flex items-center gap-1 font-mono text-[10px] text-amber-600 dark:text-amber-400 shrink-0">
+          <div className="flex items-center gap-1 font-mono text-2xs text-amber-600 dark:text-amber-400 shrink-0">
             <Zap className="w-3 h-3" />
             <span>今日消耗: {dailyTokens.toLocaleString()} tokens</span>
           </div>
@@ -706,13 +706,13 @@ export default function PetAssistantDrawer({
       {/* Built-in Study Skills Toolbar (免插件考研笔记与学习功能) */}
       <div className="px-5 py-2 bg-amber-50/50 dark:bg-slate-900 border-b border-amber-200/50 dark:border-slate-800">
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[11px] font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1">
+          <span className="text-2xs font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1">
             <Sparkles className="w-3 h-3 text-amber-500" />
             考研研学 &amp; 笔记专属 Skills (零插件一键触发):
           </span>
           <button
             onClick={() => setShowSkillsMenu(!showSkillsMenu)}
-            className="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-0.5"
+            className="text-2xs text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-0.5"
           >
             <span>{showSkillsMenu ? '收起' : '展开全部技能'}</span>
             <ChevronDown className={`w-3 h-3 transition-transform ${showSkillsMenu ? 'rotate-180' : ''}`} />
@@ -736,7 +736,7 @@ export default function PetAssistantDrawer({
               >
                 <span>{skill.emoji}</span>
                 <span>{skill.shortName}</span>
-                <span className={`text-[9px] px-1 py-0.2 rounded font-mono ${
+                <span className={`text-2xs px-1 py-0.2 rounded font-mono ${
                   isCurrent ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-500'
                 }`}>
                   {skill.command}
@@ -782,7 +782,7 @@ export default function PetAssistantDrawer({
 
             <div className={`space-y-2 max-w-[85%] ${m.role === 'user' ? 'items-end' : ''}`}>
               {m.skillName && (
-                <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-[10px] font-semibold border border-amber-300">
+                <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-2xs font-semibold border border-amber-300">
                   <Sparkles className="w-2.5 h-2.5" />
                   <span>执行 Skill: {m.skillName}</span>
                 </div>
@@ -794,7 +794,7 @@ export default function PetAssistantDrawer({
                   {m.toolCalls.map((tc, idx) => (
                     <div
                       key={idx}
-                      className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800 text-[11px] font-mono text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5"
+                      className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800 text-2xs font-mono text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5"
                     >
                       <Wrench className="w-3 h-3 text-indigo-500 shrink-0" />
                       <span className="font-bold">{tc.tool}</span>
@@ -812,7 +812,7 @@ export default function PetAssistantDrawer({
               <div
                 className={`p-3.5 rounded-2xl text-xs leading-relaxed ${
                   m.role === 'user'
-                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md'
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-sm'
                     : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 shadow-sm'
                 }`}
               >
@@ -820,7 +820,7 @@ export default function PetAssistantDrawer({
               </div>
 
               {m.role === 'assistant' && m.content && !loading && (
-                <div className="flex items-center gap-1.5 pt-1 text-[11px] text-slate-400">
+                <div className="flex items-center gap-1.5 pt-1 text-2xs text-slate-400">
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(m.content)
@@ -863,14 +863,14 @@ export default function PetAssistantDrawer({
                   <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">
                     研学记忆矩阵 · 408 与考研数学速览
                   </h4>
-                  <p className="text-[10px] text-slate-500">
+                  <p className="text-2xs text-slate-500">
                     点击考点立即唤起深度解析与记忆强化
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setShowMemoryModal(true)}
-                className="text-[11px] font-medium text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 flex items-center gap-0.5 cursor-pointer"
+                className="text-2xs font-medium text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 flex items-center gap-0.5 cursor-pointer"
               >
                 <span>记忆仓库</span>
                 <ArrowRight className="w-3 h-3" />
@@ -894,14 +894,14 @@ export default function PetAssistantDrawer({
                   }}
                   className={`p-2.5 rounded-xl border text-left transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer ${item.color}`}
                 >
-                  <div className="text-[10px] font-semibold opacity-75">{item.tag}</div>
+                  <div className="text-2xs font-semibold opacity-75">{item.tag}</div>
                   <div className="text-xs font-bold truncate mt-0.5">{item.title}</div>
                 </button>
               ))}
             </div>
 
             <div className="pt-2 border-t border-slate-200/70 dark:border-slate-700/60 flex items-center justify-between text-xs text-slate-500">
-              <span className="text-[11px]">快捷操作:</span>
+              <span className="text-2xs">快捷操作:</span>
               <div className="flex items-center gap-1.5">
                 <button
                   onClick={() => {
@@ -911,21 +911,21 @@ export default function PetAssistantDrawer({
                     })
                     setPracticeModalOpen(true)
                   }}
-                  className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-amber-400 text-[11px] font-medium flex items-center gap-1 shadow-xs cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-amber-400 text-2xs font-medium flex items-center gap-1 shadow-xs cursor-pointer"
                 >
                   <Target className="w-3 h-3 text-amber-500" />
                   <span>随堂抽测</span>
                 </button>
                 <button
                   onClick={() => setShowMemoryModal(true)}
-                  className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-400 text-[11px] font-medium flex items-center gap-1 shadow-xs cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-400 text-2xs font-medium flex items-center gap-1 shadow-xs cursor-pointer"
                 >
                   <Brain className="w-3 h-3 text-indigo-500" />
                   <span>记忆图谱</span>
                 </button>
                 <button
                   onClick={handleSyncLocalModels}
-                  className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-emerald-400 text-[11px] font-medium flex items-center gap-1 shadow-xs cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-emerald-400 text-2xs font-medium flex items-center gap-1 shadow-xs cursor-pointer"
                 >
                   <RefreshCw className={`w-3 h-3 text-emerald-500 ${syncingModels ? 'animate-spin' : ''}`} />
                   <span>同步模型</span>
@@ -989,13 +989,13 @@ export default function PetAssistantDrawer({
           <button
             onClick={() => handleSendMessage()}
             disabled={loading || !input.trim()}
-            className="absolute right-2.5 bottom-3.5 p-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:from-amber-600 hover:to-orange-600 transition-all shadow-md cursor-pointer"
+            className="absolute right-2.5 bottom-3.5 p-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:from-amber-600 hover:to-orange-600 transition-all shadow-sm cursor-pointer"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
           </button>
         </div>
 
-        <div className="mt-2 flex items-center justify-between text-[11px] text-slate-400">
+        <div className="mt-2 flex items-center justify-between text-2xs text-slate-400">
           <div className="flex items-center gap-2">
             <span>当前引擎: <b className="text-slate-700 dark:text-slate-200">{provider}</b> ({selectedModel})</span>
           </div>

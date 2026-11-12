@@ -187,7 +187,7 @@ export default function QuickPracticeModal({
 
   const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 md:p-4 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 border-0 md:border md:border-cream-200 md:dark:border-slate-800 rounded-none md:rounded-3xl shadow-2xl w-full h-[100dvh] md:h-auto md:max-w-2xl md:max-h-[88vh] flex flex-col overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 border-0 md:border md:border-cream-200 md:dark:border-slate-800 rounded-none md:rounded-3xl shadow-xl w-full h-[100dvh] md:h-auto md:max-w-2xl md:max-h-[88vh] flex flex-col overflow-hidden">
         {/* Android M3 Top App Bar */}
         <div className="flex flex-col border-b border-cream-200/90 dark:border-slate-800/90 bg-white/95 dark:bg-slate-900/95 pt-[env(safe-area-inset-top,0px)] shrink-0">
           <div className="flex items-center justify-between px-3 md:px-5 py-2.5 md:py-3.5 gap-2">
@@ -204,11 +204,11 @@ export default function QuickPracticeModal({
                   <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm md:text-base truncate">
                     考点随堂真题测验
                   </h3>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300 font-semibold shrink-0">
+                  <span className="text-2xs px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300 font-semibold shrink-0">
                     AI 命制
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-[200px] sm:max-w-xs">
+                <p className="text-2xs text-slate-500 dark:text-slate-400 truncate max-w-[200px] sm:max-w-xs">
                   靶向笔记：{noteTitle || '当前笔记'}
                 </p>
               </div>
@@ -245,14 +245,14 @@ export default function QuickPracticeModal({
           {loading ? (
             <div className="py-16 px-4 flex flex-col items-center justify-center text-center space-y-5 animate-in fade-in">
               <div className="relative">
-                <div className="w-16 h-16 rounded-3xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 flex items-center justify-center shadow-lg shadow-amber-500/10">
+                <div className="w-16 h-16 rounded-3xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 flex items-center justify-center shadow-xl shadow-amber-500/10">
                   <Loader2 className="w-8 h-8 text-amber-600 dark:text-amber-400 animate-spin" />
                 </div>
                 <Sparkles className="w-5 h-5 text-amber-500 absolute -top-1.5 -right-1.5 animate-bounce" />
               </div>
 
               <div className="space-y-2 max-w-sm">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] font-mono text-slate-600 dark:text-slate-300">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-2xs font-mono text-slate-600 dark:text-slate-300">
                   <span>⏱ 已研析生成 {elapsedSec} 秒</span>
                 </div>
 
@@ -280,7 +280,7 @@ export default function QuickPracticeModal({
           ) : showSummary ? (
             /* Summary Report Card */
             <div className="py-8 px-4 text-center space-y-6">
-              <div className="inline-flex p-4 rounded-full bg-gradient-to-tr from-amber-400 to-orange-500 text-white shadow-lg shadow-orange-500/20">
+              <div className="inline-flex p-4 rounded-full bg-gradient-to-tr from-amber-400 to-orange-500 text-white shadow-xl shadow-orange-500/20">
                 <Award className="w-10 h-10" />
               </div>
               <div>
@@ -323,7 +323,7 @@ export default function QuickPracticeModal({
                 </button>
                 <button
                   onClick={onClose}
-                  className="px-6 py-2 rounded-xl text-xs font-semibold bg-orange-500 hover:bg-orange-600 text-white shadow-md shadow-orange-500/20 transition-colors"
+                  className="px-6 py-2 rounded-xl text-xs font-semibold bg-orange-500 hover:bg-orange-600 text-white shadow-sm shadow-orange-500/20 transition-colors"
                 >
                   完成复盘
                 </button>
@@ -338,10 +338,10 @@ export default function QuickPracticeModal({
                   <span className="text-xs font-bold text-orange-600 dark:text-orange-400">
                     考点单选题
                   </span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold border border-slate-200/60 dark:border-slate-700">
+                  <span className="text-2xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold border border-slate-200/60 dark:border-slate-700">
                     {currentQ.subject}
                   </span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 font-medium border border-amber-200/60 dark:border-amber-900/40">
+                  <span className="text-2xs px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 font-medium border border-amber-200/60 dark:border-amber-900/40">
                     难度：{currentQ.difficulty}
                   </span>
                 </div>
@@ -368,8 +368,8 @@ export default function QuickPracticeModal({
               </div>
 
               {/* Question Stem - Android M3 Card */}
-              <div className="p-4 md:p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 text-sm md:text-base leading-relaxed text-slate-900 dark:text-slate-100 shadow-2xs">
-                <div className="font-semibold mb-1 text-slate-400 dark:text-slate-500 text-[11px] uppercase tracking-wider">
+              <div className="p-4 md:p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 text-sm md:text-base leading-relaxed text-slate-900 dark:text-slate-100 shadow-xs">
+                <div className="font-semibold mb-1 text-slate-400 dark:text-slate-500 text-2xs uppercase tracking-wider">
                   题目背景与条件：
                 </div>
                 <MarkdownRenderer content={currentQ.question} />
@@ -401,7 +401,7 @@ export default function QuickPracticeModal({
                         key={key}
                         disabled={isAnswered}
                         onClick={() => handleSelectOption(key)}
-                        className={`w-full flex items-center gap-3.5 p-3.5 md:p-4 rounded-2xl border text-left text-xs md:text-sm transition-all shadow-2xs select-none cursor-pointer ${optStyle}`}
+                        className={`w-full flex items-center gap-3.5 p-3.5 md:p-4 rounded-2xl border text-left text-xs md:text-sm transition-all shadow-xs select-none cursor-pointer ${optStyle}`}
                       >
                         <span className={`w-7 h-7 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 border transition-all ${badgeStyle}`}>
                           {key}
@@ -420,7 +420,7 @@ export default function QuickPracticeModal({
                   <button
                     onClick={handleSubmitAnswer}
                     disabled={!userAns}
-                    className="w-full py-3.5 px-6 rounded-2xl text-sm font-bold bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white disabled:opacity-40 disabled:cursor-not-allowed shadow-md shadow-orange-500/25 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2"
+                    className="w-full py-3.5 px-6 rounded-2xl text-sm font-bold bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white disabled:opacity-40 disabled:cursor-not-allowed shadow-sm shadow-orange-500/25 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2"
                   >
                     <span>确认作答</span>
                     <ArrowRight className="w-4 h-4" />
@@ -535,7 +535,7 @@ export default function QuickPracticeModal({
                     {currentIndex < questions.length - 1 ? (
                       <button
                         onClick={() => setCurrentIndex(prev => prev + 1)}
-                        className="flex-1 py-3 px-4 rounded-xl text-xs font-bold bg-orange-500 hover:bg-orange-600 text-white flex items-center justify-center gap-1.5 shadow-md shadow-orange-500/20 active:scale-[0.98] transition-all cursor-pointer"
+                        className="flex-1 py-3 px-4 rounded-xl text-xs font-bold bg-orange-500 hover:bg-orange-600 text-white flex items-center justify-center gap-1.5 shadow-sm shadow-orange-500/20 active:scale-[0.98] transition-all cursor-pointer"
                       >
                         <span>下一题</span>
                         <ChevronRight className="w-4 h-4" />
@@ -543,7 +543,7 @@ export default function QuickPracticeModal({
                     ) : (
                       <button
                         onClick={() => setShowSummary(true)}
-                        className="flex-1 py-3 px-4 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-600 text-white flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20 active:scale-[0.98] transition-all cursor-pointer"
+                        className="flex-1 py-3 px-4 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-600 text-white flex items-center justify-center gap-1.5 shadow-sm shadow-emerald-500/20 active:scale-[0.98] transition-all cursor-pointer"
                       >
                         <span>查看成绩报告</span>
                         <ArrowRight className="w-4 h-4" />

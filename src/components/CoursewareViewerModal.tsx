@@ -222,10 +222,10 @@ export default function CoursewareViewerModal({
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-semibold bg-cyan-500/15 text-cyan-300 border border-cyan-500/25">
+                <span className="px-2 py-0.5 rounded text-2xs sm:text-2xs font-semibold bg-cyan-500/15 text-cyan-300 border border-cyan-500/25">
                   {item.domain === 'cs_408' ? '408 计算机' : item.domain === 'politics' ? '考研政治' : '考研数学'} · {item.subject}
                 </span>
-                <span className="px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-medium bg-amber-500/15 text-amber-300 border border-amber-500/25 hidden xs:inline-block">
+                <span className="px-1.5 py-0.5 rounded text-2xs sm:text-2xs font-medium bg-amber-500/15 text-amber-300 border border-amber-500/25 hidden xs:inline-block">
                   {item.difficulty}
                 </span>
               </div>
@@ -332,7 +332,7 @@ export default function CoursewareViewerModal({
                 onClick={() => setShowGuide(false)}
                 className="md:hidden fixed inset-0 bg-black/50 backdrop-blur-[2px] z-20"
               />
-              <div className="fixed md:static inset-x-0 bottom-0 max-h-[72dvh] md:max-h-none md:w-80 lg:w-88 z-30 md:z-auto rounded-t-2xl md:rounded-none border-t md:border-t-0 md:border-l border-white/15 bg-[#13192b]/98 backdrop-blur-xl p-5 overflow-y-auto space-y-4 shrink-0 shadow-2xl animate-in slide-in-from-bottom md:slide-in-from-right duration-200">
+              <div className="fixed md:static inset-x-0 bottom-0 max-h-[72dvh] md:max-h-none md:w-80 lg:w-88 z-30 md:z-auto rounded-t-2xl md:rounded-none border-t md:border-t-0 md:border-l border-white/15 bg-[#13192b]/98 backdrop-blur-xl p-5 overflow-y-auto space-y-4 shrink-0 shadow-xl animate-in slide-in-from-bottom md:slide-in-from-right duration-200">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-xs font-bold text-cyan-400">
                     <Sparkles className="w-4 h-4" />
@@ -352,7 +352,7 @@ export default function CoursewareViewerModal({
                 </p>
 
                 <div className="space-y-2.5 pt-2 border-t border-white/10">
-                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  <div className="text-2xs font-bold text-slate-400 uppercase tracking-wider">
                     核心研学收获与考场结论
                   </div>
                   {item.learningPoints.map((pt, i) => (
@@ -371,7 +371,7 @@ export default function CoursewareViewerModal({
                         setShowGuide(false)
                         onPractice(item)
                       }}
-                      className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs font-bold hover:opacity-95 transition-opacity flex items-center justify-center gap-1.5 shadow-lg shadow-orange-500/20 cursor-pointer"
+                      className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs font-bold hover:opacity-95 transition-opacity flex items-center justify-center gap-1.5 shadow-xl shadow-orange-500/20 cursor-pointer"
                     >
                       <Target className="w-4 h-4" />
                       即刻检验直观理解 (3道随堂真题)

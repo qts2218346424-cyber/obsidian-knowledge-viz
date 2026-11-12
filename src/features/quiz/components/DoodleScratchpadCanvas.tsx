@@ -263,7 +263,7 @@ export default function DoodleScratchpadCanvas({
     <div
       ref={containerRef}
       className={`relative flex flex-col rounded-2xl border border-slate-200/90 bg-white shadow-xs overflow-hidden transition-all ${
-        isFullscreen ? 'fixed inset-4 z-50 shadow-2xl border-slate-300' : ''
+        isFullscreen ? 'fixed inset-4 z-50 shadow-xl border-slate-300' : ''
       } ${className}`}
     >
       {/* 顶部工具栏：颜色、笔触、橡皮擦、网格、撤销、清空 */}
@@ -275,7 +275,7 @@ export default function DoodleScratchpadCanvas({
             onClick={() => setIsEraser(false)}
             className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
               !isEraser
-                ? 'bg-white border-slate-300 shadow-2xs text-indigo-600 font-bold'
+                ? 'bg-white border-slate-300 shadow-xs text-indigo-600 font-bold'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
             title="钢笔画线"
@@ -313,7 +313,7 @@ export default function DoodleScratchpadCanvas({
                   setStrokeWidth(s.width)
                   setIsEraser(false)
                 }}
-                className={`px-1.5 py-0.5 text-[10px] rounded font-medium transition-colors cursor-pointer ${
+                className={`px-1.5 py-0.5 text-2xs rounded font-medium transition-colors cursor-pointer ${
                   !isEraser && strokeWidth === s.width
                     ? 'bg-slate-900 text-white font-bold'
                     : 'text-slate-500 hover:text-slate-900'
@@ -330,7 +330,7 @@ export default function DoodleScratchpadCanvas({
             onClick={() => setIsEraser(true)}
             className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
               isEraser
-                ? 'bg-rose-50 border-rose-300 text-rose-600 shadow-2xs font-bold'
+                ? 'bg-rose-50 border-rose-300 text-rose-600 shadow-xs font-bold'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
             title="橡皮擦"
@@ -347,7 +347,7 @@ export default function DoodleScratchpadCanvas({
             onClick={() => setShowGrid((v) => !v)}
             className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
               showGrid
-                ? 'bg-white border-slate-300 text-indigo-600 shadow-2xs'
+                ? 'bg-white border-slate-300 text-indigo-600 shadow-xs'
                 : 'border-transparent text-slate-400 hover:text-slate-700'
             }`}
             title={showGrid ? '关闭方格参考线' : '开启考研草稿方格线'}
@@ -411,13 +411,13 @@ export default function DoodleScratchpadCanvas({
         />
 
         {/* 右下角贴心操作指示 */}
-        <div className="absolute right-3 bottom-2 pointer-events-none text-[10px] text-slate-400 font-mono select-none">
+        <div className="absolute right-3 bottom-2 pointer-events-none text-2xs text-slate-400 font-mono select-none">
           ✍️ 支持 iPad触控笔 / 鼠标手绘 · 自动同步第 {questionIndex + 1} 题
         </div>
       </div>
 
       {/* 底部微型状态栏 */}
-      <div className="px-3 py-1.5 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+      <div className="px-3 py-1.5 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between text-2xs text-slate-400">
         <span>已开启防手掌误触 · 做题中切换题目自动留存演算痕迹</span>
         <button
           type="button"
