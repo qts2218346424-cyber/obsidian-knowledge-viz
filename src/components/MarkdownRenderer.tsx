@@ -9,6 +9,9 @@ import remarkMath from 'remark-math'
 import rehypeHighlight from 'rehype-highlight'
 
 import rehypeKatex from 'rehype-katex'
+// 公式与代码高亮样式随渲染器按需加载，不再阻塞首屏
+import 'katex/dist/katex.min.css'
+import 'highlight.js/styles/github-dark.css'
 
 import { Copy, Check, ChevronDown, Sparkles } from 'lucide-react'
 

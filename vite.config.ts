@@ -16,24 +16,18 @@ export default defineConfig({
     },
   },
   build: {
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        // 精细化分包策略：隔离重型渲染引擎，提升首屏加载与缓存命中率
-        manualChunks(id: string) {
-          if (id.includes('node_modules')) {
-            if (id.includes('react-markdown') || id.includes('remark-') || id.includes('rehype-') || id.includes('katex') || id.includes('highlight.js')) {
-              return 'vendor-markdown'
-            }
-            if (id.includes('d3') || id.includes('@xyflow') || id.includes('dagre') || id.includes('recharts')) {
-              return 'vendor-viz'
-            }
-            if (id.includes('lucide-react')) {
-              return 'vendor-icons'
-            }
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
-              return 'vendor-react'
-            }
-          }
+        // 精细化分包策略：隔离重型渲染引擎，提升首屏加载与缓存命中率。
+        // 使用 Rolldown codeSplitting + priority：React 运行时优先归入 vendor-react，
+        // 避免 markdown 分组按依赖递归吞入 react/jsx-runtime，导致落地页被迫预加载 ~600KB 的 Markdown/KaTeX 引擎。
+        codeSplitting: {
+          groups: [
+            { name: 'vendor-react', test: /[\\/]node_modules[\\/](react|react-dom|scheduler|react-router|react-router-dom)[\\/]/, priority: 40 },
+            { name: 'vendor-icons', test: /[\\/]node_modules[\\/]lucide-react[\\/]/, priority: 30 },
+            { name: 'vendor-markdown', test: /[\\/]node_modules[\\/](react-markdown|remark-[^\\/]+|rehype-[^\\/]+|katex|highlight\.js|lowlight)[\\/]/, priority: 20 },
+            { name: 'vendor-viz', test: /[\\/]node_modules[\\/](d3[^\\/]*|@xyflow|dagre|recharts)[\\/]/, priority: 10 },
+          ],
         },
       },
     },

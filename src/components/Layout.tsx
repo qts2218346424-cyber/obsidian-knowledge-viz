@@ -36,17 +36,18 @@ import { useExamCountdown } from '../utils/examDate'
 import { useVaultEvents } from '../hooks/useVaultEvents'
 import DesktopPet from './Pet/DesktopPet'
 import { useAuth } from '../contexts/AuthContext'
-import UserManagementModal from './UserManagementModal'
-import UserGuideModal from './UserGuideModal'
-import CheckinModal from './CheckinModal'
-import ChangePasswordModal from './ChangePasswordModal'
-import InteractiveTourGuide from './InteractiveTourGuide'
 import { HelpCircle, Compass, KeyRound, History as HistoryIcon } from 'lucide-react'
 import { LogOut, Users as UsersIcon, ShieldAlert as ShieldAlertIcon } from 'lucide-react'
-import { prefetchRoute } from '../App'
+import { prefetchRoute } from '../app/routes'
 import { useUIModalStore } from '../shared/store/useUIModalStore'
 
 import SearchModal from './SearchModal'
+// 低频弹窗改为按需加载 + 打开时才挂载，减少 Layout 首屏 JS 与常驻渲染开销
+const UserManagementModal = lazy(() => import('./UserManagementModal'))
+const UserGuideModal = lazy(() => import('./UserGuideModal'))
+const CheckinModal = lazy(() => import('./CheckinModal'))
+const ChangePasswordModal = lazy(() => import('./ChangePasswordModal'))
+const InteractiveTourGuide = lazy(() => import('./InteractiveTourGuide'))
 const AIAssistantModal = lazy(() => import('./AIAssistantModal'))
 const ImportResourceModal = lazy(() => import('./ImportResourceModal'))
 const MobileDeviceModal = lazy(() => import('./MobileDeviceModal'))
@@ -232,25 +233,21 @@ export default function Layout({ children }: LayoutProps) {
 
     // 核心研学空间后台闲时预取 (Idle Route Prefetching)
     // 利用空闲网络带宽提前将「做题中心」与「学习中心」缓存到浏览器，消除点击等待
-    const idleHandler =
-      (window as any).requestIdleCallback?.((deadline: any) => {
-        prefetchRoute('/quiz')
-        prefetchRoute('/study')
-        if (deadline.timeRemaining() > 10) {
-          prefetchRoute('/editor')
-        }
-      }) ??
-      setTimeout(() => {
-        prefetchRoute('/quiz')
-        prefetchRoute('/study')
-      }, 700)
+    const ric = (window as any).requestIdleCallback as undefined | ((cb: (d: { timeRemaining: () => number }) => void, opts?: { timeout: number }) => number)
+    const runPrefetch = (deadline?: { timeRemaining: () => number }) => {
+      prefetchRoute('/quiz')
+      prefetchRoute('/study')
+      if (!deadline || deadline.timeRemaining() > 10) {
+        prefetchRoute('/editor')
+      }
+    }
+    // 修复：原实现无法区分 requestIdleCallback 与 setTimeout 的句柄，清理时可能调用错误的取消函数
+    const idleId = ric ? ric(runPrefetch, { timeout: 2000 }) : null
+    const timeoutId = ric ? null : setTimeout(() => runPrefetch(), 700)
 
     return () => {
-      if ((window as any).cancelIdleCallback && typeof idleHandler === 'number') {
-        ;(window as any).cancelIdleCallback(idleHandler)
-      } else {
-        clearTimeout(idleHandler)
-      }
+      if (idleId !== null) (window as any).cancelIdleCallback?.(idleId)
+      if (timeoutId !== null) clearTimeout(timeoutId)
     }
   }, [currentPage?.label, vaultName, location.pathname])
 
@@ -797,26 +794,31 @@ export default function Layout({ children }: LayoutProps) {
           </div>
         </div>
       </header>
-      <ChangePasswordModal isOpen={changePasswordOpen} onClose={() => setChangePasswordOpen(false)} />
-      <UserManagementModal isOpen={Boolean(userManagementOpen || activeModals['user-management'])} onClose={() => { setUserManagementOpen(false); closeModal('user-management') }} />
-      <UserGuideModal
-        isOpen={Boolean(guideOpen || activeModals['user-guide'])}
-        onClose={() => { setGuideOpen(false); closeModal('user-guide') }}
-        onStartInteractiveTour={() => {
-          setGuideOpen(false)
-          closeModal('user-guide')
-          setInteractiveTourOpen(true)
-        }}
-      />
-      <InteractiveTourGuide
-        isOpen={interactiveTourOpen}
-        onClose={() => setInteractiveTourOpen(false)}
-      />
-      <CheckinModal
-        isOpen={Boolean(checkinOpen || activeModals['checkin'])}
-        onClose={() => { setCheckinOpen(false); closeModal('checkin') }}
-        defaultTab={checkinTab}
-      />
+      <Suspense fallback={null}>
+        {changePasswordOpen && <ChangePasswordModal isOpen onClose={() => setChangePasswordOpen(false)} />}
+        {Boolean(userManagementOpen || activeModals['user-management']) && (
+          <UserManagementModal isOpen onClose={() => { setUserManagementOpen(false); closeModal('user-management') }} />
+        )}
+        {Boolean(guideOpen || activeModals['user-guide']) && (
+          <UserGuideModal
+            isOpen
+            onClose={() => { setGuideOpen(false); closeModal('user-guide') }}
+            onStartInteractiveTour={() => {
+              setGuideOpen(false)
+              closeModal('user-guide')
+              setInteractiveTourOpen(true)
+            }}
+          />
+        )}
+        {interactiveTourOpen && <InteractiveTourGuide isOpen onClose={() => setInteractiveTourOpen(false)} />}
+        {Boolean(checkinOpen || activeModals['checkin']) && (
+          <CheckinModal
+            isOpen
+            onClose={() => { setCheckinOpen(false); closeModal('checkin') }}
+            defaultTab={checkinTab}
+          />
+        )}
+      </Suspense>
 
       {/* Mobile Full-Featured Bottom Sheet Navigation */}
       {mobileNavOpen && (
