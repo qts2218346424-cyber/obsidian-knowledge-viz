@@ -88,12 +88,7 @@ export default function TopicCategoryHubView({
         if (csSubjectFilter !== 'all' && cat.subjectGroup !== csSubjectFilter) return false
       }
       if (groupFilter === 'custom' && !cat.hasImported) return false
-      if (
-        groupFilter === 'other' &&
-        cat.domain !== 'english' &&
-        cat.domain !== 'politics' &&
-        cat.domain !== 'general'
-      ) {
+      if (groupFilter === 'other' && cat.domain !== 'general') {
         return false
       }
 

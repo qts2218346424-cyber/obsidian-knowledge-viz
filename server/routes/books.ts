@@ -316,7 +316,7 @@ function extractQuizQuestionsFromRawText(text: string, filename: string, domain:
   return questions
 }
 
-function inferDomainAndSubjectFromText(text: string, filename: string): { domain: ResourceDomain; subject: string } {
+export function inferDomainAndSubjectFromText(text: string, filename: string): { domain: ResourceDomain; subject: string } {
   const combined = (filename + ' ' + text).toLowerCase()
   
   // 操作系统关键词特征
@@ -1874,8 +1874,9 @@ booksRouter.post('/books/scan-start', (req, res) => {
 
     const { fullPath, actualScope, relativePathNormalized } = resolved
     const bookName = path.basename(fullPath)
-    const domain: ResourceDomain = clientDomain || inferDomainFromPathOrName(fullPath)
-    const subject = clientSubject || getDefaultSubjectForDomain(domain)
+    const inferredMeta = inferDomainAndSubjectFromText(relativePathNormalized, bookName)
+    const domain: ResourceDomain = clientDomain || inferredMeta.domain || inferDomainFromPathOrName(fullPath)
+    const subject = clientSubject || (inferredMeta.domain === domain ? inferredMeta.subject : getDefaultSubjectForDomain(domain))
     const vaultRoot = getRequestVaultPath(req)
 
     const task = enqueueBookScanTask({
@@ -1944,10 +1945,11 @@ booksRouter.post('/books/extract-ai', async (req, res) => {
       domain: ResourceDomain
       subject?: string
     }
-    const domain = normalizeResourceDomain(rawDomain)
+    const inferredFromText = inferDomainAndSubjectFromText(text, bookName || '')
+    const domain = rawDomain ? normalizeResourceDomain(rawDomain) : inferredFromText.domain
     const domainDisplay = getDomainDisplayName(domain)
     const wikiDomainDir = getWikiDomainDir(domain)
-    const defaultSubject = subject || getDefaultSubjectForDomain(domain)
+    const defaultSubject = subject || (inferredFromText.domain === domain ? inferredFromText.subject : getDefaultSubjectForDomain(domain))
 
     if (!text || text.trim().length < 10) {
       res.status(400).json({ error: '提取内容过短，请输入或提供有效的材料文本' })
@@ -2190,8 +2192,9 @@ ${cleanCustomText.slice(0, 12000)}
     }
 
     // 针对整本 PDF/资料文件：运行全卷分片真实提题引擎
-    const domain: ResourceDomain = clientDomain || inferDomainFromPathOrName(fullPath)
-    const subject = clientSubject || getDefaultSubjectForDomain(domain)
+    const inferredMeta = inferDomainAndSubjectFromText(relativePathNormalized, bookName)
+    const domain: ResourceDomain = clientDomain || inferredMeta.domain || inferDomainFromPathOrName(fullPath)
+    const subject = clientSubject || (inferredMeta.domain === domain ? inferredMeta.subject : getDefaultSubjectForDomain(domain))
 
     const result = await executeBookScanJob({
       userId: req.user?.id || 'anonymous',

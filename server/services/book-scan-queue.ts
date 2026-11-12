@@ -497,6 +497,37 @@ export async function executeBookScanJob(
     throw new Error('该资料有效文字内容为空，无法进行扫描提取')
   }
 
+  // 根据首片真实文本与书名/路径智能校准二级学科（防止未传 subject 时 cs_408 默认退化为“数据结构”）
+  const refineSubjectFromText = (sampleText: string, bookName: string, relPath: string, domain: ResourceDomain, curSubject: string): string => {
+    const combined = `${relPath} ${bookName} ${sampleText}`.toLowerCase()
+    if (domain === 'cs_408') {
+      const scores: Array<[string, number]> = [
+        ['操作系统', ['操作系统', '进程', '线程', '死锁', '信号量', 'pv操作', '虚拟内存', '分页', '分段', '页面置换', 'tlb', '快表', '文件系统', 'inode', 'spooling', '调度算法'].filter(k => combined.includes(k)).length],
+        ['计算机组成原理', ['计算机组成', '计组', '组原', '指令系统', '微程序', '流水线', '补码', 'ieee754', 'cache', '组相联', '主存', 'dram', '总线'].filter(k => combined.includes(k)).length],
+        ['计算机网络', ['计算机网络', '计网', 'tcp', 'udp', 'ip地址', '子网掩码', 'cidr', '三次握手', '滑动窗口', '拥塞控制', 'csma/cd', '路由器', 'rip', 'ospf', 'dns', 'http'].filter(k => combined.includes(k)).length],
+        ['数据结构', ['数据结构', '二叉树', 'avl', '红黑树', 'b+树', '哈夫曼', '拓扑排序', '关键路径', 'dijkstra', '快速排序', '堆排序', '链表'].filter(k => combined.includes(k)).length],
+      ]
+      scores.sort((a, b) => b[1] - a[1])
+      if (scores[0][1] > 0 && (!curSubject || curSubject === '数据结构' || scores[0][1] >= 2)) {
+        return scores[0][0]
+      }
+    } else if (domain === 'math') {
+      const scores: Array<[string, number]> = [
+        ['线性代数', ['线性代数', '行列式', '矩阵的秩', '线性相关', '线性无关', '基础解系', '特征值', '特征向量', '相似对角化', '二次型', '正定'].filter(k => combined.includes(k)).length],
+        ['概率论与数理统计', ['概率论', '数理统计', '随机变量', '概率密度', '分布函数', '数学期望', '方差', '协方差', '大数定律', '中心极限定理', '卡方分布'].filter(k => combined.includes(k)).length],
+        ['高等数学', ['微积分', '高等数学', '极限', '泰勒公式', '洛必达', '中值定理', '拉格朗日', '不定积分', '定积分', '二重积分', '微分方程', '级数'].filter(k => combined.includes(k)).length],
+      ]
+      scores.sort((a, b) => b[1] - a[1])
+      if (scores[0][1] > 0 && (!curSubject || curSubject === '高等数学' || scores[0][1] >= 2)) {
+        return scores[0][0]
+      }
+    }
+    return curSubject
+  }
+
+  const sampleTextForSubject = chunks.slice(0, 2).map(c => c.text).join('\n')
+  const effectiveSubject = refineSubjectFromText(sampleTextForSubject, input.bookName, input.relativePath, input.domain, input.subject)
+
   const answerKeySnippet = extractAnswerKeySnippet(extracted.pages)
 
   onProgress?.({
@@ -536,7 +567,7 @@ export async function executeBookScanJob(
         totalChunks: chunks.length,
         bookName: input.bookName,
         domain: input.domain,
-        subject: input.subject,
+        subject: effectiveSubject,
         mode: input.mode,
         answerKeySnippet
       })
@@ -551,7 +582,7 @@ export async function executeBookScanJob(
       if (chunkRes.questions.length > 0) {
         const normalizedBatch = normalizeAndDeduplicateQuestions(chunkRes.questions, {
           domain: input.domain,
-          subject: input.subject,
+          subject: effectiveSubject,
           bookName: input.bookName,
           defaultChapter: `${input.bookName.replace(/\.[^.]+$/, '')} · ${pageTag}`
         })
@@ -581,14 +612,14 @@ export async function executeBookScanJob(
 
   const finalQuestions = normalizeAndDeduplicateQuestions(rawQuestionsPool, {
     domain: input.domain,
-    subject: input.subject,
+    subject: effectiveSubject,
     bookName: input.bookName
   })
 
   const wikiNote = buildFinalWikiNoteContent({
     bookName: input.bookName,
     domain: input.domain,
-    subject: input.subject,
+    subject: effectiveSubject,
     totalPages,
     scannedPageRange,
     outlineText: extracted.outlineText,
@@ -637,7 +668,7 @@ export async function executeBookScanJob(
     totalPages,
     scannedPageRange,
     domain: input.domain,
-    subject: input.subject
+    subject: effectiveSubject
   })
 
   onProgress?.({

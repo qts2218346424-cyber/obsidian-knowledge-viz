@@ -131,6 +131,7 @@ export default function ImportResourceModal({
   const [, setBookContent] = useState<string>('')
   const [readingBook, setReadingBook] = useState(false)
   const [uploadDomain, setUploadDomain] = useState<ResourceDomain>('math')
+  const [uploadSubject, setUploadSubject] = useState<string>('auto')
   const [uploadCategory, setUploadCategory] = useState<string>('经典教材')
   const [isUploading, setIsUploading] = useState(false)
   const [renamingBook, setRenamingBook] = useState<BookItem | null>(null)
@@ -351,6 +352,7 @@ export default function ImportResourceModal({
         relativePath,
         scope,
         domain: domain || uploadDomain,
+        subject: uploadSubject && uploadSubject !== 'auto' ? uploadSubject : undefined,
         mode: effectiveMode,
         startPage,
         endPage,
@@ -946,12 +948,15 @@ export default function ImportResourceModal({
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 mb-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
                     <div>
                       <label className="block text-[11px] font-medium text-slate-600 mb-1">所属学科</label>
                       <select
                         value={uploadDomain}
-                        onChange={e => setUploadDomain(e.target.value as ResourceDomain)}
+                        onChange={e => {
+                          setUploadDomain(e.target.value as ResourceDomain)
+                          setUploadSubject('auto')
+                        }}
                         className="w-full text-xs rounded-lg border border-slate-200 px-2.5 py-1.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
                       >
                         {DOMAIN_OPTIONS.map(opt => (
@@ -961,6 +966,32 @@ export default function ImportResourceModal({
                     </div>
 
                     <div>
+                      <label className="block text-[11px] font-medium text-slate-600 mb-1">二级科目</label>
+                      <select
+                        value={uploadSubject}
+                        onChange={e => setUploadSubject(e.target.value)}
+                        className="w-full text-xs rounded-lg border border-slate-200 px-2.5 py-1.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                      >
+                        <option value="auto">智能识别 (推荐)</option>
+                        {uploadDomain === 'cs_408' && (
+                          <>
+                            <option value="数据结构">数据结构</option>
+                            <option value="计算机组成原理">计算机组成原理</option>
+                            <option value="操作系统">操作系统</option>
+                            <option value="计算机网络">计算机网络</option>
+                          </>
+                        )}
+                        {uploadDomain === 'math' && (
+                          <>
+                            <option value="高等数学">高等数学</option>
+                            <option value="线性代数">线性代数</option>
+                            <option value="概率论与数理统计">概率论与数理统计</option>
+                          </>
+                        )}
+                      </select>
+                    </div>
+
+                    <div className="col-span-2 sm:col-span-1">
                       <label className="block text-[11px] font-medium text-slate-600 mb-1">资料类别</label>
                       <select
                         value={uploadCategory}

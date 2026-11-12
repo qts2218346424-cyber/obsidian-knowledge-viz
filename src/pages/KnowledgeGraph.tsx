@@ -55,6 +55,14 @@ function formatLabel(label: string): string {
   return label
 }
 
+// 判定是否为系统内部架构/说明文档节点（普通考生默认不关心内部技术架构）
+const INTERNAL_ARCH_REGEX = /(obsidian|wikilink|rag检索|vault健康|embedding|zettelkasten|\bpara\b|\blyt\b|\bmoc\b|文档摄取|知识库建设|\bmcp\b|claude\s*api|使用手册)/i
+
+function isInternalArchNode(node: { label?: string; id?: string; path?: string }): boolean {
+  const text = `${node.label || ''} ${node.id || ''} ${node.path || ''}`
+  return INTERNAL_ARCH_REGEX.test(text)
+}
+
 export default function KnowledgeGraph() {
   const svgRef = useRef<SVGSVGElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -93,13 +101,35 @@ export default function KnowledgeGraph() {
   const { report } = useVaultHealth()
   const { stats } = useVaultStats()
 
-  // 考研研学知识拓扑：若用户笔记库节点少于 4 个（新账号），无缝展示官方考研核心大纲考点拓扑
-  const isUsingCuratedSyllabus = !data || !data.nodes || data.nodes.length < 4
+  // 仅当在管理员设置中主动开启才显示系统内部架构文档节点；默认只向考生展示考试知识点图谱
+  const showArchInGraph = useMemo(() => {
+    try {
+      return localStorage.getItem('coreforge_graph_show_arch') === 'true'
+    } catch {
+      return false
+    }
+  }, [])
+
+  const filteredVaultData = useMemo(() => {
+    if (!data || !data.nodes) return null
+    if (showArchInGraph) return data
+    const examNodes = data.nodes.filter(n => !isInternalArchNode(n))
+    const validIds = new Set(examNodes.map(n => n.id))
+    const examLinks = (data.links || []).filter(l => {
+      const s = typeof l.source === 'string' ? l.source : (l.source as any)?.id
+      const t = typeof l.target === 'string' ? l.target : (l.target as any)?.id
+      return validIds.has(s) && validIds.has(t)
+    })
+    return { nodes: examNodes, links: examLinks }
+  }, [data, showArchInGraph])
+
+  // 考研研学知识拓扑：若过滤内部架构文档后的考试笔记节点少于 4 个，无缝展示官方考研核心大纲考点拓扑
+  const isUsingCuratedSyllabus = !filteredVaultData || !filteredVaultData.nodes || filteredVaultData.nodes.length < 4
 
   const { nodes: rawNodes, links: rawLinks, groups } = useMemo(() => {
-    if (data && data.nodes && data.nodes.length >= 4) {
-      const grps = [...new Set(data.nodes.map(n => n.group))]
-      return { nodes: data.nodes, links: data.links, groups: grps }
+    if (filteredVaultData && filteredVaultData.nodes && filteredVaultData.nodes.length >= 4) {
+      const grps = [...new Set(filteredVaultData.nodes.map(n => n.group))]
+      return { nodes: filteredVaultData.nodes, links: filteredVaultData.links, groups: grps }
     }
     // 计算官方大纲节点连线度数
     const nodes = mockNodes.map(n => ({
@@ -113,7 +143,7 @@ export default function KnowledgeGraph() {
     }))
     const links = mockLinks.map(l => ({ source: l.source, target: l.target, value: 1 }))
     return { nodes, links, groups: [...new Set(mockNodes.map(n => n.group))] }
-  }, [data])
+  }, [filteredVaultData])
 
   const simNodes: SimNode[] = useMemo(() =>
     rawNodes.map(d => ({

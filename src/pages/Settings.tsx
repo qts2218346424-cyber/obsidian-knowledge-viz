@@ -93,6 +93,13 @@ export default function Settings() {
     }
   })
   const [adminTab, setAdminTab] = useState<'student' | 'system'>('student')
+  const [showArchInGraph, setShowArchInGraph] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('coreforge_graph_show_arch') === 'true'
+    } catch {
+      return false
+    }
+  })
   const { themeStyle, isVibrant, isMinimal, isEyecare, isDark, setThemeStyle } = useThemeStyle()
 
   // 考生账号安全与密码找回（密保与救援码）状态
@@ -556,22 +563,45 @@ export default function Settings() {
       {/* 考生专属研学偏好面板（无任何服务器底层物理路径与端口噪音） */}
       {(!isAdmin || adminTab === 'student') && (
         <div className="space-y-5 animate-in fade-in">
-          {/* 研学账号与安全沙箱 */}
+          {/* 研学账号与知识库连接状态 */}
           <section className="bento-card bg-white border border-neutral-200/80 rounded-xl shadow-xs p-5 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2 text-sm font-bold text-slate-800">
                 <HardDrive className="w-4 h-4 text-emerald-600" />
-                <span>研学空间与个人账号</span>
+                <span>个人账号与服务连接状态</span>
               </div>
-              <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
-                云端沙箱隔离已就绪
+              <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
+                vaultConfigured
+                  ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                  : 'text-rose-700 bg-rose-50 border-rose-200'
+              }`}>
+                {vaultConfigured ? '知识库：已连接' : '知识库：未连接'}
               </span>
             </div>
+
+            {/* 考生端简洁状态概览：只展示已连接/未连接，隐藏所有服务器路径和配置文件 */}
+            <div className="grid grid-cols-2 gap-2.5 text-xs">
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+                <span className="text-slate-600 font-medium">云端笔记与资料库</span>
+                <span className={`font-bold flex items-center gap-1.5 ${vaultConfigured ? 'text-emerald-600' : 'text-rose-500'}`}>
+                  <span className={`w-2 h-2 rounded-full ${vaultConfigured ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                  {vaultConfigured ? '已连接' : '未连接'}
+                </span>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
+                <span className="text-slate-600 font-medium">AI 智能伴学服务</span>
+                <span className={`font-bold flex items-center gap-1.5 ${aiConfigured ? 'text-emerald-600' : 'text-amber-500'}`}>
+                  <span className={`w-2 h-2 rounded-full ${aiConfigured ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                  {aiConfigured ? '已连接' : '未连接'}
+                </span>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-2">
                 <div className="space-y-1 min-w-0">
                   <span className="text-slate-400">当前备考登录身份：</span>
-                  <p className="font-bold text-slate-900 text-sm truncate">{user?.username || '未登录备考者'} <span className="text-xs text-slate-400 font-normal">({user?.role === 'admin' ? '系统站长' : '考研研学者'})</span></p>
+                  <p className="font-bold text-slate-900 text-sm truncate">{user?.username || '未登录备考者'} <span className="text-xs text-slate-400 font-normal">({user?.role === 'admin' ? '系统管理员' : '考研学员'})</span></p>
                 </div>
                 <button
                   type="button"
@@ -584,12 +614,12 @@ export default function Settings() {
                 </button>
               </div>
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
-                <span className="text-slate-400">研核伴学积分余额：</span>
+                <span className="text-slate-400">伴学积分余额：</span>
                 <p className="font-bold text-emerald-700 text-sm">{typeof user?.points === 'number' ? user.points.toFixed(1) : '5.0'} <span className="text-xs text-slate-500 font-normal">积分 (每日签到可领 1 积分)</span></p>
               </div>
             </div>
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              🔒 隐私保证：您的自建笔记、错题本复盘记录以及每日模考成绩均受沙箱加密隔离保护，仅您个人账号可见。
+              🔒 隐私保证：您的自建笔记、错题本复盘记录以及每日模考成绩均已独立加密保存，仅您个人账号可见。
             </p>
           </section>
 
@@ -1062,6 +1092,31 @@ export default function Settings() {
                 detail={settings?.ai?.model || currentEp?.defaultModel || (aiModelSet ? '已就绪' : '未选择')}
                 configuredText={settings?.ai?.model || currentEp?.defaultModel || '已就绪'}
               />
+            </div>
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
+              <div>
+                <div className="text-xs font-bold text-slate-800">知识图谱显示产品内部架构文档</div>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  关闭时，知识图谱仅向考生展示考试大纲与学科知识点拓扑；开启后，将在管理员图谱中包含系统架构（Obsidian Vault / MCP / API）说明节点。
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !showArchInGraph
+                  setShowArchInGraph(next)
+                  try {
+                    localStorage.setItem('coreforge_graph_show_arch', String(next))
+                  } catch {}
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer shrink-0 ${
+                  showArchInGraph
+                    ? 'bg-indigo-600 text-white border-indigo-600'
+                    : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                }`}
+              >
+                {showArchInGraph ? '已开启内部架构视图' : '已隐藏（仅显示考点）'}
+              </button>
             </div>
           </section>
 

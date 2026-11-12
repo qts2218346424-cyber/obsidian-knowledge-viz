@@ -184,14 +184,14 @@ export const activityData = Array.from({ length: 30 }, (_, i) => ({
 }))
 
 export const topEntities = [
-  { name: 'Claude', mentions: 47 },
-  { name: 'Obsidian', mentions: 42 },
-  { name: 'RAG', mentions: 38 },
-  { name: 'BM25', mentions: 31 },
-  { name: 'Embedding', mentions: 29 },
-  { name: 'MCP', mentions: 25 },
-  { name: 'Zettelkasten', mentions: 22 },
-  { name: 'PARA', mentions: 18 },
+  { name: 'PV操作与进程同步', mentions: 47 },
+  { name: '泰勒公式展开', mentions: 42 },
+  { name: 'TCP三次握手', mentions: 38 },
+  { name: '平衡二叉树与红黑树', mentions: 31 },
+  { name: 'Cache映射策略', mentions: 29 },
+  { name: '特征值与相似对角化', mentions: 25 },
+  { name: '指令流水线冒险', mentions: 22 },
+  { name: '贝叶斯与极大似然', mentions: 18 },
 ]
 
 // ─── Workflow Data ────────────────────────────────────────────────────────────
@@ -205,24 +205,24 @@ export interface WorkflowStep {
 }
 
 export const ingestionSteps: WorkflowStep[] = [
-  { id: '1', label: '文档输入', desc: 'PDF / Markdown / Web URL', icon: 'FileInput', status: 'done' },
-  { id: '2', label: '解析 & 分块', desc: '段落分割、Frontmatter 提取、结构化', icon: 'Cog', status: 'done' },
-  { id: '3', label: '实体抽取', desc: 'LLM 识别人物、概念、事件实体', icon: 'Search', status: 'done' },
-  { id: '4', label: '交叉引用', desc: '生成 Wikilinks 和反向链接', icon: 'Link', status: 'active' },
-  { id: '5', label: '向量嵌入', desc: 'Ollama nomic-embed-text 生成', icon: 'Binary', status: 'pending' },
-  { id: '6', label: '写入 Wiki', desc: '生成/更新 Markdown 页面', icon: 'CheckCircle', status: 'pending' },
+  { id: '1', label: '资料导入', desc: 'PDF 教材 / 笔记 / 网页资料', icon: 'FileInput', status: 'done' },
+  { id: '2', label: '解析与分块', desc: '识别章节结构与考点标签', icon: 'Cog', status: 'done' },
+  { id: '3', label: '考点提取', desc: '智能识别核心概念与公式定理', icon: 'Search', status: 'done' },
+  { id: '4', label: '知识点关联', desc: '自动建立笔记双向关联与引用', icon: 'Link', status: 'active' },
+  { id: '5', label: '语义索引', desc: '构建本地考点向量检索索引', icon: 'Binary', status: 'pending' },
+  { id: '6', label: '存入笔记库', desc: '生成结构化复习笔记', icon: 'CheckCircle', status: 'pending' },
 ]
 
 export const researchSteps: WorkflowStep[] = [
-  { id: '1', label: '发现缺口', desc: '从 Vault Lint 识别知识空白', icon: 'Lightbulb', status: 'done' },
-  { id: '2', label: '网络搜索', desc: '多轮 WebFetch 收集资料', icon: 'Globe', status: 'done' },
-  { id: '3', label: '综合分析', desc: '去重、交叉验证、结构化整理', icon: 'Puzzle', status: 'active' },
-  { id: '4', label: '知识归档', desc: '生成 Wiki 页面并建立引用网络', icon: 'Archive', status: 'pending' },
+  { id: '1', label: '发现薄弱点', desc: '从知识体检识别未掌握考点', icon: 'Lightbulb', status: 'done' },
+  { id: '2', label: '真题检索', desc: '关联历年真题与权威解析', icon: 'Globe', status: 'done' },
+  { id: '3', label: '综合归因', desc: '去重、对比正误与梳理推导步骤', icon: 'Puzzle', status: 'active' },
+  { id: '4', label: '知识归档', desc: '生成复习卡片并连入考点图谱', icon: 'Archive', status: 'pending' },
 ]
 
 export const lintSteps: WorkflowStep[] = [
-  { id: '1', label: '扫描 Vault', desc: '遍历所有 Markdown 文件', icon: 'FolderSearch', status: 'done' },
-  { id: '2', label: '8 类检查', desc: '孤立笔记/断链/重复/元数据等', icon: 'ShieldCheck', status: 'done' },
-  { id: '3', label: '生成报告', desc: '按严重程度排列问题清单', icon: 'FileText', status: 'done' },
-  { id: '4', label: '自动修复', desc: '修复断链、补充元数据', icon: 'Wrench', status: 'pending' },
+  { id: '1', label: '扫描笔记库', desc: '遍历全部个人学习笔记', icon: 'FolderSearch', status: 'done' },
+  { id: '2', label: '8 项体检', desc: '孤立笔记 / 失效链接 / 重复笔记等', icon: 'ShieldCheck', status: 'done' },
+  { id: '3', label: '生成报告', desc: '按优先级列出优化建议', icon: 'FileText', status: 'done' },
+  { id: '4', label: '一键优化', desc: '自动修复失效链接与补充标签', icon: 'Wrench', status: 'pending' },
 ]

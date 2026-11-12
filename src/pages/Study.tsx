@@ -2876,7 +2876,7 @@ export default function Study() {
 
 
 function DailyErrorTab() {
-
+  const navigate = useNavigate()
   const [data, setData] = useState<DailyReviewData | null>(null)
 
   const [loading, setLoading] = useState(true)
@@ -2985,17 +2985,20 @@ function DailyErrorTab() {
 
         </div>
 
-        <button
-
-          onClick={loadData}
-
-          className="px-4 py-2 rounded-xl bg-cream-200 text-xs font-semibold text-warm-600 hover:bg-cream-300 transition-colors"
-
-        >
-
-          刷新检查
-
-        </button>
+        <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1">
+          <button
+            onClick={() => navigate('/quiz?tab=errors')}
+            className="px-4 py-2 rounded-xl bg-rose-600 text-xs font-bold text-white hover:bg-rose-700 transition-colors cursor-pointer"
+          >
+            📕 打开新版错题攻克中心
+          </button>
+          <button
+            onClick={loadData}
+            className="px-4 py-2 rounded-xl bg-cream-200 text-xs font-semibold text-warm-600 hover:bg-cream-300 transition-colors cursor-pointer"
+          >
+            刷新检查
+          </button>
+        </div>
 
       </div>
 
@@ -3014,6 +3017,18 @@ function DailyErrorTab() {
   return (
 
     <div className="max-w-2xl mx-auto space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 p-3.5 rounded-xl bg-rose-50/80 border border-rose-200 text-xs">
+        <span className="text-rose-800 font-medium">
+          💡 想要按科目/错因检索、组卷重练、现场做题验证或打印刷题纸？
+        </span>
+        <button
+          type="button"
+          onClick={() => navigate('/quiz?tab=errors')}
+          className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold transition-colors cursor-pointer shrink-0"
+        >
+          📕 进入新版错题攻克中心 →
+        </button>
+      </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
 
