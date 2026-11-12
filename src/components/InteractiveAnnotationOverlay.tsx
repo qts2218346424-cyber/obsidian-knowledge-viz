@@ -520,7 +520,7 @@ export default function InteractiveAnnotationOverlay({
             }}
             className={`w-fit max-w-[96vw] flex items-center gap-1.5 px-2 py-1.5 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border border-slate-200/80 dark:border-slate-800/80 shadow-[0_8px_30px_rgba(0,0,0,0.14)] text-xs select-none transition-all duration-200 ${
               isWriting ? 'opacity-0 pointer-events-none' : 'opacity-100'
-            } ${isDragging ? 'shadow-2xl ring-2 ring-accent-orange/50 cursor-grabbing' : 'hover:shadow-2xl'}`}
+            } ${isDragging ? 'shadow-xl ring-2 ring-accent-orange/50 cursor-grabbing' : 'hover:shadow-xl'}`}
           >
             {/* 拖动手柄 */}
             <div
@@ -582,7 +582,7 @@ export default function InteractiveAnnotationOverlay({
                   <button
                     type="button"
                     onClick={() => onToggleAnnotation(true)}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl font-semibold bg-slate-100/90 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 hover:bg-indigo-600 hover:text-white transition-all duration-150 shadow-2xs touch-manipulation group cursor-pointer"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl font-semibold bg-slate-100/90 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200 hover:bg-indigo-600 hover:text-white transition-all duration-150 shadow-xs touch-manipulation group cursor-pointer"
                     title="提笔在当前页面任意处就地批注 (可按住左侧手柄自由拖拽)"
                   >
                     <PenTool className="w-3.5 h-3.5 text-indigo-600 group-hover:text-white transition-colors" />
@@ -664,8 +664,8 @@ export default function InteractiveAnnotationOverlay({
 
                         {/* 移动端调色浮层 */}
                         {showColorPalette && (
-                          <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 p-2.5 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col gap-2 z-50 animate-fade-in-down w-44">
-                            <div className="text-[10px] font-semibold text-slate-400">批注颜色</div>
+                          <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 p-2.5 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 flex flex-col gap-2 z-50 animate-fade-in-down w-44">
+                            <div className="text-2xs font-semibold text-slate-400">批注颜色</div>
                             <div className="grid grid-cols-6 gap-1">
                               {COLORS.map(c => (
                                 <button
@@ -685,7 +685,7 @@ export default function InteractiveAnnotationOverlay({
                                 />
                               ))}
                             </div>
-                            <div className="text-[10px] font-semibold text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-800">
+                            <div className="text-2xs font-semibold text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-800">
                               笔画粗细
                             </div>
                             <div className="flex gap-1">
@@ -697,7 +697,7 @@ export default function InteractiveAnnotationOverlay({
                                     setCurrentSize(s.value)
                                     setShowColorPalette(false)
                                   }}
-                                  className={`flex-1 py-1 rounded text-[11px] font-medium touch-manipulation ${
+                                  className={`flex-1 py-1 rounded text-2xs font-medium touch-manipulation ${
                                     currentSize === s.value
                                       ? 'bg-accent-orange text-white font-bold'
                                       : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
@@ -739,9 +739,9 @@ export default function InteractiveAnnotationOverlay({
                               key={s.value}
                               type="button"
                               onClick={() => setCurrentSize(s.value)}
-                              className={`px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors touch-manipulation ${
+                              className={`px-1.5 py-0.5 rounded text-2xs font-medium transition-colors touch-manipulation ${
                                 currentSize === s.value
-                                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-bold shadow-2xs'
+                                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-bold shadow-xs'
                                   : 'text-slate-500 hover:text-slate-700'
                               }`}
                             >
@@ -806,13 +806,13 @@ export default function InteractiveAnnotationOverlay({
                   </button>
 
                   {saveStatus === 'saving' && (
-                    <span className="flex items-center gap-1 text-[10px] text-amber-500 animate-pulse">
+                    <span className="flex items-center gap-1 text-2xs text-amber-500 animate-pulse">
                       <Loader2 className="w-3 h-3 animate-spin" />
                       <span className="hidden sm:inline">同步中</span>
                     </span>
                   )}
                   {saveStatus === 'saved' && (
-                    <span className="flex items-center gap-1 text-[10px] text-emerald-500">
+                    <span className="flex items-center gap-1 text-2xs text-emerald-500">
                       <Check className="w-3 h-3" />
                       <span className="hidden sm:inline">已存</span>
                     </span>

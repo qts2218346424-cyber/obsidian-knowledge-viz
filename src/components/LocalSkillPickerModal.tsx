@@ -148,11 +148,11 @@ export default function LocalSkillPickerModal({
 
   const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="w-full max-w-5xl h-[86vh] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+      <div className="w-full max-w-5xl h-[86vh] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xl flex flex-col overflow-hidden">
         {/* Header */}
         <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-gradient-to-r from-amber-50/50 via-white to-orange-50/30 dark:from-slate-900 dark:to-slate-900">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 text-white flex items-center justify-center shadow-md shadow-amber-500/20">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 text-white flex items-center justify-center shadow-sm shadow-amber-500/20">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
@@ -255,7 +255,7 @@ export default function LocalSkillPickerModal({
                 >
                   {cat !== '全部' && getCategoryIcon(cat)}
                   <span>{cat}</span>
-                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                  <span className={`text-2xs px-1.5 py-0.2 rounded-full ${
                     isSelected ? 'bg-white/25 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-500'
                   }`}>
                     {count}
@@ -301,22 +301,22 @@ export default function LocalSkillPickerModal({
                           {skill.displayName}
                         </span>
                         {isCurrent && (
-                          <span className="px-1.5 py-0.5 rounded-md bg-emerald-500 text-white text-[10px] font-bold">
+                          <span className="px-1.5 py-0.5 rounded-md bg-emerald-500 text-white text-2xs font-bold">
                             当前已启用
                           </span>
                         )}
                       </div>
 
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-medium border ${badge.color} shrink-0`}>
+                      <span className={`px-2 py-0.5 rounded-md text-2xs font-medium border ${badge.color} shrink-0`}>
                         {badge.label}
                       </span>
                     </div>
 
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                    <p className="text-2xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
                       {skill.description}
                     </p>
 
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1">
+                    <div className="flex items-center justify-between text-2xs text-slate-400 pt-1">
                       <span className="font-mono truncate max-w-[240px]">
                         ID: {skill.name}
                       </span>
@@ -336,17 +336,17 @@ export default function LocalSkillPickerModal({
               <div className="space-y-4 flex-1 flex flex-col">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-medium border ${getSourceBadge(previewSkill.source).color}`}>
+                    <span className={`px-2 py-0.5 rounded-md text-2xs font-medium border ${getSourceBadge(previewSkill.source).color}`}>
                       {getSourceBadge(previewSkill.source).label}
                     </span>
-                    <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-medium">
+                    <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-2xs font-medium">
                       {previewSkill.category}
                     </span>
                   </div>
                   <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-2">
                     {previewSkill.displayName}
                   </h4>
-                  <div className="text-[11px] font-mono text-slate-400 mt-0.5">
+                  <div className="text-2xs font-mono text-slate-400 mt-0.5">
                     {previewSkill.name}
                   </div>
                 </div>
@@ -368,7 +368,7 @@ export default function LocalSkillPickerModal({
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {previewSkill.allowedTools.map((t, idx) => (
-                        <span key={idx} className="px-2 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 font-mono text-[10px]">
+                        <span key={idx} className="px-2 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 font-mono text-2xs">
                           {t}
                         </span>
                       ))}
@@ -381,7 +381,7 @@ export default function LocalSkillPickerModal({
                     <Terminal className="w-3.5 h-3.5 text-slate-500" />
                     <span>技能系统 Prompt 蓝图预览</span>
                   </div>
-                  <pre className="flex-1 overflow-y-auto p-2 rounded-lg bg-slate-50 dark:bg-slate-950 text-[11px] font-mono text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed custom-scrollbar">
+                  <pre className="flex-1 overflow-y-auto p-2 rounded-lg bg-slate-50 dark:bg-slate-950 text-2xs font-mono text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed custom-scrollbar">
                     {previewSkill.instructions}
                   </pre>
                 </div>
@@ -392,7 +392,7 @@ export default function LocalSkillPickerModal({
                       onSelectSkill(previewSkill)
                       onClose()
                     }}
-                    className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-xs shadow-md shadow-amber-500/20 hover:from-amber-600 hover:to-orange-600 flex items-center justify-center gap-2 cursor-pointer transition-all"
+                    className="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-xs shadow-sm shadow-amber-500/20 hover:from-amber-600 hover:to-orange-600 flex items-center justify-center gap-2 cursor-pointer transition-all"
                   >
                     <Sparkles className="w-4 h-4" />
                     <span>启用此技能 ({previewSkill.displayName})</span>

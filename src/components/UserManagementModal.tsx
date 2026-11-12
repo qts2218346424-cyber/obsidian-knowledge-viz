@@ -238,19 +238,19 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
     switch (role) {
       case 'admin':
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2 py-0.5 rounded-full">
+          <span className="inline-flex items-center gap-1 text-2xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2 py-0.5 rounded-full">
             <ShieldCheck className="h-3 w-3" /> 超级管理员
           </span>
         )
       case 'editor':
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-full">
+          <span className="inline-flex items-center gap-1 text-2xs font-semibold text-amber-700 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-full">
             <Edit3 className="h-3 w-3" /> 研学助教
           </span>
         )
       default:
         return (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full">
+          <span className="inline-flex items-center gap-1 text-2xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full">
             <GraduationCap className="h-3 w-3" /> 学生只读
           </span>
         )
@@ -266,7 +266,7 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
   const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-fade-in">
       <div
-        className="w-full max-w-4xl rounded-2xl bg-white border border-slate-200/90 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up"
+        className="w-full max-w-4xl rounded-2xl bg-white border border-slate-200/90 shadow-xl overflow-hidden flex flex-col max-h-[90vh] animate-scale-up"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -296,7 +296,7 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
             onClick={() => setActiveTab('users')}
             className={`px-4 py-2 text-xs font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'users'
-                ? 'border-indigo-600 text-indigo-700 bg-white rounded-t-lg shadow-2xs'
+                ? 'border-indigo-600 text-indigo-700 bg-white rounded-t-lg shadow-xs'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
@@ -307,7 +307,7 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
             onClick={() => setActiveTab('coupons')}
             className={`px-4 py-2 text-xs font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
               activeTab === 'coupons'
-                ? 'border-amber-600 text-amber-700 bg-white rounded-t-lg shadow-2xs'
+                ? 'border-amber-600 text-amber-700 bg-white rounded-t-lg shadow-xs'
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
@@ -437,7 +437,7 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
                   return (
                     <div
                       key={u.id}
-                      className="p-3.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50/60 shadow-2xs transition-all space-y-2.5"
+                      className="p-3.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50/60 shadow-xs transition-all space-y-2.5"
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div className="flex items-center gap-3">
@@ -447,20 +447,20 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
                           <div>
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-xs font-bold text-slate-900">{u.displayName || u.username}</span>
-                              <span className="text-[11px] text-slate-400 font-mono">@{u.username}</span>
+                              <span className="text-2xs text-slate-400 font-mono">@{u.username}</span>
                               {isSelf && (
-                                <span className="text-[10px] px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-700 font-medium">
+                                <span className="text-2xs px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-700 font-medium">
                                   当前账号
                                 </span>
                               )}
                             </div>
                             <div className="mt-1 flex items-center gap-2 flex-wrap">
                               {getRoleBadge(u.role)}
-                              <span className="inline-flex items-center gap-1 text-[11px] font-bold font-mono px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                              <span className="inline-flex items-center gap-1 text-2xs font-bold font-mono px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
                                 <Coins className="h-3 w-3 text-amber-600" />
                                 {(u.points ?? 5.0).toFixed(1)} 积分
                               </span>
-                              <span className="text-[10px] text-slate-400">
+                              <span className="text-2xs text-slate-400">
                                 创建于 {new Date(u.createdAt || '').toLocaleDateString()}
                               </span>
                             </div>
@@ -534,20 +534,20 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
                               <Coins className="h-4 w-4 text-amber-600" />
                               为「{u.displayName || u.username}」分配伴学积分
                             </span>
-                            <span className="text-[11px] font-mono font-bold text-amber-800">
+                            <span className="text-2xs font-mono font-bold text-amber-800">
                               当前剩余: {(u.points ?? 5.0).toFixed(1)} 积分
                             </span>
                           </div>
 
                           {/* 快捷增减数值 */}
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-[10px] text-amber-800 font-medium">快捷调整:</span>
+                            <span className="text-2xs text-amber-800 font-medium">快捷调整:</span>
                             {[10, 20, 50, 100, -10, -50].map((num) => (
                               <button
                                 key={num}
                                 type="button"
                                 onClick={() => setGrantAmountText(String(num))}
-                                className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 cursor-pointer transition-colors shadow-2xs"
+                                className="px-2 py-0.5 rounded-md text-2xs font-mono font-bold bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 cursor-pointer transition-colors shadow-xs"
                               >
                                 {num > 0 ? `+${num}` : num}
                               </button>
@@ -555,7 +555,7 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
                           </div>
 
                           <div className="flex flex-col sm:flex-row items-center gap-2">
-                            <div className="w-full sm:w-36 flex items-center rounded-lg border border-amber-300 bg-white px-2 py-1 shadow-2xs">
+                            <div className="w-full sm:w-36 flex items-center rounded-lg border border-amber-300 bg-white px-2 py-1 shadow-xs">
                               <span className="text-xs text-amber-700 font-bold mr-1">额度:</span>
                               <input
                                 type="number"
@@ -572,7 +572,7 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
                               placeholder="调整原因/充值备注 (例如: 模拟考优秀赠送)"
                               value={grantRemarkText}
                               onChange={(e) => setGrantRemarkText(e.target.value)}
-                              className="flex-1 w-full rounded-lg border border-amber-300 bg-white px-3 py-1 text-xs text-slate-800 focus:outline-none focus:border-amber-500 shadow-2xs"
+                              className="flex-1 w-full rounded-lg border border-amber-300 bg-white px-3 py-1 text-xs text-slate-800 focus:outline-none focus:border-amber-500 shadow-xs"
                             />
 
                             <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
@@ -760,7 +760,7 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
                   return (
                     <div
                       key={coupon.code}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50/60 shadow-2xs"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50/60 shadow-xs"
                     >
                       <div className="flex items-center gap-3">
                         <div
@@ -789,16 +789,16 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
                               )}
                             </button>
                             {isExhausted ? (
-                              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-500">
+                              <span className="text-2xs px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-500">
                                 已用尽
                               </span>
                             ) : (
-                              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <span className="text-2xs px-1.5 py-0.2 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
                                 有效
                               </span>
                             )}
                           </div>
-                          <div className="mt-1 flex items-center gap-2 text-[10px] text-slate-400">
+                          <div className="mt-1 flex items-center gap-2 text-2xs text-slate-400">
                             <span>面额: <strong>+{coupon.points.toFixed(1)} 积分</strong></span>
                             <span>•</span>
                             <span>已兑: {coupon.usedCount} / {coupon.maxUses} 次</span>
@@ -838,7 +838,7 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
 
         {/* Footer */}
         <div className="border-t border-slate-200 px-6 py-3 bg-slate-50/50 flex justify-between items-center text-xs text-slate-500">
-          <div className="flex items-center gap-1.5 text-[11px]">
+          <div className="flex items-center gap-1.5 text-2xs">
             <ShieldAlert className="h-3.5 w-3.5 text-amber-500" />
             <span>分配的积分与兑换码秒级入账，支持考生在 AI 伴学中畅聊与调用导师模型</span>
           </div>

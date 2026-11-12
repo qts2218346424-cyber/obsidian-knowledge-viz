@@ -192,9 +192,9 @@ export default function Chat() {
   const fontSizeClass = useMemo(() => {
     switch (chatFontSize) {
       case 'sm':
-        return 'text-[11px] sm:text-[11.5px] leading-[1.52]'
+        return 'text-2xs sm:text-2xs leading-[1.52]'
       case 'base':
-        return 'text-[12px] sm:text-[12.5px] leading-[1.56]'
+        return 'text-xs sm:text-[12.5px] leading-[1.56]'
       case 'lg':
         return 'text-[12.5px] sm:text-[13.5px] leading-[1.6]'
     }
@@ -2337,12 +2337,12 @@ export default function Chat() {
         />
 
         {/* 2.2 中间：主伴学对话流 + 一体化智能输入舱 */}
-        <div className="flex-1 flex flex-col bg-white sm:border sm:border-neutral-200/80 sm:rounded-xl overflow-hidden min-w-0 shadow-xs complex-panel-contain">
+        <div className="flex-1 flex flex-col bg-white sm:border sm:border-slate-200/80 sm:rounded-xl overflow-hidden min-w-0 shadow-xs complex-panel-contain">
           {/* 消息滚动列表 (手机端内边距紧凑化，释放大屏可视空间) */}
           <div
             ref={messagesContainerRef}
             onScroll={handleMessagesScroll}
-            className="flex-1 overflow-y-auto px-2 sm:px-6 py-2.5 sm:py-6 space-y-3 sm:space-y-5 relative bg-neutral-50/20"
+            className="flex-1 overflow-y-auto px-2 sm:px-6 py-2.5 sm:py-6 space-y-3 sm:space-y-5 relative bg-slate-50/20"
           >
             {isWelcomeState ? (
               <div
@@ -2350,7 +2350,7 @@ export default function Chat() {
               >
                 {/* 清爽通透的居中导师欢迎区 (Clean Studio Hero) */}
                 <div className="flex flex-col items-center text-center max-w-2xl mx-auto mb-7 sm:mb-9">
-                  <div className="w-14 h-14 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center text-2xl shadow-2xs mb-3.5">
+                  <div className="w-14 h-14 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-2xl shadow-xs mb-3.5">
                     {activeAgent.icon}
                   </div>
                   <div className="flex items-center gap-2 flex-wrap justify-center mb-2">
@@ -2358,7 +2358,7 @@ export default function Chat() {
                       你好，我是「{activeAgent.name}」
                     </h2>
                     <span
-                      className={`text-[11px] px-2 py-0.5 rounded-full border font-semibold ${activeAgent.badgeClass}`}
+                      className={`text-2xs px-2 py-0.5 rounded-full border font-semibold ${activeAgent.badgeClass}`}
                     >
                       {activeAgent.title}
                     </span>
@@ -2366,7 +2366,7 @@ export default function Chat() {
                   <p className="text-xs sm:text-sm text-slate-500 leading-relaxed max-w-xl">
                     {activeAgent.description}
                   </p>
-                  <div className="flex items-center justify-center flex-wrap gap-2 mt-3.5 text-[11px] text-slate-400">
+                  <div className="flex items-center justify-center flex-wrap gap-2 mt-3.5 text-2xs text-slate-400">
                     <span className="px-2.5 py-1 rounded-full bg-slate-100/80 text-slate-600">
                       👥 顶栏支持双师同台对比
                     </span>
@@ -2410,9 +2410,9 @@ export default function Chat() {
                           type="button"
                           onClick={() => handleSend(promptText)}
                           disabled={isCurrentRunning}
-                          className="p-4 text-left rounded-xl border border-neutral-200/80 bg-white hover:border-neutral-900 hover:shadow-xs transition-all flex flex-col gap-1.5 group cursor-pointer"
+                          className="p-4 text-left rounded-xl border border-slate-200/80 bg-white hover:border-slate-900 hover:shadow-xs transition-all flex flex-col gap-1.5 group cursor-pointer"
                         >
-                          <span className="text-[11px] font-semibold text-indigo-600/90">
+                          <span className="text-2xs font-semibold text-indigo-600/90">
                             {badges[idx % badges.length]}
                           </span>
                           <span className="text-xs sm:text-[13px] font-medium text-slate-700 group-hover:text-slate-950 line-clamp-2 leading-relaxed">
@@ -2462,7 +2462,7 @@ export default function Chat() {
                   <button
                     type="button"
                     onClick={scrollToTop}
-                    className="pointer-events-auto px-2.5 py-1 rounded-full bg-white/95 border border-slate-200/90 shadow-md text-[11px] font-semibold text-slate-600 hover:text-indigo-600 flex items-center gap-1 transition-all cursor-pointer backdrop-blur-xs"
+                    className="pointer-events-auto px-2.5 py-1 rounded-full bg-white/95 border border-slate-200/90 shadow-sm text-2xs font-semibold text-slate-600 hover:text-indigo-600 flex items-center gap-1 transition-all cursor-pointer backdrop-blur-xs"
                     title="回到对话顶部"
                   >
                     <ArrowUp className="w-3 h-3" />
@@ -2477,7 +2477,7 @@ export default function Chat() {
                       setShowScrollBottomBtn(false)
                       scrollToBottom(true)
                     }}
-                    className="pointer-events-auto px-3 py-1 rounded-full bg-slate-900/95 text-white shadow-md text-[11px] font-semibold hover:bg-indigo-600 flex items-center gap-1 transition-all cursor-pointer backdrop-blur-xs"
+                    className="pointer-events-auto px-3 py-1 rounded-full bg-slate-900/95 text-white shadow-sm text-2xs font-semibold hover:bg-indigo-600 flex items-center gap-1 transition-all cursor-pointer backdrop-blur-xs"
                   >
                     <ChevronDown className="w-3.5 h-3.5" />
                     <span>最新回复</span>
@@ -2571,7 +2571,7 @@ export default function Chat() {
                 : undefined
               : undefined,
           }}
-          className={`fixed inset-y-0 right-0 z-50 w-80 bg-white shadow-2xl transition-transform duration-200 md:static md:z-auto md:shadow-none md:transition-none ${
+          className={`fixed inset-y-0 right-0 z-50 w-80 bg-white shadow-xl transition-transform duration-200 md:static md:z-auto md:shadow-none md:transition-none ${
             showFiles ? 'translate-x-0' : 'translate-x-full md:hidden'
           } shrink-0`}
         >
@@ -2618,7 +2618,7 @@ export default function Chat() {
             className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs"
             onClick={() => setShowAgentPicker(false)}
           />
-          <div className="relative bg-white rounded-t-3xl p-5 shadow-2xl border-t border-slate-200 max-h-[75vh] overflow-y-auto space-y-3 animate-sheet-up">
+          <div className="relative bg-white rounded-t-3xl p-5 shadow-xl border-t border-slate-200 max-h-[75vh] overflow-y-auto space-y-3 animate-sheet-up">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <span className="font-bold text-sm text-slate-900">切换伴学导师</span>
               <button
@@ -2646,19 +2646,19 @@ export default function Chat() {
                         : 'border-slate-200 bg-slate-50/50'
                     }`}
                   >
-                    <span className="text-2xl p-2 rounded-xl bg-white shadow-2xs shrink-0">
+                    <span className="text-2xl p-2 rounded-xl bg-white shadow-xs shrink-0">
                       {agent.icon}
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-xs text-slate-900">{agent.name}</span>
                         <span
-                          className={`text-[10px] px-1.5 py-0.2 rounded border ${agent.badgeClass}`}
+                          className={`text-2xs px-1.5 py-0.2 rounded border ${agent.badgeClass}`}
                         >
                           {agent.title}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">
+                      <p className="text-2xs text-slate-500 mt-0.5 line-clamp-1">
                         {agent.description}
                       </p>
                     </div>
@@ -2732,7 +2732,7 @@ export default function Chat() {
       {/* 新建项目工作区模态框 */}
       {showProjectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-5 shadow-2xl">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-5 shadow-xl">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
                 <FolderPlus className="w-4 h-4 text-indigo-600" />
@@ -2822,7 +2822,7 @@ export default function Chat() {
             <img
               src={previewImageModal}
               alt="大图预览"
-              className="max-h-[85vh] max-w-full rounded-2xl object-contain shadow-2xl border border-white/10"
+              className="max-h-[85vh] max-w-full rounded-2xl object-contain shadow-xl border border-white/10"
               onClick={e => e.stopPropagation()}
             />
           </div>

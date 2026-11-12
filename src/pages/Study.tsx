@@ -775,19 +775,19 @@ export default function Study() {
 
       {/* Top Banner / Hero - 响应式智能收拢 (严防手机端文字折行溢出格子) */}
 
-      <div className="bg-surface border border-neutral-200/80 rounded-xl p-3 sm:p-5 shadow-2xs shrink-0 flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-4">
+      <div className="bg-surface border border-slate-200/80 rounded-xl p-3 sm:p-5 shadow-xs shrink-0 flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-4">
 
         <div className="min-w-0">
 
           <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
 
-            <span className="px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-bold bg-accent-orange/15 text-warm-800 border border-accent-orange/20 whitespace-nowrap leading-tight">
+            <span className="px-2 py-0.5 rounded-md text-2xs sm:text-2xs font-bold bg-accent-orange/15 text-warm-800 border border-accent-orange/20 whitespace-nowrap leading-tight">
 
               COREFORGE 研学中心
 
             </span>
 
-            <span className="text-[10.5px] sm:text-xs text-warm-400 whitespace-nowrap leading-tight">
+            <span className="text-2xs sm:text-xs text-warm-400 whitespace-nowrap leading-tight">
 
               408 统考 & 考研数学权威教研
 
@@ -817,7 +817,7 @@ export default function Study() {
 
           {/* 桌面端专属切换条：讲义列表 vs 全景图谱（移动端下方已有全量 TabBar，避免顶部挤压超出格子） */}
 
-          <div className="hidden md:inline-flex items-center rounded-xl bg-neutral-100 p-1 border border-neutral-200/80 shadow-2xs">
+          <div className="hidden md:inline-flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200/80 shadow-xs">
 
             <button
 
@@ -829,9 +829,9 @@ export default function Study() {
 
                 tab !== 'graph'
 
-                  ? 'bg-white text-neutral-900 shadow-2xs'
+                  ? 'bg-white text-slate-900 shadow-xs'
 
-                  : 'text-neutral-500 hover:text-neutral-900'
+                  : 'text-slate-500 hover:text-slate-900'
 
               }`}
 
@@ -851,9 +851,9 @@ export default function Study() {
 
                 tab === 'graph'
 
-                  ? 'bg-neutral-900 text-white shadow-2xs'
+                  ? 'bg-slate-900 text-white shadow-xs'
 
-                  : 'text-neutral-500 hover:text-neutral-900'
+                  : 'text-slate-500 hover:text-slate-900'
 
               }`}
 
@@ -873,13 +873,13 @@ export default function Study() {
 
             onClick={() => window.dispatchEvent(new CustomEvent('open-quick-note'))}
 
-            className="subframe-btn-secondary h-7 sm:h-8 px-2 sm:px-3 text-[11px] sm:text-xs font-semibold cursor-pointer whitespace-nowrap flex items-center gap-1 leading-none shrink-0"
+            className="subframe-btn-secondary h-7 sm:h-8 px-2 sm:px-3 text-2xs sm:text-xs font-semibold cursor-pointer whitespace-nowrap flex items-center gap-1 leading-none shrink-0"
 
             title="一键呼出考点批注，随时记下心得并归档进知识库"
 
           >
 
-            <Edit3 className="w-3.5 h-3.5 text-neutral-600 shrink-0" />
+            <Edit3 className="w-3.5 h-3.5 text-slate-600 shrink-0" />
 
             <span className="hidden xs:inline">考点批注</span>
 
@@ -893,7 +893,7 @@ export default function Study() {
 
             onClick={() => setImportModalOpen(true)}
 
-            className="subframe-btn-black h-7 sm:h-8 px-2 sm:px-3.5 text-[11px] sm:text-xs font-medium cursor-pointer whitespace-nowrap flex items-center gap-1 leading-none shrink-0"
+            className="subframe-btn-black h-7 sm:h-8 px-2 sm:px-3.5 text-2xs sm:text-xs font-medium cursor-pointer whitespace-nowrap flex items-center gap-1 leading-none shrink-0"
 
           >
 
@@ -911,7 +911,7 @@ export default function Study() {
 
             disabled={loadingBooks}
 
-            className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg border border-neutral-200/90 bg-white text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900 transition-colors disabled:opacity-50 flex items-center justify-center shrink-0 cursor-pointer shadow-2xs"
+            className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg border border-slate-200/90 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors disabled:opacity-50 flex items-center justify-center shrink-0 cursor-pointer shadow-xs"
 
             title="刷新资料库"
 
@@ -973,9 +973,9 @@ export default function Study() {
 
                 tab === t.key
 
-                  ? 'bg-neutral-900 text-white shadow-xs font-semibold'
+                  ? 'bg-slate-900 text-white shadow-xs font-semibold'
 
-                  : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100/80'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
 
               }`}
 
@@ -987,9 +987,9 @@ export default function Study() {
 
               {t.count !== null && (
 
-                <span className={`text-[9.5px] px-1.5 py-0.5 rounded-md font-mono leading-none inline-flex items-center justify-center shrink-0 ${
+                <span className={`text-2xs px-1.5 py-0.5 rounded-md font-mono leading-none inline-flex items-center justify-center shrink-0 ${
 
-                  tab === t.key ? 'bg-neutral-800 text-neutral-200' : 'bg-neutral-100 text-neutral-500 border border-neutral-200/60'
+                  tab === t.key ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-500 border border-slate-200/60'
 
                 }`}>
 
@@ -1009,13 +1009,13 @@ export default function Study() {
 
         {/* Right Filter & Search */}
 
-        <div className="flex items-center gap-1.5 sm:gap-2 w-full xl:w-auto pt-1 xl:pt-0 border-t xl:border-t-0 border-neutral-200/60">
+        <div className="flex items-center gap-1.5 sm:gap-2 w-full xl:w-auto pt-1 xl:pt-0 border-t xl:border-t-0 border-slate-200/60">
 
           {/* Search box */}
 
           <div className="relative flex-1 xl:w-44">
 
-            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400" />
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
 
             <input
 
@@ -1027,7 +1027,7 @@ export default function Study() {
 
               onChange={e => setSearchQuery(e.target.value)}
 
-              className="w-full pl-8 pr-2.5 py-1.5 text-xs bg-neutral-100/80 hover:bg-neutral-100 focus:bg-white border border-transparent focus:border-neutral-300 rounded-lg text-neutral-800 placeholder-neutral-400 outline-none transition-all"
+              className="w-full pl-8 pr-2.5 py-1.5 text-xs bg-slate-100/80 hover:bg-slate-100 focus:bg-white border border-transparent focus:border-slate-300 rounded-lg text-slate-800 placeholder-slate-400 outline-none transition-all"
 
             />
 
@@ -1043,7 +1043,7 @@ export default function Study() {
 
             onChange={e => setSubjectFilter(e.target.value)}
 
-            className="text-xs bg-neutral-100/80 hover:bg-neutral-100 focus:bg-white border border-transparent focus:border-neutral-300 rounded-lg px-2.5 py-1.5 text-neutral-700 outline-none shrink-0 transition-all cursor-pointer"
+            className="text-xs bg-slate-100/80 hover:bg-slate-100 focus:bg-white border border-transparent focus:border-slate-300 rounded-lg px-2.5 py-1.5 text-slate-700 outline-none shrink-0 transition-all cursor-pointer"
 
           >
 
@@ -1099,17 +1099,17 @@ export default function Study() {
 
           {tab === 'graph' && (
 
-            <div className="flex-1 w-full bg-white rounded-2xl border border-neutral-200/90 overflow-hidden shadow-xs relative min-h-[680px] h-[calc(100vh-240px)] flex flex-col animate-fade-in">
+            <div className="flex-1 w-full bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-xs relative min-h-[680px] h-[calc(100vh-240px)] flex flex-col animate-fade-in">
 
-              <div className="px-4 py-2 bg-neutral-50/90 border-b border-neutral-200/80 flex items-center justify-between text-xs text-neutral-600 shrink-0">
+              <div className="px-4 py-2 bg-slate-50/90 border-b border-slate-200/80 flex items-center justify-between text-xs text-slate-600 shrink-0">
 
                 <div className="flex items-center gap-2">
 
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
 
-                  <span className="font-semibold text-neutral-800">全景考研知识双链网络图谱 (D3 物理力导向拓扑)</span>
+                  <span className="font-semibold text-slate-800">全景考研知识双链网络图谱 (D3 物理力导向拓扑)</span>
 
-                  <span className="hidden sm:inline text-neutral-400">· 支持拖拽节点、缩放探索与点击打开关联讲义</span>
+                  <span className="hidden sm:inline text-slate-400">· 支持拖拽节点、缩放探索与点击打开关联讲义</span>
 
                 </div>
 
@@ -1137,7 +1137,7 @@ export default function Study() {
 
                     onClick={() => handleTabChange('handouts')}
 
-                    className="px-2.5 py-1 rounded-lg bg-white border border-neutral-200 hover:bg-neutral-100 text-neutral-700 font-medium transition-colors"
+                    className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-medium transition-colors"
 
                   >
 
@@ -1397,7 +1397,7 @@ export default function Study() {
 
             onClick={e => e.stopPropagation()}
 
-            className="bg-white rounded-2xl border border-cream-300 shadow-2xl w-full max-w-md max-h-[88dvh] overflow-y-auto overscroll-contain p-5 sm:p-6 animate-scale-up"
+            className="bg-white rounded-2xl border border-cream-300 shadow-xl w-full max-w-md max-h-[88dvh] overflow-y-auto overscroll-contain p-5 sm:p-6 animate-scale-up"
 
             style={{ WebkitOverflowScrolling: 'touch' }}
 
@@ -1417,7 +1417,7 @@ export default function Study() {
 
                   <h3 className="text-sm font-bold text-warm-800">修改教材 / 资料名称</h3>
 
-                  <p className="text-[11px] text-warm-400">重命名后将同步更新磁盘文件名与知识库关联</p>
+                  <p className="text-2xs text-warm-400">重命名后将同步更新磁盘文件名与知识库关联</p>
 
                 </div>
 
@@ -1479,7 +1479,7 @@ export default function Study() {
 
                       onClick={handleQuickCleanName}
 
-                      className="text-[11px] text-amber-600 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 px-2 py-0.5 rounded-md transition-colors cursor-pointer"
+                      className="text-2xs text-amber-600 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 px-2 py-0.5 rounded-md transition-colors cursor-pointer"
 
                       title="快速去除随机长哈希与时间戳后缀"
 
@@ -1497,7 +1497,7 @@ export default function Study() {
 
                       disabled={isSuggestingName}
 
-                      className="flex items-center gap-1 text-[11px] text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded-md transition-colors cursor-pointer disabled:opacity-50"
+                      className="flex items-center gap-1 text-2xs text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded-md transition-colors cursor-pointer disabled:opacity-50"
 
                       title="让 AI 读取前言目录提炼标准书名"
 
@@ -1537,7 +1537,7 @@ export default function Study() {
 
                 />
 
-                <p className="text-[10px] text-warm-400 mt-1">
+                <p className="text-2xs text-warm-400 mt-1">
 
                   提示：如未填写扩展名，系统将自动保持原扩展名（{renamingBook.ext}）
 

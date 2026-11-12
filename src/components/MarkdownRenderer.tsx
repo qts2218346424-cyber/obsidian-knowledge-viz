@@ -547,7 +547,7 @@ function CodeBlock({
 
   return (
 
-    <div className="my-2 rounded-xl overflow-hidden border border-slate-800 bg-[#0d1117] text-slate-100 shadow-md text-xs font-mono group">
+    <div className="my-2 rounded-xl overflow-hidden border border-slate-800 bg-[#0d1117] text-slate-100 shadow-sm text-xs font-mono group">
 
       {/* 顶部控制栏 */}
 
@@ -567,13 +567,13 @@ function CodeBlock({
 
           </div>
 
-          <span className="text-[11px] font-semibold text-slate-300 ml-1">
+          <span className="text-2xs font-semibold text-slate-300 ml-1">
 
             {displayLang}
 
           </span>
 
-          <span className="text-[10px] text-slate-500 font-mono">
+          <span className="text-2xs text-slate-500 font-mono">
 
             {lineCount} 行
 
@@ -593,7 +593,7 @@ function CodeBlock({
 
               onClick={() => setCollapsed(prev => !prev)}
 
-              className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] text-slate-400 hover:text-slate-100 hover:bg-slate-700/60 transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-2 py-0.5 rounded text-2xs text-slate-400 hover:text-slate-100 hover:bg-slate-700/60 transition-colors cursor-pointer"
 
               title={collapsed ? '展开代码块' : '折叠代码块'}
 
@@ -613,7 +613,7 @@ function CodeBlock({
 
             onClick={handleCopy}
 
-            className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] text-slate-400 hover:text-slate-100 hover:bg-slate-700/60 transition-colors cursor-pointer"
+            className="flex items-center gap-1 px-2 py-0.5 rounded text-2xs text-slate-400 hover:text-slate-100 hover:bg-slate-700/60 transition-colors cursor-pointer"
 
             title="复制代码"
 
@@ -657,13 +657,13 @@ function CodeBlock({
 
           onClick={() => setCollapsed(false)}
 
-          className="px-3.5 py-2 text-[11px] text-slate-400 hover:text-slate-200 bg-[#0d1117]/80 cursor-pointer flex items-center justify-between"
+          className="px-3.5 py-2 text-2xs text-slate-400 hover:text-slate-200 bg-[#0d1117]/80 cursor-pointer flex items-center justify-between"
 
         >
 
           <span className="truncate font-mono opacity-80">{rawCode.split('\n')[0]} ...</span>
 
-          <span className="text-[10px] text-indigo-400 shrink-0 ml-2">点击展开全部 ({lineCount} 行)</span>
+          <span className="text-2xs text-indigo-400 shrink-0 ml-2">点击展开全部 ({lineCount} 行)</span>
 
         </div>
 
@@ -737,7 +737,7 @@ function ThinkingAccordion({
 
   return (
 
-    <div className="my-2.5 rounded-xl border border-cream-300/80 bg-cream-100/50 dark:border-slate-800 dark:bg-slate-900/60 overflow-hidden text-xs shadow-2xs transition-all">
+    <div className="my-2.5 rounded-xl border border-cream-300/80 bg-cream-100/50 dark:border-slate-800 dark:bg-slate-900/60 overflow-hidden text-xs shadow-xs transition-all">
 
       <button
 
@@ -763,7 +763,7 @@ function ThinkingAccordion({
 
           </span>
 
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cream-200/80 dark:bg-slate-800 text-warm-500 dark:text-slate-400 font-mono">
+          <span className="text-2xs px-1.5 py-0.5 rounded-full bg-cream-200/80 dark:bg-slate-800 text-warm-500 dark:text-slate-400 font-mono">
 
             {isThinkingActive ? '推演中' : `已完成 · ${wordCount} 字`}
 
@@ -771,7 +771,7 @@ function ThinkingAccordion({
 
         </div>
 
-        <div className="flex items-center gap-1.5 text-[11px] text-warm-400">
+        <div className="flex items-center gap-1.5 text-2xs text-warm-400">
 
           <span>{isOpen ? '收起思考' : '展开思考'}</span>
 
@@ -785,7 +785,7 @@ function ThinkingAccordion({
 
       {isOpen && (
 
-        <div className="p-3.5 border-t border-cream-200/70 dark:border-slate-800/80 text-warm-600 dark:text-slate-400 bg-surface/60 dark:bg-slate-950/50 leading-relaxed max-h-64 sm:max-h-72 overflow-y-auto space-y-1.5 text-[11.5px]">
+        <div className="p-3.5 border-t border-cream-200/70 dark:border-slate-800/80 text-warm-600 dark:text-slate-400 bg-surface/60 dark:bg-slate-950/50 leading-relaxed max-h-64 sm:max-h-72 overflow-y-auto space-y-1.5 text-2xs">
 
           <ReactMarkdown
 
@@ -801,7 +801,7 @@ function ThinkingAccordion({
 
           {isThinkingActive && (
 
-            <div className="flex items-center gap-1.5 text-accent-orange text-[11px] font-medium pt-1">
+            <div className="flex items-center gap-1.5 text-accent-orange text-2xs font-medium pt-1">
 
               <span className="w-1.5 h-1.5 rounded-full bg-accent-orange animate-ping" />
 
@@ -1028,7 +1028,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
 
               alt={alt || '笔记插图'}
 
-              className="inline-block max-w-full rounded-xl border border-cream-200 dark:border-slate-800 shadow-sm object-contain max-h-[520px] hover:shadow-md transition-shadow bg-white dark:bg-slate-900"
+              className="inline-block max-w-full rounded-xl border border-cream-200 dark:border-slate-800 shadow-sm object-contain max-h-[520px] hover:shadow-sm transition-shadow bg-white dark:bg-slate-900"
 
               loading="lazy"
 
@@ -1078,7 +1078,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
 
             >
 
-              <span className="text-[10px] text-indigo-400">🔗</span>
+              <span className="text-2xs text-indigo-400">🔗</span>
 
               <span className="underline decoration-indigo-400/40 underline-offset-2">{children}</span>
 
@@ -1149,7 +1149,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
             id={id}
             {...dataProps}
             {...props}
-            className="scroll-mt-6 text-[11.5px] sm:text-xs font-bold text-warm-900 dark:text-slate-100 mt-1 mb-0.5 flex items-center gap-1 transition-all duration-300"
+            className="scroll-mt-6 text-2xs sm:text-xs font-bold text-warm-900 dark:text-slate-100 mt-1 mb-0.5 flex items-center gap-1 transition-all duration-300"
           >
             <span className="w-1 h-2 rounded-full bg-purple-400 shrink-0" />
             <span>{children}</span>
@@ -1274,9 +1274,9 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
 
         return (
 
-          <div className="my-1.5 sm:my-2 overflow-x-auto rounded-lg border border-cream-200 dark:border-white/10 shadow-2xs">
+          <div className="my-1.5 sm:my-2 overflow-x-auto rounded-lg border border-cream-200 dark:border-white/10 shadow-xs">
 
-            <table className="min-w-full text-left text-[11px] sm:text-xs border-collapse">
+            <table className="min-w-full text-left text-2xs sm:text-xs border-collapse">
 
               {children}
 
@@ -1310,7 +1310,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
 
         return (
 
-          <th className="px-2 py-1 sm:px-2.5 sm:py-1 font-semibold text-[11px] sm:text-xs text-slate-800 dark:text-slate-100 whitespace-nowrap">
+          <th className="px-2 py-1 sm:px-2.5 sm:py-1 font-semibold text-2xs sm:text-xs text-slate-800 dark:text-slate-100 whitespace-nowrap">
 
             {children}
 
@@ -1324,7 +1324,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
 
         return (
 
-          <td className="px-2 py-1 sm:px-2.5 sm:py-1 text-[11px] sm:text-xs leading-snug text-slate-700 dark:text-slate-200 align-middle">
+          <td className="px-2 py-1 sm:px-2.5 sm:py-1 text-2xs sm:text-xs leading-snug text-slate-700 dark:text-slate-200 align-middle">
 
             {children}
 
@@ -1362,7 +1362,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
 
         return (
 
-          <blockquote className={`my-2.5 pl-3.5 pr-3 py-2 rounded-r-xl text-[11.5px] sm:text-xs leading-[1.55] transition-colors ${cardStyle}`}>
+          <blockquote className={`my-2.5 pl-3.5 pr-3 py-2 rounded-r-xl text-2xs sm:text-xs leading-[1.55] transition-colors ${cardStyle}`}>
 
             {children}
 

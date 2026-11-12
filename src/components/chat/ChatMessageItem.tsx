@@ -154,19 +154,19 @@ export const ChatMessageItem = memo(
                 <Users className="w-3.5 h-3.5" />
               </div>
               <span>双师同台对比研讨</span>
-              <span className="text-[11px] text-slate-400 font-normal hidden sm:inline">
+              <span className="text-2xs text-slate-400 font-normal hidden sm:inline">
                 多视角推演与采分点互补
               </span>
             </div>
 
             {/* 视图切换：双栏并排 vs 单栏专注放大 */}
-            <div className="flex items-center gap-1 bg-slate-100 border border-slate-200/80 rounded-xl p-0.5 text-[11px]">
+            <div className="flex items-center gap-1 bg-slate-100 border border-slate-200/80 rounded-xl p-0.5 text-2xs">
               <button
                 type="button"
                 onClick={() => setDualViewMode('split')}
                 className={`px-2 py-0.5 rounded-lg font-medium flex items-center gap-1 transition-all cursor-pointer ${
                   dualViewMode === 'split'
-                    ? 'bg-white text-slate-900 shadow-2xs font-semibold'
+                    ? 'bg-white text-slate-900 shadow-xs font-semibold'
                     : 'text-slate-500 hover:text-slate-800'
                 }`}
                 title="双栏同屏对比"
@@ -179,7 +179,7 @@ export const ChatMessageItem = memo(
                 onClick={() => setDualViewMode('tab-a')}
                 className={`px-2 py-0.5 rounded-lg font-medium flex items-center gap-1 transition-all cursor-pointer ${
                   dualViewMode === 'tab-a'
-                    ? 'bg-orange-500 text-white shadow-2xs font-semibold'
+                    ? 'bg-orange-500 text-white shadow-xs font-semibold'
                     : 'text-slate-500 hover:text-slate-800'
                 }`}
                 title="全宽放大查看主导师 A"
@@ -191,7 +191,7 @@ export const ChatMessageItem = memo(
                 onClick={() => setDualViewMode('tab-b')}
                 className={`px-2 py-0.5 rounded-lg font-medium flex items-center gap-1 transition-all cursor-pointer ${
                   dualViewMode === 'tab-b'
-                    ? 'bg-purple-600 text-white shadow-2xs font-semibold'
+                    ? 'bg-purple-600 text-white shadow-xs font-semibold'
                     : 'text-slate-500 hover:text-slate-800'
                 }`}
                 title="全宽放大查看协同导师 B"
@@ -208,7 +208,7 @@ export const ChatMessageItem = memo(
           >
             {/* 智能体 A 卡片 */}
             {(dualViewMode === 'split' || dualViewMode === 'tab-a') && (
-              <div className="flex flex-col bg-white border border-slate-200/90 rounded-2xl p-3 sm:p-3.5 shadow-2xs hover:border-orange-300/80 transition-all min-w-0">
+              <div className="flex flex-col bg-white border border-slate-200/90 rounded-2xl p-3 sm:p-3.5 shadow-xs hover:border-orange-300/80 transition-all min-w-0">
                 <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-100">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="text-lg p-1.5 rounded-xl bg-orange-500/10 text-orange-600 shrink-0">
@@ -219,18 +219,18 @@ export const ChatMessageItem = memo(
                         <span className="font-bold text-xs text-slate-900 truncate">
                           {msg.agentName || activeAgent.name}
                         </span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-orange-50 text-orange-600 border border-orange-200/60 font-semibold shrink-0">
+                        <span className="text-2xs px-1.5 py-0.5 rounded-md bg-orange-50 text-orange-600 border border-orange-200/60 font-semibold shrink-0">
                           主视角 A
                         </span>
                       </div>
-                      <div className="text-[10px] text-slate-400 font-mono truncate">
+                      <div className="text-2xs text-slate-400 font-mono truncate">
                         [{msg.provider || provider}] {(msg.model || selectedModel).replace(/^.*::/, '')}
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     {msg.streaming ? (
-                      <span className="text-[10px] text-accent-orange font-semibold flex items-center gap-1">
+                      <span className="text-2xs text-accent-orange font-semibold flex items-center gap-1">
                         <span className="w-2 h-2 rounded-full bg-accent-orange animate-ping" />
                         推演中...
                       </span>
@@ -277,7 +277,7 @@ export const ChatMessageItem = memo(
                 </div>
 
                 {!msg.streaming && msg.content && (
-                  <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-slate-100 text-[11px] text-slate-500 flex-wrap">
+                  <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-slate-100 text-2xs text-slate-500 flex-wrap">
                     <button
                       type="button"
                       onClick={() => onCopy(msg.id + '-a', msg.content)}
@@ -337,18 +337,18 @@ export const ChatMessageItem = memo(
                         <span className="font-bold text-xs text-slate-900 truncate">
                           {msg.peerResponse.agentName}
                         </span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-purple-50 text-purple-600 border border-purple-200/60 font-semibold shrink-0">
+                        <span className="text-2xs px-1.5 py-0.5 rounded-md bg-purple-50 text-purple-600 border border-purple-200/60 font-semibold shrink-0">
                           协同视角 B
                         </span>
                       </div>
-                      <div className="text-[10px] text-slate-400 font-mono truncate">
+                      <div className="text-2xs text-slate-400 font-mono truncate">
                         [{msg.peerResponse.provider}] {msg.peerResponse.model.replace(/^.*::/, '')}
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     {msg.peerResponse.streaming ? (
-                      <span className="text-[10px] text-purple-600 font-semibold flex items-center gap-1">
+                      <span className="text-2xs text-purple-600 font-semibold flex items-center gap-1">
                         <span className="w-2 h-2 rounded-full bg-purple-500 animate-ping" />
                         协同解答中...
                       </span>
@@ -392,7 +392,7 @@ export const ChatMessageItem = memo(
                 </div>
 
                 {!msg.peerResponse.streaming && msg.peerResponse.content && (
-                  <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-slate-100 text-[11px] text-slate-500 flex-wrap">
+                  <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-slate-100 text-2xs text-slate-500 flex-wrap">
                     <button
                       type="button"
                       onClick={() => onCopy(msg.id + '-b', msg.peerResponse!.content)}
@@ -462,7 +462,7 @@ export const ChatMessageItem = memo(
         } ${isDeferred ? 'chat-message-deferred' : ''}`}
       >
         {!isUser && (
-          <div className="hidden sm:flex w-8 h-8 rounded-xl bg-neutral-100 items-center justify-center shrink-0 border border-neutral-200/80 shadow-2xs mt-0.5">
+          <div className="hidden sm:flex w-8 h-8 rounded-xl bg-slate-100 items-center justify-center shrink-0 border border-slate-200/80 shadow-xs mt-0.5">
             <LuluAvatar size="xs" mood={msg.streaming ? 'thinking' : 'idle'} />
           </div>
         )}
@@ -476,7 +476,7 @@ export const ChatMessageItem = memo(
           {!isUser && (
             <div className="flex items-center justify-between gap-2 mb-1.5 px-1 text-xs w-full">
               <div className="flex items-center flex-wrap gap-1.5 min-w-0">
-                <span className="sm:hidden inline-flex items-center justify-center w-5 h-5 rounded-md bg-neutral-100 border border-neutral-200/80 shrink-0">
+                <span className="sm:hidden inline-flex items-center justify-center w-5 h-5 rounded-md bg-slate-100 border border-slate-200/80 shrink-0">
                   <LuluAvatar size="xs" mood={msg.streaming ? 'thinking' : 'idle'} />
                 </span>
                 <span className="font-bold text-slate-800 flex items-center gap-1">
@@ -489,12 +489,12 @@ export const ChatMessageItem = memo(
                   </span>
                 )}
                 <span
-                  className={`inline-flex items-center text-[10px] leading-tight px-1.5 py-0.5 rounded-md border font-medium ${matchedAgent.badgeClass}`}
+                  className={`inline-flex items-center text-2xs leading-tight px-1.5 py-0.5 rounded-md border font-medium ${matchedAgent.badgeClass}`}
                 >
                   {matchedAgent.title}
                 </span>
                 {(provDisplay || modelDisplay) && (
-                  <span className="text-[10px] text-slate-400 font-mono truncate max-w-[160px] sm:max-w-[260px]">
+                  <span className="text-2xs text-slate-400 font-mono truncate max-w-[160px] sm:max-w-[260px]">
                     {formatUnifiedModelName(provDisplay, modelDisplay)}
                   </span>
                 )}
@@ -506,7 +506,7 @@ export const ChatMessageItem = memo(
                   <button
                     type="button"
                     onClick={() => onCopy(msg.id, msg.content)}
-                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[11px] text-slate-400 hover:text-slate-800 hover:bg-slate-200/60 transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-2xs text-slate-400 hover:text-slate-800 hover:bg-slate-200/60 transition-colors cursor-pointer"
                     title="复制全文 Markdown"
                   >
                     {copiedId === msg.id ? (
@@ -521,7 +521,7 @@ export const ChatMessageItem = memo(
                   <button
                     type="button"
                     onClick={() => onSaveMessage(msg)}
-                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[11px] text-slate-400 hover:text-purple-700 hover:bg-purple-50 transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-2xs text-slate-400 hover:text-purple-700 hover:bg-purple-50 transition-colors cursor-pointer"
                     title="一键沉淀为知识库笔记"
                   >
                     <Save className="w-3 h-3 text-purple-500" />
@@ -530,7 +530,7 @@ export const ChatMessageItem = memo(
                   <button
                     type="button"
                     onClick={() => onTriggerPractice(msg)}
-                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[11px] text-slate-400 hover:text-orange-600 hover:bg-orange-50 transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-2xs text-slate-400 hover:text-orange-600 hover:bg-orange-50 transition-colors cursor-pointer"
                     title="针对此解答现场考我 3 道题"
                   >
                     <Target className="w-3 h-3 text-orange-500" />
@@ -540,7 +540,7 @@ export const ChatMessageItem = memo(
                     <button
                       type="button"
                       onClick={() => setIsCollapsed(prev => !prev)}
-                      className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[11px] text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-2xs text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
                       title={isCollapsed ? '展开完整回答' : '折叠长回答'}
                     >
                       {isCollapsed ? (
@@ -563,9 +563,9 @@ export const ChatMessageItem = memo(
 
           {/* 消息卡片主体 (高密度精致排版：紧凑适度，保持可读性) */}
           <div
-            className={`px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-2xl max-w-full overflow-x-hidden ${fontSizeClass} shadow-2xs ${
+            className={`px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-2xl max-w-full overflow-x-hidden ${fontSizeClass} shadow-xs ${
               isUser
-                ? 'bg-neutral-900 text-white rounded-2xl rounded-br-xs shadow-xs border border-neutral-800'
+                ? 'bg-slate-900 text-white rounded-2xl rounded-br-xs shadow-xs border border-slate-800'
                 : 'w-full bg-white border border-slate-200/60 text-slate-900 rounded-2xl rounded-tl-xs shadow-[0_2px_10px_rgba(0,0,0,0.02)] leading-[1.56] academic-body'
             }`}
           >
@@ -599,7 +599,7 @@ export const ChatMessageItem = memo(
                 {msg.files.map((file, fileIdx) => (
                   <div
                     key={fileIdx}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-neutral-800 border border-neutral-700 text-neutral-100 text-xs backdrop-blur-xs shadow-2xs"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 text-xs backdrop-blur-xs shadow-xs"
                     title={file.name}
                   >
                     {file.ext &&
@@ -621,7 +621,7 @@ export const ChatMessageItem = memo(
                       <FileText className="w-3.5 h-3.5 text-emerald-200 shrink-0" />
                     )}
                     <span className="font-medium truncate max-w-[180px]">{file.name}</span>
-                    <span className="text-[10px] opacity-75 font-mono">
+                    <span className="text-2xs opacity-75 font-mono">
                       {formatFileSize(file.size)}
                     </span>
                   </div>
@@ -639,13 +639,13 @@ export const ChatMessageItem = memo(
                   📌 <span className="text-slate-400 mr-1">[已折叠]</span>
                   {summaryPreview}
                 </p>
-                <span className="text-[11px] font-semibold text-neutral-800 shrink-0 flex items-center gap-1 bg-neutral-100 border border-neutral-200 px-2.5 py-1 rounded-lg">
+                <span className="text-2xs font-semibold text-slate-800 shrink-0 flex items-center gap-1 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-lg">
                   <ChevronDown className="w-3.5 h-3.5" />
                   展开全文 ({msg.content.length} 字)
                 </span>
               </div>
             ) : isUser ? (
-              <div className="whitespace-pre-wrap break-words leading-relaxed text-[11.5px] sm:text-xs">{msg.content}</div>
+              <div className="whitespace-pre-wrap break-words leading-relaxed text-2xs sm:text-xs">{msg.content}</div>
             ) : msg.streaming && !msg.content ? (
               <StreamingWaitBanner />
             ) : (
@@ -689,7 +689,7 @@ export const ChatMessageItem = memo(
 
           {/* 用户提问消息操作栏：编辑、撤回、复制 */}
           {isUser && (
-            <div className="flex items-center gap-1.5 mt-1 text-[11px] text-slate-400 opacity-80 hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-1.5 mt-1 text-2xs text-slate-400 opacity-80 hover:opacity-100 transition-opacity">
               <button
                 type="button"
                 onClick={() => onEditMessage(msg.id)}
@@ -726,12 +726,12 @@ export const ChatMessageItem = memo(
 
           {/* 助手消息底部完整操作栏 */}
           {!isUser && !msg.streaming && msg.content && !isCollapsed && msg.id !== 'welcome' && (
-            <div className="flex items-center gap-1.5 sm:gap-2 mt-1.5 px-0.5 text-[11px] text-slate-400 flex-wrap w-full">
+            <div className="flex items-center gap-1.5 sm:gap-2 mt-1.5 px-0.5 text-2xs text-slate-400 flex-wrap w-full">
               <button
                 type="button"
                 onClick={() => onContinue(msg.id)}
                 disabled={isCurrentRunning}
-                className="text-indigo-600 hover:bg-indigo-50 border border-indigo-200/80 font-semibold flex items-center gap-1 px-2 py-0.5 rounded-lg transition-all cursor-pointer shadow-2xs active:scale-95 disabled:opacity-50"
+                className="text-indigo-600 hover:bg-indigo-50 border border-indigo-200/80 font-semibold flex items-center gap-1 px-2 py-0.5 rounded-lg transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
                 title="若回答未讲完或断在半句，一键让智能体紧接着断点无缝续写"
               >
                 <Play className="w-3 h-3 fill-current" />

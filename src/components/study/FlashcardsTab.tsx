@@ -514,7 +514,7 @@ export default function FlashcardsTab() {
           <div className="text-2xl font-bold text-warm-800">
             {stats.total} <span className="text-xs font-normal text-warm-400">张知识卡</span>
           </div>
-          <div className="text-[11px] text-warm-500 mt-1 truncate" title={scopeMeta.desc}>{scopeMeta.desc}</div>
+          <div className="text-2xs text-warm-500 mt-1 truncate" title={scopeMeta.desc}>{scopeMeta.desc}</div>
         </div>
 
         <div className="bg-surface border border-amber-200/80 bg-amber-50/20 rounded-2xl p-4 shadow-xs">
@@ -525,7 +525,7 @@ export default function FlashcardsTab() {
           <div className="text-2xl font-bold text-amber-600">
             {stats.forgotten} <span className="text-xs font-normal text-amber-500/80">个高频易忘点</span>
           </div>
-          <div className="text-[11px] text-amber-600/80 mt-1">标记星标，支持高强度反复唤醒</div>
+          <div className="text-2xs text-amber-600/80 mt-1">标记星标，支持高强度反复唤醒</div>
         </div>
 
         <div className="bg-surface border border-indigo-200/80 bg-indigo-50/20 rounded-2xl p-4 shadow-xs">
@@ -536,7 +536,7 @@ export default function FlashcardsTab() {
           <div className="text-2xl font-bold text-indigo-600">
             {stats.due} <span className="text-xs font-normal text-indigo-500/80">张到期复习</span>
           </div>
-          <div className="text-[11px] text-indigo-600/80 mt-1">基于 SuperMemo-2 艾宾浩斯科学调度</div>
+          <div className="text-2xs text-indigo-600/80 mt-1">基于 SuperMemo-2 艾宾浩斯科学调度</div>
         </div>
 
         <div className="bg-surface border border-emerald-200/80 bg-emerald-50/20 rounded-2xl p-4 shadow-xs">
@@ -547,7 +547,7 @@ export default function FlashcardsTab() {
           <div className="text-2xl font-bold text-emerald-600">
             {stats.mastered} <span className="text-xs font-normal text-emerald-500/80">个核心要点</span>
           </div>
-          <div className="text-[11px] text-emerald-600/80 mt-1">连续 3 轮以上正确回忆</div>
+          <div className="text-2xs text-emerald-600/80 mt-1">连续 3 轮以上正确回忆</div>
         </div>
       </div>
 
@@ -557,7 +557,7 @@ export default function FlashcardsTab() {
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => handleStartReview(true)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold shadow-md shadow-amber-500/20 hover:from-amber-600 hover:to-orange-600 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold shadow-sm shadow-amber-500/20 hover:from-amber-600 hover:to-orange-600 transition-all cursor-pointer"
             title="只背诵标记为容易遗忘的知识点"
           >
             <Flame className="w-4 h-4 text-amber-100" />
@@ -705,20 +705,20 @@ export default function FlashcardsTab() {
             return (
               <div
                 key={card.id}
-                className={`bg-surface border rounded-2xl transition-all duration-200 flex flex-col justify-between overflow-hidden shadow-xs hover:shadow-md ${
+                className={`bg-surface border rounded-2xl transition-all duration-200 flex flex-col justify-between overflow-hidden shadow-xs hover:shadow-sm ${
                   card.isForgotten ? 'border-amber-300 ring-1 ring-amber-200/60 bg-amber-50/10' : 'border-cream-200 hover:border-cream-300'
                 }`}
               >
                 {/* 卡片头部 */}
                 <div className="p-4 pb-2 border-b border-cream-100 flex items-center justify-between gap-2 bg-cream-50/40">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${
+                    <span className={`px-2 py-0.5 rounded text-2xs font-bold shrink-0 ${
                       isCs ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/60' : card.domain === 'politics' ? 'bg-red-50 text-red-700 border border-red-200/60' : 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
                     }`}>
                       {card.subject}
                     </span>
                     {card.chapter && (
-                      <span className="text-[10px] text-warm-400 truncate">
+                      <span className="text-2xs text-warm-400 truncate">
                         {card.chapter}
                       </span>
                     )}
@@ -765,7 +765,7 @@ export default function FlashcardsTab() {
                       /* 正面记忆挑战 */
                       <div className="space-y-3">
                         <div className="text-xs text-warm-600 leading-relaxed bg-cream-100/60 p-3 rounded-xl border border-cream-200/70">
-                          <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-700 mb-1.5">
+                          <div className="flex items-center gap-1.5 text-2xs font-bold text-amber-700 mb-1.5">
                             <HelpCircle className="w-3.5 h-3.5 text-amber-600" />
                             <span>核心记忆挑战与设问：</span>
                           </div>
@@ -788,7 +788,7 @@ export default function FlashcardsTab() {
                         </div>
 
                         {card.mnemonic && (
-                          <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-[11px] leading-relaxed">
+                          <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-2xs leading-relaxed">
                             <span className="font-bold flex items-center gap-1 mb-0.5 text-amber-900">
                               <Lightbulb className="w-3 h-3 text-amber-600" /> 速记口诀：
                             </span>
@@ -797,7 +797,7 @@ export default function FlashcardsTab() {
                         )}
 
                         {card.pitfall && (
-                          <div className="p-2.5 rounded-xl bg-red-50/80 border border-red-200 text-red-800 text-[11px] leading-relaxed">
+                          <div className="p-2.5 rounded-xl bg-red-50/80 border border-red-200 text-red-800 text-2xs leading-relaxed">
                             <span className="font-bold flex items-center gap-1 mb-0.5 text-red-900">
                               <AlertTriangle className="w-3 h-3 text-red-600" /> 命题陷阱：
                             </span>
@@ -807,7 +807,7 @@ export default function FlashcardsTab() {
 
                         <button
                           onClick={e => toggleFlip(card.id, e)}
-                          className="w-full text-center py-1 text-[11px] text-warm-400 hover:text-warm-600 transition-colors"
+                          className="w-full text-center py-1 text-2xs text-warm-400 hover:text-warm-600 transition-colors"
                         >
                           收起背面 / 翻回正面
                         </button>
@@ -816,12 +816,12 @@ export default function FlashcardsTab() {
                   </div>
 
                   {/* 卡片底部记忆状态与自评 */}
-                  <div className="mt-4 pt-3 border-t border-cream-100 flex items-center justify-between text-[11px]">
+                  <div className="mt-4 pt-3 border-t border-cream-100 flex items-center justify-between text-2xs">
                     <div className="flex items-center gap-2">
                       <span className="text-warm-400">
                         复习 {card.reviewCount} 次
                       </span>
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                      <span className={`px-1.5 py-0.5 rounded text-2xs font-bold ${
                         card.masteryLevel >= 3
                           ? 'bg-emerald-50 text-emerald-700'
                           : card.masteryLevel >= 1
@@ -861,7 +861,7 @@ export default function FlashcardsTab() {
       {/* 4. 沉浸式极速背诵模态框 (Anki Mode) */}
       {reviewModalOpen && reviewQueue.length > 0 && createPortal(
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-cream-300 shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-3xl border border-cream-300 shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             {/* 顶栏进度 */}
             <div className="p-4 border-b border-cream-200 bg-cream-50 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -872,7 +872,7 @@ export default function FlashcardsTab() {
                   <h3 className="text-xs font-bold text-warm-800">
                     易忘考点反复记忆攻坚 ({currentReviewIdx + 1} / {reviewQueue.length})
                   </h3>
-                  <p className="text-[10px] text-warm-400">空格键翻转查看，1 键模糊，2 键记住</p>
+                  <p className="text-2xs text-warm-400">空格键翻转查看，1 键模糊，2 键记住</p>
                 </div>
               </div>
 
@@ -908,7 +908,7 @@ export default function FlashcardsTab() {
                         {cur.subject} · {cur.chapter || '核心考点'}
                       </span>
                       {cur.isForgotten && (
-                        <span className="flex items-center gap-1 text-[11px] text-amber-600 font-bold bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                        <span className="flex items-center gap-1 text-2xs text-amber-600 font-bold bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
                           <Flame className="w-3 h-3" /> 易忘高频点
                         </span>
                       )}
@@ -932,12 +932,12 @@ export default function FlashcardsTab() {
                       <div className="text-center py-8">
                         <button
                           onClick={() => setIsReviewFlipped(true)}
-                          className="px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md shadow-indigo-500/20 transition-all cursor-pointer flex items-center gap-2 mx-auto active:scale-95"
+                          className="px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm shadow-indigo-500/20 transition-all cursor-pointer flex items-center gap-2 mx-auto active:scale-95"
                           title="按空格键翻转卡片 [Space]"
                         >
                           <RotateCw className="w-4 h-4" />
                           <span>翻转查看考点答案与记忆口诀</span>
-                          <kbd className="px-1.5 py-0.5 rounded bg-white/20 border border-white/30 text-[10px] font-mono text-white">
+                          <kbd className="px-1.5 py-0.5 rounded bg-white/20 border border-white/30 text-2xs font-mono text-white">
                             Space
                           </kbd>
                         </button>
@@ -978,19 +978,19 @@ export default function FlashcardsTab() {
                 >
                   <Frown className="w-4 h-4" />
                   <span>模糊 / 重来</span>
-                  <kbd className="px-1.5 py-0.5 rounded bg-rose-100 border border-rose-300 text-[10px] font-mono text-rose-800">
+                  <kbd className="px-1.5 py-0.5 rounded bg-rose-100 border border-rose-300 text-2xs font-mono text-rose-800">
                     1
                   </kbd>
                 </button>
 
                 <button
                   onClick={() => handleReviewStep(true)}
-                  className="flex-1 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-95"
+                  className="flex-1 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm shadow-emerald-600/20 transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-95"
                   title="标记为熟练掌握并进入下一张（快捷键 2）"
                 >
                   <Smile className="w-4 h-4" />
                   <span>记住 / 通过</span>
-                  <kbd className="px-1.5 py-0.5 rounded bg-white/25 border border-white/35 text-[10px] font-mono text-white">
+                  <kbd className="px-1.5 py-0.5 rounded bg-white/25 border border-white/35 text-2xs font-mono text-white">
                     2
                   </kbd>
                 </button>
@@ -1003,7 +1003,7 @@ export default function FlashcardsTab() {
       {/* 5. 新建 / 编辑卡片弹窗 */}
       {editModalOpen && editingCard && createPortal(
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-cream-300 shadow-2xl w-full max-w-lg p-5 sm:p-6 max-h-[88dvh] overflow-y-auto overscroll-contain animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-3xl border border-cream-300 shadow-xl w-full max-w-lg p-5 sm:p-6 max-h-[88dvh] overflow-y-auto overscroll-contain animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-cream-200 pb-3 mb-4">
               <h3 className="text-sm font-bold text-warm-900">
                 {editingCard.id ? '编辑知识点记忆卡片' : '新建考研知识点记忆闪卡'}
@@ -1152,7 +1152,7 @@ export default function FlashcardsTab() {
       {/* 6. AI 智能提炼卡片弹窗 */}
       {aiModalOpen && createPortal(
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-cream-300 shadow-2xl w-full max-w-md p-5 sm:p-6 max-h-[88dvh] overflow-y-auto overscroll-contain animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-3xl border border-cream-300 shadow-xl w-full max-w-md p-5 sm:p-6 max-h-[88dvh] overflow-y-auto overscroll-contain animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-cream-200 pb-3 mb-4">
               <div className="flex items-center gap-2">
                 <div className="p-2 bg-purple-50 rounded-xl text-purple-600 border border-purple-200">
@@ -1160,7 +1160,7 @@ export default function FlashcardsTab() {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-warm-900">AI 一键提炼记忆闪卡</h3>
-                  <p className="text-[11px] text-warm-400">输入考点名称，自动提炼设问、答案与速记口诀</p>
+                  <p className="text-2xs text-warm-400">输入考点名称，自动提炼设问、答案与速记口诀</p>
                 </div>
               </div>
               <button
@@ -1208,7 +1208,7 @@ export default function FlashcardsTab() {
                 />
               </div>
 
-              <div className="p-3 rounded-xl bg-purple-50/70 border border-purple-200/80 text-[11px] text-purple-800 leading-relaxed">
+              <div className="p-3 rounded-xl bg-purple-50/70 border border-purple-200/80 text-2xs text-purple-800 leading-relaxed">
                 ✨ AI 将结合 408 / 考研数学 / 考研政治命题规律，自动构建正面考查设问、背面核心机理与公式推导、琅琅上口的记忆口诀以及防坑易错辨析！
               </div>
 

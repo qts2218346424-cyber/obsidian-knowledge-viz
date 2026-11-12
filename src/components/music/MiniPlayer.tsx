@@ -93,7 +93,7 @@ export default function MiniPlayer() {
           </div>
           <div className="min-w-0 text-left flex-1">
             <div className="truncate text-xs font-bold text-slate-800">{currentTrack.title}</div>
-            <div className={`truncate text-[10px] ${status === 'error' ? 'text-rose-500' : 'text-slate-400'}`}>
+            <div className={`truncate text-2xs ${status === 'error' ? 'text-rose-500' : 'text-slate-400'}`}>
               {status === 'loading'
                 ? '正在连接音频流…'
                 : status === 'error'
@@ -162,13 +162,13 @@ export default function MiniPlayer() {
             {status === 'error' ? (
               <span
                 title={error || undefined}
-                className="flex min-w-0 items-center gap-1 truncate text-[10px] text-rose-500"
+                className="flex min-w-0 items-center gap-1 truncate text-2xs text-rose-500"
               >
                 <AlertCircle className="h-3 w-3 shrink-0" />
                 <span className="truncate">{error || '播放失败'}</span>
               </span>
             ) : (
-              <span className="font-mono text-[10px] text-slate-400">
+              <span className="font-mono text-2xs text-slate-400">
                 {isLive ? '实时电台' : `${formatTime(progress)} / ${formatTime(duration)}`}
               </span>
             )}
@@ -212,7 +212,7 @@ export default function MiniPlayer() {
       {/* Expanded Queue */}
       {expanded && queue.length > 0 && (
         <div className="max-h-44 overflow-auto modal-scroll-contain border-t border-slate-100 bg-white px-3 sm:px-4 py-2">
-          <div className="mb-1.5 flex items-center justify-between text-[10px] font-bold text-slate-400">
+          <div className="mb-1.5 flex items-center justify-between text-2xs font-bold text-slate-400">
             <span>当前播放队列（{queue.length}）</span>
             <span className="md:hidden font-mono">{isLive ? '实时电台' : `${formatTime(progress)} / ${formatTime(duration)}`}</span>
           </div>
@@ -227,9 +227,9 @@ export default function MiniPlayer() {
                   : 'text-slate-600 hover:bg-slate-50'
               }`}
             >
-              <span className="w-5 text-right text-slate-400 font-mono text-[11px]">{index + 1}</span>
+              <span className="w-5 text-right text-slate-400 font-mono text-2xs">{index + 1}</span>
               <span className="flex-1 truncate">{track.title}</span>
-              <span className="text-[11px]">{track.type === 'radio' ? '📻' : '🎵'}</span>
+              <span className="text-2xs">{track.type === 'radio' ? '📻' : '🎵'}</span>
             </button>
           ))}
         </div>

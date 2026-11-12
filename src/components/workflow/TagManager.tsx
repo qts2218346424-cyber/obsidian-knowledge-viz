@@ -96,9 +96,9 @@ export default function TagManager() {
       <div className="px-5 py-4 border-b border-cream-200 flex items-center gap-3 flex-wrap">
         <div className="flex-1 min-w-[200px]">
           <div className="text-sm font-semibold text-warm-700">标签管理</div>
-          <div className="text-[11px] text-warm-400 mt-0.5">搜索、重命名、合并、删除标签</div>
+          <div className="text-2xs text-warm-400 mt-0.5">搜索、重命名、合并、删除标签</div>
         </div>
-        <span className="text-[11px] text-warm-400">{tags.length} 个标签</span>
+        <span className="text-2xs text-warm-400">{tags.length} 个标签</span>
       </div>
 
       {/* Search */}
@@ -142,7 +142,7 @@ export default function TagManager() {
               }
               <Tag className="w-3 h-3 text-accent-orange shrink-0" />
               <span className="text-xs text-warm-700 font-medium flex-1">#{tag.name}</span>
-              <span className="text-[10px] bg-cream-200 text-warm-500 px-1.5 py-0.5 rounded-full shrink-0">
+              <span className="text-2xs bg-cream-200 text-warm-500 px-1.5 py-0.5 rounded-full shrink-0">
                 {tag.count}
               </span>
             </button>
@@ -152,10 +152,10 @@ export default function TagManager() {
               <div className="px-3 pb-3 pt-1 border-t border-cream-200 space-y-2.5">
                 {/* Affected files */}
                 <div>
-                  <div className="text-[10px] text-warm-400 mb-1">使用该标签的文件:</div>
+                  <div className="text-2xs text-warm-400 mb-1">使用该标签的文件:</div>
                   <div className="max-h-24 overflow-auto space-y-0.5">
                     {tag.files.map(f => (
-                      <div key={f} className="text-[10px] text-warm-500 pl-2 border-l border-cream-300">
+                      <div key={f} className="text-2xs text-warm-500 pl-2 border-l border-cream-300">
                         {f}
                       </div>
                     ))}
@@ -164,7 +164,7 @@ export default function TagManager() {
 
                 {/* Rename */}
                 <div>
-                  <div className="text-[10px] text-warm-400 mb-1 flex items-center gap-1">
+                  <div className="text-2xs text-warm-400 mb-1 flex items-center gap-1">
                     <Edit2 className="w-2.5 h-2.5" /> 重命名
                   </div>
                   <div className="flex gap-1.5">
@@ -172,12 +172,12 @@ export default function TagManager() {
                       type="text"
                       defaultValue={tag.name}
                       onChange={e => { renameInputs.current[tag.name] = e.target.value }}
-                      className="flex-1 bg-cream-200 border border-cream-300 rounded px-2 py-1 text-[11px] text-warm-700 outline-none focus:border-accent-orange"
+                      className="flex-1 bg-cream-200 border border-cream-300 rounded px-2 py-1 text-2xs text-warm-700 outline-none focus:border-accent-orange"
                       placeholder="新标签名"
                     />
                     <button
                       onClick={() => handleRename(tag.name)}
-                      className="px-2.5 py-1 rounded text-[10px] bg-accent-orange text-white hover:bg-accent-orange/90 transition-colors"
+                      className="px-2.5 py-1 rounded text-2xs bg-accent-orange text-white hover:bg-accent-orange/90 transition-colors"
                     >
                       重命名
                     </button>
@@ -186,19 +186,19 @@ export default function TagManager() {
 
                 {/* Merge */}
                 <div>
-                  <div className="text-[10px] text-warm-400 mb-1 flex items-center gap-1">
+                  <div className="text-2xs text-warm-400 mb-1 flex items-center gap-1">
                     <GitMerge className="w-2.5 h-2.5" /> 合并到
                   </div>
                   <div className="flex gap-1.5">
                     <input
                       type="text"
                       onChange={e => { mergeInputs.current[tag.name] = e.target.value }}
-                      className="flex-1 bg-cream-200 border border-cream-300 rounded px-2 py-1 text-[11px] text-warm-700 outline-none focus:border-accent-orange"
+                      className="flex-1 bg-cream-200 border border-cream-300 rounded px-2 py-1 text-2xs text-warm-700 outline-none focus:border-accent-orange"
                       placeholder="目标标签名"
                     />
                     <button
                       onClick={() => handleMerge(tag.name)}
-                      className="px-2.5 py-1 rounded text-[10px] bg-accent-sage/80 text-white hover:bg-accent-sage transition-colors"
+                      className="px-2.5 py-1 rounded text-2xs bg-accent-sage/80 text-white hover:bg-accent-sage transition-colors"
                     >
                       合并
                     </button>
@@ -209,7 +209,7 @@ export default function TagManager() {
                 <div className="pt-1.5 border-t border-cream-200">
                   <button
                     onClick={() => handleDelete(tag.name)}
-                    className={`flex items-center gap-1 px-2.5 py-1 rounded text-[10px] transition-colors ${
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded text-2xs transition-colors ${
                       confirmDelete === tag.name
                         ? 'bg-red-500 text-white'
                         : 'bg-rose-50 text-rose-400 hover:bg-rose-100 border border-rose-200'
@@ -222,7 +222,7 @@ export default function TagManager() {
 
                 {/* Result */}
                 {results[tag.name] && (
-                  <div className={`text-[10px] flex items-center gap-1 ${
+                  <div className={`text-2xs flex items-center gap-1 ${
                     results[tag.name].includes('成功') ? 'text-accent-sage' :
                     results[tag.name].includes('失败') ? 'text-rose-400' : 'text-warm-400'
                   }`}>

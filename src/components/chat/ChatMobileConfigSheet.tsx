@@ -33,7 +33,7 @@ export default function ChatMobileConfigSheet({ mobileConfigOpen, setMobileConfi
               className="absolute inset-0 bg-slate-950/45 backdrop-blur-xs"
               onClick={() => setMobileConfigOpen(false)}
             />
-            <div className="relative bg-white rounded-t-3xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl border-t border-slate-200 max-h-[86dvh] overflow-y-auto modal-scroll-contain space-y-4 animate-sheet-up">
+            <div className="relative bg-white rounded-t-3xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-xl border-t border-slate-200 max-h-[86dvh] overflow-y-auto modal-scroll-contain space-y-4 animate-sheet-up">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2">
                   <Settings className="w-4 h-4 text-indigo-600" />
@@ -50,7 +50,7 @@ export default function ChatMobileConfigSheet({ mobileConfigOpen, setMobileConfi
 
               {/* 1. 伴学风格 */}
               <div className="space-y-1.5">
-                <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                <div className="text-2xs font-bold text-slate-400 uppercase tracking-wider">
                   伴学风格与语调
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -83,7 +83,7 @@ export default function ChatMobileConfigSheet({ mobileConfigOpen, setMobileConfi
 
               {/* 2. 双核引擎选择 */}
               <div className="space-y-1.5">
-                <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                <div className="text-2xs font-bold text-slate-400 uppercase tracking-wider">
                   AI 驱动底座
                 </div>
                 <div className="grid grid-cols-2 gap-1.5 bg-slate-100 p-1.5 rounded-2xl">
@@ -112,7 +112,7 @@ export default function ChatMobileConfigSheet({ mobileConfigOpen, setMobileConfi
               {/* 3. 模型管理 */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  <span className="text-2xs font-bold text-slate-400 uppercase tracking-wider">
                     选择模型
                   </span>
 
@@ -187,7 +187,7 @@ export default function ChatMobileConfigSheet({ mobileConfigOpen, setMobileConfi
                         onClick={() => handleSetFontSize(item.key)}
                         className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
                           chatFontSize === item.key
-                            ? 'bg-slate-900 text-white shadow-2xs'
+                            ? 'bg-slate-900 text-white shadow-xs'
                             : 'text-slate-600'
                         }`}
                       >
@@ -211,7 +211,7 @@ export default function ChatMobileConfigSheet({ mobileConfigOpen, setMobileConfi
                     <span>双智能体同台对比研讨</span>
                   </span>
                   <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] ${
+                    className={`px-2 py-0.5 rounded-full text-2xs ${
                       isDualMode ? 'bg-orange-500 text-white' : 'bg-slate-200 text-slate-600'
                     }`}
                   >
@@ -223,7 +223,7 @@ export default function ChatMobileConfigSheet({ mobileConfigOpen, setMobileConfi
               <button
                 type="button"
                 onClick={() => setMobileConfigOpen(false)}
-                className="w-full py-3 rounded-2xl bg-slate-900 text-white text-xs font-bold shadow-md"
+                className="w-full py-3 rounded-2xl bg-slate-900 text-white text-xs font-bold shadow-sm"
               >
                 完成配置并返回对话
               </button>

@@ -54,7 +54,7 @@ export default function HandoutsTab({ filteredHandouts, onResetFilters, handleOp
 
                       onClick={() => handleOpenHandout(handout)}
 
-                      className="bg-surface border border-cream-200 hover:border-neutral-900 rounded-2xl p-5 cursor-pointer transition-all duration-200 hover:shadow-md flex flex-col justify-between group"
+                      className="bg-surface border border-cream-200 hover:border-slate-900 rounded-2xl p-5 cursor-pointer transition-all duration-200 hover:shadow-sm flex flex-col justify-between group"
 
                     >
 
@@ -66,7 +66,7 @@ export default function HandoutsTab({ filteredHandouts, onResetFilters, handleOp
 
                           <div className="flex items-center gap-1.5">
 
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                            <span className={`text-2xs font-bold px-2 py-0.5 rounded border ${
 
                               isCs
 
@@ -86,7 +86,7 @@ export default function HandoutsTab({ filteredHandouts, onResetFilters, handleOp
 
                             </span>
 
-                            <span className="text-[10px] px-2 py-0.5 rounded font-medium bg-amber-500/10 text-amber-700 border border-amber-500/20">
+                            <span className="text-2xs px-2 py-0.5 rounded font-medium bg-amber-500/10 text-amber-700 border border-amber-500/20">
 
                               {handout.difficulty}
 
@@ -94,7 +94,7 @@ export default function HandoutsTab({ filteredHandouts, onResetFilters, handleOp
 
                           </div>
 
-                          <span className="text-[11px] text-warm-400 flex items-center gap-1">
+                          <span className="text-2xs text-warm-400 flex items-center gap-1">
 
                             <Clock className="w-3 h-3" /> {handout.readTime}
 
@@ -132,7 +132,7 @@ export default function HandoutsTab({ filteredHandouts, onResetFilters, handleOp
 
                             {handout.keyTheorems.slice(0, 2).map((th, i) => (
 
-                              <div key={i} className="text-[11px] text-warm-600 truncate flex items-center gap-1.5">
+                              <div key={i} className="text-2xs text-warm-600 truncate flex items-center gap-1.5">
 
                                 <span className="w-1.5 h-1.5 rounded-full bg-accent-orange shrink-0" />
 
@@ -158,7 +158,7 @@ export default function HandoutsTab({ filteredHandouts, onResetFilters, handleOp
 
                           {handout.tags.slice(0, 3).map((tag, idx) => (
 
-                            <span key={idx} className="text-[10px] text-warm-400 bg-cream-200/60 px-1.5 py-0.5 rounded">
+                            <span key={idx} className="text-2xs text-warm-400 bg-cream-200/60 px-1.5 py-0.5 rounded">
 
                               #{tag}
 

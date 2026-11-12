@@ -49,7 +49,7 @@ export const statusStyles = {
     iconBg: 'bg-accent-orange/15', iconColor: 'text-accent-orange',
     labelColor: 'text-accent-orange',
     badge: 'bg-accent-orange/10 text-accent-orange border-accent-orange/30',
-    badgeText: '进行中', glow: 'shadow-accent-orange/20 shadow-lg',
+    badgeText: '进行中', glow: 'shadow-accent-orange/20 shadow-xl',
   },
   pending: {
     bg: 'bg-cream-200/50', border: 'border-cream-300/40',
@@ -74,20 +74,20 @@ export function StepNode({ data }: { data: any }) {
         </div>
         <div>
           <div className={`text-sm font-medium ${s.labelColor}`}>{data.label}</div>
-          <div className="text-[11px] text-warm-400 mt-0.5">{data.desc}</div>
+          <div className="text-2xs text-warm-400 mt-0.5">{data.desc}</div>
         </div>
       </div>
       {data.status === 'active' && (
-        <div className={`inline-flex mt-2 px-2 py-0.5 rounded-md border text-[10px] ${s.badge}`}>
+        <div className={`inline-flex mt-2 px-2 py-0.5 rounded-md border text-2xs ${s.badge}`}>
           <div className="w-1.5 h-1.5 rounded-full bg-accent-orange animate-pulse mr-1.5 mt-1" />
           {s.badgeText}
         </div>
       )}
       {data.status === 'done' && data.detail && (
-        <div className="mt-2 text-[10px] text-accent-sage/80">{data.detail}</div>
+        <div className="mt-2 text-2xs text-accent-sage/80">{data.detail}</div>
       )}
       {data.status === 'done' && !data.detail && (
-        <div className={`inline-flex mt-2 px-2 py-0.5 rounded-md border text-[10px] ${s.badge}`}>
+        <div className={`inline-flex mt-2 px-2 py-0.5 rounded-md border text-2xs ${s.badge}`}>
           {s.badgeText}
         </div>
       )}

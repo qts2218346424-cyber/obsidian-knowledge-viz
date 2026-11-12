@@ -41,15 +41,15 @@ export default function ChatSessionSidebar({ activeConvId, activeProject, worksp
                   : undefined
                 : undefined,
             }}
-            className={`fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-2xl transition-transform duration-200 md:static md:z-auto md:shadow-2xs md:transition-none ${
+            className={`fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl transition-transform duration-200 md:static md:z-auto md:shadow-xs md:transition-none ${
               showSessions ? 'translate-x-0' : '-translate-x-full md:hidden'
-            } overflow-hidden md:border md:border-neutral-200/80 md:rounded-xl shrink-0 shadow-xs complex-panel-contain`}
+            } overflow-hidden md:border md:border-slate-200/80 md:rounded-xl shrink-0 shadow-xs complex-panel-contain`}
           >
             <div className="h-full flex flex-col bg-white">
               {/* 项目工作区与快捷操作一体顶栏 */}
               <div className="p-3 border-b border-slate-100 flex flex-col gap-2 shrink-0">
                 <div className="flex items-center justify-between gap-1">
-                  <span className="text-[11px] font-semibold text-slate-500 flex items-center gap-1.5">
+                  <span className="text-2xs font-semibold text-slate-500 flex items-center gap-1.5">
                     <Folder className="w-3.5 h-3.5 text-indigo-500" />
                     <span>工作区</span>
                   </span>
@@ -89,7 +89,7 @@ export default function ChatSessionSidebar({ activeConvId, activeProject, worksp
 
               {/* 会话历史分组标题 */}
               <div className="flex items-center justify-between px-3.5 pt-3 pb-1.5 shrink-0">
-                <span className="text-[11px] font-semibold text-slate-400 tracking-wide">
+                <span className="text-2xs font-semibold text-slate-400 tracking-wide">
                   历史对话 ({projectConversations.length})
                 </span>
                 <button
@@ -98,7 +98,7 @@ export default function ChatSessionSidebar({ activeConvId, activeProject, worksp
                     onCreateConversation()
                     if (window.innerWidth < 768) setShowSessions(false)
                   }}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-2xs font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
                   title="新建对话"
                 >
                   <Plus className="w-3 h-3" />
@@ -119,7 +119,7 @@ export default function ChatSessionSidebar({ activeConvId, activeProject, worksp
                     <button
                       type="button"
                       onClick={() => onCreateConversation()}
-                      className="mt-2.5 px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 text-[11px] font-semibold cursor-pointer"
+                      className="mt-2.5 px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 text-2xs font-semibold cursor-pointer"
                     >
                       + 开启新对话
                     </button>
@@ -137,8 +137,8 @@ export default function ChatSessionSidebar({ activeConvId, activeProject, worksp
                         }}
                         className={`group flex items-center gap-2.5 px-3 py-2.5 mx-2 rounded-lg cursor-pointer text-xs transition-all ${
                           isCurrent
-                            ? 'bg-neutral-900 text-white font-medium shadow-xs'
-                            : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                            ? 'bg-slate-900 text-white font-medium shadow-xs'
+                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                         }`}
                       >
                         {isConvRunning ? (
@@ -146,7 +146,7 @@ export default function ChatSessionSidebar({ activeConvId, activeProject, worksp
                         ) : (
                           <MessageSquare
                             className={`w-3.5 h-3.5 shrink-0 mt-0.5 self-start ${
-                              isCurrent ? 'text-white' : 'text-neutral-400'
+                              isCurrent ? 'text-white' : 'text-slate-400'
                             }`}
                           />
                         )}
@@ -154,12 +154,12 @@ export default function ChatSessionSidebar({ activeConvId, activeProject, worksp
                           <div className="truncate flex items-center gap-1">
                             <span className="truncate">{conv.title}</span>
                             {isConvRunning && (
-                              <span className="text-[9px] px-1 py-0.2 rounded bg-amber-100 text-amber-700 font-semibold shrink-0">
+                              <span className="text-2xs px-1 py-0.2 rounded bg-amber-100 text-amber-700 font-semibold shrink-0">
                                 运行中
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center gap-1 mt-0.5 text-[10px] text-slate-400 font-normal">
+                          <div className="flex items-center gap-1 mt-0.5 text-2xs text-slate-400 font-normal">
                             <span>
                               {conv.provider === 'antigravity'
                                 ? '✨ 研核官方 (Gemini 3.8 Flash)'

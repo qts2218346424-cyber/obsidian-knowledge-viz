@@ -188,7 +188,7 @@ export function ToolCallCard({ toolCall, defaultExpanded = false }: ToolCallCard
   const isFailed = toolCall.success === false
 
   return (
-    <div className="my-2 rounded-xl border border-cream-300/80 dark:border-slate-800 bg-surface dark:bg-slate-900/90 shadow-2xs overflow-hidden transition-all text-xs">
+    <div className="my-2 rounded-xl border border-cream-300/80 dark:border-slate-800 bg-surface dark:bg-slate-900/90 shadow-xs overflow-hidden transition-all text-xs">
       {/* 头部点击栏 */}
       <button
         type="button"
@@ -206,11 +206,11 @@ export function ToolCallCard({ toolCall, defaultExpanded = false }: ToolCallCard
             <span className="font-semibold text-warm-900 dark:text-slate-100 truncate">
               {meta.title}
             </span>
-            <span className="text-[10px] text-warm-400 dark:text-slate-500 font-mono hidden sm:inline">
+            <span className="text-2xs text-warm-400 dark:text-slate-500 font-mono hidden sm:inline">
               ({toolCall.tool})
             </span>
             {summary && (
-              <span className="text-[11px] text-warm-500 dark:text-slate-400 font-mono truncate max-w-[200px] sm:max-w-xs bg-cream-200/60 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+              <span className="text-2xs text-warm-500 dark:text-slate-400 font-mono truncate max-w-[200px] sm:max-w-xs bg-cream-200/60 dark:bg-slate-800 px-1.5 py-0.5 rounded">
                 {summary}
               </span>
             )}
@@ -220,19 +220,19 @@ export function ToolCallCard({ toolCall, defaultExpanded = false }: ToolCallCard
         {/* 右侧状态微标与展开箭头 */}
         <div className="flex items-center gap-2 shrink-0 ml-2">
           {isRunning && (
-            <span className="flex items-center gap-1 text-[10px] text-accent-orange font-medium bg-orange-500/10 px-2 py-0.5 rounded-full border border-orange-500/20">
+            <span className="flex items-center gap-1 text-2xs text-accent-orange font-medium bg-orange-500/10 px-2 py-0.5 rounded-full border border-orange-500/20">
               <Loader2 className="w-3 h-3 animate-spin" />
               <span>调用中...</span>
             </span>
           )}
           {isSuccess && (
-            <span className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+            <span className="flex items-center gap-1 text-2xs text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
               <CheckCircle2 className="w-3 h-3 text-emerald-500" />
               <span>已完成</span>
             </span>
           )}
           {isFailed && (
-            <span className="flex items-center gap-1 text-[10px] text-rose-600 dark:text-rose-400 font-medium bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20">
+            <span className="flex items-center gap-1 text-2xs text-rose-600 dark:text-rose-400 font-medium bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20">
               <AlertTriangle className="w-3 h-3 text-rose-500" />
               <span>执行失败</span>
             </span>
@@ -251,7 +251,7 @@ export function ToolCallCard({ toolCall, defaultExpanded = false }: ToolCallCard
         <div className="p-3 border-t border-cream-200 dark:border-slate-800 space-y-2.5 bg-cream-50/40 dark:bg-slate-950/40">
           {/* 输入参数模块 */}
           <div>
-            <div className="flex items-center justify-between mb-1 text-[11px] font-medium text-warm-500 dark:text-slate-400">
+            <div className="flex items-center justify-between mb-1 text-2xs font-medium text-warm-500 dark:text-slate-400">
               <span>调用入参 (Parameters):</span>
               <button
                 type="button"
@@ -272,7 +272,7 @@ export function ToolCallCard({ toolCall, defaultExpanded = false }: ToolCallCard
                 )}
               </button>
             </div>
-            <pre className="p-2.5 rounded-lg bg-[#0d1117] text-slate-200 font-mono text-[11px] leading-relaxed overflow-x-auto max-h-48 border border-slate-800">
+            <pre className="p-2.5 rounded-lg bg-[#0d1117] text-slate-200 font-mono text-2xs leading-relaxed overflow-x-auto max-h-48 border border-slate-800">
               <code>{formattedInput}</code>
             </pre>
           </div>
@@ -280,7 +280,7 @@ export function ToolCallCard({ toolCall, defaultExpanded = false }: ToolCallCard
           {/* 执行结果模块 */}
           {toolCall.output !== undefined && (
             <div>
-              <div className="flex items-center justify-between mb-1 text-[11px] font-medium text-warm-500 dark:text-slate-400">
+              <div className="flex items-center justify-between mb-1 text-2xs font-medium text-warm-500 dark:text-slate-400">
                 <span>执行返回 (Output):</span>
                 <button
                   type="button"
@@ -301,7 +301,7 @@ export function ToolCallCard({ toolCall, defaultExpanded = false }: ToolCallCard
                   )}
                 </button>
               </div>
-              <pre className="p-2.5 rounded-lg bg-[#0d1117] text-slate-200 font-mono text-[11px] leading-relaxed overflow-x-auto max-h-56 border border-slate-800 whitespace-pre-wrap">
+              <pre className="p-2.5 rounded-lg bg-[#0d1117] text-slate-200 font-mono text-2xs leading-relaxed overflow-x-auto max-h-56 border border-slate-800 whitespace-pre-wrap">
                 <code>{toolCall.output || '(无文本输出)'}</code>
               </pre>
             </div>
