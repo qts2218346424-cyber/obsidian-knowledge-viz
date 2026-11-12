@@ -1018,7 +1018,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
               </div>
             )}
 
-            {/* 快捷操作栏 */}
+            {/* 快捷操作栏（带清晰中文标签与图标，避免靠边裁切或看不清功能） */}
             <div
               onPointerDown={e => e.stopPropagation()}
               onPointerMove={e => e.stopPropagation()}
@@ -1027,8 +1027,8 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
               className={`pet-action-panel absolute ${
                 isNearBottom ? 'bottom-0' : 'top-0'
               } ${
-                isRightSide ? '-left-10' : '-right-10'
-              } flex flex-col gap-1.5 transition-all duration-200 z-20 max-h-[calc(100vh-60px)] overflow-y-auto scrollbar-none py-1 overscroll-contain ${
+                isRightSide ? 'right-[calc(100%+8px)]' : 'left-[calc(100%+8px)]'
+              } flex flex-col gap-1.5 transition-all duration-200 z-20 max-h-[calc(100vh-60px)] overflow-y-auto scrollbar-none py-1.5 px-1.5 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-xl border border-slate-200/80 dark:border-slate-700/80 min-w-[116px] overscroll-contain ${
                 showMobileMenu
                   ? 'opacity-100 scale-100 pointer-events-auto'
                   : 'opacity-0 scale-95 pointer-events-none group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto'
@@ -1041,10 +1041,11 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                   e.stopPropagation()
                   navigate('/chat')
                 }}
-                className="w-8 h-8 rounded-full bg-white/95 dark:bg-slate-800 text-indigo-600 shadow-lg border border-indigo-200 dark:border-slate-700 flex items-center justify-center hover:bg-indigo-50 hover:scale-110 active:scale-95 transition-all cursor-pointer select-none"
+                className="w-full px-2.5 py-1.5 rounded-xl bg-indigo-50/80 dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 border border-indigo-200/70 dark:border-slate-700 flex items-center gap-2 hover:bg-indigo-100 active:scale-95 transition-all cursor-pointer select-none text-[11px] font-semibold whitespace-nowrap"
                 title="进入全屏 AI 伴学空间"
               >
-                <Bot className="w-4 h-4 text-indigo-500" />
+                <Bot className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                <span>AI 伴学舱</span>
               </button>
 
               {/* 打开智能伴学侧滑抽屉 */}
@@ -1055,10 +1056,11 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                   setDrawerOpen(prev => !prev)
                   setShowMobileMenu(false)
                 }}
-                className="w-8 h-8 rounded-full bg-white/95 dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center hover:bg-amber-50 hover:text-amber-600 hover:scale-110 active:scale-95 transition-all cursor-pointer select-none"
+                className="w-full px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 flex items-center gap-2 hover:bg-amber-50 hover:text-amber-700 active:scale-95 transition-all cursor-pointer select-none text-[11px] font-semibold whitespace-nowrap"
                 title={`呼出${persona.name}快捷伴学抽屉`}
               >
-                <MessageSquare className="w-4 h-4" />
+                <MessageSquare className="w-3.5 h-3.5 shrink-0" />
+                <span>快捷对话</span>
               </button>
 
               {/* 投喂大烤鸡腿 */}
@@ -1068,10 +1070,11 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                   e.stopPropagation()
                   handleFeedDrumstick()
                 }}
-                className="w-8 h-8 rounded-full bg-white/95 dark:bg-slate-800 text-amber-600 shadow-lg border border-amber-200 dark:border-slate-700 flex items-center justify-center hover:bg-amber-50 hover:scale-110 active:scale-95 transition-all cursor-pointer select-none"
+                className="w-full px-2.5 py-1.5 rounded-xl bg-amber-50/80 dark:bg-slate-800 text-amber-700 dark:text-amber-300 border border-amber-200/70 dark:border-slate-700 flex items-center gap-2 hover:bg-amber-100 active:scale-95 transition-all cursor-pointer select-none text-[11px] font-semibold whitespace-nowrap"
                 title="投喂香喷喷大烤鸡腿 🍗"
               >
-                <Utensils className="w-4 h-4 text-amber-600" />
+                <Utensils className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                <span>投喂鸡腿</span>
               </button>
 
               {/* 随堂练习快捷按钮 */}
@@ -1086,10 +1089,11 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                   }
                   setShowMobileMenu(false)
                 }}
-                className="w-8 h-8 rounded-full bg-white/95 dark:bg-slate-800 text-emerald-600 shadow-lg border border-emerald-200 dark:border-slate-700 flex items-center justify-center hover:bg-emerald-50 hover:scale-110 active:scale-95 transition-all cursor-pointer select-none"
+                className="w-full px-2.5 py-1.5 rounded-xl bg-emerald-50/80 dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 border border-emerald-200/70 dark:border-slate-700 flex items-center gap-2 hover:bg-emerald-100 active:scale-95 transition-all cursor-pointer select-none text-[11px] font-semibold whitespace-nowrap"
                 title="开启考研做题中心 / 随堂测验"
               >
-                <Award className="w-4 h-4 text-emerald-600" />
+                <Award className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span>做题测验</span>
               </button>
 
               {/* 语音开关按钮 */}
@@ -1099,14 +1103,15 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                   e.stopPropagation()
                   toggleVoiceMute()
                 }}
-                className={`w-8 h-8 rounded-full shadow-lg border flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer select-none ${
+                className={`w-full px-2.5 py-1.5 rounded-xl border flex items-center gap-2 active:scale-95 transition-all cursor-pointer select-none text-[11px] font-semibold whitespace-nowrap ${
                   !voiceMuted
-                    ? 'bg-amber-50 dark:bg-slate-800 text-amber-600 border-amber-300 dark:border-amber-700'
-                    : 'bg-white/95 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700'
+                    ? 'bg-amber-50 dark:bg-slate-800 text-amber-700 border-amber-300 dark:border-amber-700'
+                    : 'bg-slate-50 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'
                 }`}
                 title={voiceMuted ? '点击开启奶龙语音与Q弹音效' : '语音与音效已开启（点击切换静音自习模式）'}
               >
-                {voiceMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                {voiceMuted ? <VolumeX className="w-3.5 h-3.5 shrink-0" /> : <Volume2 className="w-3.5 h-3.5 shrink-0" />}
+                <span>{voiceMuted ? '开启语音' : '静音模式'}</span>
               </button>
 
               {/* 长时间用眼科学护眼提醒 / 一键开启 20 秒放松 */}
@@ -1127,10 +1132,10 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                   }
                   setShowMobileMenu(false)
                 }}
-                className={`w-8 h-8 rounded-full shadow-lg border flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer select-none ${
+                className={`w-full px-2.5 py-1.5 rounded-xl border flex items-center gap-2 active:scale-95 transition-all cursor-pointer select-none text-[11px] font-semibold whitespace-nowrap ${
                   eyeCareActive
                     ? "bg-sky-500 text-white border-sky-400 animate-pulse"
-                    : "bg-white/95 dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-lg border border-sky-200 dark:border-slate-700 hover:bg-sky-50"
+                    : "bg-sky-50/90 dark:bg-slate-800 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-slate-700 hover:bg-sky-100"
                 }`}
                 title={
                   eyeCareActive
@@ -1138,7 +1143,8 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                     : `长时间用眼护眼助手（已连续用眼 ${Math.floor(continuousStudySeconds / 60)} 分钟，点击开启 20 秒闭目远眺）`
                 }
               >
-                <Eye className="w-4 h-4" />
+                <Eye className="w-3.5 h-3.5 shrink-0" />
+                <span>{eyeCareActive ? `护眼中 ${eyeCareSecondsLeft}s` : '护眼助手'}</span>
               </button>
 
               {/* 番茄钟开关 */}
@@ -1165,14 +1171,15 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                     return next
                   })
                 }}
-                className={`w-8 h-8 rounded-full shadow-lg border flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer select-none ${
+                className={`w-full px-2.5 py-1.5 rounded-xl border flex items-center gap-2 active:scale-95 transition-all cursor-pointer select-none text-[11px] font-semibold whitespace-nowrap ${
                   focusActive
                     ? 'bg-amber-500 text-white border-amber-600'
-                    : 'bg-white/95 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-amber-50 hover:text-amber-600'
+                    : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-amber-50 hover:text-amber-600'
                 }`}
                 title={focusActive ? '暂停番茄钟' : '开启 25 分钟考研专注伴学'}
               >
-                <Clock className="w-4 h-4" />
+                <Clock className="w-3.5 h-3.5 shrink-0" />
+                <span>{focusActive ? '暂停专注' : '专注番茄'}</span>
               </button>
 
               {/* 最小化为胶囊徽章 */}
@@ -1183,10 +1190,11 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                   setMinimized(true)
                   setShowMobileMenu(false)
                 }}
-                className="w-8 h-8 rounded-full bg-white/95 dark:bg-slate-800 text-slate-400 hover:text-slate-700 shadow-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer select-none"
+                className="w-full px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-500 hover:text-slate-800 border border-slate-200 dark:border-slate-700 flex items-center gap-2 active:scale-95 transition-all cursor-pointer select-none text-[11px] font-semibold whitespace-nowrap"
                 title="收起为迷你萌宠胶囊"
               >
-                <Minimize2 className="w-3.5 h-3.5" />
+                <Minimize2 className="w-3.5 h-3.5 shrink-0" />
+                <span>最小化</span>
               </button>
 
               {/* 一键隐藏到屏幕边缘 */}
@@ -1200,10 +1208,11 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                   } catch {}
                   setShowMobileMenu(false)
                 }}
-                className="w-8 h-8 rounded-full bg-white/95 dark:bg-slate-800 text-slate-400 hover:text-rose-500 shadow-lg border border-slate-200 dark:border-slate-700 flex items-center justify-center hover:scale-110 active:scale-95 transition-all cursor-pointer select-none"
+                className="w-full px-2.5 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-500 hover:text-rose-500 border border-slate-200 dark:border-slate-700 flex items-center gap-2 active:scale-95 transition-all cursor-pointer select-none text-[11px] font-semibold whitespace-nowrap"
                 title="暂时隐藏（可在屏幕右侧边缘随时点开）"
               >
-                <EyeOff className="w-3.5 h-3.5" />
+                <EyeOff className="w-3.5 h-3.5 shrink-0" />
+                <span>暂时隐藏</span>
               </button>
 
               {showMobileMenu && (
@@ -1213,10 +1222,11 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                     e.stopPropagation()
                     setShowMobileMenu(false)
                   }}
-                  className="w-8 h-8 rounded-full bg-warm-100 dark:bg-slate-800 text-warm-500 dark:text-slate-300 shadow border border-warm-200 dark:border-slate-700 flex items-center justify-center hover:bg-warm-200 transition-all cursor-pointer select-none"
+                  className="w-full px-2.5 py-1.5 rounded-xl bg-warm-100 dark:bg-slate-800 text-warm-600 dark:text-slate-300 border border-warm-200 dark:border-slate-700 flex items-center gap-2 hover:bg-warm-200 transition-all cursor-pointer select-none text-[11px] font-semibold whitespace-nowrap"
                   title="收起菜单"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-3.5 h-3.5 shrink-0" />
+                  <span>收起菜单</span>
                 </button>
               )}
             </div>

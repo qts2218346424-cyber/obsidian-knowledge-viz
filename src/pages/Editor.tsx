@@ -1593,7 +1593,7 @@ export default function Editor() {
                     </button>
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-slate-400 dark:text-slate-500">
-                    <span>{content.length} 字</span>
+                    <span>{content.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '').replace(/\s+/g, '').length} 字</span>
                     {currentFile?.links && currentFile.links.length > 0 && (
                       <>
                         <span>·</span>

@@ -218,7 +218,7 @@ export default function Dashboard() {
     () => report?.categories.reduce((total, category) => total + category.issues.length, 0) ?? 0,
     [report],
   )
-  const totalQuestions = qCounts.cs + qCounts.math + customCount
+  const totalQuestions = qCounts.cs + qCounts.math + (qCounts.politics || 0) + customCount
 
   // 考研初试统一倒计时
   const countdown = useExamCountdown()
@@ -556,7 +556,7 @@ export default function Dashboard() {
         <MetricCard
           label="知识体系健康度"
           value={healthLoading ? '...' : `${healthScore} 分`}
-          subtext={`${issueCount} 项结构优化建议`}
+          subtext={healthLoading ? '正在评估体系健康度...' : `${issueCount} 项结构优化建议`}
           icon={HeartPulse}
           to="/workflow"
           colorTheme="purple"

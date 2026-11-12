@@ -517,7 +517,8 @@ function insertFromInput() {
   const v = parseInt(inp.value, 10);
   if (isNaN(v)) return;
   insertVal(v);
-  inp.value = Math.floor(Math.random() * 90) + 10;
+  inp.value = '';
+  inp.placeholder = '已插入 ' + v + '，继续输入...';
 }
 
 function resetTree() {

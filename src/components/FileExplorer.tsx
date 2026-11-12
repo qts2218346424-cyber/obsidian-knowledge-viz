@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ChevronRight, ChevronDown, FileText, Folder, FolderOpen, Search, X, BookOpen, FileCode } from 'lucide-react'
-import type { TreeNode } from '../services/api'
+import { api, type TreeNode } from '../services/api'
 
 interface FileExplorerProps {
   tree: TreeNode[]
@@ -10,7 +10,32 @@ interface FileExplorerProps {
 
 export default function FileExplorer({ tree, onFileClick, selectedPath }: FileExplorerProps) {
   const [query, setQuery] = useState('')
-  const filteredTree = useMemo(() => filterTree(tree, query), [tree, query])
+  const [remoteMatchedPaths, setRemoteMatchedPaths] = useState<Set<string> | null>(null)
+
+  useEffect(() => {
+    const trimmed = query.trim()
+    if (!trimmed) {
+      setRemoteMatchedPaths(null)
+      return
+    }
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      try {
+        const files = await api.getFiles(trimmed)
+        if (!cancelled) {
+          setRemoteMatchedPaths(new Set(files.map(f => f.path)))
+        }
+      } catch {
+        if (!cancelled) setRemoteMatchedPaths(null)
+      }
+    }, 220)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [query])
+
+  const filteredTree = useMemo(() => filterTree(tree, query, remoteMatchedPaths), [tree, query, remoteMatchedPaths])
 
   if (tree.length === 0) {
     return (
@@ -60,25 +85,25 @@ export default function FileExplorer({ tree, onFileClick, selectedPath }: FileEx
   )
 }
 
-function filterTree(nodes: TreeNode[], query: string): TreeNode[] {
+function filterTree(nodes: TreeNode[], query: string, remoteMatchedPaths?: Set<string> | null): TreeNode[] {
   const rawQuery = query.trim().toLowerCase()
   if (!rawQuery) return nodes
 
-  // 支持用户输入 #标签 或纯标签名搜索，支持标签、文件名、相对路径深度多维匹配
+  // 支持用户输入 #标签 或纯标签名搜索，结合后端 /api/files 全文与标签匹配结果进行多维过滤
   const cleanTag = rawQuery.startsWith('#') ? rawQuery.slice(1).trim() : rawQuery
 
   return nodes.flatMap(node => {
     if (node.type === 'file') {
       const nameMatch = node.name.toLowerCase().includes(rawQuery) || node.name.toLowerCase().includes(cleanTag)
       const pathMatch = node.path.toLowerCase().includes(rawQuery) || node.path.toLowerCase().includes(cleanTag)
-      // 若节点挂载了 tags 数组，深度匹配标签
-      const tagMatch = Array.isArray((node as any).tags) && (node as any).tags.some((t: string) => 
+      const remoteMatch = remoteMatchedPaths ? remoteMatchedPaths.has(node.path) : false
+      const tagMatch = Array.isArray((node as any).tags) && (node as any).tags.some((t: string) =>
         t.toLowerCase().includes(cleanTag) || t.toLowerCase().includes(rawQuery)
       )
-      return (nameMatch || pathMatch || tagMatch) ? [node] : []
+      return (nameMatch || pathMatch || tagMatch || remoteMatch) ? [node] : []
     }
 
-    const children = node.children ? filterTree(node.children, rawQuery) : []
+    const children = node.children ? filterTree(node.children, rawQuery, remoteMatchedPaths) : []
     return node.name.toLowerCase().includes(rawQuery) || children.length > 0
       ? [{ ...node, children }]
       : []

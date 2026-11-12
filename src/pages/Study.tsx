@@ -1328,7 +1328,7 @@ export default function Study() {
 
             { key: 'graph' as Tab, label: '🕸️ 全景知识图谱', shortLabel: '🕸️ 知识图谱', count: null },
 
-            { key: 'handouts' as Tab, label: '📖 核心讲义', shortLabel: '📖 讲义', count: allHandouts.length },
+            { key: 'handouts' as Tab, label: '📖 核心讲义', shortLabel: '📖 讲义', count: filteredHandouts.length },
 
             { key: 'topology' as Tab, label: '🔥 考点掌握度热力图', shortLabel: '🔥 掌握度', count: null },
 
@@ -1336,7 +1336,7 @@ export default function Study() {
 
             { key: 'flashcards' as Tab, label: '🎴 易忘闪卡', shortLabel: '🎴 闪卡', count: null },
 
-            { key: 'pdfs' as Tab, label: '📑 PDF 教材与真题', shortLabel: '📑 教材真题', count: pdfBooks.length },
+            { key: 'pdfs' as Tab, label: '📑 PDF 教材与真题', shortLabel: '📑 教材真题', count: filteredPdfs.length },
 
             { key: 'coursewares' as Tab, label: '🌐 仿真课件', shortLabel: '🌐 课件', count: INTERACTIVE_COURSEWARES.length },
 
