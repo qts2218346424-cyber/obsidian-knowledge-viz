@@ -48,7 +48,7 @@ export default function DailyErrorTab() {
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-sm text-warm-500 py-12 justify-center">
-        <Loader2 className="w-4 h-4 animate-spin" /> 正在调取今日错题数据...
+        <Loader2 className="w-4 h-4 animate-spin" /> 正在加载今日错题…
       </div>
     )
   }

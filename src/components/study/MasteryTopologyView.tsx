@@ -437,7 +437,7 @@ export default function MasteryTopologyView() {
             {loadingDetail ? (
               <div className="py-16 flex flex-col items-center justify-center gap-2 text-warm-400 text-xs">
                 <Loader2 className="w-5 h-5 animate-spin text-accent-orange" />
-                正在调取考点全量元数据与历史错题...
+                正在加载考点与错题…
               </div>
             ) : !nodeDetail ? (
               <div className="py-20 text-center space-y-3">

@@ -308,7 +308,7 @@ export default function Pomodoro() {
             <div className="bg-white rounded-3xl border border-black/[0.06] p-6 sm:p-8 flex flex-col items-center shadow-xs">
               {/* 表盘上部：当前学科指示灯 */}
               <div className="flex items-center gap-2 mb-4">
-                <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-ping" />
+                <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse" />
                 <span className="text-2xs font-semibold tracking-wider uppercase text-slate-500">
                   {subjectFocus === '408' ? '408 计算机基础' : subjectFocus === 'math' ? '考研数学高数线代' : subjectFocus === 'politics' ? '政治史纲马原' : '考研英语长难句'}
                 </span>

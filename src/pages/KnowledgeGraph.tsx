@@ -670,7 +670,7 @@ export default function KnowledgeGraph() {
         <div className="flex items-center gap-2">
           {viewMode === 'mastery' ? (
             <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-xs text-rose-800 font-medium">
-              <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
               <span>单击红色薄弱考点，立即进入【提分急救舱】</span>
             </div>
           ) : (
@@ -781,7 +781,7 @@ export default function KnowledgeGraph() {
             <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-rose-50/90 via-amber-50/80 to-emerald-50/80 border border-rose-200/90 text-xs mb-2">
               <div className="flex items-center gap-2 text-slate-800">
                 <span className="font-extrabold text-rose-900 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-rose-600 animate-ping" />
+                  <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
                   提分急救舱就绪
                 </span>
                 <span className="text-slate-300 hidden sm:inline">|</span>
@@ -968,7 +968,7 @@ export default function KnowledgeGraph() {
                   </div>
                   <span className="text-slate-300">·</span>
                   <div className="flex items-center gap-1 text-rose-600 font-bold">
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
                     <span>薄弱高危 (&lt;50% 呼吸闪烁)</span>
                   </div>
                 </div>

@@ -455,7 +455,7 @@ function ThinkingAccordion({
 
             <div className="flex items-center gap-1.5 text-accent-orange text-2xs font-medium pt-1">
 
-              <span className="w-1.5 h-1.5 rounded-full bg-accent-orange animate-ping" />
+              <span className="w-1.5 h-1.5 rounded-full bg-accent-orange animate-pulse" />
 
               <span>正在梳理逻辑链与求解步骤...</span>
 

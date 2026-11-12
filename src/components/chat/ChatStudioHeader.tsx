@@ -1084,7 +1084,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
             className="hidden sm:inline-flex h-9 items-center gap-1.5 rounded-xl border border-amber-200/90 bg-amber-50/80 px-2.5 text-xs font-bold text-amber-900 hover:bg-amber-100 transition-all cursor-pointer active:scale-95"
             title="伴学积分中心 (单次提问消耗 0.1 积分，每日签到领 1 积分)"
           >
-            <Coins className="w-3.5 h-3.5 text-amber-600 animate-bounce" />
+            <Coins className="w-3.5 h-3.5 text-amber-600" />
             <span className="font-mono text-amber-950">{points.toFixed(1)}</span>
             <span className="text-2xs text-amber-700 font-medium">分</span>
             {canCheckinToday && (

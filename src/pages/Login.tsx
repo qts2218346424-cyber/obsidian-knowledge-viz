@@ -175,7 +175,7 @@ export default function Login() {
               )}
 
               {/* 表单 */}
-              <form onSubmit={handleSubmit} className="space-y-3">
+              <form onSubmit={handleSubmit} noValidate className="space-y-3">
                 <div>
                   <input
                     type="text"
@@ -211,6 +211,7 @@ export default function Login() {
                     type={showPassword ? 'text' : 'password'}
                     required
                     value={password}
+                    autoComplete={activeTab === 'register' || isInitMode ? 'new-password' : 'current-password'}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="登录密码 (至少 6 位)"
                     className="w-full py-2.5 pl-3 pr-10 rounded-lg bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
@@ -218,6 +219,7 @@ export default function Login() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? '隐藏密码' : '显示密码'}
                     className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-700 transition-colors"
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -230,6 +232,7 @@ export default function Login() {
                       type={showPassword ? 'text' : 'password'}
                       required
                       value={confirmPassword}
+                      autoComplete="new-password"
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="请再次输入相同密码确认"
                       className="w-full py-2.5 px-3 rounded-lg bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"

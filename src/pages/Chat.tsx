@@ -1300,7 +1300,7 @@ export default function Chat() {
       setStagedImages([])
       setStagedFiles([])
 
-      const initStatus = `正在调取【${activeAgent.name}】(${provider}) 进行深度研学推演...`
+      const initStatus = `${activeAgent.name}正在思考…`
       setRunningConvs(prev => ({
         ...prev,
         [convId]: { status: initStatus, streaming: true },
@@ -1883,7 +1883,7 @@ export default function Chat() {
       }))
 
       const convId = activeConvId
-      const initStatus = `正在让【${activeAgent.name}】(${provider}) 接续未完内容...`
+      const initStatus = `${activeAgent.name}正在继续作答…`
       setRunningConvs(prev => ({
         ...prev,
         [convId]: { status: initStatus, streaming: true },

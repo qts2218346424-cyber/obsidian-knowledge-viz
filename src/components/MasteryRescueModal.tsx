@@ -27,7 +27,7 @@ export default function MasteryRescueModal({
 
   const statusBadge = isCritical ? (
     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 text-xs font-bold border border-rose-200 animate-pulse">
-      <span className="w-2 h-2 rounded-full bg-rose-600 animate-ping" />
+      <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
       高危薄弱考点 (极易失分)
     </span>
   ) : isModerate ? (

@@ -28,10 +28,13 @@ const MasteryTopologyView = lazy(() => import('../components/study/MasteryTopolo
 
 const FlashcardsTab = lazy(() => import('../components/study/FlashcardsTab'))
 
-const KnowledgeGraph = lazy(() => import('./KnowledgeGraph'))
+const KnowledgeGraph = safeLazy(() => import('./KnowledgeGraph'), 'knowledge-graph')
 
 
 
+import { safeLazy } from '../app/routes'
+import LoadingState from '../shared/ui/LoadingState'
+import { FeatureErrorBoundary } from '../shared/ui/FeatureErrorBoundary'
 import DailyErrorTab from '../features/study/components/DailyErrorTab'
 import ProgressTab from '../features/study/components/ProgressTab'
 import MasteryPaletteSection from '../features/study/components/MasteryPaletteSection'
@@ -1099,21 +1102,11 @@ export default function Study() {
 
               <div className="flex-1 relative w-full h-full overflow-hidden">
 
-                <Suspense fallback={
-
-                  <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-500">
-
-                    <Loader2 className="w-6 h-6 animate-spin text-slate-900" />
-
-                    <span className="text-xs font-medium">正在装载考研知识双链拓扑...</span>
-
-                  </div>
-
-                }>
-
-                  <KnowledgeGraph />
-
-                </Suspense>
+                <FeatureErrorBoundary fallbackTitle="知识图谱加载失败" fallbackMessage="网络波动或版本更新导致资源未加载，点击重试。">
+                  <Suspense fallback={<LoadingState label="正在加载知识图谱…" />}>
+                    <KnowledgeGraph />
+                  </Suspense>
+                </FeatureErrorBoundary>
 
               </div>
 

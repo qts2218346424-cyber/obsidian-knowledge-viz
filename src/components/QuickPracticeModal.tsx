@@ -248,7 +248,7 @@ export default function QuickPracticeModal({
                 <div className="w-16 h-16 rounded-3xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 flex items-center justify-center shadow-xl shadow-amber-500/10">
                   <Loader2 className="w-8 h-8 text-amber-600 dark:text-amber-400 animate-spin" />
                 </div>
-                <Sparkles className="w-5 h-5 text-amber-500 absolute -top-1.5 -right-1.5 animate-bounce" />
+                <Sparkles className="w-5 h-5 text-amber-500 absolute -top-1.5 -right-1.5" />
               </div>
 
               <div className="space-y-2 max-w-sm">
