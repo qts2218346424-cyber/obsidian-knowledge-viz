@@ -439,22 +439,14 @@ export default function PdfCanvasViewer({
           className="flex-1 h-full overflow-auto bg-[#12141a] flex items-start justify-center p-2 sm:p-5 relative"
         >
           {loading && (
-            <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[#13151c]/90 text-slate-300 gap-3 backdrop-blur-xs">
+            <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[#13151c]/92 text-slate-300 gap-3 backdrop-blur-xs">
               <Loader2 className="w-9 h-9 text-cyan-400 animate-spin" />
-              <div className="text-sm font-semibold tracking-wide">
-                正在通过纯前端 Canvas 引擎装载 PDF 讲义...
+              <div className="text-sm font-semibold tracking-wide text-white">
+                正在通过分片管道装载 PDF 首屏...
               </div>
-              {loadingProgress > 0 && (
-                <div className="w-56 bg-white/10 rounded-full h-1.5 overflow-hidden">
-                  <div
-                    className="bg-cyan-400 h-full rounded-full transition-all duration-200"
-                    style={{ width: `${loadingProgress}%` }}
-                  />
-                </div>
-              )}
-              <div className="text-xs text-slate-400 flex items-center gap-1.5">
-                <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
-                全平台 Canvas 动态光栅化渲染 · 完美支持手机与各端电脑
+              <div className="text-xs text-emerald-400 flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
+                <Smartphone className="w-3.5 h-3.5" />
+                已开启 Fast Web View 线性化 · 仅拉取当前页，无需下载全书
               </div>
             </div>
           )}
