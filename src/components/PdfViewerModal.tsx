@@ -112,7 +112,7 @@ export default function PdfViewerModal({
           {loading && (
             <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#1a1d26] text-slate-300 gap-3">
               <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
-              <div className="text-sm font-medium">正在调取流式分片管道并渲染 PDF...</div>
+              <div className="text-sm font-medium">正在打开 PDF…</div>
               <div className="text-xs text-slate-500">大体积文件 ({sizeMb} MB) 已启用 HTTP 206 分片首屏加速</div>
             </div>
           )}

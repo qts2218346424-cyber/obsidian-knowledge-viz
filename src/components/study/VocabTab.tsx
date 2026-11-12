@@ -204,7 +204,7 @@ export default function VocabTab() {
         <div className="bento-card rounded-2xl bg-white border border-slate-200/80 p-8 shadow-xs flex flex-col items-center justify-center text-center space-y-4">
           <div className="relative">
             <Loader2 className="w-8 h-8 text-slate-900 animate-spin" />
-            <Sparkles className="w-4 h-4 text-amber-500 absolute -top-1 -right-1 animate-bounce" />
+            <Sparkles className="w-4 h-4 text-amber-500 absolute -top-1 -right-1" />
           </div>
           <div>
             <h4 className="text-sm font-bold text-slate-900">正在装载考研英语大纲词库...</h4>

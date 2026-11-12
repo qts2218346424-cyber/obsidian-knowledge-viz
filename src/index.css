@@ -1516,3 +1516,18 @@ code, pre, kbd, samp, .font-mono {
 h1, h2, h3 {
   text-wrap: balance;
 }
+
+/* 尊重系统「减少动态效果」设置：关闭循环动画与大幅位移过渡 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-spin {
+    animation: spin 1.5s linear infinite !important;
+  }
+}
