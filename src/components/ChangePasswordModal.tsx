@@ -101,7 +101,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-xs animate-fade-in">
       <div
-        className="w-full max-w-md max-h-[88dvh] rounded-2xl bg-white border border-slate-200/90 shadow-2xl overflow-hidden flex flex-col animate-scale-up"
+        className="w-full max-w-md max-h-[88dvh] rounded-2xl bg-white border border-slate-200/90 shadow-xl overflow-hidden flex flex-col animate-scale-up"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -136,7 +136,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
                 <span className="text-xs text-slate-400 font-normal">(@{user?.username})</span>
               </p>
             </div>
-            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-700 bg-white border border-indigo-200/80 px-2.5 py-0.5 rounded-full shadow-2xs">
+            <span className="inline-flex items-center gap-1 text-2xs font-semibold text-indigo-700 bg-white border border-indigo-200/80 px-2.5 py-0.5 rounded-full shadow-xs">
               <ShieldCheck className="h-3.5 w-3.5 text-indigo-600" />
               <span>{user?.role === 'admin' ? '超级管理员' : user?.role === 'editor' ? '助教编辑' : '学生账号'}</span>
             </span>
@@ -207,7 +207,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
                     <span className="text-rose-500">*</span>
                   </label>
                   {newPassword && (
-                    <span className="text-[10px] text-slate-400">
+                    <span className="text-2xs text-slate-400">
                       强度：<span className="font-semibold text-slate-700">{strength.label}</span>
                     </span>
                   )}
@@ -297,7 +297,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
               </div>
 
               <div className="pt-2 text-center border-t border-slate-100 mt-2">
-                <span className="text-[11px] text-slate-400">
+                <span className="text-2xs text-slate-400">
                   💡 忘记当前旧密码？可在退出后于登录界面点击「忘记密码」，通过安全密保或专属救援码直接重置。
                 </span>
               </div>

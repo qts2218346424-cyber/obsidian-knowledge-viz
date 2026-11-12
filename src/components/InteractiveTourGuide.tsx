@@ -159,12 +159,12 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
       >
         <button
           onClick={() => setIsMinimized(false)}
-          className="flex items-center gap-2 rounded-full border border-neutral-300/90 bg-white/95 px-4 py-2.5 text-xs font-semibold text-neutral-800 shadow-[0_8px_24px_rgba(0,0,0,0.12)] backdrop-blur-md hover:bg-neutral-50 active:scale-95 transition-all cursor-pointer"
+          className="flex items-center gap-2 rounded-full border border-slate-300/90 bg-white/95 px-4 py-2.5 text-xs font-semibold text-slate-800 shadow-[0_8px_24px_rgba(0,0,0,0.12)] backdrop-blur-md hover:bg-slate-50 active:scale-95 transition-all cursor-pointer"
         >
           <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-          <Compass className="h-4 w-4 text-neutral-700" />
+          <Compass className="h-4 w-4 text-slate-700" />
           <span>新手教程 ({currentStepIndex + 1}/{TOUR_STEPS.length})</span>
-          <Maximize2 className="h-3 w-3 text-neutral-400 ml-1" />
+          <Maximize2 className="h-3 w-3 text-slate-400 ml-1" />
         </button>
       </aside>
     )
@@ -173,18 +173,18 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
   return (
     <aside 
       aria-label="新手交互体验向导"
-      className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-[55] w-[calc(100vw-2.5rem)] sm:w-[420px] rounded-2xl border border-neutral-200/90 bg-white/95 p-4 sm:p-5 shadow-[0_20px_48px_rgba(0,0,0,0.12)] backdrop-blur-xl animate-fade-in text-neutral-900 font-sans select-none"
+      className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-[55] w-[calc(100vw-2.5rem)] sm:w-[420px] rounded-2xl border border-slate-200/90 bg-white/95 p-4 sm:p-5 shadow-[0_20px_48px_rgba(0,0,0,0.12)] backdrop-blur-xl animate-fade-in text-slate-900 font-sans select-none"
     >
       {/* 顶部指示条与控制项 */}
-      <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
+      <div className="flex items-center justify-between pb-3 border-b border-slate-100">
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-neutral-900 text-white shadow-2xs">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-900 text-white shadow-xs">
             <Compass className="h-3.5 w-3.5" />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-neutral-900">新用户研学实战引导</span>
-              <span className="rounded-full bg-neutral-100 px-2 py-0.2 text-[10px] font-semibold text-neutral-600 border border-neutral-200/60">
+              <span className="text-xs font-bold text-slate-900">新用户研学实战引导</span>
+              <span className="rounded-full bg-slate-100 px-2 py-0.2 text-2xs font-semibold text-slate-600 border border-slate-200/60">
                 {currentStepIndex + 1} / {TOUR_STEPS.length}
               </span>
             </div>
@@ -194,7 +194,7 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
         <div className="flex items-center gap-1">
           <button
             onClick={() => setIsMinimized(true)}
-            className="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
             title="最小化到右下角"
             aria-label="最小化向导"
           >
@@ -202,7 +202,7 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
           </button>
           <button
             onClick={handleSkipTour}
-            className="p-1.5 rounded-lg text-neutral-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
             title="跳过并结束新手教程"
             aria-label="跳过新手教程"
           >
@@ -212,9 +212,9 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
       </div>
 
       {/* 步骤进度条 */}
-      <div className="my-3 h-1.5 w-full rounded-full bg-neutral-100 overflow-hidden">
+      <div className="my-3 h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
         <div
-          className="h-full bg-neutral-900 transition-all duration-300 rounded-full"
+          className="h-full bg-slate-900 transition-all duration-300 rounded-full"
           style={{ width: `${((currentStepIndex + 1) / TOUR_STEPS.length) * 100}%` }}
         />
       </div>
@@ -222,16 +222,16 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
       {/* 步骤核心内容 */}
       <div className="space-y-2.5">
         <div className="flex items-center gap-2">
-          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-bold border ${step.highlightColor}`}>
+          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-2xs font-bold border ${step.highlightColor}`}>
             <step.icon className="h-3 w-3 shrink-0" />
             <span>{step.badge}</span>
           </span>
-          <h4 className="text-sm font-bold text-neutral-900 truncate">
+          <h4 className="text-sm font-bold text-slate-900 truncate">
             {step.title}
           </h4>
         </div>
 
-        <p className="text-xs text-neutral-600 leading-relaxed">
+        <p className="text-xs text-slate-600 leading-relaxed">
           {step.summary}
         </p>
 
@@ -246,7 +246,7 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
         {/* 亮点小贴士 */}
         <div className="space-y-1">
           {step.tips.map((tip, idx) => (
-            <div key={idx} className="flex items-center gap-1.5 text-[11px] text-neutral-500">
+            <div key={idx} className="flex items-center gap-1.5 text-2xs text-slate-500">
               <CheckCircle2 className="h-3 w-3 text-emerald-500 shrink-0" />
               <span>{tip}</span>
             </div>
@@ -255,11 +255,11 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
       </div>
 
       {/* 底部操作行 */}
-      <div className="mt-4 pt-3 border-t border-neutral-100 flex items-center justify-between gap-2">
+      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
         {/* 跳过新手教程按钮 */}
         <button
           onClick={handleSkipTour}
-          className="text-xs text-neutral-400 hover:text-neutral-700 hover:underline px-1 py-1 font-medium transition-colors cursor-pointer select-none"
+          className="text-xs text-slate-400 hover:text-slate-700 hover:underline px-1 py-1 font-medium transition-colors cursor-pointer select-none"
         >
           跳过新手教程
         </button>
@@ -269,13 +269,13 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
           {!isCurrentRoute ? (
             <button
               onClick={handleGoToRoute}
-              className="inline-flex items-center gap-1 rounded-lg border border-neutral-200/90 bg-white px-2.5 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900 transition-all active:scale-95 shadow-2xs cursor-pointer"
+              className="inline-flex items-center gap-1 rounded-lg border border-slate-200/90 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-all active:scale-95 shadow-xs cursor-pointer"
             >
               <span>前往体验</span>
               <ArrowRight className="h-3 w-3" />
             </button>
           ) : (
-            <span className="text-[11px] font-medium text-emerald-600 flex items-center gap-1 px-2">
+            <span className="text-2xs font-medium text-emerald-600 flex items-center gap-1 px-2">
               <CheckCircle2 className="h-3 w-3" />
               <span>当前已在此功能页</span>
             </span>
@@ -285,7 +285,7 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
           <button
             onClick={handlePrev}
             disabled={currentStepIndex === 0}
-            className="p-1.5 rounded-lg border border-neutral-200/80 bg-white text-neutral-600 hover:bg-neutral-50 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer"
+            className="p-1.5 rounded-lg border border-slate-200/80 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer"
             title="上一步"
             aria-label="上一步"
           >
@@ -295,7 +295,7 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
           {/* 下一步 / 完成 */}
           <button
             onClick={handleNext}
-            className="inline-flex items-center gap-1 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-white px-3 py-1.5 text-xs font-semibold shadow-xs active:scale-95 transition-all cursor-pointer"
+            className="inline-flex items-center gap-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 text-xs font-semibold shadow-xs active:scale-95 transition-all cursor-pointer"
           >
             <span>{isLastStep ? '完成教程 🎉' : '下一站'}</span>
             {!isLastStep && <ChevronRight className="h-3.5 w-3.5" />}

@@ -55,7 +55,7 @@ export default function DailyErrorTab() {
 
   if (!data || data.dueQuestions.length === 0) {
     return (
-      <div className="bg-surface border border-neutral-200/80 rounded-xl text-center py-16 space-y-4 max-w-xl mx-auto">
+      <div className="bg-surface border border-slate-200/80 rounded-xl text-center py-16 space-y-4 max-w-xl mx-auto">
         <Check className="w-12 h-12 mx-auto text-accent-sage/40" />
         <div className="text-base font-bold text-warm-800">太棒了！今日没有待复习的错题</div>
         <div className="text-xs text-warm-400">
@@ -97,7 +97,7 @@ export default function DailyErrorTab() {
         </div>
       </div>
 
-      <div className="bg-surface border border-neutral-200/80 rounded-xl overflow-hidden shadow-xs">
+      <div className="bg-surface border border-slate-200/80 rounded-xl overflow-hidden shadow-xs">
         <div className="p-6 space-y-4">
           <div className="flex items-center gap-2">
             <XCircle className="w-4 h-4 text-rose-500" />
@@ -105,7 +105,7 @@ export default function DailyErrorTab() {
               错题复盘 {currentIdx + 1} / {data.dueQuestions.length}
             </span>
             {currentQ.source && (
-              <span className="ml-auto text-[10px] text-warm-400 truncate max-w-[200px]">
+              <span className="ml-auto text-2xs text-warm-400 truncate max-w-[200px]">
                 来源: {currentQ.source}
               </span>
             )}
@@ -115,7 +115,7 @@ export default function DailyErrorTab() {
           </div>
           {currentQ.userAnswer && (
             <div className="px-3 py-2 bg-rose-500/5 border border-rose-500/10 rounded-lg">
-              <span className="text-[10px] text-rose-500 block mb-1">你记录的错误解答：</span>
+              <span className="text-2xs text-rose-500 block mb-1">你记录的错误解答：</span>
               <div className="text-xs text-rose-700">
                 <MarkdownRenderer content={currentQ.userAnswer} inline />
               </div>
@@ -134,7 +134,7 @@ export default function DailyErrorTab() {
             </div>
             {currentQ.explanation && (
               <div className="mt-2 px-3.5 py-2.5 bg-cream-200/60 rounded-xl">
-                <span className="text-[10px] text-warm-400 block mb-1">名师解析与考点归因：</span>
+                <span className="text-2xs text-warm-400 block mb-1">名师解析与考点归因：</span>
                 <div className="text-xs text-warm-700 leading-relaxed">
                   <MarkdownRenderer content={currentQ.explanation} />
                 </div>

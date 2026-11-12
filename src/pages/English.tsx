@@ -377,7 +377,7 @@ ${essayInput.trim()}
       <section className="relative overflow-hidden rounded-3xl border border-slate-200/90 bg-gradient-to-br from-white via-indigo-50/20 to-slate-50 p-4 sm:p-8 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200/80 text-[11px] font-semibold text-indigo-700 shadow-2xs">
+            <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200/80 text-2xs font-semibold text-indigo-700 shadow-xs">
               <Sparkles className="w-3.5 h-3.5 text-indigo-600 animate-spin shrink-0" style={{ animationDuration: '6s' }} />
               <span className="sm:hidden">英语一 / 英语二研学总攻</span>
               <span className="hidden sm:inline">2026/2027 考研英语总攻作战舱 · 英语一 & 英语二双轨适配</span>
@@ -397,20 +397,20 @@ ${essayInput.trim()}
 
           {/* 快捷数据统计徽章 */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 shrink-0 text-center">
-            <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 shadow-2xs">
-              <div className="text-[10px] font-semibold text-slate-400">大纲真题词</div>
+            <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 shadow-xs">
+              <div className="text-2xs font-semibold text-slate-400">大纲真题词</div>
               <div className="text-base font-black font-mono text-indigo-600 mt-0.5">2,000+</div>
             </div>
-            <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 shadow-2xs">
-              <div className="text-[10px] font-semibold text-slate-400">万能作文模板</div>
+            <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 shadow-xs">
+              <div className="text-2xs font-semibold text-slate-400">万能作文模板</div>
               <div className="text-base font-black font-mono text-emerald-600 mt-0.5">18 套</div>
             </div>
-            <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 shadow-2xs">
-              <div className="text-[10px] font-semibold text-slate-400">闪光金句库</div>
+            <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 shadow-xs">
+              <div className="text-2xs font-semibold text-slate-400">闪光金句库</div>
               <div className="text-base font-black font-mono text-amber-600 mt-0.5">60+ 条</div>
             </div>
-            <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 shadow-2xs">
-              <div className="text-[10px] font-semibold text-slate-400">AI 智能批改</div>
+            <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-3 shadow-xs">
+              <div className="text-2xs font-semibold text-slate-400">AI 智能批改</div>
               <div className="text-base font-black font-mono text-rose-600 mt-0.5">~1.2s 极速精批</div>
             </div>
           </div>
@@ -423,14 +423,14 @@ ${essayInput.trim()}
             onClick={() => setActiveTab('dailyReading')}
             className={`inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
               activeTab === 'dailyReading'
-                ? 'bg-slate-900 text-white shadow-md'
+                ? 'bg-slate-900 text-white shadow-sm'
                 : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80'
             }`}
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
             <span className="sm:hidden">每日精读</span>
             <span className="hidden sm:inline">每日文献精读 (AI伴读)</span>
-            <span className="hidden sm:inline text-[10px] px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950 font-black">
+            <span className="hidden sm:inline text-2xs px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950 font-black">
               外刊题源
             </span>
           </button>
@@ -440,14 +440,14 @@ ${essayInput.trim()}
             onClick={() => setActiveTab('papers')}
             className={`inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
               activeTab === 'papers'
-                ? 'bg-slate-900 text-white shadow-md'
+                ? 'bg-slate-900 text-white shadow-sm'
                 : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80'
             }`}
           >
             <FileEdit className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
             <span className="sm:hidden">历年真题</span>
             <span className="hidden sm:inline">历年真题精析与模考</span>
-            <span className="hidden sm:inline text-[10px] px-1.5 py-0.2 rounded-md bg-white/20">长难句</span>
+            <span className="hidden sm:inline text-2xs px-1.5 py-0.2 rounded-md bg-white/20">长难句</span>
           </button>
 
           <button
@@ -455,14 +455,14 @@ ${essayInput.trim()}
             onClick={() => setActiveTab('grading')}
             className={`inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
               activeTab === 'grading'
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20'
+                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/20'
                 : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80 ring-1 ring-indigo-500/30'
             }`}
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-300 shrink-0" />
             <span className="sm:hidden">作文批改</span>
             <span className="hidden sm:inline">作文批改舱 (20分制)</span>
-            <span className="hidden sm:inline text-[10px] px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950 font-black">
+            <span className="hidden sm:inline text-2xs px-1.5 py-0.2 rounded-md bg-amber-400 text-slate-950 font-black">
               墨卷AI精批
             </span>
           </button>
@@ -472,14 +472,14 @@ ${essayInput.trim()}
             onClick={() => setActiveTab('templates')}
             className={`inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
               activeTab === 'templates'
-                ? 'bg-slate-900 text-white shadow-md'
+                ? 'bg-slate-900 text-white shadow-sm'
                 : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80'
             }`}
           >
             <ScrollText className="w-3.5 h-3.5 shrink-0" />
             <span className="sm:hidden">高分模板</span>
             <span className="hidden sm:inline">作文高分模板库</span>
-            <span className="hidden sm:inline text-[10px] px-1.5 py-0.2 rounded-md bg-white/20">大小作文</span>
+            <span className="hidden sm:inline text-2xs px-1.5 py-0.2 rounded-md bg-white/20">大小作文</span>
           </button>
 
           <button
@@ -487,14 +487,14 @@ ${essayInput.trim()}
             onClick={() => setActiveTab('vocab')}
             className={`inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
               activeTab === 'vocab'
-                ? 'bg-slate-900 text-white shadow-md'
+                ? 'bg-slate-900 text-white shadow-sm'
                 : 'bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/80'
             }`}
           >
             <BookOpen className="w-3.5 h-3.5 shrink-0" />
             <span className="sm:hidden">核心词汇</span>
             <span className="hidden sm:inline">核心词汇打卡复盘</span>
-            <span className="hidden sm:inline text-[10px] px-1.5 py-0.2 rounded-md bg-white/20">艾宾浩斯</span>
+            <span className="hidden sm:inline text-2xs px-1.5 py-0.2 rounded-md bg-white/20">艾宾浩斯</span>
           </button>
         </div>
       </section>
@@ -510,7 +510,7 @@ ${essayInput.trim()}
       {activeTab === 'templates' && (
         <div className="space-y-6">
           {/* 筛选控制器 */}
-          <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
+          <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <span className="font-bold text-slate-400 mr-1 flex items-center gap-1">
                 <Filter className="w-3.5 h-3.5" />
@@ -523,7 +523,7 @@ ${essayInput.trim()}
                   onClick={() => setTemplateFilterExam(mode)}
                   className={`px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
                     templateFilterExam === mode
-                      ? 'bg-indigo-600 text-white font-bold shadow-2xs'
+                      ? 'bg-indigo-600 text-white font-bold shadow-xs'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
@@ -541,7 +541,7 @@ ${essayInput.trim()}
                   onClick={() => setTemplateFilterCategory(cat)}
                   className={`px-3 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
                     templateFilterCategory === cat
-                      ? 'bg-slate-900 text-white font-bold shadow-2xs'
+                      ? 'bg-slate-900 text-white font-bold shadow-xs'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
@@ -582,25 +582,25 @@ ${essayInput.trim()}
                       onClick={() => setSelectedTemplateId(item.id)}
                       className={`p-4 rounded-2xl border transition-all cursor-pointer relative overflow-hidden ${
                         isSelected
-                          ? 'border-indigo-600 bg-white shadow-md ring-2 ring-indigo-500/20'
-                          : 'border-slate-200/90 bg-white/70 hover:bg-white hover:border-slate-300 shadow-2xs'
+                          ? 'border-indigo-600 bg-white shadow-sm ring-2 ring-indigo-500/20'
+                          : 'border-slate-200/90 bg-white/70 hover:bg-white hover:border-slate-300 shadow-xs'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200/60">
+                        <span className="text-2xs font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200/60">
                           {item.typeLabel}
                         </span>
-                        <span className="text-[10px] font-mono text-slate-400">
+                        <span className="text-2xs font-mono text-slate-400">
                           {item.examType === 'both' ? '英一/英二通用' : item.examType === 'english_1' ? '英语(一)' : '英语(二)'}
                         </span>
                       </div>
 
                       <h3 className="text-xs font-bold text-slate-900 line-clamp-1">{item.title}</h3>
-                      <p className="text-[11px] text-slate-500 line-clamp-2 mt-1 leading-relaxed">
+                      <p className="text-2xs text-slate-500 line-clamp-2 mt-1 leading-relaxed">
                         {item.description}
                       </p>
 
-                      <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
+                      <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-2xs text-slate-400">
                         <span>含 {item.structure.length} 个结构段落</span>
                         <span className="text-indigo-600 font-semibold flex items-center gap-0.5">
                           <span>查看详情</span>
@@ -638,7 +638,7 @@ ${essayInput.trim()}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          <span className="w-5 h-5 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-mono font-bold">
+                          <span className="w-5 h-5 rounded-full bg-slate-900 text-white flex items-center justify-center text-2xs font-mono font-bold">
                             {idx + 1}
                           </span>
                           <h4 className="text-xs font-bold text-slate-900">{sec.sectionName}</h4>
@@ -646,7 +646,7 @@ ${essayInput.trim()}
                         <button
                           type="button"
                           onClick={() => handleCopySection(sec.templateText, idx)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-[11px] font-semibold text-slate-600 hover:text-slate-900 hover:border-slate-300 transition-all cursor-pointer shadow-2xs active:scale-95"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-2xs font-semibold text-slate-600 hover:text-slate-900 hover:border-slate-300 transition-all cursor-pointer shadow-xs active:scale-95"
                         >
                           {copiedSectionIdx === idx ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
                           <span>{copiedSectionIdx === idx ? '已复制' : '复制本段'}</span>
@@ -657,11 +657,11 @@ ${essayInput.trim()}
                         {sec.templateText}
                       </div>
 
-                      <div className="text-[11px] text-slate-500 leading-relaxed bg-amber-50/60 border border-amber-200/50 rounded-xl p-3">
+                      <div className="text-2xs text-slate-500 leading-relaxed bg-amber-50/60 border border-amber-200/50 rounded-xl p-3">
                         <div className="font-semibold text-amber-900 mb-0.5">💡 译文与逻辑解析:</div>
                         <p>{sec.translation}</p>
                         {sec.placeholderHints.length > 0 && (
-                          <div className="mt-2 pt-2 border-t border-amber-200/40 text-[10.5px] text-amber-800">
+                          <div className="mt-2 pt-2 border-t border-amber-200/40 text-2xs text-amber-800">
                             <strong>填空与替换建议:</strong>
                             <ul className="list-disc list-inside mt-0.5 space-y-0.5">
                               {sec.placeholderHints.map((hint, hIdx) => (
@@ -685,7 +685,7 @@ ${essayInput.trim()}
                     {activeTemplate.highlightPhrases.map((phrase, pIdx) => (
                       <span
                         key={pIdx}
-                        className="px-2.5 py-1 rounded-lg bg-white border border-indigo-200 text-xs font-mono font-medium text-indigo-700 shadow-2xs"
+                        className="px-2.5 py-1 rounded-lg bg-white border border-indigo-200 text-xs font-mono font-medium text-indigo-700 shadow-xs"
                       >
                         {phrase}
                       </span>
@@ -702,7 +702,7 @@ ${essayInput.trim()}
                       <Flame className="w-4 h-4 text-amber-500" />
                       <span>万能高分句型库 (即查即背即拷)</span>
                     </h3>
-                    <p className="text-[11px] text-slate-500 mt-0.5">覆盖首段名言引出、图表极值分析、深度归因与结尾倒装升华句</p>
+                    <p className="text-2xs text-slate-500 mt-0.5">覆盖首段名言引出、图表极值分析、深度归因与结尾倒装升华句</p>
                   </div>
 
                   <div className="relative">
@@ -748,10 +748,10 @@ ${essayInput.trim()}
                   {filteredGoldenSentences.map((g) => (
                     <div
                       key={g.id}
-                      className="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:border-slate-300 transition-all flex flex-col justify-between space-y-2 group shadow-2xs"
+                      className="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:border-slate-300 transition-all flex flex-col justify-between space-y-2 group shadow-xs"
                     >
                       <div>
-                        <div className="flex items-center justify-between text-[10px] font-bold mb-1">
+                        <div className="flex items-center justify-between text-2xs font-bold mb-1">
                           <span className="text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">
                             {g.categoryLabel}
                           </span>
@@ -760,10 +760,10 @@ ${essayInput.trim()}
                           </span>
                         </div>
                         <p className="text-xs font-mono font-medium text-slate-900 leading-snug">{g.sentence}</p>
-                        <p className="text-[11px] text-slate-500 mt-1">{g.translation}</p>
+                        <p className="text-2xs text-slate-500 mt-1">{g.translation}</p>
                       </div>
 
-                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-2xs text-slate-400">
                         <span className="truncate max-w-[200px]">亮点：{g.grammarHighlight}</span>
                         <button
                           type="button"
@@ -792,13 +792,13 @@ ${essayInput.trim()}
           <div className="rounded-3xl border border-slate-200/90 bg-white p-5 shadow-xs space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
               <div className="flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-indigo-600 text-white text-xs font-bold shadow-2xs">
+                <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-indigo-600 text-white text-xs font-bold shadow-xs">
                   🎯
                 </span>
                 <span className="text-xs font-black text-slate-900 tracking-tight">考研英语历年真题作文题库速选</span>
-                <span className="text-[10px] text-slate-400 hidden sm:inline">· 点击即可载入真题题干、图意要求与参考草稿</span>
+                <span className="text-2xs text-slate-400 hidden sm:inline">· 点击即可载入真题题干、图意要求与参考草稿</span>
               </div>
-              <span className="text-[11px] font-mono text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100">
+              <span className="text-2xs font-mono text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100">
                 英语一 / 英语二 双轨图文真题
               </span>
             </div>
@@ -811,11 +811,11 @@ ${essayInput.trim()}
                   onClick={() => handleSelectPrompt(prompt)}
                   className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                     selectedPromptId === prompt.id
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                      ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/20'
                       : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200/80'
                   }`}
                 >
-                  <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-white/20">
+                  <span className="text-2xs px-1.5 py-0.2 rounded-md bg-white/20">
                     {prompt.year} {prompt.examType === 'english_1' ? '英一' : prompt.examType === 'english_2' ? '英二' : '通用'}
                   </span>
                   <span>{prompt.subType}</span>
@@ -830,7 +830,7 @@ ${essayInput.trim()}
                   <span className="text-base">📌</span>
                   <span>{activePrompt.title}</span>
                 </h3>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800">
+                <span className="text-2xs font-bold px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800">
                   {activePrompt.category === 'big_essay' ? '大作文 (满分 20 分)' : '小作文 (满分 10 分)'}
                 </span>
               </div>
@@ -840,14 +840,14 @@ ${essayInput.trim()}
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-12 gap-2 pt-1 text-xs">
-                <div className="md:col-span-7 text-[11px] text-slate-600">
+                <div className="md:col-span-7 text-2xs text-slate-600">
                   <strong className="text-slate-800">🖼️ 图画/图表核心要点：</strong>
                   <span>{activePrompt.visualDescription}</span>
                 </div>
-                <div className="md:col-span-5 text-[11px] flex flex-wrap items-center gap-1">
+                <div className="md:col-span-5 text-2xs flex flex-wrap items-center gap-1">
                   <strong className="text-indigo-900 shrink-0">✨ 推荐闪光词：</strong>
                   {activePrompt.recommendedKeywords.slice(0, 3).map((kw, kwIdx) => (
-                    <span key={kwIdx} className="px-1.5 py-0.2 rounded bg-white border border-indigo-200 text-indigo-700 font-mono text-[10px]">
+                    <span key={kwIdx} className="px-1.5 py-0.2 rounded bg-white border border-indigo-200 text-indigo-700 font-mono text-2xs">
                       {kw.split(' ')[0]}
                     </span>
                   ))}
@@ -876,7 +876,7 @@ ${essayInput.trim()}
                     </div>
                     <div>
                       <h2 className="text-sm font-bold text-slate-900">英语写作作答区</h2>
-                      <p className="text-[11px] text-slate-400">支持键盘打字、Ctrl+V 粘贴手写试卷识别或载入草稿</p>
+                      <p className="text-2xs text-slate-400">支持键盘打字、Ctrl+V 粘贴手写试卷识别或载入草稿</p>
                     </div>
                   </div>
 
@@ -885,7 +885,7 @@ ${essayInput.trim()}
                       type="button"
                       onClick={() => setGradingEssayType('big_essay')}
                       className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                        gradingEssayType === 'big_essay' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500'
+                        gradingEssayType === 'big_essay' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'
                       }`}
                     >
                       大作文 (20分)
@@ -894,7 +894,7 @@ ${essayInput.trim()}
                       type="button"
                       onClick={() => setGradingEssayType('small_essay')}
                       className={`px-2.5 py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                        gradingEssayType === 'small_essay' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500'
+                        gradingEssayType === 'small_essay' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'
                       }`}
                     >
                       小作文 (10分)
@@ -909,14 +909,14 @@ ${essayInput.trim()}
                       <img
                         src={handwritingImage}
                         alt="手写作文预览"
-                        className="w-12 h-12 object-cover rounded-xl border border-indigo-200 shadow-2xs shrink-0"
+                        className="w-12 h-12 object-cover rounded-xl border border-indigo-200 shadow-xs shrink-0"
                       />
                       <div className="min-w-0">
                         <div className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
                           <span>已捕获手写作文图片</span>
-                          <span className="text-[10px] text-indigo-600 bg-white px-1.5 py-0.2 rounded font-mono">OCR就绪</span>
+                          <span className="text-2xs text-indigo-600 bg-white px-1.5 py-0.2 rounded font-mono">OCR就绪</span>
                         </div>
-                        <p className="text-[11px] text-indigo-600/80 truncate">
+                        <p className="text-2xs text-indigo-600/80 truncate">
                           可一键识别将文字填入下方输入框，或直接提交 AI 综合批改
                         </p>
                       </div>
@@ -953,7 +953,7 @@ ${essayInput.trim()}
                     placeholder="请在此输入或粘贴您的考研英语作文作答文本...（支持直接按 Ctrl + V 粘贴手写作文截图）"
                     className="w-full p-4 rounded-2xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all text-xs sm:text-sm font-mono leading-relaxed outline-none resize-none text-slate-800"
                   />
-                  <div className="absolute right-3 bottom-3 text-[11px] font-mono text-slate-400 bg-white/90 px-2 py-0.5 rounded-md border border-slate-200 shadow-2xs">
+                  <div className="absolute right-3 bottom-3 text-2xs font-mono text-slate-400 bg-white/90 px-2 py-0.5 rounded-md border border-slate-200 shadow-xs">
                     当前: {(essayInput.match(/[a-zA-Z]+/g) || []).length} 词 · {essayInput.split(/\n+/).filter(Boolean).length} 段
                   </div>
                 </div>
@@ -963,7 +963,7 @@ ${essayInput.trim()}
                     <button
                       type="button"
                       onClick={() => handwritingInputRef.current?.click()}
-                      className="px-2.5 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100/60 text-xs text-indigo-700 cursor-pointer font-bold flex items-center gap-1 shadow-2xs transition-colors"
+                      className="px-2.5 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100/60 text-xs text-indigo-700 cursor-pointer font-bold flex items-center gap-1 shadow-xs transition-colors"
                       title="上传手写答题卡照片进行识别"
                     >
                       <Camera className="w-3.5 h-3.5 text-indigo-600" />
@@ -999,7 +999,7 @@ ${essayInput.trim()}
                       type="button"
                       disabled={isGrading || isMojuanGrading || !essayInput.trim()}
                       onClick={handleStartAiGrading}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 active:scale-95 text-white text-xs font-bold transition-all shadow-md shadow-indigo-600/25 disabled:opacity-50 cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 active:scale-95 text-white text-xs font-bold transition-all shadow-sm shadow-indigo-600/25 disabled:opacity-50 cursor-pointer"
                       title="调用全国考研英语大纲官方评阅标准，输出档次分、逐句纠错、闪光升级与满分范文"
                     >
                       {isGrading ? (
@@ -1025,14 +1025,14 @@ ${essayInput.trim()}
                         <ScrollText className="w-4 h-4 text-amber-600" />
                         <span>考研英语写作万能高分模板背诵舱</span>
                       </span>
-                      <span className="text-[10px] text-amber-700 bg-amber-100 px-2 py-0.5 rounded font-mono">
+                      <span className="text-2xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded font-mono">
                         点击一键套用
                       </span>
                     </div>
 
                     <div className="space-y-2">
                       {ESSAY_TEMPLATES.slice(0, 3).map((tpl) => (
-                        <div key={tpl.id} className="p-3 rounded-xl bg-white border border-amber-100 shadow-2xs space-y-1.5">
+                        <div key={tpl.id} className="p-3 rounded-xl bg-white border border-amber-100 shadow-xs space-y-1.5">
                           <div className="flex items-center justify-between">
                             <span className="font-bold text-slate-800">{tpl.title}</span>
                             <button
@@ -1042,12 +1042,12 @@ ${essayInput.trim()}
                                 setEssayInput(full)
                                 setTemplateDrawerOpen(false)
                               }}
-                              className="text-[11px] text-indigo-600 hover:underline font-bold cursor-pointer"
+                              className="text-2xs text-indigo-600 hover:underline font-bold cursor-pointer"
                             >
                               套用此模板 →
                             </button>
                           </div>
-                          <p className="text-[11px] text-slate-500">{tpl.description}</p>
+                          <p className="text-2xs text-slate-500">{tpl.description}</p>
                         </div>
                       ))}
                     </div>
@@ -1056,7 +1056,7 @@ ${essayInput.trim()}
 
                 {/* 状态与扣费兜底安全提示 */}
                 {mojuanStatusNotice && (
-                  <div className="p-2.5 rounded-xl bg-indigo-50/80 border border-indigo-200/80 text-[11px] text-indigo-800 flex items-center justify-between">
+                  <div className="p-2.5 rounded-xl bg-indigo-50/80 border border-indigo-200/80 text-2xs text-indigo-800 flex items-center justify-between">
                     <span>💡 {mojuanStatusNotice}</span>
                     <button
                       type="button"
@@ -1068,7 +1068,7 @@ ${essayInput.trim()}
                   </div>
                 )}
                 {mojuanError && (
-                  <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-[11px] text-rose-700 flex items-center justify-between">
+                  <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-2xs text-rose-700 flex items-center justify-between">
                     <span>⚠️ {mojuanError}</span>
                     <button
                       type="button"
@@ -1089,7 +1089,7 @@ ${essayInput.trim()}
                       <TrendingUp className="w-3.5 h-3.5 text-indigo-600" />
                       <span>词汇升级与平庸词替换指南 ({gradingResult.vocabularyUpgrades.length})</span>
                     </h3>
-                    <span className="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded">
+                    <span className="text-2xs text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded">
                       一档词汇提分策略
                     </span>
                   </div>
@@ -1108,15 +1108,15 @@ ${essayInput.trim()}
                               {item.suggested.map((sug, sIdx) => (
                                 <span
                                   key={sIdx}
-                                  className="px-2 py-0.5 rounded-md bg-white border border-indigo-200 text-indigo-700 font-bold font-mono text-[11px]"
+                                  className="px-2 py-0.5 rounded-md bg-white border border-indigo-200 text-indigo-700 font-bold font-mono text-2xs"
                                 >
                                   {sug}
                                 </span>
                               ))}
                             </div>
                           </div>
-                          <p className="text-[11px] text-slate-600">{item.reason}</p>
-                          <div className="text-[10.5px] font-mono text-indigo-800 bg-white/70 p-2 rounded-lg border border-indigo-100">
+                          <p className="text-2xs text-slate-600">{item.reason}</p>
+                          <div className="text-2xs font-mono text-indigo-800 bg-white/70 p-2 rounded-lg border border-indigo-100">
                             示例：{item.exampleSentence}
                           </div>
                         </div>
@@ -1157,15 +1157,15 @@ ${essayInput.trim()}
 
                     <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/10 text-center">
                       <div className="p-2 rounded-xl bg-white/5">
-                        <div className="text-[10px] text-slate-400">总字数统计</div>
+                        <div className="text-2xs text-slate-400">总字数统计</div>
                         <div className="text-sm font-bold font-mono text-white mt-0.5">{aiEssayEvaluation.wordCount} 词</div>
                       </div>
                       <div className="p-2 rounded-xl bg-white/5">
-                        <div className="text-[10px] text-slate-400">平均句长</div>
+                        <div className="text-2xs text-slate-400">平均句长</div>
                         <div className="text-sm font-bold font-mono text-white mt-0.5">{aiEssayEvaluation.avgWordsPerSentence} 词</div>
                       </div>
                       <div className="p-2 rounded-xl bg-white/5">
-                        <div className="text-[10px] text-slate-400">评分标准制</div>
+                        <div className="text-2xs text-slate-400">评分标准制</div>
                         <div className="text-sm font-bold font-mono text-emerald-300 mt-0.5">全国统考五档制</div>
                       </div>
                     </div>
@@ -1191,7 +1191,7 @@ ${essayInput.trim()}
                                 style={{ width: `${dim.score}%` }}
                               />
                             </div>
-                            <p className="text-[11px] text-slate-500 leading-snug">{dim.comment}</p>
+                            <p className="text-2xs text-slate-500 leading-snug">{dim.comment}</p>
                           </div>
                         ))}
                       </div>
@@ -1209,7 +1209,7 @@ ${essayInput.trim()}
                         {aiEssayEvaluation.sentenceDiagnostics.map((diag: any, idx: number) => (
                           <div key={idx} className="p-3.5 rounded-2xl border border-rose-100 bg-rose-50/20 text-xs space-y-2">
                             <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-100 text-rose-800">
+                              <span className="text-2xs font-bold px-2 py-0.5 rounded-md bg-rose-100 text-rose-800">
                                 {diag.errorType || '语法与语用规范'}
                               </span>
                             </div>
@@ -1219,7 +1219,7 @@ ${essayInput.trim()}
                             <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 font-mono font-semibold leading-relaxed">
                               ✓ {diag.corrected}
                             </div>
-                            <p className="text-[11px] text-slate-600">{diag.explanation}</p>
+                            <p className="text-2xs text-slate-600">{diag.explanation}</p>
                           </div>
                         ))}
                       </div>
@@ -1236,11 +1236,11 @@ ${essayInput.trim()}
                       <div className="space-y-3">
                         {aiEssayEvaluation.sparkleUpgrades.map((item: any, idx: number) => (
                           <div key={idx} className="p-3.5 rounded-2xl border border-amber-200 bg-amber-50/20 text-xs space-y-2">
-                            <div className="text-[11px] text-slate-400 font-mono line-through">{item.original}</div>
+                            <div className="text-2xs text-slate-400 font-mono line-through">{item.original}</div>
                             <div className="text-xs text-amber-950 font-bold font-mono bg-white p-2.5 rounded-xl border border-amber-200 leading-relaxed">
                               ✨ {item.upgrade}
                             </div>
-                            <p className="text-[11px] text-amber-800/90 leading-relaxed">{item.reason}</p>
+                            <p className="text-2xs text-amber-800/90 leading-relaxed">{item.reason}</p>
                           </div>
                         ))}
                       </div>
@@ -1261,7 +1261,7 @@ ${essayInput.trim()}
                             navigator.clipboard?.writeText?.(aiEssayEvaluation.polishedVersion)
                             alert('已复制满分范文！')
                           }}
-                          className="text-[11px] font-semibold text-indigo-600 hover:underline flex items-center gap-1 cursor-pointer"
+                          className="text-2xs font-semibold text-indigo-600 hover:underline flex items-center gap-1 cursor-pointer"
                         >
                           <Copy className="w-3 h-3" />
                           <span>复制范文</span>
@@ -1281,10 +1281,10 @@ ${essayInput.trim()}
 
                       {aiEssayEvaluation.flashcardsVocab && aiEssayEvaluation.flashcardsVocab.length > 0 && (
                         <div className="pt-2 border-t border-slate-100">
-                          <span className="text-[11px] font-bold text-slate-700 block mb-1.5">📚 本文核心高频闪光词卡：</span>
+                          <span className="text-2xs font-bold text-slate-700 block mb-1.5">📚 本文核心高频闪光词卡：</span>
                           <div className="flex flex-wrap gap-1.5">
                             {aiEssayEvaluation.flashcardsVocab.map((v: any, vIdx: number) => (
-                              <span key={vIdx} className="px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 text-[11px] font-mono">
+                              <span key={vIdx} className="px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 text-2xs font-mono">
                                 <strong>{v.word}</strong>: {v.meaning}
                               </span>
                             ))}
@@ -1305,12 +1305,12 @@ ${essayInput.trim()}
                         <div className="text-xs font-bold text-white flex items-center gap-1.5">
                           <span>墨卷导师 · 考研官方 20 分制深度精批</span>
                           {isMojuanGrading && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-[10px] font-mono animate-pulse">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-2xs font-mono animate-pulse">
                               <Sparkles className="w-2.5 h-2.5" /> 逐维推演中
                             </span>
                           )}
                         </div>
-                        <div className="text-[10px] text-indigo-300">政治/英语双科领航导师 · 阅卷采分点严审</div>
+                        <div className="text-2xs text-indigo-300">政治/英语双科领航导师 · 阅卷采分点严审</div>
                       </div>
                     </div>
 
@@ -1334,7 +1334,7 @@ ${essayInput.trim()}
                     </div>
                   </div>
 
-                  <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px] text-indigo-300">
+                  <div className="pt-2 border-t border-white/10 flex items-center justify-between text-2xs text-indigo-300">
                     <span>💡 批改标准：严格对标考研英语大纲 4 大阅卷维度</span>
                     <button
                       type="button"
@@ -1349,7 +1349,7 @@ ${essayInput.trim()}
               ) : gradingResult ? (
                 /* 分支 2：本地秒级诊断报告 */
                 <>
-                  <div className="rounded-3xl border border-slate-200/90 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-6 shadow-md space-y-4">
+                  <div className="rounded-3xl border border-slate-200/90 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-6 shadow-sm space-y-4">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-indigo-200 uppercase tracking-wider">
                         EXAM EVALUATION REPORT
@@ -1372,25 +1372,25 @@ ${essayInput.trim()}
 
                     <div className="grid grid-cols-4 gap-2 pt-2 border-t border-white/10 text-center">
                       <div>
-                        <div className="text-[10px] text-slate-400">总字数</div>
+                        <div className="text-2xs text-slate-400">总字数</div>
                         <div className="text-sm font-bold font-mono text-white mt-0.5">
                           {gradingResult.statistics.wordCount}
                         </div>
                       </div>
                       <div>
-                        <div className="text-[10px] text-slate-400">复合句比</div>
+                        <div className="text-2xs text-slate-400">复合句比</div>
                         <div className="text-sm font-bold font-mono text-white mt-0.5">
                           {gradingResult.statistics.complexSentenceRatio}%
                         </div>
                       </div>
                       <div>
-                        <div className="text-[10px] text-slate-400">词汇丰富度</div>
+                        <div className="text-2xs text-slate-400">词汇丰富度</div>
                         <div className="text-sm font-bold font-mono text-white mt-0.5">
                           {gradingResult.statistics.typeTokenRatio}
                         </div>
                       </div>
                       <div>
-                        <div className="text-[10px] text-slate-400">平均句长</div>
+                        <div className="text-2xs text-slate-400">平均句长</div>
                         <div className="text-sm font-bold font-mono text-white mt-0.5">
                           {gradingResult.statistics.avgWordsPerSentence} 词
                         </div>
@@ -1418,7 +1418,7 @@ ${essayInput.trim()}
                               style={{ width: `${dim.score}%` }}
                             />
                           </div>
-                          <p className="text-[11px] text-slate-500 leading-snug">{dim.comment}</p>
+                          <p className="text-2xs text-slate-500 leading-snug">{dim.comment}</p>
                         </div>
                       ))}
                     </div>
@@ -1437,7 +1437,7 @@ ${essayInput.trim()}
                           navigator.clipboard?.writeText?.(gradingResult.polishedVersion)
                           alert('已复制 AI 润色范文！')
                         }}
-                        className="text-[11px] font-semibold text-indigo-600 hover:underline flex items-center gap-1 cursor-pointer"
+                        className="text-2xs font-semibold text-indigo-600 hover:underline flex items-center gap-1 cursor-pointer"
                       >
                         <Copy className="w-3 h-3" />
                         <span>复制范文</span>
@@ -1452,7 +1452,7 @@ ${essayInput.trim()}
               ) : (
                 /* 空态提示卡 */
                 <div className="h-full min-h-[420px] rounded-3xl border border-dashed border-slate-300 bg-slate-50/50 flex flex-col items-center justify-center p-8 text-center space-y-3">
-                  <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 text-xl shadow-2xs">
+                  <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 text-xl shadow-xs">
                     📝
                   </div>
                   <h3 className="text-sm font-bold text-slate-700">等待提交作文进行批改</h3>
@@ -1469,7 +1469,7 @@ ${essayInput.trim()}
       {/* 板块 3: 历年真题精读与长难句树状解析 */}
       {activeTab === 'papers' && (
         <div className="space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs">
+          <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-slate-400">选择真题篇目:</span>
               <select
@@ -1519,7 +1519,7 @@ ${essayInput.trim()}
                 <div className="space-y-6">
                   {activePaper.paragraphs.map((para) => (
                     <div key={para.paraIndex} className="space-y-3">
-                      <div className="text-[11px] font-bold text-slate-400 font-mono">
+                      <div className="text-2xs font-bold text-slate-400 font-mono">
                         PARAGRAPH {para.paraIndex}
                       </div>
 
@@ -1545,7 +1545,7 @@ ${essayInput.trim()}
                                     {sen.en}
                                   </p>
                                   {sen.isHardSentence && (
-                                    <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-700">
+                                    <span className="shrink-0 text-2xs font-bold px-1.5 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-700">
                                       长难句
                                     </span>
                                   )}
@@ -1557,7 +1557,7 @@ ${essayInput.trim()}
 
                                 {/* 展开长难句语法剖析 */}
                                 {sen.isHardSentence && sen.hardAnalysis && (
-                                  <div className="mt-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-700 leading-relaxed space-y-1">
+                                  <div className="mt-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-2xs text-slate-700 leading-relaxed space-y-1">
                                     <div className="font-bold text-indigo-700 flex items-center gap-1">
                                       <span>🔍 语法主干与从句剖析:</span>
                                     </div>
@@ -1567,7 +1567,7 @@ ${essayInput.trim()}
                                         {sen.keyWords.map((kw, kwIdx) => (
                                           <span
                                             key={kwIdx}
-                                            className="px-2 py-0.5 rounded bg-white border border-slate-200 text-[10.5px] font-mono text-slate-800"
+                                            className="px-2 py-0.5 rounded bg-white border border-slate-200 text-2xs font-mono text-slate-800"
                                           >
                                             <strong>{kw.word}</strong>: {kw.meaning}
                                           </span>
@@ -1594,7 +1594,7 @@ ${essayInput.trim()}
                     <Award className="w-3.5 h-3.5 text-amber-500" />
                     <span>真题对应单选精炼 ({activePaper.questions.length})</span>
                   </h3>
-                  <span className="text-[10px] text-slate-400">考点溯源</span>
+                  <span className="text-2xs text-slate-400">考点溯源</span>
                 </div>
 
                 <div className="space-y-4">
@@ -1605,9 +1605,9 @@ ${essayInput.trim()}
 
                     return (
                       <div key={q.id} className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-3">
-                        <div className="flex items-center justify-between text-[11px] font-bold">
+                        <div className="flex items-center justify-between text-2xs font-bold">
                           <span className="text-slate-400">第 {qIdx + 1} 题</span>
-                          <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 text-[10px]">
+                          <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 text-2xs">
                             {q.questionType}
                           </span>
                         </div>
@@ -1630,7 +1630,7 @@ ${essayInput.trim()}
                                   : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
                               }`}
                             >
-                              <span className="w-4 h-4 rounded-full bg-slate-100 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+                              <span className="w-4 h-4 rounded-full bg-slate-100 flex items-center justify-center font-bold text-2xs shrink-0 mt-0.5">
                                 {optKey}
                               </span>
                               <span className="leading-snug">{q.options[optKey]}</span>
@@ -1641,7 +1641,7 @@ ${essayInput.trim()}
                         {/* 答案解析 */}
                         {isSubmitted && (
                           <div
-                            className={`p-3 rounded-xl text-[11px] leading-relaxed border ${
+                            className={`p-3 rounded-xl text-2xs leading-relaxed border ${
                               isCorrect
                                 ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
                                 : 'bg-rose-50 border-rose-200 text-rose-900'

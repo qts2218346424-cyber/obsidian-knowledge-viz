@@ -128,7 +128,7 @@ export default function ObsidianSyncModal({
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="dark bg-[#121622] border border-white/15 rounded-3xl w-full max-w-xl max-h-[88dvh] shadow-2xl overflow-hidden text-slate-100 flex flex-col">
+      <div className="dark bg-[#121622] border border-white/15 rounded-3xl w-full max-w-xl max-h-[88dvh] shadow-xl overflow-hidden text-slate-100 flex flex-col">
         {/* Header */}
         <div className="px-5 sm:px-6 py-3.5 sm:py-4 border-b border-white/10 flex items-center justify-between bg-white/[0.02] shrink-0">
           <div className="flex items-center gap-3">
@@ -140,7 +140,7 @@ export default function ObsidianSyncModal({
                 <h3 className="text-base font-bold text-white">
                   {isAdmin ? 'Obsidian 本地同步中心 (系统管理员)' : '云端专属研学沙盒与导出'}
                 </h3>
-                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   {isAdmin ? '双向实时监听已生效' : '多租户物理沙箱隔离就绪'}
                 </span>
@@ -171,7 +171,7 @@ export default function ObsidianSyncModal({
               </span>
               <button
                 onClick={handleCopyPath}
-                className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-white transition-colors cursor-pointer"
+                className="flex items-center gap-1 text-2xs text-slate-400 hover:text-white transition-colors cursor-pointer"
               >
                 {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                 <span>{copied ? '已复制' : '复制标识'}</span>
@@ -180,7 +180,7 @@ export default function ObsidianSyncModal({
             <div className="p-3 rounded-xl bg-black/40 border border-slate-800 font-mono text-xs text-purple-300 break-all select-all flex items-center justify-between">
               <span>{displayVaultPath}</span>
               {!isAdmin && (
-                <span className="text-[11px] text-emerald-400 font-sans ml-2 shrink-0">
+                <span className="text-2xs text-emerald-400 font-sans ml-2 shrink-0">
                   仅您本人私有
                 </span>
               )}
@@ -226,7 +226,7 @@ export default function ObsidianSyncModal({
               <Activity className="w-4 h-4 text-indigo-400" />
               <span>{isAdmin ? '本地物理同步机制' : '考生沙盒安全与 Obsidian 离线掌握保障'}</span>
             </div>
-            <p className="text-[11.5px] leading-relaxed text-slate-400">
+            <p className="text-2xs leading-relaxed text-slate-400">
               {isAdmin ? (
                 <>
                   1. <b>零延迟本地读写</b>：在软件内创建、编辑的任何笔记，均直接写入本地物理目录中真实存在的 .md 文件。<br />
@@ -260,7 +260,7 @@ export default function ObsidianSyncModal({
               <button
                 onClick={handleOpenFolder}
                 disabled={openingFolder}
-                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition-all shadow-md active:scale-95 cursor-pointer"
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition-all shadow-sm active:scale-95 cursor-pointer"
                 title="在 Windows 资源管理器中打开本地 Obsidian 文件夹"
               >
                 <FolderOpen className="w-4 h-4" />
@@ -270,7 +270,7 @@ export default function ObsidianSyncModal({
               <button
                 onClick={handleDownloadZip}
                 disabled={downloadingZip}
-                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold text-xs transition-all shadow-md active:scale-95 cursor-pointer"
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold text-xs transition-all shadow-sm active:scale-95 cursor-pointer"
                 title="将个人全部沙盒笔记打包为 ZIP 压缩包下载到本地"
               >
                 <Download className={`w-4 h-4 ${downloadingZip ? 'animate-bounce' : ''}`} />

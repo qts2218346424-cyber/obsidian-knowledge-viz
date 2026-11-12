@@ -237,12 +237,12 @@ export default function WordBrowser() {
                         <Volume2 size={13} />
                       </button>
                       {freqColor[item.frequency] && (
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${freqColor[item.frequency]}`}>
+                        <span className={`px-2 py-0.5 rounded-full text-2xs font-medium ${freqColor[item.frequency]}`}>
                           {item.frequency}
                         </span>
                       )}
                       <StatusIcon item={item} />
-                      <span className="text-[10px] text-warm-400">U{item.unit}</span>
+                      <span className="text-2xs text-warm-400">U{item.unit}</span>
                     </div>
                     <p className="text-xs text-warm-500 mt-0.5 truncate">{item.definition}</p>
                   </div>
@@ -297,7 +297,7 @@ export default function WordBrowser() {
                       </div>
                     )}
                     {item.progress && (
-                      <div className="flex gap-4 text-[11px] text-warm-400 pt-1">
+                      <div className="flex gap-4 text-2xs text-warm-400 pt-1">
                         <span>状态: {statusLabel(item)}</span>
                         <span>复习: {item.progress.reviews} 次</span>
                         {item.progress.nextReview && <span>下次复习: {item.progress.nextReview}</span>}
@@ -336,7 +336,7 @@ export default function WordBrowser() {
 
       {/* Total hint */}
       {data && (
-        <p className="text-center text-[11px] text-warm-300">
+        <p className="text-center text-2xs text-warm-300">
           显示第 {(page - 1) * size + 1}-{Math.min(page * size, data.total)} 条，共 {data.total} 条
         </p>
       )}

@@ -607,7 +607,7 @@ export default function KnowledgeGraph() {
         <div className="flex items-center gap-1.5 font-medium text-slate-600">
           <button
             onClick={() => setViewMode(prev => prev === 'mastery' ? 'topology' : 'mastery')}
-            className={`px-2 py-0.5 rounded-full text-[11px] font-bold flex items-center gap-1 ${
+            className={`px-2 py-0.5 rounded-full text-2xs font-bold flex items-center gap-1 ${
               viewMode === 'mastery'
                 ? 'bg-rose-100 text-rose-700 border border-rose-200'
                 : 'bg-slate-100 text-slate-700'
@@ -626,7 +626,7 @@ export default function KnowledgeGraph() {
         </div>
         <div className="flex items-center gap-1.5">
           {hasFilter && (
-            <button onClick={clearFilters} className="px-2 py-1 rounded-lg bg-slate-100 text-slate-600 text-[11px] font-semibold">
+            <button onClick={clearFilters} className="px-2 py-1 rounded-lg bg-slate-100 text-slate-600 text-2xs font-semibold">
               重置
             </button>
           )}
@@ -640,26 +640,26 @@ export default function KnowledgeGraph() {
       <div className="hidden md:flex items-center justify-between gap-3 pt-1">
         <div className="flex items-center gap-2">
           {/* 模式切换双联胶囊 */}
-          <div className="flex items-center p-1 bg-white border border-neutral-200/80 rounded-full shadow-xs">
+          <div className="flex items-center p-1 bg-white border border-slate-200/80 rounded-full shadow-xs">
             <button
               onClick={() => setViewMode('mastery')}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
                 viewMode === 'mastery'
                   ? 'bg-gradient-to-r from-rose-500 via-amber-500 to-orange-500 text-white shadow-xs'
-                  : 'text-neutral-600 hover:text-neutral-900'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <Flame className="w-3.5 h-3.5 fill-current" />
               <span>考点掌握度热力图 (Mastery Graph)</span>
-              <span className="text-[10px] bg-white/20 px-1.5 py-0.2 rounded-full">提分导航仪</span>
+              <span className="text-2xs bg-white/20 px-1.5 py-0.2 rounded-full">提分导航仪</span>
             </button>
 
             <button
               onClick={() => setViewMode('topology')}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
                 viewMode === 'topology'
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:text-neutral-900'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <span>知识双链拓扑图</span>
@@ -674,7 +674,7 @@ export default function KnowledgeGraph() {
               <span>单击红色薄弱考点，立即进入【提分急救舱】</span>
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-100 border border-neutral-200/80 text-xs text-neutral-600 font-medium">
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200/80 text-xs text-slate-600 font-medium">
               <span>双击节点：右侧属性检查器</span>
             </div>
           )}
@@ -682,10 +682,10 @@ export default function KnowledgeGraph() {
       </div>
 
       {/* 🖥️ 桌面端 Header */}
-      <div className="hidden md:flex flex-col justify-between gap-3 shrink-0 lg:flex-row lg:items-center bg-white rounded-[16px] border border-black/[0.08] p-4 sm:p-5 shadow-xs">
+      <div className="hidden md:flex flex-col justify-between gap-3 shrink-0 lg:flex-row lg:items-center bg-white rounded-2xl border border-black/[0.08] p-4 sm:p-5 shadow-xs">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold tracking-tight text-neutral-900 flex items-center gap-2">
+            <h1 className="text-xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
               {viewMode === 'mastery' ? (
                 <>
                   <span className="text-rose-500">🔥</span>
@@ -696,15 +696,15 @@ export default function KnowledgeGraph() {
               )}
             </h1>
             {viewMode === 'mastery' ? (
-              <span className="rounded-full bg-rose-100 border border-rose-200 px-2.5 py-0.5 text-[11px] font-bold text-rose-800 flex items-center gap-1">
+              <span className="rounded-full bg-rose-100 border border-rose-200 px-2.5 py-0.5 text-2xs font-bold text-rose-800 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
                 提分急救导航模式已激活
               </span>
             ) : isRealData && (
-              <span className="rounded-full bg-neutral-100 border border-neutral-200 px-2 py-0.5 text-[10px] font-mono font-medium text-neutral-700">实时网络</span>
+              <span className="rounded-full bg-slate-100 border border-slate-200 px-2 py-0.5 text-2xs font-mono font-medium text-slate-700">实时网络</span>
             )}
           </div>
-          <p className="mt-0.5 text-xs text-neutral-500">
+          <p className="mt-0.5 text-xs text-slate-500">
             {viewMode === 'mastery'
               ? '实时映射做题中心作答战况：绿色稳固攻克(>80%)、黄色中度掌握(50%~80%)、红色高危薄弱(<50%呼吸闪烁)。点击薄弱考点直通常规仿真课件与真题急救。'
               : '从笔记双向链接构建拓扑知识网络。支持平移缩放、智能标签分级、单击跳至编辑、双击检查器透视。'}
@@ -713,7 +713,7 @@ export default function KnowledgeGraph() {
         <div className="flex flex-wrap gap-2">
           <button
             onClick={resetView}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-700 text-xs font-medium cursor-pointer shadow-xs transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium cursor-pointer shadow-xs transition-colors"
           >
             <Maximize2 className="h-3.5 w-3.5" />
             适配全景
@@ -722,8 +722,8 @@ export default function KnowledgeGraph() {
             onClick={() => setShowAllLabels(prev => !prev)}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shadow-xs cursor-pointer ${
               showAllLabels
-                ? 'bg-neutral-900 text-white font-semibold'
-                : 'border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50'
+                ? 'bg-slate-900 text-white font-semibold'
+                : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
             }`}
           >
             <Eye className="h-3.5 w-3.5" />
@@ -732,14 +732,14 @@ export default function KnowledgeGraph() {
           <button
             onClick={clearFilters}
             disabled={!hasFilter}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium transition-colors shadow-xs cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium transition-colors shadow-xs cursor-pointer"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             清除筛选
           </button>
           <button
             onClick={reload}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold cursor-pointer shadow-xs transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold cursor-pointer shadow-xs transition-colors"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             重新构建
@@ -751,14 +751,14 @@ export default function KnowledgeGraph() {
       <div className="hidden md:grid grid-cols-4 gap-2.5 shrink-0">
         {viewMode === 'mastery' ? (
           <>
-            <GraphMetric label="收录核心考点" value={totalNodes} color="text-neutral-900" />
+            <GraphMetric label="收录核心考点" value={totalNodes} color="text-slate-900" />
             <GraphMetric label="稳固攻克 (≥80%)" value={masterySummary.masteredCount} color="text-emerald-600" />
             <GraphMetric label="进阶巩固 (50~80%)" value={masterySummary.moderateCount} color="text-amber-500" />
             <GraphMetric label="薄弱高危 (<50%)" value={masterySummary.criticalCount} color="text-rose-500" />
           </>
         ) : (
           <>
-            <GraphMetric label="节点总数" value={totalNodes} color="text-neutral-900" />
+            <GraphMetric label="节点总数" value={totalNodes} color="text-slate-900" />
             <GraphMetric label="双向连接" value={rawLinks.length} color="text-emerald-600" />
             <GraphMetric label="孤立笔记" value={orphanNotes} color="text-rose-500" />
             <GraphMetric label="健康度" value={overallScore || '—'} color={scoreColor} suffix={overallScore ? '/100' : undefined} />
@@ -792,14 +792,14 @@ export default function KnowledgeGraph() {
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={() => handleOpenCourseware('cw-avl-tree')}
-                  className="text-[11px] font-bold text-indigo-700 hover:text-indigo-900 bg-white px-2.5 py-1 rounded-lg border border-indigo-200 shadow-2xs transition-colors flex items-center gap-1"
+                  className="text-2xs font-bold text-indigo-700 hover:text-indigo-900 bg-white px-2.5 py-1 rounded-lg border border-indigo-200 shadow-xs transition-colors flex items-center gap-1"
                 >
                   <Play className="w-3 h-3 fill-current" />
                   <span>AVL树仿真课件</span>
                 </button>
                 <Link
                   to="/quiz"
-                  className="text-[11px] font-bold text-white bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 px-2.5 py-1 rounded-lg shadow-2xs transition-colors"
+                  className="text-2xs font-bold text-white bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 px-2.5 py-1 rounded-lg shadow-xs transition-colors"
                 >
                   前往做题中心 →
                 </Link>
@@ -816,19 +816,19 @@ export default function KnowledgeGraph() {
                 </span>
                 <span className="text-slate-300 hidden sm:inline">|</span>
                 <span className="text-slate-600 hidden sm:inline">
-                  涵盖 408 计算机与考研数学高频考点。在笔记中使用 <code className="bg-white px-1.5 py-0.5 rounded border border-indigo-200 text-indigo-600 font-mono text-[11px]">[[双链]]</code> 即可点亮个人知识网络。
+                  涵盖 408 计算机与考研数学高频考点。在笔记中使用 <code className="bg-white px-1.5 py-0.5 rounded border border-indigo-200 text-indigo-600 font-mono text-2xs">[[双链]]</code> 即可点亮个人知识网络。
                 </span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <Link
                   to="/study"
-                  className="text-[11px] font-bold text-indigo-700 hover:text-indigo-900 bg-white px-2.5 py-1 rounded-lg border border-indigo-200 shadow-2xs transition-colors"
+                  className="text-2xs font-bold text-indigo-700 hover:text-indigo-900 bg-white px-2.5 py-1 rounded-lg border border-indigo-200 shadow-xs transition-colors"
                 >
                   浏览考研讲义 →
                 </Link>
                 <Link
                   to="/editor"
-                  className="text-[11px] font-bold text-white bg-indigo-600 hover:bg-indigo-500 px-2.5 py-1 rounded-lg shadow-2xs transition-colors"
+                  className="text-2xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 px-2.5 py-1 rounded-lg shadow-xs transition-colors"
                 >
                   + 新建考研笔记
                 </Link>
@@ -838,12 +838,12 @@ export default function KnowledgeGraph() {
 
           <div
             ref={containerRef}
-            className="relative flex-1 min-h-0 overflow-hidden sm:rounded-xl sm:border sm:border-neutral-200/80 bg-neutral-50/50 shadow-xs select-none"
+            className="relative flex-1 min-h-0 overflow-hidden sm:rounded-xl sm:border sm:border-slate-200/80 bg-slate-50/50 shadow-xs select-none"
           >
             <svg ref={svgRef} width={dimensions.width} height={dimensions.height} className="block h-full w-full touch-none select-none" style={{ touchAction: 'none' }} />
 
             {/* Floating on-canvas controls (top-left) */}
-            <div className="absolute top-3 left-3 z-10 flex flex-col gap-1 rounded-lg border border-neutral-200/80 bg-white/95 p-1 shadow-xs backdrop-blur-md">
+            <div className="absolute top-3 left-3 z-10 flex flex-col gap-1 rounded-lg border border-slate-200/80 bg-white/95 p-1 shadow-xs backdrop-blur-md">
               <button
                 onClick={() => {
                   if (!svgRef.current || !zoomRef.current) return
@@ -907,7 +907,7 @@ export default function KnowledgeGraph() {
 
             {/* Filter Match Badge (top-center) */}
             {hasFilter && (
-              <div className="absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-surface/90 backdrop-blur-md border border-cream-200 text-[11px] text-warm-600 shadow-sm">
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-surface/90 backdrop-blur-md border border-cream-200 text-2xs text-warm-600 shadow-sm">
                 匹配 <span className="font-semibold text-accent-orange">{activeNodeIds.size}</span> / {totalNodes} 考点
               </div>
             )}
@@ -928,8 +928,8 @@ export default function KnowledgeGraph() {
                             {mp.rate}% ({isCritical ? '薄弱高危' : mp.rate < 80 ? '进阶巩固' : '稳固攻克'})
                           </span>
                         </div>
-                        <div className="text-[11px] text-slate-500">{mp.recentStatus}</div>
-                        <div className="text-[10px] text-rose-600 font-medium pt-1 border-t border-slate-100 flex items-center gap-1">
+                        <div className="text-2xs text-slate-500">{mp.recentStatus}</div>
+                        <div className="text-2xs text-rose-600 font-medium pt-1 border-t border-slate-100 flex items-center gap-1">
                           <Flame className="w-3 h-3" />
                           <span>点击呼出【提分急救舱】</span>
                         </div>
@@ -943,10 +943,10 @@ export default function KnowledgeGraph() {
                       <span className="text-xs text-slate-600">{allGroupLabels[hoveredNode.group] || hoveredNode.group}</span>
                     </div>
                     {hoveredNode.path && (
-                      <div className="text-[10px] text-slate-400 mt-1 font-mono truncate">{hoveredNode.path}</div>
+                      <div className="text-2xs text-slate-400 mt-1 font-mono truncate">{hoveredNode.path}</div>
                     )}
-                    <div className="text-[10px] text-slate-400 mt-1.5">双链拓扑度: {hoveredNode.linkCount}</div>
-                    <div className="text-[10px] text-indigo-600 mt-1 font-medium">单击右侧检查 · 双击沉浸编辑</div>
+                    <div className="text-2xs text-slate-400 mt-1.5">双链拓扑度: {hoveredNode.linkCount}</div>
+                    <div className="text-2xs text-indigo-600 mt-1 font-medium">单击右侧检查 · 双击沉浸编辑</div>
                   </>
                 )}
               </div>
@@ -980,7 +980,7 @@ export default function KnowledgeGraph() {
                     <button
                       key={key}
                       onClick={() => toggleGroup(key)}
-                      className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[11px] transition-all backdrop-blur-sm shadow-sm ${
+                      className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-2xs transition-all backdrop-blur-sm shadow-sm ${
                         isActive
                           ? 'bg-cream-200/90 text-warm-800 font-medium'
                           : 'bg-cream-100/80 text-warm-400 hover:text-warm-600 opacity-50'
@@ -998,66 +998,66 @@ export default function KnowledgeGraph() {
 
         {/* Right Node Inspector (拓扑模式下的右侧抽屉) */}
         {viewMode === 'topology' && (previewNode || previewLoading) && (
-          <div className="fixed inset-x-3 bottom-16 top-24 z-40 md:static md:w-80 md:inset-auto md:z-auto shrink-0 h-auto md:h-full flex flex-col rounded-[16px] border border-black/[0.08] bg-white p-4 shadow-xl md:shadow-xs overflow-hidden animate-fade-in">
-            <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-neutral-100">
+          <div className="fixed inset-x-3 bottom-16 top-24 z-40 md:static md:w-80 md:inset-auto md:z-auto shrink-0 h-auto md:h-full flex flex-col rounded-2xl border border-black/[0.08] bg-white p-4 shadow-xl md:shadow-xs overflow-hidden animate-fade-in">
+            <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-100">
               <div className="flex items-center gap-1.5 min-w-0">
                 <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                <span className="text-[11px] font-bold tracking-wider uppercase text-neutral-400 font-mono">NODE INSPECTOR</span>
+                <span className="text-2xs font-bold tracking-wider uppercase text-slate-400 font-mono">NODE INSPECTOR</span>
               </div>
               <button
                 onClick={() => setPreviewNode(null)}
-                className="p-1 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors cursor-pointer"
+                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-900 transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
             {previewLoading && (
               <div className="flex-1 flex items-center justify-center">
-                <Loader2 className="w-5 h-5 text-neutral-900 animate-spin" />
+                <Loader2 className="w-5 h-5 text-slate-900 animate-spin" />
               </div>
             )}
             {previewNode && !previewLoading && (
               <div className="flex-1 flex flex-col min-h-0 space-y-3">
                 <div>
-                  <h3 className="text-sm font-bold text-neutral-900 truncate">
+                  <h3 className="text-sm font-bold text-slate-900 truncate">
                     {previewNode.title}
                   </h3>
-                  <div className="text-[10px] text-neutral-400 font-mono mt-0.5 truncate">{previewNode.path}</div>
+                  <div className="text-2xs text-slate-400 font-mono mt-0.5 truncate">{previewNode.path}</div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="p-2 rounded-xl bg-neutral-50/80 border border-neutral-200/80">
-                    <div className="text-[10px] text-neutral-400 font-medium">双链拓扑度</div>
-                    <div className="font-bold font-mono text-neutral-900 mt-0.5">{previewNode.links.length} Degree</div>
+                  <div className="p-2 rounded-xl bg-slate-50/80 border border-slate-200/80">
+                    <div className="text-2xs text-slate-400 font-medium">双链拓扑度</div>
+                    <div className="font-bold font-mono text-slate-900 mt-0.5">{previewNode.links.length} Degree</div>
                   </div>
-                  <div className="p-2 rounded-xl bg-neutral-50/80 border border-neutral-200/80">
-                    <div className="text-[10px] text-neutral-400 font-medium">总词字数</div>
-                    <div className="font-bold font-mono text-neutral-900 mt-0.5">{previewNode.wordCount} 字</div>
+                  <div className="p-2 rounded-xl bg-slate-50/80 border border-slate-200/80">
+                    <div className="text-2xs text-slate-400 font-medium">总词字数</div>
+                    <div className="font-bold font-mono text-slate-900 mt-0.5">{previewNode.wordCount} 字</div>
                   </div>
                 </div>
 
                 {previewNode.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1">
                     {previewNode.tags.map(tag => (
-                      <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-100 border border-neutral-200 text-neutral-600 font-medium">#{tag}</span>
+                      <span key={tag} className="text-2xs px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600 font-medium">#{tag}</span>
                     ))}
                   </div>
                 )}
 
-                <div className="flex-1 overflow-y-auto text-xs text-neutral-600 leading-relaxed whitespace-pre-wrap pr-1 border-t border-neutral-100 pt-2 font-mono">
+                <div className="flex-1 overflow-y-auto text-xs text-slate-600 leading-relaxed whitespace-pre-wrap pr-1 border-t border-slate-100 pt-2 font-mono">
                   {previewNode.content.substring(0, 1500)}
                   {previewNode.content.length > 1500 && (
-                    <div className="mt-2 text-neutral-400 italic text-[11px]">... (内容较长，点击下方按钮在完整编辑器中阅读)</div>
+                    <div className="mt-2 text-slate-400 italic text-2xs">... (内容较长，点击下方按钮在完整编辑器中阅读)</div>
                   )}
                 </div>
 
-                <div className="pt-2 border-t border-neutral-100">
+                <div className="pt-2 border-t border-slate-100">
                   <button
                     onClick={() => {
                       navigate(`/editor?path=${encodeURIComponent(previewNode.path)}`)
                       setPreviewNode(null)
                     }}
-                    className="w-full py-2.5 rounded-[10px] bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    className="w-full py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <span>在编辑器中打开沉浸研读</span>
                   </button>
@@ -1099,11 +1099,11 @@ function GraphMetric({
   suffix?: string
 }) {
   return (
-    <div className="rounded-[16px] border border-black/[0.08] bg-white p-3.5 sm:p-4 shadow-xs">
-      <div className="text-[11px] font-medium text-neutral-500">{label}</div>
+    <div className="rounded-2xl border border-black/[0.08] bg-white p-3.5 sm:p-4 shadow-xs">
+      <div className="text-2xs font-medium text-slate-500">{label}</div>
       <div className={`mt-1 font-mono text-xl sm:text-2xl font-bold tracking-tight ${color}`}>
         {value}
-        {suffix && <span className="text-xs font-normal text-neutral-400">{suffix}</span>}
+        {suffix && <span className="text-xs font-normal text-slate-400">{suffix}</span>}
       </div>
     </div>
   )

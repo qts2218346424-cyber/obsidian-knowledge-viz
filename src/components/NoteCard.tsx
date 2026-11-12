@@ -18,14 +18,14 @@ export default function NoteCard({ note, onClick }: NoteCardProps) {
           {note.title}
         </span>
       </div>
-      <p className="text-[11px] text-warm-400 leading-relaxed line-clamp-2 pl-5.5">
+      <p className="text-2xs text-warm-400 leading-relaxed line-clamp-2 pl-5.5">
         {note.excerpt}
       </p>
       {note.tags.length > 0 && (
         <div className="flex items-center gap-1 mt-1.5 pl-5.5">
           <Tag className="w-2.5 h-2.5 text-warm-400" />
           {note.tags.map(tag => (
-            <span key={tag} className="text-[9px] px-1 py-0.5 rounded bg-cream-100 text-warm-400">
+            <span key={tag} className="text-2xs px-1 py-0.5 rounded bg-cream-100 text-warm-400">
               {tag}
             </span>
           ))}

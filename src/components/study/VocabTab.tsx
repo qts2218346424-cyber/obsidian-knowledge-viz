@@ -201,14 +201,14 @@ export default function VocabTab() {
   if (loading) {
     return (
       <div className="max-w-xl mx-auto py-12 px-4 space-y-4 animate-in fade-in">
-        <div className="bento-card rounded-2xl bg-white border border-neutral-200/80 p-8 shadow-xs flex flex-col items-center justify-center text-center space-y-4">
+        <div className="bento-card rounded-2xl bg-white border border-slate-200/80 p-8 shadow-xs flex flex-col items-center justify-center text-center space-y-4">
           <div className="relative">
-            <Loader2 className="w-8 h-8 text-neutral-900 animate-spin" />
+            <Loader2 className="w-8 h-8 text-slate-900 animate-spin" />
             <Sparkles className="w-4 h-4 text-amber-500 absolute -top-1 -right-1 animate-bounce" />
           </div>
           <div>
-            <h4 className="text-sm font-bold text-neutral-900">正在装载考研英语大纲词库...</h4>
-            <p className="text-xs text-neutral-500 mt-1">
+            <h4 className="text-sm font-bold text-slate-900">正在装载考研英语大纲词库...</h4>
+            <p className="text-xs text-slate-500 mt-1">
               基于艾宾浩斯遗忘曲线，正在计算今日需复盘的真题高频核心词
             </p>
           </div>
@@ -223,7 +223,7 @@ export default function VocabTab() {
         <span className="text-xs text-rose-600">{error}</span>
         <button
           onClick={loadData}
-          className="px-3.5 py-1.5 rounded-lg bg-neutral-900 text-white text-xs font-semibold hover:bg-neutral-800"
+          className="px-3.5 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800"
         >
           重试
         </button>
@@ -243,17 +243,17 @@ export default function VocabTab() {
     return (
       <div className="max-w-xl mx-auto space-y-5 animate-fade-in-up py-4">
         {/* 完成头 */}
-        <div className="bg-white rounded-[20px] border border-black/[0.08] p-6 text-center shadow-xs space-y-3">
-          <div className="w-12 h-12 rounded-full bg-neutral-100 border border-neutral-200/80 mx-auto flex items-center justify-center text-neutral-900">
+        <div className="bg-white rounded-3xl border border-black/[0.08] p-6 text-center shadow-xs space-y-3">
+          <div className="w-12 h-12 rounded-full bg-slate-100 border border-slate-200/80 mx-auto flex items-center justify-center text-slate-900">
             <Award className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-neutral-900">
+            <h3 className="text-lg font-bold text-slate-900">
               {totalDue === 0 && sessionReviewed === 0
                 ? '今日词汇已全部复习完毕'
                 : '本轮艾宾浩斯复盘完成'}
             </h3>
-            <p className="text-xs text-neutral-500 mt-1">
+            <p className="text-xs text-slate-500 mt-1">
               {sessionReviewed > 0
                 ? `本轮共复盘 ${sessionReviewed} 个真题核心词，掌握率达 ${pct}%`
                 : '当前队列中无到期复习单词，建议前往词根图谱或大纲词库拓展'}
@@ -263,22 +263,22 @@ export default function VocabTab() {
 
         {/* 统计指标卡 */}
         {sessionReviewed > 0 && (
-          <div className="bg-white rounded-[16px] border border-black/[0.08] p-5 shadow-xs space-y-4">
-            <div className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
+          <div className="bg-white rounded-2xl border border-black/[0.08] p-5 shadow-xs space-y-4">
+            <div className="text-2xs font-semibold text-slate-400 uppercase tracking-wider">
               本轮复盘审计 (Session Audit)
             </div>
 
             <div className="grid grid-cols-3 gap-2.5">
-              <div className="p-3 rounded-xl bg-neutral-50 border border-neutral-200/80 text-center">
-                <div className="text-[11px] text-neutral-500">已秒杀</div>
-                <div className="text-xl font-bold font-mono text-neutral-900 mt-0.5">{sessionResults.known}</div>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-center">
+                <div className="text-2xs text-slate-500">已秒杀</div>
+                <div className="text-xl font-bold font-mono text-slate-900 mt-0.5">{sessionResults.known}</div>
               </div>
-              <div className="p-3 rounded-xl bg-neutral-50 border border-neutral-200/80 text-center">
-                <div className="text-[11px] text-neutral-500">需巩固</div>
-                <div className="text-xl font-bold font-mono text-neutral-700 mt-0.5">{sessionResults.fuzzy}</div>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-center">
+                <div className="text-2xs text-slate-500">需巩固</div>
+                <div className="text-xl font-bold font-mono text-slate-700 mt-0.5">{sessionResults.fuzzy}</div>
               </div>
-              <div className="p-3 rounded-xl bg-neutral-50 border border-neutral-200/80 text-center">
-                <div className="text-[11px] text-neutral-500">待强化</div>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-center">
+                <div className="text-2xs text-slate-500">待强化</div>
                 <div className="text-xl font-bold font-mono text-rose-600 mt-0.5">{sessionResults.unknown}</div>
               </div>
             </div>
@@ -286,23 +286,23 @@ export default function VocabTab() {
         )}
 
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white rounded-xl border border-neutral-200/80 p-3.5 text-center shadow-2xs">
-            <div className="text-xs text-neutral-400">已掌握</div>
-            <div className="text-xl font-bold font-mono text-neutral-900 mt-0.5">{data.stats.mastered}</div>
+          <div className="bg-white rounded-xl border border-slate-200/80 p-3.5 text-center shadow-xs">
+            <div className="text-xs text-slate-400">已掌握</div>
+            <div className="text-xl font-bold font-mono text-slate-900 mt-0.5">{data.stats.mastered}</div>
           </div>
-          <div className="bg-white rounded-xl border border-neutral-200/80 p-3.5 text-center shadow-2xs">
-            <div className="text-xs text-neutral-400">记忆中</div>
-            <div className="text-xl font-bold font-mono text-neutral-900 mt-0.5">{data.stats.learning}</div>
+          <div className="bg-white rounded-xl border border-slate-200/80 p-3.5 text-center shadow-xs">
+            <div className="text-xs text-slate-400">记忆中</div>
+            <div className="text-xl font-bold font-mono text-slate-900 mt-0.5">{data.stats.learning}</div>
           </div>
-          <div className="bg-white rounded-xl border border-neutral-200/80 p-3.5 text-center shadow-2xs">
-            <div className="text-xs text-neutral-400">词库总量</div>
-            <div className="text-xl font-bold font-mono text-neutral-900 mt-0.5">{data.totalWords}</div>
+          <div className="bg-white rounded-xl border border-slate-200/80 p-3.5 text-center shadow-xs">
+            <div className="text-xs text-slate-400">词库总量</div>
+            <div className="text-xl font-bold font-mono text-slate-900 mt-0.5">{data.totalWords}</div>
           </div>
         </div>
 
         <button
           onClick={loadData}
-          className="w-full py-2.5 rounded-[10px] bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+          className="w-full py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
         >
           <RefreshCw className="w-3.5 h-3.5" />
           <span>重新检查词库到期任务</span>
@@ -318,19 +318,19 @@ export default function VocabTab() {
       {/* 顶部指标与细线进度 */}
       <div className="flex items-center justify-between text-xs">
         <div className="flex items-center gap-2">
-          <span className="font-semibold text-neutral-900">今日目标</span>
-          <span className="font-mono text-neutral-500 font-bold">{sessionReviewed} / {DAILY_GOAL}</span>
+          <span className="font-semibold text-slate-900">今日目标</span>
+          <span className="font-mono text-slate-500 font-bold">{sessionReviewed} / {DAILY_GOAL}</span>
         </div>
-        <div className="flex items-center gap-2 text-[11px] text-neutral-400 font-mono">
+        <div className="flex items-center gap-2 text-2xs text-slate-400 font-mono">
           <span>待复习 {totalDue}</span>
           <span>·</span>
           <span>已斩词 {data.stats.mastered}</span>
         </div>
       </div>
 
-      <div className="h-1 bg-neutral-100 rounded-full overflow-hidden border border-neutral-200/60">
+      <div className="h-1 bg-slate-100 rounded-full overflow-hidden border border-slate-200/60">
         <div
-          className="h-full bg-neutral-900 rounded-full transition-all duration-300"
+          className="h-full bg-slate-900 rounded-full transition-all duration-300"
           style={{ width: `${Math.min(progressPct, 100)}%` }}
         />
       </div>
@@ -340,14 +340,14 @@ export default function VocabTab() {
         <button
           onClick={goPrev}
           disabled={currentIdx === 0}
-          className="p-1.5 rounded-lg border border-neutral-200 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           title="上一个词"
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
 
-        <span className="text-xs text-neutral-400 font-mono">
-          <span className="font-bold text-neutral-800">{currentIdx + 1}</span>
+        <span className="text-xs text-slate-400 font-mono">
+          <span className="font-bold text-slate-800">{currentIdx + 1}</span>
           <span className="mx-1">/</span>
           <span>{totalDue}</span>
         </span>
@@ -355,7 +355,7 @@ export default function VocabTab() {
         <button
           onClick={goNext}
           disabled={currentIdx === totalDue - 1}
-          className="p-1.5 rounded-lg border border-neutral-200 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           title="下一个词"
         >
           <ChevronRight className="w-4 h-4" />
@@ -365,7 +365,7 @@ export default function VocabTab() {
       {/* 沉浸式真题单词核心卡片 (Subframe Hardware Card) */}
       {currentWord && (
         <div
-          className={`bg-white rounded-[20px] border border-black/[0.08] shadow-xs overflow-hidden transition-all duration-200 select-none ${
+          className={`bg-white rounded-3xl border border-black/[0.08] shadow-xs overflow-hidden transition-all duration-200 select-none ${
             slideDir === 'left' ? '-translate-x-3 opacity-0' :
             slideDir === 'right' ? 'translate-x-3 opacity-0' :
             'translate-x-0 opacity-100'
@@ -374,27 +374,27 @@ export default function VocabTab() {
           <div className="p-6 sm:p-8 space-y-6">
             {/* 顶栏元信息 */}
             <div className="flex items-center justify-between text-xs">
-              <span className="px-2.5 py-0.5 rounded-full bg-neutral-100 text-neutral-600 font-mono text-[10px] font-semibold border border-neutral-200/70">
+              <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-mono text-2xs font-semibold border border-slate-200/70">
                 Unit {currentWord.unit}
               </span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-neutral-900 text-white">
+              <span className="px-2 py-0.5 rounded text-2xs font-semibold bg-slate-900 text-white">
                 {currentWord.frequency === 'high' ? '🔥 考研高频' : currentWord.frequency === 'medium' ? '⚡ 常用真题' : '🌱 大纲认知'}
               </span>
             </div>
 
             {/* 英文主词与音标 */}
             <div className="text-center space-y-2">
-              <h2 className="text-4xl sm:text-5xl font-bold tracking-tight text-neutral-900 font-serif">
+              <h2 className="text-4xl sm:text-5xl font-bold tracking-tight text-slate-900 font-serif">
                 {currentWord.word}
               </h2>
               {currentWord.phonetic && (
                 <button
                   type="button"
                   onClick={() => speakWord(currentWord.word)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-50 border border-neutral-200 hover:bg-neutral-100 text-neutral-600 transition-colors cursor-pointer text-xs font-mono"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer text-xs font-mono"
                   title="点击朗读标准发音"
                 >
-                  <Volume2 className="w-3.5 h-3.5 text-neutral-700" />
+                  <Volume2 className="w-3.5 h-3.5 text-slate-700" />
                   <span>{currentWord.phonetic}</span>
                 </button>
               )}
@@ -402,16 +402,16 @@ export default function VocabTab() {
 
             {/* 真题语境例句 */}
             {currentWord.example && (
-              <div className="bg-[#fafafa] rounded-xl p-4 border border-neutral-200/70 space-y-1.5 text-left">
-                <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider flex items-center gap-1">
-                  <Quote className="w-3 h-3 text-neutral-500" />
+              <div className="bg-[#fafafa] rounded-xl p-4 border border-slate-200/70 space-y-1.5 text-left">
+                <div className="text-2xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                  <Quote className="w-3 h-3 text-slate-500" />
                   <span>真题语境 (Exam Context)</span>
                 </div>
-                <p className="text-xs sm:text-sm text-neutral-800 leading-relaxed font-serif italic">
+                <p className="text-xs sm:text-sm text-slate-800 leading-relaxed font-serif italic">
                   {currentWord.example}
                 </p>
                 {currentWord.exampleCn && (
-                  <p className="text-xs text-neutral-500 leading-relaxed pt-1">
+                  <p className="text-xs text-slate-500 leading-relaxed pt-1">
                     {currentWord.exampleCn}
                   </p>
                 )}
@@ -424,13 +424,13 @@ export default function VocabTab() {
               className="cursor-pointer"
             >
               {!revealed ? (
-                <div className="py-5 rounded-xl border border-dashed border-neutral-300 hover:border-neutral-900 bg-neutral-50/60 hover:bg-neutral-50 transition-all text-center flex flex-col items-center gap-1">
-                  <span className="text-xs font-semibold text-neutral-700">点击查看考点释义</span>
-                  <span className="text-[10px] text-neutral-400 font-mono">按 [Space] 键盘一键揭晓</span>
+                <div className="py-5 rounded-xl border border-dashed border-slate-300 hover:border-slate-900 bg-slate-50/60 hover:bg-slate-50 transition-all text-center flex flex-col items-center gap-1">
+                  <span className="text-xs font-semibold text-slate-700">点击查看考点释义</span>
+                  <span className="text-2xs text-slate-400 font-mono">按 [Space] 键盘一键揭晓</span>
                 </div>
               ) : (
-                <div className="py-4 px-5 rounded-xl bg-neutral-900 text-white text-center space-y-1.5 animate-fade-in-up">
-                  <div className="text-[10px] uppercase font-mono tracking-widest text-neutral-400">
+                <div className="py-4 px-5 rounded-xl bg-slate-900 text-white text-center space-y-1.5 animate-fade-in-up">
+                  <div className="text-2xs uppercase font-mono tracking-widest text-slate-400">
                     DEFINITION · 考点释义
                   </div>
                   <p className="text-base sm:text-lg font-semibold leading-relaxed">
@@ -441,12 +441,12 @@ export default function VocabTab() {
             </div>
 
             {/* 底部复习进度微文字 */}
-            <div className="flex items-center justify-between text-[11px] text-neutral-400 pt-2 border-t border-neutral-100">
+            <div className="flex items-center justify-between text-2xs text-slate-400 pt-2 border-t border-slate-100">
               <span className="flex items-center gap-1">
                 <Star className="w-3 h-3 text-amber-500" />
                 <span>已复习 {currentWord.reviews} 次</span>
               </span>
-              <span className="font-mono text-[10px]">
+              <span className="font-mono text-2xs">
                 {revealed ? 'SPACE 隐藏' : 'SPACE 查看'}
               </span>
             </div>
@@ -461,44 +461,44 @@ export default function VocabTab() {
             type="button"
             onClick={() => handleReview('known')}
             disabled={reviewing}
-            className="py-3 px-3 rounded-[12px] bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white text-xs font-semibold shadow-xs flex flex-col items-center gap-1 transition-all cursor-pointer"
+            className="py-3 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 active:scale-[0.98] text-white text-xs font-semibold shadow-xs flex flex-col items-center gap-1 transition-all cursor-pointer"
           >
             <div className="flex items-center gap-1">
               <Check className="w-3.5 h-3.5 text-emerald-400" />
               <span>认识并秒杀</span>
             </div>
-            <span className="text-[10px] opacity-70 font-mono">[ 1 ]</span>
+            <span className="text-2xs opacity-70 font-mono">[ 1 ]</span>
           </button>
 
           <button
             type="button"
             onClick={() => handleReview('fuzzy')}
             disabled={reviewing}
-            className="py-3 px-3 rounded-[12px] bg-white border border-neutral-200 hover:bg-neutral-50 active:scale-[0.98] text-neutral-800 text-xs font-medium shadow-xs flex flex-col items-center gap-1 transition-all cursor-pointer"
+            className="py-3 px-3 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 active:scale-[0.98] text-slate-800 text-xs font-medium shadow-xs flex flex-col items-center gap-1 transition-all cursor-pointer"
           >
             <div className="flex items-center gap-1">
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
               <span>印象模糊</span>
             </div>
-            <span className="text-[10px] text-neutral-400 font-mono">[ 2 ]</span>
+            <span className="text-2xs text-slate-400 font-mono">[ 2 ]</span>
           </button>
 
           <button
             type="button"
             onClick={() => handleReview('unknown')}
             disabled={reviewing}
-            className="py-3 px-3 rounded-[12px] bg-white border border-rose-200 hover:bg-rose-50/50 active:scale-[0.98] text-rose-600 text-xs font-medium shadow-xs flex flex-col items-center gap-1 transition-all cursor-pointer"
+            className="py-3 px-3 rounded-xl bg-white border border-rose-200 hover:bg-rose-50/50 active:scale-[0.98] text-rose-600 text-xs font-medium shadow-xs flex flex-col items-center gap-1 transition-all cursor-pointer"
           >
             <div className="flex items-center gap-1">
               <X className="w-3.5 h-3.5" />
               <span>完全遗忘</span>
             </div>
-            <span className="text-[10px] text-rose-400 font-mono">[ 3 ]</span>
+            <span className="text-2xs text-rose-400 font-mono">[ 3 ]</span>
           </button>
         </div>
       ) : (
         <div className="text-center py-1">
-          <span className="text-xs text-neutral-400 font-mono">
+          <span className="text-xs text-slate-400 font-mono">
             按 [空格键] 或点击卡片虚线区揭晓考点释义
           </span>
         </div>

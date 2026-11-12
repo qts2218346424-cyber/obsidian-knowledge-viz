@@ -918,7 +918,7 @@ export default function Editor() {
 
       {/* File Explorer Sidebar: 移动端为侧滑抽屉，桌面端保持经典侧边栏 */}
       <div className={`
-        fixed inset-y-0 left-0 z-50 w-72 bg-[#fbfbfc] shadow-2xl transition-transform duration-200
+        fixed inset-y-0 left-0 z-50 w-72 bg-[#fbfbfc] shadow-xl transition-transform duration-200
         lg:static lg:z-auto lg:shadow-none lg:transition-all
         ${showFiles ? 'translate-x-0 lg:w-56' : '-translate-x-full lg:w-0'}
         overflow-hidden border-r border-cream-200 flex flex-col shrink-0
@@ -943,7 +943,7 @@ export default function Editor() {
       {/* Main Editor Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Toolbar: File operations */}
-        <div className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 border-b border-neutral-200/80 bg-white/95 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 border-b border-slate-200/80 bg-white/95 shrink-0">
           <button onClick={() => setShowFiles(!showFiles)}
             className={`p-1.5 rounded-lg text-xs transition-colors shrink-0 ${showFiles ? 'bg-cream-200 text-warm-600' : 'text-warm-500 hover:text-warm-700'}`}
             title={showFiles ? '隐藏文件列表' : '显示文件列表'}>
@@ -956,24 +956,24 @@ export default function Editor() {
             <FilePlus className="w-3.5 h-3.5" /> <span>新建</span>
           </button>
           <button onClick={() => setShowNewDialog(true)}
-            className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50 transition-all shrink-0 cursor-pointer shadow-xs"
+            className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all shrink-0 cursor-pointer shadow-xs"
             title="选择学习卡片、错题复盘或灵感模板">
             <span>模板</span>
           </button>
           {/* Obsidian Sync Status Pill (只在电脑或平板宽屏展示) */}
           <button
             onClick={() => setObsidianSyncModalOpen(true)}
-            className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-neutral-100 hover:bg-neutral-200/70 border border-neutral-200 text-neutral-800 transition-all cursor-pointer shadow-2xs shrink-0"
+            className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-slate-100 hover:bg-slate-200/70 border border-slate-200 text-slate-800 transition-all cursor-pointer shadow-xs shrink-0"
             title="点击查看与本地 Obsidian 实时双向同步状态及文件夹"
           >
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
             <span className="font-medium">Obsidian 同步</span>
-            <span className="subframe-pill text-[10px]">
+            <span className="subframe-pill text-2xs">
               {typeof vaultStats?.totalNotes === 'number' ? `${vaultStats.totalNotes} 篇` : '就绪'}
             </span>
           </button>
           <button onClick={handleSave} disabled={saving || (!dirty && !!currentFile)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-neutral-900 text-white hover:bg-neutral-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all shrink-0 font-semibold shadow-xs cursor-pointer active:scale-95">
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all shrink-0 font-semibold shadow-xs cursor-pointer active:scale-95">
             {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} 
             <span>保存</span>
           </button>
@@ -996,7 +996,7 @@ export default function Editor() {
               accept={ingestStatus?.supportedFormats?.join(',') || '.pdf,.docx,.xlsx,.pptx,.html,.csv'}
               onChange={handleImport} className="hidden" />
             <button onClick={() => fileInputRef.current?.click()} disabled={importing}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-white border border-neutral-200 text-neutral-800 hover:bg-neutral-50 disabled:opacity-40 transition-all cursor-pointer shadow-xs">
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-white border border-slate-200 text-slate-800 hover:bg-slate-50 disabled:opacity-40 transition-all cursor-pointer shadow-xs">
               {importing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
               导入{importing && batchProgress ? ` (${batchProgress.done}/${batchProgress.total})` : ''}
             </button>
@@ -1009,7 +1009,7 @@ export default function Editor() {
             className="subframe-btn-secondary px-3 py-1.5 text-xs font-medium hidden md:flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed transition-all shrink-0 cursor-pointer shadow-xs"
             title="基于本篇笔记考点，立即生成 3 道测试题进行随堂真题测验"
           >
-            <Target className="w-3.5 h-3.5 text-neutral-700" /> <span>即学即练</span>
+            <Target className="w-3.5 h-3.5 text-slate-700" /> <span>即学即练</span>
           </button>
 
           <div className="ml-auto flex items-center gap-1.5 sm:gap-2 shrink-0">
@@ -1024,7 +1024,7 @@ export default function Editor() {
               </div>
             )}
             <button onClick={() => setShowPreview(!showPreview)}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors shrink-0 cursor-pointer ${showPreview ? 'bg-neutral-900 text-white shadow-xs' : 'bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50'}`}>
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors shrink-0 cursor-pointer ${showPreview ? 'bg-slate-900 text-white shadow-xs' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
               <Eye className="w-3.5 h-3.5" />
               <span>{showPreview ? '写作' : '预览'}</span>
             </button>
@@ -1045,13 +1045,13 @@ export default function Editor() {
             <div className="mr-1.5 flex items-center rounded-lg border border-slate-200 bg-slate-100 p-0.5 shrink-0">
               <button
                 onClick={() => switchEditorMode('write')}
-                className={`rounded-md px-2.5 py-1 text-[11px] transition-colors ${editorMode === 'write' ? 'bg-white font-bold text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'}`}
+                className={`rounded-md px-2.5 py-1 text-2xs transition-colors ${editorMode === 'write' ? 'bg-white font-bold text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
               >
                 富文本
               </button>
               <button
                 onClick={() => switchEditorMode('markdown')}
-                className={`rounded-md px-2.5 py-1 text-[11px] transition-colors ${editorMode === 'markdown' ? 'bg-white font-bold text-slate-900 shadow-2xs' : 'text-slate-500 hover:text-slate-800'}`}
+                className={`rounded-md px-2.5 py-1 text-2xs transition-colors ${editorMode === 'markdown' ? 'bg-white font-bold text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
               >
                 源码
               </button>
@@ -1066,8 +1066,8 @@ export default function Editor() {
               title="就地手写批注"
               className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all shrink-0 border cursor-pointer ${
                 isAnnotationActive
-                  ? 'bg-neutral-900 text-white border-neutral-900 shadow-xs'
-                  : 'subframe-btn-secondary text-neutral-700'
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                  : 'subframe-btn-secondary text-slate-700'
               }`}
             >
               <PenTool className="w-3.5 h-3.5" />
@@ -1112,7 +1112,7 @@ export default function Editor() {
                 icon={Sigma}
                 label="插入 LaTeX 数学公式"
                 onClick={() => { setShowMathMenu(!showMathMenu); setShowAiMenu(false) }}
-                className={showMathMenu ? 'bg-white text-indigo-700 font-bold shadow-2xs' : ''}
+                className={showMathMenu ? 'bg-white text-indigo-700 font-bold shadow-xs' : ''}
               />
               <ToolBtn icon={Table} label="对比表格" onClick={fmt.table} />
               <ToolBtn icon={Hash} label="考点双链 [[...]]" onClick={fmt.wiki} />
@@ -1125,7 +1125,7 @@ export default function Editor() {
               <button
                 onClick={() => imageInputRef.current?.click()}
                 title="插入真题插图或板书照片"
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 transition-all border border-slate-200/80 cursor-pointer shadow-2xs"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 transition-all border border-slate-200/80 cursor-pointer shadow-xs"
               >
                 <ImageIcon className="w-3.5 h-3.5 text-indigo-600" />
                 <span>插图</span>
@@ -1140,7 +1140,7 @@ export default function Editor() {
               <button
                 onClick={() => setShowHandwritingModal(true)}
                 title="全屏手写演草纸与公式演算"
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 transition-all border border-slate-200/80 cursor-pointer shadow-2xs"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-slate-700 bg-white hover:bg-slate-50 transition-all border border-slate-200/80 cursor-pointer shadow-xs"
               >
                 <span>演草纸</span>
               </button>
@@ -1152,19 +1152,19 @@ export default function Editor() {
             <>
               <div className="fixed inset-0 z-40" onClick={() => setShowMathMenu(false)} />
               <div className="absolute left-3 top-full mt-1 w-68 bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-1.5 animate-fade-in-up">
-                <div className="px-2.5 py-1.5 border-b border-slate-100 text-[11px] text-slate-600 font-bold flex items-center justify-between">
+                <div className="px-2.5 py-1.5 border-b border-slate-100 text-2xs text-slate-600 font-bold flex items-center justify-between">
                   <span>LaTeX 数学公式速插</span>
-                  <span className="text-[10px] text-neutral-900 font-normal">实时 KaTeX 渲染</span>
+                  <span className="text-2xs text-slate-900 font-normal">实时 KaTeX 渲染</span>
                 </div>
                 <div className="max-h-60 overflow-y-auto modal-scroll-contain py-1 space-y-0.5">
                   {mathSnippets.map((m, idx) => (
                     <button
                       key={idx}
                       onClick={() => handleInsertMath(m.snippet)}
-                      className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left text-xs text-slate-700 hover:bg-neutral-50 hover:text-indigo-700 transition-colors cursor-pointer"
+                      className="w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left text-xs text-slate-700 hover:bg-slate-50 hover:text-indigo-700 transition-colors cursor-pointer"
                     >
                       <span className="font-semibold">{m.label}</span>
-                      <span className="font-mono text-[10px] text-slate-400">{m.desc}</span>
+                      <span className="font-mono text-2xs text-slate-400">{m.desc}</span>
                     </button>
                   ))}
                 </div>
@@ -1178,18 +1178,18 @@ export default function Editor() {
               <div className="fixed inset-0 z-40" onClick={() => setShowAiMenu(false)} />
               <div className="absolute right-3 top-full mt-1 w-60 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden animate-fade-in-up">
                 <div className="px-3 py-2 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-slate-700">✨ AI 智能编辑助手</span>
+                  <span className="text-2xs font-bold text-slate-700">✨ AI 智能编辑助手</span>
                 </div>
                 {aiActions.map(action => (
                   <button
                     key={action.key}
                     onClick={() => handleAiEdit(action.key)}
-                    className="w-full flex items-center gap-3 px-3.5 py-2.5 text-left hover:bg-neutral-50 transition-colors cursor-pointer"
+                    className="w-full flex items-center gap-3 px-3.5 py-2.5 text-left hover:bg-slate-50 transition-colors cursor-pointer"
                   >
-                    <action.icon className="w-4 h-4 text-neutral-900 shrink-0" />
+                    <action.icon className="w-4 h-4 text-slate-900 shrink-0" />
                     <div>
                       <div className="text-xs font-bold text-slate-800">{action.label}</div>
-                      <div className="text-[10px] text-slate-400">{action.desc}</div>
+                      <div className="text-2xs text-slate-400">{action.desc}</div>
                     </div>
                   </button>
                 ))}
@@ -1206,7 +1206,7 @@ export default function Editor() {
           >
             <div
               onClick={e => e.stopPropagation()}
-              className="bg-white rounded-t-3xl p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl border-t border-slate-200 space-y-3 animate-sheet-up"
+              className="bg-white rounded-t-3xl p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-xl border-t border-slate-200 space-y-3 animate-sheet-up"
             >
               <div className="flex justify-center pb-1">
                 <div className="w-10 h-1 rounded-full bg-slate-300" />
@@ -1235,7 +1235,7 @@ export default function Editor() {
                   onClick={() => { setMobileActionsOpen(false); setShowNewDialog(true) }}
                   className="flex items-center gap-2.5 p-3 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs font-bold text-slate-800 active:scale-95"
                 >
-                  <FileText className="w-4 h-4 text-neutral-900 shrink-0" />
+                  <FileText className="w-4 h-4 text-slate-900 shrink-0" />
                   <span>使用笔记模板</span>
                 </button>
 
@@ -1289,7 +1289,7 @@ export default function Editor() {
 
         {/* Import status bar */}
         {ingestStatus && (
-          <div className="hidden sm:flex px-4 py-1 border-b border-cream-200 bg-surface/30 text-[10px] text-warm-400 items-center gap-2">
+          <div className="hidden sm:flex px-4 py-1 border-b border-cream-200 bg-surface/30 text-2xs text-warm-400 items-center gap-2">
             <div className={`w-1.5 h-1.5 rounded-full ${ingestStatus.installed ? 'bg-accent-sage' : 'bg-accent-amber'}`} />
             markitdown: {ingestStatus.installed ? `已安装 (${ingestStatus.pythonVersion})` : '未安装 — 拖拽文件到此处导入'}
             {importError && <span className="text-rose-400 ml-2">{importError}</span>}
@@ -1319,7 +1319,7 @@ export default function Editor() {
                 aria-label="笔记标题"
                 className="w-full bg-transparent text-base sm:text-xl font-extrabold tracking-tight text-slate-900 outline-none placeholder:text-slate-300"
               />
-              <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-slate-400">
+              <div className="mt-1 flex items-center justify-between gap-2 text-2xs text-slate-400">
                 <div className="flex items-center gap-2 min-w-0">
                   {currentFile ? (
                     <>
@@ -1337,7 +1337,7 @@ export default function Editor() {
                   <button
                     type="button"
                     onClick={() => setShowFiles(true)}
-                    className="lg:hidden text-[11px] font-bold text-neutral-900 shrink-0 flex items-center gap-1"
+                    className="lg:hidden text-2xs font-bold text-slate-900 shrink-0 flex items-center gap-1"
                   >
                     <FolderTree className="w-3 h-3" />
                     <span>打开已有笔记</span>
@@ -1356,7 +1356,7 @@ export default function Editor() {
               {showFm && (
                 <div className="px-4 pb-3 space-y-2">
                   <div className="flex items-center gap-2">
-                    <label className="text-[11px] text-warm-400 w-12 shrink-0">标签</label>
+                    <label className="text-2xs text-warm-400 w-12 shrink-0">标签</label>
                     <input type="text" value={tags} onChange={e => setTags(e.target.value)}
                       placeholder="用逗号分隔，例如：数据结构, 复习"
                       className="flex-1 bg-cream-200 border border-cream-300 rounded px-2 py-1 text-xs text-warm-700 outline-none focus:border-accent-orange" />
@@ -1367,7 +1367,7 @@ export default function Editor() {
 
             {/* 图片上传中指示 */}
             {isUploadingImage && (
-              <div className="absolute top-3 right-5 z-30 flex items-center gap-2 px-3.5 py-1.5 bg-accent-orange text-white text-xs font-bold rounded-full shadow-lg animate-pulse">
+              <div className="absolute top-3 right-5 z-30 flex items-center gap-2 px-3.5 py-1.5 bg-accent-orange text-white text-xs font-bold rounded-full shadow-xl animate-pulse">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 <span>图片上传中...</span>
               </div>
@@ -1405,7 +1405,7 @@ export default function Editor() {
                     onDragOver={(e) => { e.preventDefault() }}
                     dangerouslySetInnerHTML={{ __html: richHtml }}
                     data-placeholder={currentFile || showNewDialog ? '从这里开始写作与排版… (支持粘贴截图、拖拽图片、点击上方直接提笔手写批注)' : '点击上方「新建」或「打开已有笔记」开始写作…'}
-                    className="rich-note-editor relative z-10 min-h-full text-[15px] sm:text-[16px] leading-7 sm:leading-8 text-warm-800 dark:text-slate-200 outline-none"
+                    className="rich-note-editor relative z-10 min-h-full text-[15px] sm:text-base leading-7 sm:leading-8 text-warm-800 dark:text-slate-200 outline-none"
                   />
                 </div>
               </div>
@@ -1414,7 +1414,7 @@ export default function Editor() {
                 <div className="hidden sm:block w-10 shrink-0 overflow-hidden border-r border-cream-200 bg-surface/50 select-none">
                   <div className="py-3 pr-2 text-right">
                     {Array.from({ length: lineCount }, (_, i) => (
-                      <div key={i} className="font-mono text-[11px] leading-relaxed text-warm-400" style={{ height: '1.625em' }}>
+                      <div key={i} className="font-mono text-2xs leading-relaxed text-warm-400" style={{ height: '1.625em' }}>
                         {i + 1}
                       </div>
                     ))}
@@ -1429,7 +1429,7 @@ export default function Editor() {
                   onDrop={handleEditorDrop}
                   onDragOver={(e) => { e.preventDefault() }}
                   placeholder={currentFile || showNewDialog ? '从这里开始写作… (支持Ctrl+V粘贴截图、拖拽图片与手写插入)' : '点击上方「新建」或「打开已有笔记」开始写作…'}
-                  className="flex-1 resize-none bg-transparent px-3 py-3 sm:px-4 sm:py-4 font-sans text-[14px] sm:text-[15px] leading-6 sm:leading-7 text-warm-700 outline-none placeholder:text-warm-300"
+                  className="flex-1 resize-none bg-transparent px-3 py-3 sm:px-4 sm:py-4 font-sans text-sm sm:text-[15px] leading-6 sm:leading-7 text-warm-700 outline-none placeholder:text-warm-300"
                   spellCheck
                 />
               </div>
@@ -1439,11 +1439,11 @@ export default function Editor() {
           {/* Preview Panel — Professional Markdown Rendering */}
           {showPreview && (
             <div className="flex-1 w-full overflow-auto bg-cream-100 p-4 sm:p-5 lg:w-[45%] lg:flex-none">
-              <div className="mb-3 flex items-center justify-between text-[10px] uppercase tracking-wider text-warm-400">
+              <div className="mb-3 flex items-center justify-between text-2xs uppercase tracking-wider text-warm-400">
                 <span>实时预览</span>
                 <button
                   onClick={() => setShowPreview(false)}
-                  className="lg:hidden px-2.5 py-1 rounded-lg bg-white border border-cream-300 text-warm-700 font-semibold text-xs shadow-2xs hover:bg-cream-50"
+                  className="lg:hidden px-2.5 py-1 rounded-lg bg-white border border-cream-300 text-warm-700 font-semibold text-xs shadow-xs hover:bg-cream-50"
                 >
                   返回编辑
                 </button>
@@ -1499,14 +1499,14 @@ export default function Editor() {
         >
           <div
             onClick={e => e.stopPropagation()}
-            className="bg-surface border border-cream-300 rounded-3xl p-5 sm:p-6 w-[min(94vw,32rem)] max-h-[90dvh] overflow-y-auto overscroll-contain shadow-2xl space-y-4"
+            className="bg-surface border border-cream-300 rounded-3xl p-5 sm:p-6 w-[min(94vw,32rem)] max-h-[90dvh] overflow-y-auto overscroll-contain shadow-xl space-y-4"
             style={{ WebkitOverflowScrolling: 'touch' }}
           >
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-base font-bold tracking-tight text-warm-900 flex items-center gap-2">
                   <span>创建一篇新笔记</span>
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">
+                  <span className="text-2xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">
                     同步至 Obsidian
                   </span>
                 </h3>
@@ -1522,7 +1522,7 @@ export default function Editor() {
 
             <div className="space-y-3.5">
               <div>
-                <label className="text-[11px] font-semibold text-warm-500 mb-1.5 block">从模板开始</label>
+                <label className="text-2xs font-semibold text-warm-500 mb-1.5 block">从模板开始</label>
                 <div className="grid grid-cols-2 gap-2">
                   {noteTemplates.map(template => (
                     <button
@@ -1536,14 +1536,14 @@ export default function Editor() {
                       }`}
                     >
                       <span className="block text-xs font-semibold text-warm-800">{template.label}</span>
-                      <span className="mt-0.5 block text-[10px] leading-4 text-warm-400">{template.description}</span>
+                      <span className="mt-0.5 block text-2xs leading-4 text-warm-400">{template.description}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold text-warm-600 mb-1 block">笔记名称</label>
+                <label className="text-2xs font-semibold text-warm-600 mb-1 block">笔记名称</label>
                 <input
                   type="text"
                   value={newFileName}
@@ -1570,12 +1570,12 @@ export default function Editor() {
                   }}
                   placeholder="例如：二叉树遍历 (留空默认为未命名笔记)"
                   autoFocus
-                  className="w-full bg-white border-2 border-indigo-200 focus:border-accent-orange rounded-xl px-3.5 py-2.5 text-sm font-medium text-warm-800 placeholder:text-warm-300 outline-none shadow-2xs transition-all"
+                  className="w-full bg-white border-2 border-indigo-200 focus:border-accent-orange rounded-xl px-3.5 py-2.5 text-sm font-medium text-warm-800 placeholder:text-warm-300 outline-none shadow-xs transition-all"
                 />
               </div>
 
               <div>
-                <label className="text-[11px] font-semibold text-warm-600 mb-1 block">放入子文件夹（可选）</label>
+                <label className="text-2xs font-semibold text-warm-600 mb-1 block">放入子文件夹（可选）</label>
                 <input
                   type="text"
                   value={newFileFolder}
@@ -1593,17 +1593,17 @@ export default function Editor() {
                     }
                   }}
                   placeholder="例如：课程笔记 或 专题复习 (留空存放在根目录)"
-                  className="w-full bg-white border-2 border-indigo-200 focus:border-accent-orange rounded-xl px-3.5 py-2.5 text-sm font-medium text-warm-800 placeholder:text-warm-300 outline-none shadow-2xs transition-all"
+                  className="w-full bg-white border-2 border-indigo-200 focus:border-accent-orange rounded-xl px-3.5 py-2.5 text-sm font-medium text-warm-800 placeholder:text-warm-300 outline-none shadow-xs transition-all"
                 />
               </div>
 
               {/* Obsidian Local Vault Path Realtime Banner */}
               <div className="p-3 rounded-2xl bg-purple-50 border border-purple-200/80 text-xs text-purple-900 space-y-1">
-                <div className="font-semibold flex items-center gap-1.5 text-[11px] text-purple-800">
+                <div className="font-semibold flex items-center gap-1.5 text-2xs text-purple-800">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                   <span>{isAdmin ? '将实时落盘保存至本地 Obsidian 目录：' : '将安全保存至您的个人专属研学沙盒：'}</span>
                 </div>
-                <div className="font-mono text-[11px] text-purple-700 break-all select-all font-semibold">
+                <div className="font-mono text-2xs text-purple-700 break-all select-all font-semibold">
                   {isAdmin ? `${vaultStats?.vaultPath || 'E:\\考研\\408考研学习'}\\` : '专属沙盒空间 / '}
                   {newFilePath || `${newFileName || '未命名笔记'}.md`}
                 </div>
@@ -1621,13 +1621,13 @@ export default function Editor() {
                   type="button"
                   onClick={handleSave}
                   disabled={saving}
-                  className="flex-1 px-4 py-2.5 rounded-xl text-xs font-bold bg-accent-orange text-white hover:bg-accent-orange/90 shadow-md active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                  className="flex-1 px-4 py-2.5 rounded-xl text-xs font-bold bg-accent-orange text-white hover:bg-accent-orange/90 shadow-sm active:scale-95 transition-all cursor-pointer disabled:opacity-50"
                 >
                   {saving ? '正在同步落盘…' : '创建并开始写作 ↵'}
                 </button>
               </div>
 
-              <p className="text-[10px] text-warm-400 text-center">
+              <p className="text-2xs text-warm-400 text-center">
                 💡 提示：输入名称后直接按 Enter 回车键即可极速创建并开始写作
               </p>
             </div>
@@ -1639,7 +1639,7 @@ export default function Editor() {
       {/* Delete Confirm */}
       {showDeleteConfirm && currentFile && createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-surface border border-cream-300 rounded-2xl p-5 sm:p-6 w-full max-w-sm shadow-2xl animate-scale-up">
+          <div className="bg-surface border border-cream-300 rounded-2xl p-5 sm:p-6 w-full max-w-sm shadow-xl animate-scale-up">
             <h3 className="text-sm font-semibold text-rose-400 mb-3 flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> 确认删除</h3>
             <p className="text-xs text-warm-500 mb-1">将把文件移入回收站：</p>
             <p className="text-xs text-warm-700 font-mono bg-cream-200 rounded-xl px-2.5 py-2 mb-4 break-all">{currentFile.path}</p>
@@ -1655,16 +1655,16 @@ export default function Editor() {
       {/* Rename Dialog */}
       {showRenameDialog && currentFile && createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-surface border border-cream-300 rounded-2xl p-5 sm:p-6 w-full max-w-sm shadow-2xl animate-scale-up">
+          <div className="bg-surface border border-cream-300 rounded-2xl p-5 sm:p-6 w-full max-w-sm shadow-xl animate-scale-up">
             <h3 className="text-sm font-semibold text-warm-700 mb-4">重命名笔记</h3>
             <div className="space-y-3">
-              <div><label className="text-[11px] text-warm-500 mb-1 block">当前路径</label>
+              <div><label className="text-2xs text-warm-500 mb-1 block">当前路径</label>
                 <div className="text-xs text-warm-400 font-mono bg-cream-200 rounded-xl px-2.5 py-2 break-all">{currentFile.path}</div></div>
-              <div><label className="text-[11px] text-warm-500 mb-1 block">新路径</label>
+              <div><label className="text-2xs text-warm-500 mb-1 block">新路径</label>
                 <input type="text" value={renamePath} onChange={e => setRenamePath(e.target.value)}
                   placeholder="new-folder/new-name.md" autoFocus
                   className="w-full bg-cream-200 border border-cream-300 rounded-xl px-3 py-2 text-sm text-warm-700 outline-none focus:border-accent-orange" /></div>
-              <p className="text-[10px] text-warm-400">重命名后会自动更新所有 [[wikilinks]]。</p>
+              <p className="text-2xs text-warm-400">重命名后会自动更新所有 [[wikilinks]]。</p>
               <div className="flex gap-2 pt-2">
                 <button onClick={() => { setShowRenameDialog(false); setRenamePath('') }} className="flex-1 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-cream-200 text-warm-600 hover:bg-cream-300 transition-colors cursor-pointer">取消</button>
                 <button onClick={handleRename} disabled={!renamePath} className="flex-1 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-accent-orange text-white hover:bg-accent-orange/90 shadow-xs transition-colors disabled:opacity-40 cursor-pointer">重命名</button>
@@ -1678,7 +1678,7 @@ export default function Editor() {
       {/* AI Edit Result Panel */}
       {showAiResult && createPortal(
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-3 sm:p-5 animate-fade-in">
-          <div className="bg-surface border border-cream-300 rounded-2xl w-full max-w-2xl max-h-[88dvh] shadow-2xl flex flex-col animate-scale-up overflow-hidden">
+          <div className="bg-surface border border-cream-300 rounded-2xl w-full max-w-2xl max-h-[88dvh] shadow-xl flex flex-col animate-scale-up overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-cream-200">
               <div className="flex items-center gap-2">

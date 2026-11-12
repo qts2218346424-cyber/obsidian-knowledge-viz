@@ -76,7 +76,7 @@ export function PoliticsTrialDemo({ fullscreen, onEnter }: PoliticsTrialDemoProp
           <span className={`font-bold text-amber-300 tracking-wide ${fullscreen ? 'text-base' : 'text-sm'}`}>
             考研政治 · 史纲时空轴
           </span>
-          <span className="text-[11px] text-amber-300/90 border border-amber-500/30 px-2 py-0.5 rounded-full">
+          <span className="text-2xs text-amber-300/90 border border-amber-500/30 px-2 py-0.5 rounded-full">
             试玩演示
           </span>
         </div>
@@ -157,9 +157,9 @@ export function PoliticsTrialDemo({ fullscreen, onEnter }: PoliticsTrialDemoProp
             }`}
           >
             <div className="text-xs font-bold text-white truncate">{n.title}</div>
-            <div className="text-[11px] text-slate-300 mt-1 flex items-center justify-between gap-1">
+            <div className="text-2xs text-slate-300 mt-1 flex items-center justify-between gap-1">
               <span className="truncate">📍 {n.city}</span>
-              <span className="hidden sm:inline text-[10px] px-1.5 rounded bg-white/10 text-amber-200 shrink-0">{n.tag}</span>
+              <span className="hidden sm:inline text-2xs px-1.5 rounded bg-white/10 text-amber-200 shrink-0">{n.tag}</span>
             </div>
           </button>
         ))}
@@ -168,12 +168,12 @@ export function PoliticsTrialDemo({ fullscreen, onEnter }: PoliticsTrialDemoProp
       <div className="rounded-2xl border border-amber-500/30 bg-slate-900/80 p-4 sm:p-5 space-y-2.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="text-xs sm:text-sm font-bold text-amber-300">📜 核心命题点</span>
-          <span className="text-[11px] sm:text-xs text-amber-200 bg-amber-400/10 px-2 py-0.5 rounded-lg border border-amber-500/20">
+          <span className="text-2xs sm:text-xs text-amber-200 bg-amber-400/10 px-2 py-0.5 rounded-lg border border-amber-500/20">
             {node.focus}
           </span>
         </div>
         <p className={`text-slate-100 leading-relaxed ${fullscreen ? 'text-sm sm:text-base' : 'text-xs sm:text-sm'}`}>{node.body}</p>
-        <div className="p-2.5 rounded-xl bg-black/40 border border-white/5 text-[11px] sm:text-xs text-amber-100">
+        <div className="p-2.5 rounded-xl bg-black/40 border border-white/5 text-2xs sm:text-xs text-amber-100">
           <span className="font-bold">易混淆点：</span>
           {node.trap}
         </div>

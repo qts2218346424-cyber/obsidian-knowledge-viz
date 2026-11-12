@@ -54,7 +54,7 @@ export function MathTrialDemo({ fullscreen, onEnter }: DemoProps) {
         </div>
 
         <div className="rounded-2xl bg-slate-950/80 border border-slate-800 p-4">
-          <div className="text-[11px] text-slate-400 font-semibold mb-1.5">例题</div>
+          <div className="text-2xs text-slate-400 font-semibold mb-1.5">例题</div>
           <div className={`font-serif tracking-wide text-slate-100 ${fullscreen ? 'text-xl' : 'text-lg'}`}>
             求极限 lim<sub className="text-xs">x→0</sub> (eˣ − 1 − x) / x²
           </div>
@@ -66,7 +66,7 @@ export function MathTrialDemo({ fullscreen, onEnter }: DemoProps) {
               key={s.title}
               className="flex gap-3 rounded-xl border border-pink-500/20 bg-pink-500/[0.06] px-3.5 py-2.5 animate-fade-in-up"
             >
-              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-pink-500/25 text-[11px] font-bold text-pink-200">
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-pink-500/25 text-2xs font-bold text-pink-200">
                 {i + 1}
               </span>
               <div className="min-w-0 space-y-1">
@@ -143,7 +143,7 @@ export function AgentTrialDemo({ fullscreen, onEnter }: DemoProps) {
                 }`}
               >
                 <div
-                  className={`mb-1 text-[10.5px] font-bold ${
+                  className={`mb-1 text-2xs font-bold ${
                     m.from === 'user' ? 'text-slate-500' : m.from === 'web' ? 'text-violet-300' : 'text-emerald-300'
                   }`}
                 >

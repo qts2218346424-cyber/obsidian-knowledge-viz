@@ -1313,7 +1313,7 @@ input[type="range"].history-range-slider:focus-visible {
 }
 
 /* 顶部导航激活项：鲜艳渐变 */
-.theme-vibrant nav a.bg-neutral-900 {
+.theme-vibrant nav a.bg-slate-900 {
   background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%) !important;
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3) !important;
 }

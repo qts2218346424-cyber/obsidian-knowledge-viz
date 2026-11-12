@@ -581,12 +581,12 @@ export default function ImportResourceModal({
 
   const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/70 backdrop-blur-md">
-      <div className="relative flex flex-col w-full max-w-5xl h-[88vh] rounded-2xl bg-white border border-slate-200/80 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative flex flex-col w-full max-w-5xl h-[88vh] rounded-2xl bg-white border border-slate-200/80 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         
         {/* Modal Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/70">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 text-white shadow-md shadow-indigo-500/20">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 text-white shadow-sm shadow-indigo-500/20">
               <Database className="h-5 w-5" />
             </div>
             <div>
@@ -680,12 +680,12 @@ export default function ImportResourceModal({
                       <Upload className="h-4 w-4 text-indigo-600" />
                       导入新参考书 / 历年真题
                     </span>
-                    <span className="text-[10px] text-slate-400">支持 PDF, Markdown, TXT</span>
+                    <span className="text-2xs text-slate-400">支持 PDF, Markdown, TXT</span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 mb-3">
                     <div>
-                      <label className="block text-[11px] font-medium text-slate-600 mb-1">所属学科</label>
+                      <label className="block text-2xs font-medium text-slate-600 mb-1">所属学科</label>
                       <select
                         value={uploadDomain}
                         onChange={e => setUploadDomain(e.target.value as any)}
@@ -697,7 +697,7 @@ export default function ImportResourceModal({
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-medium text-slate-600 mb-1">资料类别</label>
+                      <label className="block text-2xs font-medium text-slate-600 mb-1">资料类别</label>
                       <select
                         value={uploadCategory}
                         onChange={e => setUploadCategory(e.target.value)}
@@ -723,7 +723,7 @@ export default function ImportResourceModal({
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isUploading}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-semibold text-xs shadow-md shadow-indigo-500/20 hover:from-indigo-500 hover:to-blue-500 transition-all disabled:opacity-50 cursor-pointer"
+                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-semibold text-xs shadow-sm shadow-indigo-500/20 hover:from-indigo-500 hover:to-blue-500 transition-all disabled:opacity-50 cursor-pointer"
                   >
                     {isUploading ? (
                       <>
@@ -780,12 +780,12 @@ export default function ImportResourceModal({
                                 {b.name}
                               </span>
                             </div>
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-slate-200/60 text-slate-600 shrink-0">
+                            <span className="text-2xs px-1.5 py-0.5 rounded-full font-medium bg-slate-200/60 text-slate-600 shrink-0">
                               {b.category}
                             </span>
                           </div>
 
-                          <div className="flex items-center justify-between text-[10px] text-slate-400 mt-2">
+                          <div className="flex items-center justify-between text-2xs text-slate-400 mt-2">
                             <span>{b.domain === 'cs_408' ? '408 综合' : '考研数学'} · {b.ext.toUpperCase()}</span>
                             <span>{(b.size / 1024).toFixed(1)} KB</span>
                           </div>
@@ -798,12 +798,12 @@ export default function ImportResourceModal({
                                 handleAutoExtract(b.relativePath, b.domain, b.name)
                               }}
                               disabled={autoExtractStatus === 'analyzing'}
-                              className="flex items-center gap-1 text-[11px] font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50/80 hover:bg-indigo-100 px-2 py-0.5 rounded-md transition-all cursor-pointer disabled:opacity-50"
+                              className="flex items-center gap-1 text-2xs font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50/80 hover:bg-indigo-100 px-2 py-0.5 rounded-md transition-all cursor-pointer disabled:opacity-50"
                             >
                               <Sparkles className="h-3 w-3 text-amber-500" />
                               <span>AI 自动分析入库</span>
                             </button>
-                            <span className="text-[10px] text-slate-400 ml-auto">
+                            <span className="text-2xs text-slate-400 ml-auto">
                               {b.isTextReadable ? '已就绪' : '支持抽取'}
                             </span>
                             <button
@@ -874,7 +874,7 @@ export default function ImportResourceModal({
 
                   {autoExtractStatus === 'analyzing' ? (
                     <div className="py-12 px-6 rounded-2xl bg-gradient-to-br from-indigo-50/80 via-white to-purple-50/80 border border-indigo-100/80 flex flex-col items-center justify-center text-center gap-3 animate-pulse my-4">
-                      <div className="p-3.5 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-500/25">
+                      <div className="p-3.5 bg-indigo-600 text-white rounded-2xl shadow-xl shadow-indigo-500/25">
                         <RefreshCw className="h-6 w-6 animate-spin" />
                       </div>
                       <div className="text-sm font-bold text-slate-800">
@@ -891,7 +891,7 @@ export default function ImportResourceModal({
                           <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                           已全自动归纳进知识库与做题题库！
                         </span>
-                        <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                        <span className="text-2xs font-medium px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
                           已沉淀 1 篇笔记 · 录入 {autoExtractResult.questionsCount || 0} 道题
                         </span>
                       </div>
@@ -900,9 +900,9 @@ export default function ImportResourceModal({
                         <div className="mb-3 p-3 rounded-lg bg-white border border-emerald-100 text-xs">
                           <div className="flex items-center justify-between">
                             <span className="font-semibold text-indigo-700">📚 知识库笔记：{autoExtractResult.note?.title}</span>
-                            <span className="text-[10px] text-emerald-600 font-medium">✓ 已写入 Obsidian</span>
+                            <span className="text-2xs text-emerald-600 font-medium">✓ 已写入 Obsidian</span>
                           </div>
-                          <div className="mt-1 font-mono text-[11px] text-slate-600 bg-slate-50 p-1.5 rounded">
+                          <div className="mt-1 font-mono text-2xs text-slate-600 bg-slate-50 p-1.5 rounded">
                             {autoExtractResult.savedNotePath}
                           </div>
                         </div>
@@ -910,17 +910,17 @@ export default function ImportResourceModal({
 
                       {autoExtractResult.questions && autoExtractResult.questions.length > 0 && (
                         <div className="space-y-2">
-                          <div className="flex items-center justify-between text-[11px] font-semibold text-slate-700">
+                          <div className="flex items-center justify-between text-2xs font-semibold text-slate-700">
                             <span>🎯 自动命制并归入题库真题：</span>
                             <span className="text-indigo-600 font-normal">做题中心随时可刷</span>
                           </div>
                           {autoExtractResult.questions.map((q, idx) => (
-                            <div key={idx} className="p-3 rounded-lg bg-white border border-slate-100 text-xs shadow-2xs">
+                            <div key={idx} className="p-3 rounded-lg bg-white border border-slate-100 text-xs shadow-xs">
                               <div className="font-medium text-slate-800 mb-1">
                                 {idx + 1}. <MarkdownRenderer content={q.question} />
                               </div>
                               {q.options && (
-                                <div className="grid grid-cols-2 gap-1.5 my-2 text-[11px] text-slate-600 bg-slate-50/70 p-2 rounded">
+                                <div className="grid grid-cols-2 gap-1.5 my-2 text-2xs text-slate-600 bg-slate-50/70 p-2 rounded">
                                   {Object.entries(q.options).map(([k, v]) => (
                                     <div key={k} className="truncate">
                                       <span className="font-semibold">{k}.</span> {v as string}
@@ -928,9 +928,9 @@ export default function ImportResourceModal({
                                   ))}
                                 </div>
                               )}
-                              <div className="text-[11px] text-slate-500 flex items-center justify-between pt-1 border-t border-slate-50">
+                              <div className="text-2xs text-slate-500 flex items-center justify-between pt-1 border-t border-slate-50">
                                 <div>正确答案：<span className="font-bold text-emerald-600">{q.answer}</span></div>
-                                <div className="text-[10px] text-slate-400 truncate max-w-[260px]">考点：{(q.tags || []).join('、')}</div>
+                                <div className="text-2xs text-slate-400 truncate max-w-[260px]">考点：{(q.tags || []).join('、')}</div>
                               </div>
                             </div>
                           ))}
@@ -948,7 +948,7 @@ export default function ImportResourceModal({
                           <label className="text-xs font-medium text-slate-700">
                             从参考书中选取或微调章节文本片段（或直接点击上方一键全自动分析）：
                           </label>
-                          <span className="text-[10px] text-slate-400">{extractSnippet.length} 字</span>
+                          <span className="text-2xs text-slate-400">{extractSnippet.length} 字</span>
                         </div>
                         <textarea
                           rows={5}
@@ -963,7 +963,7 @@ export default function ImportResourceModal({
                         <button
                           onClick={handleAIExtract}
                           disabled={isExtracting || !extractSnippet.trim()}
-                          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-indigo-600 text-white text-xs font-semibold shadow-md shadow-amber-500/20 hover:from-amber-400 hover:to-indigo-500 transition-all disabled:opacity-50 cursor-pointer"
+                          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-indigo-600 text-white text-xs font-semibold shadow-sm shadow-amber-500/20 hover:from-amber-400 hover:to-indigo-500 transition-all disabled:opacity-50 cursor-pointer"
                         >
                           {isExtracting ? (
                             <>
@@ -987,7 +987,7 @@ export default function ImportResourceModal({
                               <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                               知识库沉淀与生成习题成功！
                             </span>
-                            <span className="text-[11px] text-slate-500">
+                            <span className="text-2xs text-slate-500">
                               已生成笔记并入库 {extractResult.questions?.length || 0} 道题
                             </span>
                           </div>
@@ -1001,13 +1001,13 @@ export default function ImportResourceModal({
 
                           {extractResult.questions && extractResult.questions.length > 0 && (
                             <div className="space-y-2">
-                              <span className="text-[11px] font-semibold text-slate-700">配套生成试题预览：</span>
+                              <span className="text-2xs font-semibold text-slate-700">配套生成试题预览：</span>
                               {extractResult.questions.map((q, idx) => (
                                 <div key={idx} className="p-2.5 rounded-lg bg-white border border-slate-100 text-xs">
                                   <div className="font-medium text-slate-800 mb-1">
                                     {idx + 1}. <MarkdownRenderer content={q.question} />
                                   </div>
-                                  <div className="text-[11px] text-slate-500">
+                                  <div className="text-2xs text-slate-500">
                                     答案：<span className="font-bold text-emerald-600">{q.answer}</span>
                                   </div>
                                 </div>
@@ -1136,7 +1136,7 @@ export default function ImportResourceModal({
                             >
                               <X className="w-4 h-4" />
                             </button>
-                            <span className="absolute bottom-2 left-2 text-[10px] px-2 py-0.5 rounded-md bg-black/60 text-white backdrop-blur-xs font-mono">
+                            <span className="absolute bottom-2 left-2 text-2xs px-2 py-0.5 rounded-md bg-black/60 text-white backdrop-blur-xs font-mono">
                               📸 已捕获考研真题/公式截图
                             </span>
                           </div>
@@ -1146,7 +1146,7 @@ export default function ImportResourceModal({
                               type="button"
                               onClick={handleOcrParse}
                               disabled={isParsingOcr}
-                              className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-xs shadow-md shadow-indigo-500/25 transition-all cursor-pointer disabled:opacity-50"
+                              className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-xs shadow-sm shadow-indigo-500/25 transition-all cursor-pointer disabled:opacity-50"
                             >
                               {isParsingOcr ? (
                                 <>
@@ -1180,10 +1180,10 @@ export default function ImportResourceModal({
                           </div>
                           <span className="text-xs font-bold text-slate-800 flex items-center gap-1">
                             <span>点击上传考研试卷照片，或在此处按下</span>
-                            <kbd className="px-1.5 py-0.5 rounded border border-slate-200 bg-white font-mono text-[10px] text-indigo-600 font-bold shadow-2xs">Ctrl + V</kbd>
+                            <kbd className="px-1.5 py-0.5 rounded border border-slate-200 bg-white font-mono text-2xs text-indigo-600 font-bold shadow-xs">Ctrl + V</kbd>
                             <span>直接粘贴截图</span>
                           </span>
-                          <p className="text-[11px] text-slate-400 mt-1 max-w-md">
+                          <p className="text-2xs text-slate-400 mt-1 max-w-md">
                             支持考研数学复杂公式（积分、级数、行列式）与 408 计算机图表（拓扑、页表、电路），自动转规范 LaTeX
                           </p>
                         </div>
@@ -1195,7 +1195,7 @@ export default function ImportResourceModal({
                         <label className="text-xs font-semibold text-slate-800">
                           粘贴题目文本（或配合截图补充说明）：
                         </label>
-                        <span className="text-[10px] text-slate-400">支持一题或多题批量</span>
+                        <span className="text-2xs text-slate-400">支持一题或多题批量</span>
                       </div>
                       <textarea
                         rows={6}
@@ -1217,7 +1217,7 @@ D. 5
                     <button
                       onClick={handleSmartTextParse}
                       disabled={isParsingText || !rawQuestionText.trim()}
-                      className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-indigo-600 text-white font-semibold text-xs shadow-md shadow-indigo-500/20 hover:bg-indigo-500 transition-all disabled:opacity-50 cursor-pointer"
+                      className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-indigo-600 text-white font-semibold text-xs shadow-sm shadow-indigo-500/20 hover:bg-indigo-500 transition-all disabled:opacity-50 cursor-pointer"
                     >
                       {isParsingText ? (
                         <>
@@ -1260,10 +1260,10 @@ D. 5
                         parsedPreviewQuestions.map((q, idx) => (
                           <div key={idx} className="p-3.5 rounded-xl border border-indigo-100 bg-indigo-50/20">
                             <div className="flex items-center gap-2 mb-2">
-                              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-indigo-100 text-indigo-700">
+                              <span className="text-2xs px-2 py-0.5 rounded-full font-bold bg-indigo-100 text-indigo-700">
                                 {q.subject}
                               </span>
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                              <span className="text-2xs px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
                                 {q.difficulty}
                               </span>
                             </div>
@@ -1290,7 +1290,7 @@ D. 5
                               </div>
                             )}
 
-                            <div className="p-2 rounded-lg bg-white border border-slate-100 text-[11px] text-slate-600">
+                            <div className="p-2 rounded-lg bg-white border border-slate-100 text-2xs text-slate-600">
                               <span className="font-bold text-slate-800">标准解析：</span>
                               <MarkdownRenderer content={q.explanation} />
                             </div>
@@ -1345,7 +1345,7 @@ D. 5
                     <button
                       onClick={handleJsonImport}
                       disabled={!jsonInput.trim()}
-                      className="px-5 py-2 rounded-xl bg-indigo-600 text-white font-semibold text-xs shadow-md shadow-indigo-500/20 hover:bg-indigo-500 transition-all disabled:opacity-50 cursor-pointer"
+                      className="px-5 py-2 rounded-xl bg-indigo-600 text-white font-semibold text-xs shadow-sm shadow-indigo-500/20 hover:bg-indigo-500 transition-all disabled:opacity-50 cursor-pointer"
                     >
                       确认导入 JSON 题库
                     </button>
@@ -1376,24 +1376,24 @@ D. 5
                   ) : (
                     <div className="space-y-3 max-h-[460px] overflow-y-auto pr-1">
                       {customQuestions.map(q => (
-                        <div key={q.id} className="p-4 rounded-xl border border-slate-200 bg-white shadow-2xs">
+                        <div key={q.id} className="p-4 rounded-xl border border-slate-200 bg-white shadow-xs">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1.5">
-                                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                <span className="text-2xs px-2 py-0.5 rounded-full font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
                                   {q.subject}
                                 </span>
-                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                                <span className="text-2xs px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
                                   {q.difficulty}
                                 </span>
                                 {q.chapter && (
-                                  <span className="text-[10px] text-slate-400">章节: {q.chapter}</span>
+                                  <span className="text-2xs text-slate-400">章节: {q.chapter}</span>
                                 )}
                               </div>
                               <div className="text-xs font-semibold text-slate-900 mb-2">
                                 <MarkdownRenderer content={q.question} />
                               </div>
-                              <div className="text-[11px] text-slate-500">
+                              <div className="text-2xs text-slate-500">
                                 答案：<span className="font-bold text-emerald-600">{q.answer}</span>
                               </div>
                             </div>
@@ -1424,7 +1424,7 @@ D. 5
                   <AlertCircle className="h-4 w-4 text-amber-500" />
                   错因四维画像诊断
                 </span>
-                <p className="text-[11px] text-slate-500 mb-4">基于您在刷题训练中的即时错因标记</p>
+                <p className="text-2xs text-slate-500 mb-4">基于您在刷题训练中的即时错因标记</p>
 
                 <div className="space-y-3 flex-1 flex flex-col justify-center">
                   {[
@@ -1441,7 +1441,7 @@ D. 5
                       <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
                         <div className={`h-full ${item.color} rounded-full`} style={{ width: `${item.pct}%` }} />
                       </div>
-                      <span className="text-[10px] text-slate-400 mt-0.5 block">{item.desc}</span>
+                      <span className="text-2xs text-slate-400 mt-0.5 block">{item.desc}</span>
                     </div>
                   ))}
                 </div>
@@ -1453,7 +1453,7 @@ D. 5
                   <BarChart3 className="h-4 w-4 text-rose-500" />
                   薄弱考点热力预警
                 </span>
-                <p className="text-[11px] text-slate-500 mb-4">建议在进入冲刺前重点攻坚的板块</p>
+                <p className="text-2xs text-slate-500 mb-4">建议在进入冲刺前重点攻坚的板块</p>
 
                 <div className="space-y-2.5 flex-1">
                   {[
@@ -1465,11 +1465,11 @@ D. 5
                     <div key={idx} className="p-2.5 rounded-lg border border-slate-100 bg-slate-50/60 text-xs">
                       <div className="flex items-center justify-between mb-1">
                         <span className="font-semibold text-slate-800">{w.tag}</span>
-                        <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.2 rounded">
+                        <span className="text-2xs font-bold text-rose-600 bg-rose-50 px-1.5 py-0.2 rounded">
                           {w.rate}
                         </span>
                       </div>
-                      <span className="text-[10px] text-slate-400">{w.sub}</span>
+                      <span className="text-2xs text-slate-400">{w.sub}</span>
                     </div>
                   ))}
                 </div>
@@ -1482,21 +1482,21 @@ D. 5
                     <Sparkles className="h-4 w-4 text-indigo-600" />
                     AI 研考伴学今日突破建议
                   </span>
-                  <p className="text-[11px] text-indigo-700/80 mb-4">
+                  <p className="text-2xs text-indigo-700/80 mb-4">
                     根据你的错题沉淀和知识库吸收情况定制
                   </p>
 
                   <div className="space-y-2 text-xs text-slate-700">
                     <div className="p-2.5 rounded-lg bg-white/90 border border-indigo-100/80">
                       <div className="font-semibold text-indigo-900 mb-1">1. 回溯复习笔记</div>
-                      <p className="text-[11px] text-slate-600">
+                      <p className="text-2xs text-slate-600">
                         查阅知识库中的《[[高等数学/偏导数与全微分]]》，重温判定充要条件反例。
                       </p>
                     </div>
 
                     <div className="p-2.5 rounded-lg bg-white/90 border border-indigo-100/80">
                       <div className="font-semibold text-indigo-900 mb-1">2. 举一反三变式训练</div>
-                      <p className="text-[11px] text-slate-600">
+                      <p className="text-2xs text-slate-600">
                         利用做题中心的「AI 变式题」功能，针对昨日做错的方差和线性变换完成 3 道巩固题。
                       </p>
                     </div>
@@ -1528,7 +1528,7 @@ D. 5
         >
           <div
             onClick={e => e.stopPropagation()}
-            className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-md p-6 animate-in fade-in zoom-in-95 duration-150"
+            className="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-md p-6 animate-in fade-in zoom-in-95 duration-150"
           >
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div className="flex items-center gap-2.5">
@@ -1537,7 +1537,7 @@ D. 5
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-900">修改教材 / 资料名称</h3>
-                  <p className="text-[11px] text-slate-400">重命名后将同步更新磁盘文件名与知识库关联</p>
+                  <p className="text-2xs text-slate-400">重命名后将同步更新磁盘文件名与知识库关联</p>
                 </div>
               </div>
               <button
@@ -1568,7 +1568,7 @@ D. 5
                     <button
                       type="button"
                       onClick={handleQuickCleanName}
-                      className="text-[11px] text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 px-2 py-0.5 rounded-md transition-colors cursor-pointer border border-amber-200/60"
+                      className="text-2xs text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 px-2 py-0.5 rounded-md transition-colors cursor-pointer border border-amber-200/60"
                       title="快速去除随机长哈希与时间戳后缀"
                     >
                       🧹 一键去杂乱后缀
@@ -1577,7 +1577,7 @@ D. 5
                       type="button"
                       onClick={handleSuggestName}
                       disabled={isSuggestingName}
-                      className="flex items-center gap-1 text-[11px] text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded-md transition-colors cursor-pointer border border-indigo-200/60 disabled:opacity-50"
+                      className="flex items-center gap-1 text-2xs text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded-md transition-colors cursor-pointer border border-indigo-200/60 disabled:opacity-50"
                       title="让 AI 读取前言目录提炼标准书名"
                     >
                       <Sparkles className="w-3 h-3 text-amber-500" />

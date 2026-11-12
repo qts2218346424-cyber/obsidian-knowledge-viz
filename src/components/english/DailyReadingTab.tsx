@@ -289,7 +289,7 @@ export default function DailyReadingTab() {
   // 渲染 AI 伴读导师核心工作卡片 (支持桌面端右栏固定与移动端全屏抽屉复用)
   const renderCompanionCard = (isModal = false) => {
     return (
-      <div className={`space-y-4 ${isModal ? '' : 'bento-card rounded-3xl p-4 sm:p-5 bg-white border border-slate-200/90 shadow-md'}`}>
+      <div className={`space-y-4 ${isModal ? '' : 'bento-card rounded-3xl p-4 sm:p-5 bg-white border border-slate-200/90 shadow-sm'}`}>
         {/* 仅在桌面端独立卡片模式下渲染顶栏切页，移动端弹窗已由顶层控制条统一接管 */}
         {!isModal && (
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -303,7 +303,7 @@ export default function DailyReadingTab() {
                   <Bot className="w-3.5 h-3.5 text-indigo-600" />
                   <span>考研英语 AI 伴读导师</span>
                 </div>
-                <span className="text-[10px] text-slate-400">实时交互 · 答疑长难句与同义替换</span>
+                <span className="text-2xs text-slate-400">实时交互 · 答疑长难句与同义替换</span>
               </div>
             </div>
 
@@ -312,7 +312,7 @@ export default function DailyReadingTab() {
                 type="button"
                 onClick={() => setSideTab('companion')}
                 className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                  sideTab === 'companion' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500'
+                  sideTab === 'companion' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'
                 }`}
               >
                 伴读对话
@@ -321,7 +321,7 @@ export default function DailyReadingTab() {
                 type="button"
                 onClick={() => setSideTab('vocab')}
                 className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                  sideTab === 'vocab' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500'
+                  sideTab === 'vocab' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'
                 }`}
               >
                 生词速查
@@ -330,7 +330,7 @@ export default function DailyReadingTab() {
                 type="button"
                 onClick={() => setSideTab('quiz')}
                 className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                  sideTab === 'quiz' ? 'bg-white text-slate-900 shadow-2xs' : 'text-slate-500'
+                  sideTab === 'quiz' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'
                 }`}
               >
                 真题模考
@@ -355,12 +355,12 @@ export default function DailyReadingTab() {
                       className={`max-w-[90%] p-3 rounded-2xl leading-relaxed whitespace-pre-wrap ${
                         isUser
                           ? 'bg-slate-900 text-white rounded-tr-none'
-                          : 'bg-white text-slate-800 border border-slate-200/80 shadow-2xs rounded-tl-none'
+                          : 'bg-white text-slate-800 border border-slate-200/80 shadow-xs rounded-tl-none'
                       }`}
                     >
                       {msg.content}
                     </div>
-                    <span className="text-[9.5px] text-slate-400 font-mono px-1">
+                    <span className="text-2xs text-slate-400 font-mono px-1">
                       {msg.timestamp}
                     </span>
                   </div>
@@ -377,7 +377,7 @@ export default function DailyReadingTab() {
 
             {/* 快捷提问提词器 */}
             <div className="space-y-1.5">
-              <div className="text-[11px] font-bold text-slate-500 flex items-center gap-1">
+              <div className="text-2xs font-bold text-slate-500 flex items-center gap-1">
                 <Sparkles className="w-3 h-3 text-amber-500" />
                 <span>伴读快捷探针：</span>
               </div>
@@ -392,7 +392,7 @@ export default function DailyReadingTab() {
                     key={promptText}
                     type="button"
                     onClick={() => handleSendMessage(promptText)}
-                    className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition-all cursor-pointer"
+                    className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-2xs font-bold transition-all cursor-pointer"
                   >
                     {promptText}
                   </button>
@@ -443,16 +443,16 @@ export default function DailyReadingTab() {
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-black text-slate-900">{v.word}</span>
-                        <span className="text-[11px] font-mono text-slate-400">{v.phonetic}</span>
+                        <span className="text-2xs font-mono text-slate-400">{v.phonetic}</span>
                         {v.isKaoYanCrucial && (
-                          <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-500/15 text-amber-800">
+                          <span className="px-1.5 py-0.2 rounded text-2xs font-bold bg-amber-500/15 text-amber-800">
                             核心考词
                           </span>
                         )}
                       </div>
                       <div className="text-xs text-slate-700 leading-relaxed">{v.meaning}</div>
                       {v.familiarMeaningDifferent && (
-                        <div className="text-[11px] font-bold text-rose-600 bg-rose-50 p-1.5 rounded-lg border border-rose-200">
+                        <div className="text-2xs font-bold text-rose-600 bg-rose-50 p-1.5 rounded-lg border border-rose-200">
                           {v.familiarMeaningDifferent}
                         </div>
                       )}
@@ -540,7 +540,7 @@ export default function DailyReadingTab() {
                     <div className="p-3 rounded-xl bg-white border border-slate-200 text-xs space-y-1.5">
                       <div className="font-bold text-slate-800">📋 考研真题命题解析：</div>
                       <p className="text-slate-600 leading-relaxed">{q.analysis}</p>
-                      <div className="text-[11px] font-bold text-indigo-700 bg-indigo-50 p-2 rounded-lg">
+                      <div className="text-2xs font-bold text-indigo-700 bg-indigo-50 p-2 rounded-lg">
                         🔍 考点同义替换还原：{q.paraphrasePoint}
                       </div>
                     </div>
@@ -561,17 +561,17 @@ export default function DailyReadingTab() {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 relative z-10">
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[11px] font-black shadow-xs">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 text-2xs font-black shadow-xs">
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>考研外刊真题同源精读</span>
               </span>
-              <span className="px-2 py-0.5 rounded-full bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 text-[10px] font-mono font-bold">
+              <span className="px-2 py-0.5 rounded-full bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 text-2xs font-mono font-bold">
                 {currentArticle.sourceJournal}
               </span>
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-mono">
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-2xs font-mono">
                 蓝思难度 {currentArticle.lexileLevel}
               </span>
-              <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-[10px] font-mono">
+              <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 text-2xs font-mono">
                 约 {currentArticle.wordCount} 词 · 建议 {currentArticle.recommendedMinutes} 分钟
               </span>
             </div>
@@ -601,7 +601,7 @@ export default function DailyReadingTab() {
             <button
               type="button"
               onClick={toggleCheckin}
-              className={`inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs font-black shadow-md transition-all cursor-pointer active:scale-95 ${
+              className={`inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-xs font-black shadow-sm transition-all cursor-pointer active:scale-95 ${
                 checkinMap[currentArticle.id]
                   ? 'bg-emerald-500 text-white shadow-emerald-500/30'
                   : 'bg-amber-400 text-slate-950 hover:bg-amber-300 shadow-amber-400/30'
@@ -615,7 +615,7 @@ export default function DailyReadingTab() {
       </div>
 
       {/* ── 筛选栏：主题选择、中英对照开关、长难句过滤、自定义输入 ── */}
-      <div className="bento-card rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3 bg-white/90 border border-slate-200/80 shadow-2xs">
+      <div className="bento-card rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3 bg-white/90 border border-slate-200/80 shadow-xs">
         {/* 文献切换药丸列表 */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           {DAILY_READING_ARTICLES.map((art) => {
@@ -633,7 +633,7 @@ export default function DailyReadingTab() {
               >
                 <span>{art.sourceJournal === 'The Economist' ? '📊' : art.sourceJournal === 'Harvard Business Review' ? '💼' : '🧠'}</span>
                 <span>{art.topicCategory}</span>
-                <span className="opacity-70 text-[11px] font-mono">({art.sourceJournal.split(' ')[0]})</span>
+                <span className="opacity-70 text-2xs font-mono">({art.sourceJournal.split(' ')[0]})</span>
               </button>
             )
           })}
@@ -658,7 +658,7 @@ export default function DailyReadingTab() {
           <button
             type="button"
             onClick={() => setMobileCompanionOpen(true)}
-            className="md:hidden inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-2xs cursor-pointer active:scale-95 transition-all"
+            className="md:hidden inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-xs cursor-pointer active:scale-95 transition-all"
           >
             <Bot className="w-3.5 h-3.5" />
             <span>AI 伴读</span>
@@ -741,13 +741,13 @@ export default function DailyReadingTab() {
                 {/* 段首主旨徽章 */}
                 <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100 text-xs">
                   <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-slate-900 text-white text-[10px] font-black flex items-center justify-center">
+                    <span className="w-5 h-5 rounded-full bg-slate-900 text-white text-2xs font-black flex items-center justify-center">
                       P{p.index}
                     </span>
                     <span className="font-extrabold text-slate-700">段落核心：{p.corePoint}</span>
                   </div>
                   {p.examTrapAlert && (
-                    <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                    <span className="hidden sm:inline-flex items-center gap-1 text-2xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
                       <AlertTriangle className="w-3 h-3 text-amber-600" />
                       <span>题眼探针</span>
                     </span>
@@ -777,9 +777,9 @@ export default function DailyReadingTab() {
                         }`}
                       >
                         {/* 英文原句 */}
-                        <div className="text-[14px] sm:text-[15px] text-slate-900 leading-relaxed font-normal flex items-start gap-2">
+                        <div className="text-sm sm:text-[15px] text-slate-900 leading-relaxed font-normal flex items-start gap-2">
                           {isHard && (
-                            <span className="mt-0.5 shrink-0 px-1.5 py-0.2 rounded text-[10px] font-sans font-bold bg-amber-500 text-white">
+                            <span className="mt-0.5 shrink-0 px-1.5 py-0.2 rounded text-2xs font-sans font-bold bg-amber-500 text-white">
                               长难句
                             </span>
                           )}
@@ -802,7 +802,7 @@ export default function DailyReadingTab() {
                               <Sparkles className="w-3.5 h-3.5 text-amber-600" />
                               <span>AI 语法树骨架解析：</span>
                             </div>
-                            <div className="text-slate-800 font-mono text-[11.5px] bg-amber-50/60 p-2 rounded-lg">
+                            <div className="text-slate-800 font-mono text-2xs bg-amber-50/60 p-2 rounded-lg">
                               {sen.treeAnalysis.mainTrunk}
                             </div>
                             <div className="text-slate-600">
@@ -826,7 +826,7 @@ export default function DailyReadingTab() {
                                 setSideTab('companion')
                                 setMobileCompanionOpen(true)
                               }}
-                              className="mt-2 w-full py-2 px-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-98"
+                              className="mt-2 w-full py-2 px-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-98"
                             >
                               <Bot className="w-3.5 h-3.5" />
                               <span>呼出 AI 伴读：深度解构此句与命题点 →</span>
@@ -840,7 +840,7 @@ export default function DailyReadingTab() {
                             {sen.keyWords.map((kw, i) => (
                               <span
                                 key={i}
-                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10.5px] font-medium border ${
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-2xs font-medium border ${
                                   kw.isFamiliarDifferent
                                     ? 'bg-rose-50 text-rose-800 border-rose-200'
                                     : 'bg-slate-100 text-slate-700 border-slate-200'
@@ -886,7 +886,7 @@ export default function DailyReadingTab() {
             <Bot className="w-4 h-4 text-white" />
             <span className="text-xs font-black">AI 伴读</span>
             {activeSentence && (
-              <span className="px-1.5 py-0.2 rounded-full bg-amber-400 text-slate-950 text-[9.5px] font-black">
+              <span className="px-1.5 py-0.2 rounded-full bg-amber-400 text-slate-950 text-2xs font-black">
                 第{activeSentence.sentenceIndex}句
               </span>
             )}
@@ -902,7 +902,7 @@ export default function DailyReadingTab() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className={`w-full bg-white rounded-t-3xl shadow-2xl border-t border-slate-200 flex flex-col transition-all duration-300 ease-out overflow-hidden ${
+            className={`w-full bg-white rounded-t-3xl shadow-xl border-t border-slate-200 flex flex-col transition-all duration-300 ease-out overflow-hidden ${
               windowMode === 'full' ? 'h-[92dvh]' : 'h-[58dvh]'
             }`}
           >
@@ -912,11 +912,11 @@ export default function DailyReadingTab() {
                 <Bot className="w-4 h-4 text-indigo-600 shrink-0" />
                 <span className="text-xs font-black text-slate-900 truncate">考研英语 AI 伴读</span>
                 {activeSentence && (
-                  <span className="text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full font-mono shrink-0">
+                  <span className="text-2xs text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full font-mono shrink-0">
                     第{activeSentence.sentenceIndex}句
                   </span>
                 )}
-                <span className="text-[9.5px] text-slate-400 font-medium">
+                <span className="text-2xs text-slate-400 font-medium">
                   {windowMode === 'full' ? '全屏沉浸' : '半屏伴读'}
                 </span>
               </div>
@@ -969,7 +969,7 @@ export default function DailyReadingTab() {
                   type="button"
                   onClick={() => setSideTab('companion')}
                   className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer text-center ${
-                    sideTab === 'companion' ? 'bg-white text-slate-900 shadow-2xs font-extrabold' : 'text-slate-500'
+                    sideTab === 'companion' ? 'bg-white text-slate-900 shadow-xs font-extrabold' : 'text-slate-500'
                   }`}
                 >
                   伴读对话
@@ -978,7 +978,7 @@ export default function DailyReadingTab() {
                   type="button"
                   onClick={() => setSideTab('vocab')}
                   className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer text-center ${
-                    sideTab === 'vocab' ? 'bg-white text-slate-900 shadow-2xs font-extrabold' : 'text-slate-500'
+                    sideTab === 'vocab' ? 'bg-white text-slate-900 shadow-xs font-extrabold' : 'text-slate-500'
                   }`}
                 >
                   生词速查
@@ -987,7 +987,7 @@ export default function DailyReadingTab() {
                   type="button"
                   onClick={() => setSideTab('quiz')}
                   className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer text-center ${
-                    sideTab === 'quiz' ? 'bg-white text-slate-900 shadow-2xs font-extrabold' : 'text-slate-500'
+                    sideTab === 'quiz' ? 'bg-white text-slate-900 shadow-xs font-extrabold' : 'text-slate-500'
                   }`}
                 >
                   真题模考

@@ -165,7 +165,7 @@ export default function MobileDeviceModal({ isOpen, onClose }: MobileDeviceModal
       <div
         className={`relative w-full ${
           activeTab === 'simulator' ? 'max-w-5xl' : 'max-w-3xl'
-        } overflow-hidden rounded-3xl border border-slate-700/60 bg-slate-900 text-slate-100 shadow-2xl shadow-indigo-950/40 transition-all duration-300 animate-scale-up`}
+        } overflow-hidden rounded-3xl border border-slate-700/60 bg-slate-900 text-slate-100 shadow-xl shadow-indigo-950/40 transition-all duration-300 animate-scale-up`}
       >
         <div className="absolute -top-24 -left-24 h-56 w-56 rounded-full bg-indigo-600/20 blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -right-24 h-56 w-56 rounded-full bg-violet-600/20 blur-3xl pointer-events-none" />
@@ -179,7 +179,7 @@ export default function MobileDeviceModal({ isOpen, onClose }: MobileDeviceModal
             <div className="min-w-0">
               <h2 className="text-sm sm:text-base font-bold text-white flex flex-wrap items-center gap-2">
                 <span>手机 / 平板跨端直连与预览中心</span>
-                <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                <span className="text-2xs font-medium px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                   支持云端 PWA & 原生 APK
                 </span>
               </h2>
@@ -193,7 +193,7 @@ export default function MobileDeviceModal({ isOpen, onClose }: MobileDeviceModal
 
           <div className="flex items-center gap-2 ml-auto">
             {/* 云端 / 本地双模切换开关 */}
-            <div className="flex items-center p-0.5 rounded-xl bg-slate-950 border border-slate-800 text-[11px]">
+            <div className="flex items-center p-0.5 rounded-xl bg-slate-950 border border-slate-800 text-2xs">
               <button
                 type="button"
                 onClick={() => handleSwitchEnvMode('cloud')}
@@ -345,7 +345,7 @@ export default function MobileDeviceModal({ isOpen, onClose }: MobileDeviceModal
                     width: isLandscape ? '600px' : deviceModel === 'tablet' ? '460px' : '375px',
                     height: isLandscape ? '360px' : deviceModel === 'tablet' ? '600px' : '640px',
                   }}
-                  className="rounded-[44px] border-[10px] border-slate-800 bg-black shadow-2xl p-1 relative flex flex-col overflow-hidden ring-1 ring-slate-700/50"
+                  className="rounded-[44px] border-[10px] border-slate-800 bg-black shadow-xl p-1 relative flex flex-col overflow-hidden ring-1 ring-slate-700/50"
                 >
                   {!isLandscape && (
                     <div className="absolute top-2.5 left-1/2 -translate-x-1/2 z-20 flex items-center justify-between px-3 h-5 w-24 rounded-full bg-black border border-slate-800/80">
@@ -354,7 +354,7 @@ export default function MobileDeviceModal({ isOpen, onClose }: MobileDeviceModal
                     </div>
                   )}
 
-                  <div className="h-6 shrink-0 bg-slate-950 flex items-center justify-between px-6 text-[10px] text-slate-400 select-none z-10">
+                  <div className="h-6 shrink-0 bg-slate-950 flex items-center justify-between px-6 text-2xs text-slate-400 select-none z-10">
                     <span className="font-semibold">09:41</span>
                     <div className="flex items-center gap-1.5">
                       <Wifi className="w-3 h-3" />
@@ -385,7 +385,7 @@ export default function MobileDeviceModal({ isOpen, onClose }: MobileDeviceModal
                     <Smartphone className="w-4 h-4 text-indigo-400" />
                     <span>仿真器页面直达</span>
                   </div>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-2xs text-slate-400">
                     点击快速在左侧手机预览中切换各个考研研学模块，实时验证移动端响应式交互
                   </p>
                   <div className="grid grid-cols-2 gap-2">
@@ -425,12 +425,12 @@ export default function MobileDeviceModal({ isOpen, onClose }: MobileDeviceModal
                         handleSwitchEnvMode('cloud')
                         setActiveTab('pwa')
                       }}
-                      className="text-[11px] px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold cursor-pointer transition-colors"
+                      className="text-2xs px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold cursor-pointer transition-colors"
                     >
                       打开扫码页 →
                     </button>
                   </div>
-                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                  <p className="text-2xs text-slate-300 leading-relaxed">
                     项目部署到云服务器后，不再需要局域网共连 Wi-Fi 或内网穿透。手机在自习室、图书馆用
                     5G 扫描云端地址二维码，点击浏览器菜单「添加到主屏幕」即可获得原生全屏 App 体验。
                   </p>
@@ -445,22 +445,22 @@ export default function MobileDeviceModal({ isOpen, onClose }: MobileDeviceModal
                     <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
                       <div className="font-bold text-white flex items-center justify-between">
                         <span>1. 浏览器 DevTools 设备仿真</span>
-                        <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                        <span className="text-2xs text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
                           Ctrl + Shift + M
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-400 mt-1">
+                      <p className="text-2xs text-slate-400 mt-1">
                         按 F12 后开启设备仿真，支持模拟任意安卓 / iPhone 视口尺寸与触摸滑动。
                       </p>
                     </div>
                     <div className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800">
                       <div className="font-bold text-white flex items-center justify-between">
                         <span>2. Chrome 远程真机审查</span>
-                        <span className="text-[10px] text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded">
+                        <span className="text-2xs text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded">
                           chrome://inspect
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-400 mt-1">
+                      <p className="text-2xs text-slate-400 mt-1">
                         手机连接电脑或直接用手机浏览器访问你的云服务器域名，实时排查移动端样式与网络请求。
                       </p>
                     </div>
@@ -477,14 +477,14 @@ export default function MobileDeviceModal({ isOpen, onClose }: MobileDeviceModal
                 <div className="md:col-span-5 flex flex-col items-center justify-center p-4 rounded-2xl bg-slate-950 border border-slate-800 shadow-inner">
                   {qrDataUrl ? (
                     <div className="relative group">
-                      <div className="p-2.5 bg-white rounded-xl shadow-lg">
+                      <div className="p-2.5 bg-white rounded-xl shadow-xl">
                         <img
                           src={qrDataUrl}
                           alt="移动端访问二维码"
                           className="w-48 h-48 rounded-lg object-contain"
                         />
                       </div>
-                      <div className="mt-2.5 text-center text-[11px] text-slate-400 flex items-center justify-center gap-1">
+                      <div className="mt-2.5 text-center text-2xs text-slate-400 flex items-center justify-center gap-1">
                         <QrCode className="h-3.5 w-3.5 text-indigo-400" />
                         <span>手机相机 / 浏览器直接扫码打开</span>
                       </div>
@@ -508,7 +508,7 @@ export default function MobileDeviceModal({ isOpen, onClose }: MobileDeviceModal
                       <button
                         onClick={fetchNetwork}
                         title="重新识别当前地址"
-                        className="text-[11px] text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer shrink-0"
+                        className="text-2xs text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer shrink-0"
                       >
                         <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
                         <span>重置</span>
@@ -535,7 +535,7 @@ export default function MobileDeviceModal({ isOpen, onClose }: MobileDeviceModal
                       </button>
                     </div>
                     {envMode === 'cloud' && selectedUrl.startsWith('http://') && (
-                      <p className="mt-1.5 text-[11px] text-amber-400/90">
+                      <p className="mt-1.5 text-2xs text-amber-400/90">
                         💡 提示：若已绑定域名并配置 HTTPS，建议输入{' '}
                         <code className="font-mono">https://</code> 地址，可解锁移动端浏览器原生 PWA
                         一键安装弹窗。
@@ -545,13 +545,13 @@ export default function MobileDeviceModal({ isOpen, onClose }: MobileDeviceModal
 
                   {envMode === 'local' && networkInfo && networkInfo.lanUrls.length > 0 && (
                     <div>
-                      <span className="text-[11px] text-slate-400">切换本机网卡地址：</span>
+                      <span className="text-2xs text-slate-400">切换本机网卡地址：</span>
                       <div className="mt-1 flex flex-wrap gap-1.5">
                         {networkInfo.lanUrls.map(item => (
                           <button
                             key={item.url}
                             onClick={() => setSelectedUrl(item.url)}
-                            className={`rounded-lg px-2.5 py-1 text-[11px] font-mono transition-all cursor-pointer ${
+                            className={`rounded-lg px-2.5 py-1 text-2xs font-mono transition-all cursor-pointer ${
                               selectedUrl === item.url
                                 ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/50'
                                 : 'bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700'
@@ -623,7 +623,7 @@ export default function MobileDeviceModal({ isOpen, onClose }: MobileDeviceModal
                   </div>
                   <div>
                     <div className="font-semibold text-slate-200">云端算力托管</div>
-                    <div className="text-[11px] text-slate-400">PDF 解析与 AI 检索全由服务端完成</div>
+                    <div className="text-2xs text-slate-400">PDF 解析与 AI 检索全由服务端完成</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-800/40 border border-slate-800">
@@ -632,7 +632,7 @@ export default function MobileDeviceModal({ isOpen, onClose }: MobileDeviceModal
                   </div>
                   <div>
                     <div className="font-semibold text-slate-200">全屏沉浸刷题</div>
-                    <div className="text-[11px] text-slate-400">PWA 独立窗口运行，无浏览器地址栏</div>
+                    <div className="text-2xs text-slate-400">PWA 独立窗口运行，无浏览器地址栏</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-800/40 border border-slate-800">
@@ -641,7 +641,7 @@ export default function MobileDeviceModal({ isOpen, onClose }: MobileDeviceModal
                   </div>
                   <div>
                     <div className="font-semibold text-slate-200">多端实时同步</div>
-                    <div className="text-[11px] text-slate-400">手机刷题与随手记，电脑端秒级同步</div>
+                    <div className="text-2xs text-slate-400">手机刷题与随手记，电脑端秒级同步</div>
                   </div>
                 </div>
               </div>
@@ -669,16 +669,16 @@ export default function MobileDeviceModal({ isOpen, onClose }: MobileDeviceModal
                   <button
                     type="button"
                     onClick={handleCopyNginx}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-300 text-[11px] font-semibold cursor-pointer"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-300 text-2xs font-semibold cursor-pointer"
                   >
                     {copiedNginx ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                     <span>{copiedNginx ? '已复制配置' : '复制 Nginx 片段'}</span>
                   </button>
                 </div>
-                <pre className="p-3 rounded-xl bg-slate-900 border border-slate-800 font-mono text-[11px] text-emerald-300 overflow-x-auto leading-relaxed">
+                <pre className="p-3 rounded-xl bg-slate-900 border border-slate-800 font-mono text-2xs text-emerald-300 overflow-x-auto leading-relaxed">
                   {nginxSnippet}
                 </pre>
-                <ul className="list-disc pl-4 space-y-1 text-slate-400 text-[11px]">
+                <ul className="list-disc pl-4 space-y-1 text-slate-400 text-2xs">
                   <li>
                     <b className="text-slate-200">为什么必须加 proxy_buffering off</b>：AI
                     伴学工作台与知识库实时变动采用 SSE 流式推送，若未关闭缓冲，Nginx
@@ -698,13 +698,13 @@ export default function MobileDeviceModal({ isOpen, onClose }: MobileDeviceModal
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3 pt-3 border-t border-slate-800/80">
                   <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
                     <div className="font-semibold text-slate-200">Cloudflare Tunnel 临时 HTTPS</div>
-                    <pre className="p-2 rounded-lg bg-slate-950 font-mono text-[11px] text-emerald-300 overflow-x-auto select-all">
+                    <pre className="p-2 rounded-lg bg-slate-950 font-mono text-2xs text-emerald-300 overflow-x-auto select-all">
                       npx cloudflared tunnel --url http://localhost:3001
                     </pre>
                   </div>
                   <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
                     <div className="font-semibold text-slate-200">Tailscale 异地虚拟组网</div>
-                    <p className="text-slate-400 text-[11px]">
+                    <p className="text-slate-400 text-2xs">
                       电脑与手机登录同一 Tailscale 账号，通过分配的 <code className="text-indigo-300">100.x.x.x:3001</code> 直连。
                     </p>
                   </div>
@@ -730,26 +730,26 @@ export default function MobileDeviceModal({ isOpen, onClose }: MobileDeviceModal
                 <div className="font-semibold text-slate-200">打包操作命令清单（在有 Android Studio 的电脑上执行一次即可）：</div>
                 <div className="space-y-2.5">
                   <div>
-                    <div className="text-slate-400 text-[11px] mb-1">
+                    <div className="text-slate-400 text-2xs mb-1">
                       1. 构建前端资源并添加 Android 工程（首次执行）：
                     </div>
-                    <pre className="p-2.5 rounded-lg bg-slate-900 font-mono text-[11px] text-slate-200 overflow-x-auto select-all">
+                    <pre className="p-2.5 rounded-lg bg-slate-900 font-mono text-2xs text-slate-200 overflow-x-auto select-all">
 {`npm run build
 npm install @capacitor/core @capacitor/cli @capacitor/android
 npx cap add android`}
                     </pre>
                   </div>
                   <div>
-                    <div className="text-slate-400 text-[11px] mb-1">
+                    <div className="text-slate-400 text-2xs mb-1">
                       2. 绑定你的云服务器地址并同步到 Android 工程（将地址替换为你的服务器域名或公网 IP）：
                     </div>
-                    <pre className="p-2.5 rounded-lg bg-slate-900 font-mono text-[11px] text-emerald-300 overflow-x-auto select-all">
+                    <pre className="p-2.5 rounded-lg bg-slate-900 font-mono text-2xs text-emerald-300 overflow-x-auto select-all">
 {`# PowerShell 示例：
 $env:CAP_SERVER_URL="${selectedUrl || 'https://你的服务器域名'}"; npx cap sync android; npx cap open android`}
                     </pre>
                   </div>
                 </div>
-                <p className="text-slate-400 text-[11px] pt-2 border-t border-slate-800">
+                <p className="text-slate-400 text-2xs pt-2 border-t border-slate-800">
                   💡 在打开的 Android Studio 中点击 <b>Build &gt; Build Bundle(s) / APK(s) &gt; Build APK(s)</b> 即可导出安装包发到手机安装。其实在大多数场景下，直接使用第二个标签页的<b>「云端 PWA 添加到主屏幕」</b>就已经能获得几乎一致的全屏体验，且完全免编译！
                 </p>
               </div>

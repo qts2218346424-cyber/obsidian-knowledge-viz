@@ -59,11 +59,11 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* 卷种与年份筛选控制台 */}
-      <div className="bento-card rounded-2xl border border-neutral-200/85 bg-white p-4 sm:p-5 shadow-xs space-y-4">
+      <div className="bento-card rounded-2xl border border-slate-200/85 bg-white p-4 sm:p-5 shadow-xs space-y-4">
         {/* 顶部卷种切换胶囊 */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-            <span className="text-xs font-semibold text-neutral-500 mr-1 flex items-center gap-1">
+            <span className="text-xs font-semibold text-slate-500 mr-1 flex items-center gap-1">
               <Layers className="w-3.5 h-3.5 text-accent-orange" />
               <span>考研卷种：</span>
             </span>
@@ -73,8 +73,8 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
               onClick={() => setSelectedCategory('all')}
               className={`rounded-xl px-3.5 py-1.5 text-xs font-medium transition-all cursor-pointer ${
                 selectedCategory === 'all'
-                  ? 'bg-neutral-900 text-white font-semibold shadow-xs'
-                  : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200/70 hover:text-neutral-900'
+                  ? 'bg-slate-900 text-white font-semibold shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70 hover:text-slate-900'
               }`}
             >
               全部卷种 ({categoryStats.totalCount})
@@ -90,7 +90,7 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
               }`}
             >
               <span>📐 考研数学（二）</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/10">
+              <span className="text-2xs px-1.5 py-0.2 rounded-full bg-black/10">
                 {categoryStats.math2Count}
               </span>
             </button>
@@ -105,7 +105,7 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
               }`}
             >
               <span>📐 考研数学（一）</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/10">
+              <span className="text-2xs px-1.5 py-0.2 rounded-full bg-black/10">
                 {categoryStats.math1Count}
               </span>
             </button>
@@ -120,7 +120,7 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
               }`}
             >
               <span>🖥️ 408 计算机综合</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/10">
+              <span className="text-2xs px-1.5 py-0.2 rounded-full bg-black/10">
                 {categoryStats.cs408Count}
               </span>
             </button>
@@ -128,21 +128,21 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
 
           {/* 关键字搜索框 */}
           <div className="relative w-full sm:w-64">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
               placeholder="搜索真题试卷、年份或考点..."
-              className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-neutral-200 text-xs text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 bg-neutral-50/50"
+              className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-slate-900 bg-slate-50/50"
             />
           </div>
         </div>
 
         {/* 年份快速切换标签栏 */}
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-2 border-t border-neutral-100">
-          <span className="text-xs font-semibold text-neutral-500 mr-1 flex items-center gap-1">
-            <Calendar className="w-3.5 h-3.5 text-neutral-400" />
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-2 border-t border-slate-100">
+          <span className="text-xs font-semibold text-slate-500 mr-1 flex items-center gap-1">
+            <Calendar className="w-3.5 h-3.5 text-slate-400" />
             <span>真题年份：</span>
           </span>
 
@@ -151,8 +151,8 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
             onClick={() => setSelectedYear('all')}
             className={`rounded-lg px-2.5 py-1 text-xs transition-all cursor-pointer ${
               selectedYear === 'all'
-                ? 'bg-neutral-900 text-white font-semibold'
-                : 'text-neutral-600 hover:bg-neutral-100'
+                ? 'bg-slate-900 text-white font-semibold'
+                : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
             历年全部
@@ -165,8 +165,8 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
               onClick={() => setSelectedYear(year)}
               className={`rounded-lg px-2.5 py-1 text-xs transition-all cursor-pointer font-mono ${
                 selectedYear === year
-                  ? 'bg-accent-orange text-white font-bold shadow-2xs'
-                  : 'bg-neutral-100/80 text-neutral-700 hover:bg-neutral-200/70'
+                  ? 'bg-accent-orange text-white font-bold shadow-xs'
+                  : 'bg-slate-100/80 text-slate-700 hover:bg-slate-200/70'
               }`}
             >
               {year} 年
@@ -177,10 +177,10 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
 
       {/* 试卷列表展示 */}
       {filteredPapers.length === 0 ? (
-        <div className="bento-card rounded-2xl border border-dashed border-neutral-300 p-12 text-center bg-white space-y-3">
-          <FileText className="w-10 h-10 mx-auto text-neutral-300" />
-          <h3 className="text-sm font-bold text-neutral-700">暂无符合筛选条件的真题试卷</h3>
-          <p className="text-xs text-neutral-400 max-w-md mx-auto">
+        <div className="bento-card rounded-2xl border border-dashed border-slate-300 p-12 text-center bg-white space-y-3">
+          <FileText className="w-10 h-10 mx-auto text-slate-300" />
+          <h3 className="text-sm font-bold text-slate-700">暂无符合筛选条件的真题试卷</h3>
+          <p className="text-xs text-slate-400 max-w-md mx-auto">
             您可以尝试重置卷种或年份筛选条件，或在搜索框中键入其它考点关键词。
           </p>
           <button
@@ -190,7 +190,7 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
               setSelectedYear('all')
               setSearchKeyword('')
             }}
-            className="px-4 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-xs font-semibold text-neutral-700 transition-colors cursor-pointer"
+            className="px-4 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
           >
             重置所有筛选
           </button>
@@ -204,7 +204,7 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
             return (
               <div
                 key={paper.id}
-                className="bento-card rounded-2xl border border-neutral-200/85 bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between hover:shadow-md transition-all duration-200 group relative overflow-hidden"
+                className="bento-card rounded-2xl border border-slate-200/85 bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between hover:shadow-sm transition-all duration-200 group relative overflow-hidden"
               >
                 {/* 装饰条 */}
                 <div
@@ -221,7 +221,7 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
                   {/* 试卷元信息徽标 */}
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-xs px-2.5 py-0.5 rounded-lg bg-neutral-900 text-white shadow-2xs">
+                      <span className="font-mono font-bold text-xs px-2.5 py-0.5 rounded-lg bg-slate-900 text-white shadow-xs">
                         {paper.year} 年真题
                       </span>
                       <span
@@ -239,13 +239,13 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-3 text-xs text-neutral-500 font-mono">
+                    <div className="flex items-center gap-3 text-xs text-slate-500 font-mono">
                       <span className="flex items-center gap-1">
                         <Award className="w-3.5 h-3.5 text-amber-500" />
                         <span>满分 {paper.totalScore} 分</span>
                       </span>
                       <span className="flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5 text-neutral-400" />
+                        <Clock className="w-3.5 h-3.5 text-slate-400" />
                         <span>{paper.durationMinutes} 分钟</span>
                       </span>
                     </div>
@@ -253,32 +253,32 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
 
                   {/* 试卷全名与副标题 */}
                   <div>
-                    <h2 className="text-base sm:text-lg font-bold text-neutral-900 tracking-tight leading-snug group-hover:text-accent-orange transition-colors">
+                    <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight leading-snug group-hover:text-accent-orange transition-colors">
                       {paper.title}
                     </h2>
                     {paper.subtitle && (
-                      <p className="mt-1 text-xs text-neutral-400 font-medium">{paper.subtitle}</p>
+                      <p className="mt-1 text-xs text-slate-400 font-medium">{paper.subtitle}</p>
                     )}
                   </div>
 
                   {/* 试卷题型架构与分值分布胶囊 */}
                   <div className="flex flex-wrap items-center gap-2 pt-1">
                     {stats.choiceCount > 0 && (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-lg bg-neutral-100 text-neutral-700 border border-neutral-200/60">
+                      <span className="inline-flex items-center gap-1 text-2xs font-medium px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200/60">
                         <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                         <span>单选题 {stats.choiceCount} 题 ({stats.choiceScore}分)</span>
                       </span>
                     )}
 
                     {stats.blankCount > 0 && (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-lg bg-neutral-100 text-neutral-700 border border-neutral-200/60">
+                      <span className="inline-flex items-center gap-1 text-2xs font-medium px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200/60">
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                         <span>填空题 {stats.blankCount} 题 ({stats.blankScore}分)</span>
                       </span>
                     )}
 
                     {stats.analysisCount > 0 && (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-lg bg-neutral-100 text-neutral-700 border border-neutral-200/60">
+                      <span className="inline-flex items-center gap-1 text-2xs font-medium px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200/60">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                         <span>综合解答大题 {stats.analysisCount} 题 ({stats.analysisScore}分)</span>
                       </span>
@@ -286,18 +286,18 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
                   </div>
 
                   {/* 试卷考点范围描述 */}
-                  <div className="p-3 rounded-xl bg-neutral-50/80 border border-neutral-200/60 text-xs text-neutral-600 leading-relaxed">
+                  <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-200/60 text-xs text-slate-600 leading-relaxed">
                     <MarkdownRenderer content={paper.description} inline />
                   </div>
                 </div>
 
                 {/* 试卷精准三大练习入口（核心功能交付点） */}
-                <div className="mt-5 pt-4 border-t border-neutral-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+                <div className="mt-5 pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
                   {/* 全卷模考入口 */}
                   <button
                     type="button"
                     onClick={() => onStartPaper(paper, 'all')}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-bold transition-all shadow-xs hover:shadow cursor-pointer"
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-xs hover:shadow cursor-pointer"
                   >
                     <Flame className="w-3.5 h-3.5 text-amber-400" />
                     <span>📝 全卷模拟 (150分)</span>

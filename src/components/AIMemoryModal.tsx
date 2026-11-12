@@ -253,7 +253,7 @@ export default function AIMemoryModal({
 
   const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fade-in">
-      <div className="flex h-[90vh] w-full max-w-5xl flex-col rounded-2xl border border-cream-300 bg-surface shadow-2xl overflow-hidden">
+      <div className="flex h-[90vh] w-full max-w-5xl flex-col rounded-2xl border border-cream-300 bg-surface shadow-xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-cream-200 bg-surface/90 px-6 py-4">
           <div className="flex items-center gap-3">
@@ -263,7 +263,7 @@ export default function AIMemoryModal({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-bold text-warm-800">AI 可视化记忆仓库</h2>
-                <span className="rounded-md bg-accent-orange/12 px-2 py-0.5 text-[11px] font-semibold text-accent-orange">
+                <span className="rounded-md bg-accent-orange/12 px-2 py-0.5 text-2xs font-semibold text-accent-orange">
                   agent.md 智能体设定
                 </span>
               </div>
@@ -298,7 +298,7 @@ export default function AIMemoryModal({
               <CheckCircle2 className="h-4 w-4 text-accent-sage" />
               <span>{actionFeedback}</span>
             </div>
-            <button onClick={() => setActionFeedback(null)} className="text-[11px] underline hover:opacity-80">
+            <button onClick={() => setActionFeedback(null)} className="text-2xs underline hover:opacity-80">
               关闭
             </button>
           </div>
@@ -311,7 +311,7 @@ export default function AIMemoryModal({
               <UserCheck className="h-4 w-4" />
             </div>
             <div>
-              <div className="text-[10px] text-warm-400">当前人设</div>
+              <div className="text-2xs text-warm-400">当前人设</div>
               <div className="text-xs font-bold text-warm-800 truncate max-w-[140px]">{stats.personaName}</div>
             </div>
           </div>
@@ -321,7 +321,7 @@ export default function AIMemoryModal({
               <ShieldCheck className="h-4 w-4" />
             </div>
             <div>
-              <div className="text-[10px] text-warm-400">全局准则规范</div>
+              <div className="text-2xs text-warm-400">全局准则规范</div>
               <div className="text-xs font-bold text-warm-800">{stats.rulesCount} 项严选规则</div>
             </div>
           </div>
@@ -331,7 +331,7 @@ export default function AIMemoryModal({
               <Zap className="h-4 w-4" />
             </div>
             <div>
-              <div className="text-[10px] text-warm-400">活跃长效记忆</div>
+              <div className="text-2xs text-warm-400">活跃长效记忆</div>
               <div className="text-xs font-bold text-warm-800">{stats.active} / {stats.total} 条生效中</div>
             </div>
           </div>
@@ -341,7 +341,7 @@ export default function AIMemoryModal({
               <AlertTriangle className="h-4 w-4" />
             </div>
             <div>
-              <div className="text-[10px] text-warm-400">重点弱项画像</div>
+              <div className="text-2xs text-warm-400">重点弱项画像</div>
               <div className="text-xs font-bold text-warm-800">{stats.weakPointsCount} 个标记考点</div>
             </div>
           </div>
@@ -360,7 +360,7 @@ export default function AIMemoryModal({
             >
               <Zap className="h-3.5 w-3.5" />
               <span>长效记忆清单</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+              <span className={`px-1.5 py-0.2 rounded-full text-2xs ${
                 activeTab === 'directives' ? 'bg-white/20 text-white' : 'bg-cream-200 text-warm-600'
               }`}>
                 {stats.active}
@@ -389,7 +389,7 @@ export default function AIMemoryModal({
             >
               <ShieldCheck className="h-3.5 w-3.5" />
               <span>行为准则规范</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+              <span className={`px-1.5 py-0.2 rounded-full text-2xs ${
                 activeTab === 'rules' ? 'bg-white/20 text-white' : 'bg-cream-200 text-warm-600'
               }`}>
                 {stats.rulesCount}
@@ -514,7 +514,7 @@ export default function AIMemoryModal({
                     <div>
                       <div className="flex items-center justify-between gap-2 mb-2">
                         <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                          <span className={`px-2 py-0.5 rounded-full text-2xs font-semibold ${
                             d.category === 'behavior' ? 'bg-indigo-50 text-indigo-600' :
                             d.category === 'knowledge' ? 'bg-emerald-50 text-emerald-600' :
                             d.category === 'habit' ? 'bg-accent-orange/15 text-accent-orange' :
@@ -540,7 +540,7 @@ export default function AIMemoryModal({
                               d.enabled ? 'left-4' : 'left-0.5'
                             }`} />
                           </div>
-                          <span className="text-[10px] font-medium text-warm-500">
+                          <span className="text-2xs font-medium text-warm-500">
                             {d.enabled ? '已启用' : '已停用'}
                           </span>
                         </label>
@@ -551,7 +551,7 @@ export default function AIMemoryModal({
                       </p>
                     </div>
 
-                    <div className="flex items-center justify-between border-t border-cream-100 pt-3 mt-3 text-[11px] text-warm-400">
+                    <div className="flex items-center justify-between border-t border-cream-100 pt-3 mt-3 text-2xs text-warm-400">
                       <span>更新: {d.lastUpdated}</span>
                       <div className="flex items-center gap-2">
                         {onAskAgent && (

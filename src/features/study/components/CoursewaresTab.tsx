@@ -35,7 +35,7 @@ export default function CoursewaresTab({ filteredCoursewares, onOpenCourseware }
 
                     onClick={() => onOpenCourseware(item)}
 
-                    className="bento-card rounded-xl border border-neutral-200/80 bg-white p-5 cursor-pointer transition-all duration-200 hover:border-neutral-900 hover:shadow-xs active:scale-[0.99] flex flex-col justify-between group"
+                    className="bento-card rounded-xl border border-slate-200/80 bg-white p-5 cursor-pointer transition-all duration-200 hover:border-slate-900 hover:shadow-xs active:scale-[0.99] flex flex-col justify-between group"
 
                   >
 
@@ -47,7 +47,7 @@ export default function CoursewaresTab({ filteredCoursewares, onOpenCourseware }
 
                         <span
 
-                          className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${
+                          className={`px-2 py-0.5 rounded-md text-2xs font-bold border ${
 
                             isPol
 
@@ -67,7 +67,7 @@ export default function CoursewaresTab({ filteredCoursewares, onOpenCourseware }
 
                         </span>
 
-                        <span className="text-[10px] px-2 py-0.5 rounded-md font-semibold bg-amber-500/10 text-amber-700 border border-amber-500/20">
+                        <span className="text-2xs px-2 py-0.5 rounded-md font-semibold bg-amber-500/10 text-amber-700 border border-amber-500/20">
 
                           {item.difficulty}
 
@@ -81,7 +81,7 @@ export default function CoursewaresTab({ filteredCoursewares, onOpenCourseware }
 
                         <div
 
-                          className="w-10 h-10 rounded-lg bg-neutral-100 border border-neutral-200 shrink-0 flex items-center justify-center text-lg shadow-2xs group-hover:scale-105 transition-transform text-neutral-800" 
+                          className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 shrink-0 flex items-center justify-center text-lg shadow-xs group-hover:scale-105 transition-transform text-slate-800" 
 
                         >
 
@@ -91,7 +91,7 @@ export default function CoursewaresTab({ filteredCoursewares, onOpenCourseware }
 
                         <div className="min-w-0 flex-1">
 
-                          <h3 className="text-sm font-bold text-warm-900 group-hover:text-neutral-900 transition-colors leading-snug">
+                          <h3 className="text-sm font-bold text-warm-900 group-hover:text-slate-900 transition-colors leading-snug">
 
                             {cleanTitle}
 
@@ -115,7 +115,7 @@ export default function CoursewaresTab({ filteredCoursewares, onOpenCourseware }
 
                         {item.learningPoints.slice(0, 2).map((pt, i) => (
 
-                          <div key={i} className="text-[11px] text-warm-600 flex items-center gap-1.5">
+                          <div key={i} className="text-2xs text-warm-600 flex items-center gap-1.5">
 
                             <span
 
@@ -149,7 +149,7 @@ export default function CoursewaresTab({ filteredCoursewares, onOpenCourseware }
 
                             key={idx}
 
-                            className="text-[10px] text-warm-500 bg-cream-200/60 px-1.5 py-0.5 rounded truncate"
+                            className="text-2xs text-warm-500 bg-cream-200/60 px-1.5 py-0.5 rounded truncate"
 
                           >
 
@@ -163,7 +163,7 @@ export default function CoursewaresTab({ filteredCoursewares, onOpenCourseware }
 
 
 
-                      <span className="px-2.5 py-1 rounded-lg bg-cyan-500/10 group-hover:bg-cyan-600 text-cyan-700 group-hover:text-white font-bold text-[11px] flex items-center gap-1 shrink-0 transition-all">
+                      <span className="px-2.5 py-1 rounded-lg bg-cyan-500/10 group-hover:bg-cyan-600 text-cyan-700 group-hover:text-white font-bold text-2xs flex items-center gap-1 shrink-0 transition-all">
 
                         进入仿真 <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
 

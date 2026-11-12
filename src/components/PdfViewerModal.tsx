@@ -30,7 +30,7 @@ export default function PdfViewerModal({
 
   const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
-      <div className={`bg-[#181b24] border border-white/10 rounded-2xl flex flex-col shadow-2xl overflow-hidden transition-all duration-200 ${
+      <div className={`bg-[#181b24] border border-white/10 rounded-2xl flex flex-col shadow-xl overflow-hidden transition-all duration-200 ${
         isFullscreen ? 'w-full h-full rounded-none' : 'w-full max-w-6xl h-[92vh]'
       }`}>
         {/* Top Header Bar */}
@@ -41,13 +41,13 @@ export default function PdfViewerModal({
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-red-500/15 text-red-300 border border-red-500/20">
+                <span className="px-2 py-0.5 rounded text-2xs font-semibold bg-red-500/15 text-red-300 border border-red-500/20">
                   PDF 考研专著
                 </span>
-                <span className="text-[11px] text-slate-400">
+                <span className="text-2xs text-slate-400">
                   {book.domain === 'cs_408' ? '408 计算机' : '考研数学'} · {book.category} · {sizeMb} MB
                 </span>
-                <span className="text-[10px] text-emerald-400/90 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.2 rounded hidden sm:inline-block">
+                <span className="text-2xs text-emerald-400/90 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.2 rounded hidden sm:inline-block">
                   ⚡ HTTP 206 分片秒开
                 </span>
               </div>

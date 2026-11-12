@@ -90,7 +90,7 @@ export default function MobileDashboardView({
           {/* 顶栏：问候 + 积分与打卡 */}
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <span className="text-[11px] text-amber-300 font-bold flex items-center gap-1.5">
+              <span className="text-2xs text-amber-300 font-bold flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
                 {greeting}
               </span>
@@ -128,14 +128,14 @@ export default function MobileDashboardView({
           {/* 倒计时主展示区 */}
           <div className="p-3.5 rounded-xl bg-white/[0.07] border border-white/10 flex items-center justify-between gap-3">
             <div>
-              <div className="text-[10px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1">
+              <div className="text-2xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1">
                 <Calendar className="w-3 h-3 text-amber-400" />
                 <span>{countdown.targetLabel}</span>
               </div>
-              <p className="text-[11px] text-slate-400 mt-0.5 font-medium">{countdown.displayDate} 政治统考开考</p>
+              <p className="text-2xs text-slate-400 mt-0.5 font-medium">{countdown.displayDate} 政治统考开考</p>
             </div>
             <div className="flex items-baseline gap-1 text-right">
-              <span className="text-[11px] text-amber-300 font-bold">倒计时</span>
+              <span className="text-2xs text-amber-300 font-bold">倒计时</span>
               <span className="text-3xl sm:text-4xl font-black font-mono tracking-tight text-amber-300">
                 {countdownDays}
               </span>
@@ -145,7 +145,7 @@ export default function MobileDashboardView({
 
           {/* 每日真题冲刺进度条 */}
           <div className="space-y-1">
-            <div className="flex items-center justify-between text-[11px]">
+            <div className="flex items-center justify-between text-2xs">
               <span className="text-slate-300 font-medium">今日真题自测进度</span>
               <span className="font-mono font-bold text-amber-300">{doneCount} / {dailyGoal} 题 ({progressPct}%)</span>
             </div>
@@ -166,14 +166,14 @@ export default function MobileDashboardView({
             <span className="text-sm">🎯</span>
             <span>四门核心统考专区</span>
           </div>
-          <span className="text-[10px] text-slate-500 font-mono">题池储备 {totalQuestions} 道</span>
+          <span className="text-2xs text-slate-500 font-mono">题池储备 {totalQuestions} 道</span>
         </div>
 
         <div className="grid grid-cols-2 gap-2.5">
           {/* 408 计算机专区 */}
           <Link
             to="/quiz?domain=cs_408"
-            className={`p-3.5 rounded-2xl border shadow-2xs active:scale-[0.98] transition-all flex flex-col justify-between ${
+            className={`p-3.5 rounded-2xl border shadow-xs active:scale-[0.98] transition-all flex flex-col justify-between ${
               isVibrant
                 ? 'bg-gradient-to-br from-blue-50/90 via-white to-indigo-50/60 border-blue-200/90 shadow-blue-500/10'
                 : 'bg-white border-slate-200/90'
@@ -182,14 +182,14 @@ export default function MobileDashboardView({
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xl">💻</span>
-                <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-md font-mono">
+                <span className="text-2xs font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-md font-mono">
                   {csQuestionsCount} 题
                 </span>
               </div>
               <h3 className="text-xs font-bold text-slate-900">408 统考</h3>
-              <p className="text-[10px] text-slate-500 mt-0.5 truncate">数构·计组·OS·网络</p>
+              <p className="text-2xs text-slate-500 mt-0.5 truncate">数构·计组·OS·网络</p>
             </div>
-            <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-blue-600 font-semibold">
+            <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-2xs text-blue-600 font-semibold">
               <span>刷 408 真题</span>
               <span className="font-mono">→</span>
             </div>
@@ -198,7 +198,7 @@ export default function MobileDashboardView({
           {/* 考研数学专区 */}
           <Link
             to="/quiz?domain=math"
-            className={`p-3.5 rounded-2xl border shadow-2xs active:scale-[0.98] transition-all flex flex-col justify-between ${
+            className={`p-3.5 rounded-2xl border shadow-xs active:scale-[0.98] transition-all flex flex-col justify-between ${
               isVibrant
                 ? 'bg-gradient-to-br from-purple-50/90 via-white to-violet-50/60 border-purple-200/90 shadow-purple-500/10'
                 : 'bg-white border-slate-200/90'
@@ -207,14 +207,14 @@ export default function MobileDashboardView({
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xl">📐</span>
-                <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded-md">
+                <span className="text-2xs font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded-md">
                   KaTeX公式
                 </span>
               </div>
               <h3 className="text-xs font-bold text-slate-900">考研数学</h3>
-              <p className="text-[10px] text-slate-500 mt-0.5 truncate">高数·线代·概率论</p>
+              <p className="text-2xs text-slate-500 mt-0.5 truncate">高数·线代·概率论</p>
             </div>
-            <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-amber-700 font-semibold">
+            <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-2xs text-amber-700 font-semibold">
               <span>公式推导演练</span>
               <span className="font-mono">→</span>
             </div>
@@ -223,7 +223,7 @@ export default function MobileDashboardView({
           {/* 考研政治专区 */}
           <Link
             to="/politics"
-            className={`p-3.5 rounded-2xl border shadow-2xs active:scale-[0.98] transition-all flex flex-col justify-between ${
+            className={`p-3.5 rounded-2xl border shadow-xs active:scale-[0.98] transition-all flex flex-col justify-between ${
               isVibrant
                 ? 'bg-gradient-to-br from-rose-50/90 via-white to-amber-50/60 border-rose-200/90 shadow-rose-500/10'
                 : 'bg-white border-slate-200/90'
@@ -232,14 +232,14 @@ export default function MobileDashboardView({
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xl">🏛️</span>
-                <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded-md">
+                <span className="text-2xs font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded-md">
                   时空编年
                 </span>
               </div>
               <h3 className="text-xs font-bold text-slate-900">考研政治</h3>
-              <p className="text-[10px] text-slate-500 mt-0.5 truncate">史纲时空轴·1000题</p>
+              <p className="text-2xs text-slate-500 mt-0.5 truncate">史纲时空轴·1000题</p>
             </div>
-            <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-rose-600 font-semibold">
+            <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-2xs text-rose-600 font-semibold">
               <span>速记与背诵</span>
               <span className="font-mono">→</span>
             </div>
@@ -248,7 +248,7 @@ export default function MobileDashboardView({
           {/* 考研英语专区 */}
           <Link
             to="/english"
-            className={`p-3.5 rounded-2xl border shadow-2xs active:scale-[0.98] transition-all flex flex-col justify-between ${
+            className={`p-3.5 rounded-2xl border shadow-xs active:scale-[0.98] transition-all flex flex-col justify-between ${
               isVibrant
                 ? 'bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/60 border-emerald-200/90 shadow-emerald-500/10'
                 : 'bg-white border-slate-200/90'
@@ -257,14 +257,14 @@ export default function MobileDashboardView({
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xl">📖</span>
-                <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded-md">
+                <span className="text-2xs font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded-md">
                   AI 批改
                 </span>
               </div>
               <h3 className="text-xs font-bold text-slate-900">考研英语</h3>
-              <p className="text-[10px] text-slate-500 mt-0.5 truncate">写作模板·真题研读</p>
+              <p className="text-2xs text-slate-500 mt-0.5 truncate">写作模板·真题研读</p>
             </div>
-            <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-purple-600 font-semibold">
+            <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-2xs text-purple-600 font-semibold">
               <span>作文批改舱</span>
               <span className="font-mono">→</span>
             </div>
@@ -273,7 +273,7 @@ export default function MobileDashboardView({
       </section>
 
       {/* ── 2.5 🤖 考研 AI 伴学导师专属工作舱 (首屏吸睛直达) ── */}
-      <section className="p-3.5 rounded-2xl bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-900 text-white border border-indigo-500/30 shadow-md flex items-center justify-between gap-2.5">
+      <section className="p-3.5 rounded-2xl bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-900 text-white border border-indigo-500/30 shadow-sm flex items-center justify-between gap-2.5">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-sm">
             🤖
@@ -281,11 +281,11 @@ export default function MobileDashboardView({
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <h4 className="text-xs font-black text-white truncate">考研 AI 伴学导师</h4>
-              <span className="px-1.5 py-0.2 rounded-full bg-amber-400 text-slate-950 text-[9px] font-black shrink-0">
+              <span className="px-1.5 py-0.2 rounded-full bg-amber-400 text-slate-950 text-2xs font-black shrink-0">
                 在线伴读
               </span>
             </div>
-            <p className="text-[10px] text-slate-300 mt-0.5 truncate">多智能体答疑 · 严谨推导数学与408错因</p>
+            <p className="text-2xs text-slate-300 mt-0.5 truncate">多智能体答疑 · 严谨推导数学与408错因</p>
           </div>
         </div>
         <Link
@@ -303,12 +303,12 @@ export default function MobileDashboardView({
             <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
             <span className="text-xs font-bold text-slate-900">考点急救与提分直通</span>
           </div>
-          <span className="text-[10px] text-rose-700 font-bold bg-rose-100 px-2 py-0.5 rounded-full">
+          <span className="text-2xs text-rose-700 font-bold bg-rose-100 px-2 py-0.5 rounded-full">
             热力导航
           </span>
         </div>
 
-        <p className="text-[11px] text-slate-600 leading-relaxed">
+        <p className="text-2xs text-slate-600 leading-relaxed">
           红点呼吸闪烁代表高频失分薄弱点（做对率&lt;50%）。点击直通仿真课件单步推演与 3 道真题急救特训。
         </p>
 
@@ -316,7 +316,7 @@ export default function MobileDashboardView({
           <button
             type="button"
             onClick={() => navigate('/graph')}
-            className="flex-1 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white text-xs font-bold shadow-2xs active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            className="flex-1 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white text-xs font-bold shadow-xs active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <Flame className="w-3.5 h-3.5 fill-current" />
             <span>查阅掌握度热力图</span>
@@ -324,7 +324,7 @@ export default function MobileDashboardView({
           <button
             type="button"
             onClick={() => navigate('/quiz?mode=practice&count=10')}
-            className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs font-bold active:scale-95 transition-all cursor-pointer shadow-2xs whitespace-nowrap"
+            className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs font-bold active:scale-95 transition-all cursor-pointer shadow-xs whitespace-nowrap"
           >
             抽 10 题速练
           </button>
@@ -338,7 +338,7 @@ export default function MobileDashboardView({
           <button
             type="button"
             onClick={() => navigate('/settings')}
-            className="text-[10.5px] text-indigo-600 font-bold hover:underline"
+            className="text-2xs text-indigo-600 font-bold hover:underline"
           >
             系统设置 ⚙️
           </button>
@@ -347,36 +347,36 @@ export default function MobileDashboardView({
           {/* 错题本直达 */}
           <Link
             to="/quiz"
-            className="p-2.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-2.5 text-left"
+            className="p-2.5 rounded-xl bg-white border border-slate-200/80 shadow-xs hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-2.5 text-left"
           >
             <span className="text-lg">📕</span>
             <div className="min-w-0">
               <div className="text-xs font-bold text-slate-800">错题本与真题</div>
-              <div className="text-[10px] text-slate-400 truncate">408沙箱·拍照导题</div>
+              <div className="text-2xs text-slate-400 truncate">408沙箱·拍照导题</div>
             </div>
           </Link>
 
           {/* 知识图谱 */}
           <Link
             to="/graph"
-            className="p-2.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-2.5 text-left"
+            className="p-2.5 rounded-xl bg-white border border-slate-200/80 shadow-xs hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-2.5 text-left"
           >
             <span className="text-lg">🕸️</span>
             <div className="min-w-0">
               <div className="text-xs font-bold text-slate-800">考点知识图谱</div>
-              <div className="text-[10px] text-slate-400 truncate">全库双链网络拓扑</div>
+              <div className="text-2xs text-slate-400 truncate">全库双链网络拓扑</div>
             </div>
           </Link>
 
           {/* 核心讲义 */}
           <Link
             to="/study"
-            className="p-2.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-2.5 text-left"
+            className="p-2.5 rounded-xl bg-white border border-slate-200/80 shadow-xs hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-2.5 text-left"
           >
             <span className="text-lg">📚</span>
             <div className="min-w-0">
               <div className="text-xs font-bold text-slate-800">考研核心讲义</div>
-              <div className="text-[10px] text-slate-400 truncate">大纲知识与课件</div>
+              <div className="text-2xs text-slate-400 truncate">大纲知识与课件</div>
             </div>
           </Link>
 
@@ -384,36 +384,36 @@ export default function MobileDashboardView({
           <button
             type="button"
             onClick={onOpenQuickNote}
-            className="p-2.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-2.5 cursor-pointer text-left"
+            className="p-2.5 rounded-xl bg-white border border-slate-200/80 shadow-xs hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-2.5 cursor-pointer text-left"
           >
             <span className="text-lg">✍️</span>
             <div className="min-w-0">
               <div className="text-xs font-bold text-slate-800">随手速记</div>
-              <div className="text-[10px] text-slate-400 truncate">双链考点备忘</div>
+              <div className="text-2xs text-slate-400 truncate">双链考点备忘</div>
             </div>
           </button>
 
           {/* 番茄专注 */}
           <Link
             to="/pomodoro"
-            className="p-2.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-2.5 text-left"
+            className="p-2.5 rounded-xl bg-white border border-slate-200/80 shadow-xs hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-2.5 text-left"
           >
             <span className="text-lg">🍅</span>
             <div className="min-w-0">
               <div className="text-xs font-bold text-slate-800">番茄专注</div>
-              <div className="text-[10px] text-slate-400 truncate">深度沉浸学习</div>
+              <div className="text-2xs text-slate-400 truncate">深度沉浸学习</div>
             </div>
           </Link>
 
           {/* 白噪音伴学 */}
           <Link
             to="/music"
-            className="p-2.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-2.5 text-left"
+            className="p-2.5 rounded-xl bg-white border border-slate-200/80 shadow-xs hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-2.5 text-left"
           >
             <span className="text-lg">🎵</span>
             <div className="min-w-0">
               <div className="text-xs font-bold text-slate-800">白噪音伴学</div>
-              <div className="text-[10px] text-slate-400 truncate">自习室与雨声</div>
+              <div className="text-2xs text-slate-400 truncate">自习室与雨声</div>
             </div>
           </Link>
         </div>

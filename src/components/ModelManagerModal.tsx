@@ -211,7 +211,7 @@ export default function ModelManagerModal({
 
   const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-in fade-in">
-      <div className="relative w-full max-w-2xl bg-surface border border-cream-300 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+      <div className="relative w-full max-w-2xl bg-surface border border-cream-300 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[85vh]">
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-cream-200 dark:border-slate-800 flex items-center justify-between bg-cream-100/60 dark:bg-slate-900/60">
           <div className="flex items-center gap-2.5">
@@ -275,7 +275,7 @@ export default function ModelManagerModal({
                 }`}
               >
                 <span>{tab.label}</span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-cream-200 dark:bg-slate-600 text-warm-600 dark:text-slate-300">
+                <span className="text-2xs px-1.5 py-0.2 rounded-full bg-cream-200 dark:bg-slate-600 text-warm-600 dark:text-slate-300">
                   {tab.count}
                 </span>
               </button>
@@ -303,7 +303,7 @@ export default function ModelManagerModal({
               <h3 className="text-xs font-bold text-warm-700 dark:text-slate-300 flex items-center gap-1.5">
                 <span>当前可用模型列表 ({currentModels.length} 个)</span>
               </h3>
-              <span className="text-[11px] text-warm-400">点击右侧垃圾桶即可从系统列表彻底移除</span>
+              <span className="text-2xs text-warm-400">点击右侧垃圾桶即可从系统列表彻底移除</span>
             </div>
 
             {currentModels.length === 0 ? (
@@ -315,7 +315,7 @@ export default function ModelManagerModal({
                 {currentModels.map(m => (
                   <div
                     key={m}
-                    className="group p-2.5 rounded-xl border border-cream-200 dark:border-slate-800 bg-surface dark:bg-slate-900/50 hover:border-orange-300 dark:hover:border-orange-500/40 transition-all flex items-center justify-between gap-2 shadow-2xs"
+                    className="group p-2.5 rounded-xl border border-cream-200 dark:border-slate-800 bg-surface dark:bg-slate-900/50 hover:border-orange-300 dark:hover:border-orange-500/40 transition-all flex items-center justify-between gap-2 shadow-xs"
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
@@ -323,7 +323,7 @@ export default function ModelManagerModal({
                         {m.includes('::') ? m.split('::')[1] : m}
                       </span>
                       {m.includes('::') && (
-                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-cream-200 text-warm-500 font-sans shrink-0">
+                        <span className="text-2xs px-1.5 py-0.2 rounded bg-cream-200 text-warm-500 font-sans shrink-0">
                           {m.split('::')[0]}
                         </span>
                       )}
@@ -373,7 +373,7 @@ export default function ModelManagerModal({
                 <button
                   onClick={handleRestoreAll}
                   disabled={loading}
-                  className="text-[11px] text-orange-600 dark:text-orange-400 hover:underline flex items-center gap-1 cursor-pointer"
+                  className="text-2xs text-orange-600 dark:text-orange-400 hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   <RotateCcw className="w-3 h-3" />
                   <span>恢复全部模型</span>
@@ -384,7 +384,7 @@ export default function ModelManagerModal({
                 {deletedModels.map(m => (
                   <div
                     key={m}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-cream-200 dark:border-slate-800 bg-cream-100/70 dark:bg-slate-800/40 text-[11px] text-warm-500 dark:text-slate-400"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-cream-200 dark:border-slate-800 bg-cream-100/70 dark:bg-slate-800/40 text-2xs text-warm-500 dark:text-slate-400"
                   >
                     <span className="line-through">{m}</span>
                     <button
@@ -404,7 +404,7 @@ export default function ModelManagerModal({
 
         {/* Modal Footer */}
         <div className="px-6 py-3 border-t border-cream-200 dark:border-slate-800 flex items-center justify-between bg-cream-50 dark:bg-slate-900/60">
-          <span className="text-[11px] text-warm-400 flex items-center gap-1">
+          <span className="text-2xs text-warm-400 flex items-center gap-1">
             <Sparkles className="w-3 h-3 text-amber-500" />
             所有删除操作将实时持久化保存，重启应用后依然保持纯净
           </span>

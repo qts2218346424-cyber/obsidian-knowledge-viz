@@ -568,8 +568,8 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath, initialCon
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <h2 className="truncate text-sm font-semibold text-warm-900">{activeProject.name}</h2>
-              <span className="hidden rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-warm-400 sm:inline">{context.title}</span>
-              <span className="hidden sm:inline-flex items-center gap-1 rounded-md bg-indigo-50 border border-indigo-200/80 px-2 py-0.5 text-[10px] font-mono font-bold text-indigo-700">
+              <span className="hidden rounded-full bg-slate-100 px-2 py-0.5 text-2xs text-warm-400 sm:inline">{context.title}</span>
+              <span className="hidden sm:inline-flex items-center gap-1 rounded-md bg-indigo-50 border border-indigo-200/80 px-2 py-0.5 text-2xs font-mono font-bold text-indigo-700">
                 伴学抽屉 ⌘J
               </span>
             </div>
@@ -619,7 +619,7 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath, initialCon
             )}
 
             <div className="flex items-center justify-between px-3 pb-1 pt-4">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-warm-400">会话</span>
+              <span className="text-2xs font-semibold uppercase tracking-[0.14em] text-warm-400">会话</span>
               <button onClick={handleCreateSession} className="rounded-lg p-1 text-warm-400 hover:bg-slate-100 hover:text-accent-orange" aria-label="新建会话">
                 <Plus className="h-3.5 w-3.5" />
               </button>
@@ -638,7 +638,7 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath, initialCon
               ))}
             </div>
             {workspace.projects.length > 1 && (
-              <button onClick={() => setWorkspace(previous => deleteProject(previous, activeProject.id))} className="m-3 flex items-center justify-center gap-1.5 rounded-xl border border-rose-200 px-3 py-2 text-[11px] text-rose-500 hover:bg-rose-50">
+              <button onClick={() => setWorkspace(previous => deleteProject(previous, activeProject.id))} className="m-3 flex items-center justify-center gap-1.5 rounded-xl border border-rose-200 px-3 py-2 text-2xs text-rose-500 hover:bg-rose-50">
                 <Trash2 className="h-3 w-3" /> 删除当前项目
               </button>
             )}
@@ -662,7 +662,7 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath, initialCon
                       type="button"
                       disabled={disabled}
                       onClick={() => selectProvider(provider)}
-                      className={`rounded-full px-2.5 py-1.5 text-[11px] font-medium transition flex items-center gap-1.5 ${
+                      className={`rounded-full px-2.5 py-1.5 text-2xs font-medium transition flex items-center gap-1.5 ${
                         selected
                           ? provider === 'antigravity'
                             ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-sm ring-1 ring-white/20'
@@ -687,7 +687,7 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath, initialCon
                   )
                 })}
               </div>
-              <span className="hidden items-center gap-1 text-[10px] text-warm-400 lg:flex">
+              <span className="hidden items-center gap-1 text-2xs text-warm-400 lg:flex">
                 <Cpu className="h-3 w-3" />
                 {localStatusLoading
                   ? '正在检测本机 Agent…'
@@ -702,9 +702,9 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath, initialCon
                 <span>{activeSkills.length ? activeSkills.map(skill => skill.name).join('、') : '选择 Skill'}</span>
                 <ChevronDown className="h-3 w-3 text-warm-400" />
               </button>
-              <span className="hidden truncate text-[11px] text-warm-400 sm:inline">{context.description}</span>
+              <span className="hidden truncate text-2xs text-warm-400 sm:inline">{context.description}</span>
               {activeProvider !== 'web' && activeProject.cwd && (
-                <span className="hidden max-w-[220px] truncate text-[10px] text-warm-400 xl:inline" title={activeProject.cwd}>
+                <span className="hidden max-w-[220px] truncate text-2xs text-warm-400 xl:inline" title={activeProject.cwd}>
                   {activeProject.cwd}
                 </span>
               )}
@@ -730,7 +730,7 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath, initialCon
 
             {skillsOpen && (
               <div className="border-b border-slate-200 bg-white px-4 py-3 sm:px-5">
-                <div className="mb-2 text-[11px] font-medium text-warm-500">为当前会话启用 Skill</div>
+                <div className="mb-2 text-2xs font-medium text-warm-500">为当前会话启用 Skill</div>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {AI_SKILLS.map(skill => {
                     const active = activeSession.skillIds.includes(skill.id)
@@ -739,7 +739,7 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath, initialCon
                         <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-xs ${skill.color}`}>{skill.icon}</span>
                         <span className="min-w-0">
                           <span className="flex items-center gap-1.5 text-xs font-medium text-warm-700">{skill.name}{active && <Check className="h-3 w-3 text-accent-sage" />}</span>
-                          <span className="mt-0.5 block text-[10px] leading-4 text-warm-400">{skill.description}</span>
+                          <span className="mt-0.5 block text-2xs leading-4 text-warm-400">{skill.description}</span>
                         </span>
                       </button>
                     )
@@ -792,7 +792,7 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath, initialCon
                   {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 </button>
               </div>
-              <div className="mx-auto mt-2 flex max-w-2xl items-center gap-1 text-[10px] text-warm-400">
+              <div className="mx-auto mt-2 flex max-w-2xl items-center gap-1 text-2xs text-warm-400">
                 <Check className="h-3 w-3 text-accent-sage" />
                 已保存到本地工作区 · Enter 发送，Shift + Enter 换行
               </div>
@@ -819,7 +819,7 @@ function MessageBubble({
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
-        className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed transition-all shadow-2xs ${
+        className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed transition-all shadow-xs ${
           isUser
             ? 'rounded-br-xs bg-gradient-to-r from-accent-orange to-blue-600 text-white shadow-xs'
             : 'rounded-bl-xs border border-cream-200/90 dark:border-slate-800 bg-surface dark:bg-slate-900 text-warm-800 dark:text-slate-200'
@@ -847,18 +847,18 @@ function MessageBubble({
                   </span>
                 </div>
                 {loadingSeconds >= 8 && onSwitchFastModel && (
-                  <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800 space-y-1.5 animate-in fade-in">
+                  <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-2xs text-amber-800 space-y-1.5 animate-in fade-in">
                     <div className="flex items-center gap-1.5 font-bold">
                       <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                       <span>思考耗时较长（已用时 {loadingSeconds} 秒，未重复扣费）</span>
                     </div>
-                    <p className="text-[10.5px] text-amber-700 leading-relaxed">
+                    <p className="text-2xs text-amber-700 leading-relaxed">
                       您可以继续等待推理，或一键切换备用极速模型即刻重答：
                     </p>
                     <button
                       type="button"
                       onClick={onSwitchFastModel}
-                      className="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-[10.5px] shadow-2xs transition-colors flex items-center gap-1 cursor-pointer active:scale-95"
+                      className="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-2xs shadow-xs transition-colors flex items-center gap-1 cursor-pointer active:scale-95"
                     >
                       <Zap className="w-3 h-3" />
                       <span>切换备用极速模型重试</span>

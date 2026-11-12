@@ -22,11 +22,11 @@ export default function PdfShelfTab({ books, filteredPdfs, batchExtracting, batc
 
             {/* 智能解析与知识库/题库归类总控条 */}
 
-            <div className="bento-card rounded-xl border border-neutral-200/80 bg-white p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xs">
+            <div className="bento-card rounded-xl border border-slate-200/80 bg-white p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xs">
 
               <div className="flex items-center gap-3.5">
 
-                <div className="p-2.5 rounded-lg bg-neutral-900 text-white shrink-0 shadow-xs">
+                <div className="p-2.5 rounded-lg bg-slate-900 text-white shrink-0 shadow-xs">
 
                   <Database className="w-5 h-5" />
 
@@ -36,13 +36,13 @@ export default function PdfShelfTab({ books, filteredPdfs, batchExtracting, batc
 
                   <div className="flex items-center gap-2">
 
-                    <h3 className="text-sm sm:text-base font-bold text-neutral-900">
+                    <h3 className="text-sm sm:text-base font-bold text-slate-900">
 
                       AI 讲义 & 题目自动解析归类引擎
 
                     </h3>
 
-                    <span className="subframe-pill text-[10px]">
+                    <span className="subframe-pill text-2xs">
 
                       双轨深度整合
 
@@ -50,7 +50,7 @@ export default function PdfShelfTab({ books, filteredPdfs, batchExtracting, batc
 
                   </div>
 
-                  <p className="text-xs text-neutral-500 mt-1">
+                  <p className="text-xs text-slate-500 mt-1">
 
                     全自动研读 PDF 讲义：提取知识点精讲归入知识图谱，抽取真题与解析批量注入题库。
 
@@ -156,7 +156,7 @@ export default function PdfShelfTab({ books, filteredPdfs, batchExtracting, batc
 
             {filteredPdfs.length === 0 ? (
 
-              <div className="text-center py-16 text-warm-400 space-y-3 bg-surface border border-neutral-200/80 rounded-xl">
+              <div className="text-center py-16 text-warm-400 space-y-3 bg-surface border border-slate-200/80 rounded-xl">
 
                 <FileText className="w-12 h-12 mx-auto opacity-30 text-rose-400" />
 
@@ -202,7 +202,7 @@ export default function PdfShelfTab({ books, filteredPdfs, batchExtracting, batc
 
                       onClick={() => setActivePdf(book)}
 
-                      className={`bg-surface border rounded-2xl p-5 cursor-pointer transition-all duration-200 hover:shadow-md flex flex-col justify-between group ${
+                      className={`bg-surface border rounded-2xl p-5 cursor-pointer transition-all duration-200 hover:shadow-sm flex flex-col justify-between group ${
 
                         isExtracted
 
@@ -218,13 +218,13 @@ export default function PdfShelfTab({ books, filteredPdfs, batchExtracting, batc
 
                         <div className="flex items-center justify-between gap-2 mb-2.5">
 
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-500/10 text-red-600 border border-red-500/20">
+                          <span className="px-2 py-0.5 rounded text-2xs font-bold bg-red-500/10 text-red-600 border border-red-500/20">
 
                             PDF 电子教材
 
                           </span>
 
-                          <span className="text-[11px] text-warm-400">
+                          <span className="text-2xs text-warm-400">
 
                             {sizeMb} MB
 
@@ -240,7 +240,7 @@ export default function PdfShelfTab({ books, filteredPdfs, batchExtracting, batc
 
                           {isExtracted ? (
 
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-500/10 text-green-700 border border-green-500/20">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-bold bg-green-500/10 text-green-700 border border-green-500/20">
 
                               <CheckCircle2 className="w-3 h-3 text-green-600 shrink-0" />
 
@@ -250,7 +250,7 @@ export default function PdfShelfTab({ books, filteredPdfs, batchExtracting, batc
 
                           ) : (
 
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/10 text-amber-700 border border-amber-500/20">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium bg-amber-500/10 text-amber-700 border border-amber-500/20">
 
                               <Sparkles className="w-3 h-3 text-amber-500 shrink-0" />
 
@@ -280,7 +280,7 @@ export default function PdfShelfTab({ books, filteredPdfs, batchExtracting, batc
 
                             <div className="flex items-start justify-between gap-1">
 
-                              <h3 className="text-sm font-bold text-warm-800 group-hover:text-neutral-900 transition-colors leading-snug line-clamp-2">
+                              <h3 className="text-sm font-bold text-warm-800 group-hover:text-slate-900 transition-colors leading-snug line-clamp-2">
 
                                 {book.name}
 
@@ -304,7 +304,7 @@ export default function PdfShelfTab({ books, filteredPdfs, batchExtracting, batc
 
                             </div>
 
-                            <div className="text-[11px] text-warm-400 mt-1">
+                            <div className="text-2xs text-warm-400 mt-1">
 
                               {isCs ? '408 计算机' : '考研数学'} · {book.category}
 
@@ -320,7 +320,7 @@ export default function PdfShelfTab({ books, filteredPdfs, batchExtracting, batc
 
                       <div className="mt-5 pt-3 border-t border-cream-200/60 flex items-center justify-between text-xs">
 
-                        <span className="text-[11px] text-warm-400">
+                        <span className="text-2xs text-warm-400">
 
                           {new Date(book.lastModified).toLocaleDateString('zh-CN')}
 

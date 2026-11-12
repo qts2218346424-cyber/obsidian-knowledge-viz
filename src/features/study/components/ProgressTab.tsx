@@ -44,27 +44,27 @@ export default function ProgressTab() {
         <div className="bg-surface border border-cream-200 rounded-xl p-4">
           <div className="text-xs text-warm-400">权威讲义库</div>
           <div className="text-2xl font-bold text-warm-800 mt-1">{CURATED_HANDOUTS.length} <span className="text-xs font-normal text-warm-400">篇精析</span></div>
-          <div className="text-[10px] text-accent-orange mt-1">覆盖 408 与 考研数学全科</div>
+          <div className="text-2xs text-accent-orange mt-1">覆盖 408 与 考研数学全科</div>
         </div>
         <div className="bg-surface border border-cream-200 rounded-xl p-4">
           <div className="text-xs text-warm-400">交互仿真课件</div>
           <div className="text-2xl font-bold text-cyan-600 mt-1">{INTERACTIVE_COURSEWARES.length} <span className="text-xs font-normal text-warm-400">个互动课件</span></div>
-          <div className="text-[10px] text-warm-400 mt-1">含 史纲时空轴、CPU流水线、页面置换</div>
+          <div className="text-2xs text-warm-400 mt-1">含 史纲时空轴、CPU流水线、页面置换</div>
         </div>
         <div className="bg-surface border border-cream-200 rounded-xl p-4">
           <div className="text-xs text-warm-400">考研真题与题库</div>
           <div className="text-2xl font-bold text-accent-sage mt-1">167 <span className="text-xs font-normal text-warm-400">道统考真题精选</span></div>
-          <div className="text-[10px] text-warm-400 mt-1">支持随时随堂一键即练</div>
+          <div className="text-2xs text-warm-400 mt-1">支持随时随堂一键即练</div>
         </div>
         <div className="bg-surface border border-cream-200 rounded-xl p-4">
           <div className="text-xs text-warm-400">AI 伴学引擎</div>
           <div className="text-2xl font-bold text-purple-600 mt-1">双核 <span className="text-xs font-normal text-warm-400">+ 噜噜</span></div>
-          <div className="text-[10px] text-warm-400 mt-1">Claude Code / Codex / DeepSeek</div>
+          <div className="text-2xs text-warm-400 mt-1">Claude Code / Codex / DeepSeek</div>
         </div>
       </div>
 
       {/* Chart */}
-      <div className="bg-surface border border-neutral-200/80 rounded-xl p-5 shadow-xs">
+      <div className="bg-surface border border-slate-200/80 rounded-xl p-5 shadow-xs">
         <div className="text-xs font-bold text-warm-700 mb-4">408 与 考研数学各科讲义与真题覆盖分布</div>
         <ResponsiveContainer width="100%" height={260}>
           <BarChart data={chartData} barCategoryGap="25%">

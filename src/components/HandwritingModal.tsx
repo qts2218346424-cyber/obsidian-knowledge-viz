@@ -433,7 +433,7 @@ export default function HandwritingModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-xs select-none">
       <div
-        className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-200 ${
+        className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl flex flex-col overflow-hidden transition-all duration-200 ${
           isFullscreen
             ? 'w-full h-full rounded-none'
             : 'w-full max-w-5xl h-[88vh] max-h-[850px]'
@@ -452,7 +452,7 @@ export default function HandwritingModal({
                   平板触屏压感适配
                 </span>
               </h2>
-              <p className="text-[11px] text-slate-500 hidden sm:block">
+              <p className="text-2xs text-slate-500 hidden sm:block">
                 支持触控笔压感、平滑贝塞尔笔迹、数学推导与草图绘制，一键裁剪插入笔记
               </p>
             </div>
@@ -506,12 +506,12 @@ export default function HandwritingModal({
         {/* 笔刷与画板工具栏（专为平板触控优化的横排控制栏） */}
         <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-5 py-2 bg-slate-100/70 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800 text-xs shrink-0">
           {/* 工具切换：钢笔 / 马克笔 / 橡皮擦 */}
-          <div className="flex items-center gap-1 bg-white dark:bg-slate-900 p-0.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xs">
+          <div className="flex items-center gap-1 bg-white dark:bg-slate-900 p-0.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xs">
             <button
               onClick={() => setCurrentTool('pen')}
               className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-medium transition-all ${
                 currentTool === 'pen'
-                  ? 'bg-accent-orange text-white shadow-2xs'
+                  ? 'bg-accent-orange text-white shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
@@ -522,7 +522,7 @@ export default function HandwritingModal({
               onClick={() => setCurrentTool('highlighter')}
               className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-medium transition-all ${
                 currentTool === 'highlighter'
-                  ? 'bg-amber-500 text-white shadow-2xs'
+                  ? 'bg-amber-500 text-white shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
@@ -533,7 +533,7 @@ export default function HandwritingModal({
               onClick={() => setCurrentTool('eraser')}
               className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-medium transition-all ${
                 currentTool === 'eraser'
-                  ? 'bg-slate-800 text-white dark:bg-slate-600 shadow-2xs'
+                  ? 'bg-slate-800 text-white dark:bg-slate-600 shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
@@ -567,7 +567,7 @@ export default function HandwritingModal({
               <button
                 key={s.value}
                 onClick={() => setCurrentSize(s.value)}
-                className={`px-2 py-0.5 rounded-md font-medium text-[11px] ${
+                className={`px-2 py-0.5 rounded-md font-medium text-2xs ${
                   currentSize === s.value
                     ? 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white font-bold'
                     : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
@@ -580,7 +580,7 @@ export default function HandwritingModal({
 
           {/* 底纹选择 */}
           <div className="flex items-center gap-1 bg-white dark:bg-slate-900 px-2 py-1 rounded-xl border border-slate-200 dark:border-slate-700">
-            <span className="text-[11px] text-slate-500 mr-1 flex items-center gap-1">
+            <span className="text-2xs text-slate-500 mr-1 flex items-center gap-1">
               <Grid className="w-3 h-3" />
               底纹:
             </span>
@@ -590,7 +590,7 @@ export default function HandwritingModal({
                 <button
                   key={mode}
                   onClick={() => setBackgroundGrid(mode)}
-                  className={`px-1.5 py-0.5 rounded text-[11px] ${
+                  className={`px-1.5 py-0.5 rounded text-2xs ${
                     backgroundGrid === mode
                       ? 'bg-orange-100 dark:bg-orange-950/40 text-accent-orange font-bold'
                       : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
@@ -604,7 +604,7 @@ export default function HandwritingModal({
 
           {/* 导出设置：保留底纹与完成插入按钮 */}
           <div className="flex items-center gap-2">
-            <label className="flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-400 cursor-pointer select-none">
+            <label className="flex items-center gap-1.5 text-2xs text-slate-600 dark:text-slate-400 cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={keepBackgroundOnExport}
@@ -617,7 +617,7 @@ export default function HandwritingModal({
             <button
               onClick={handleSaveAndInsert}
               disabled={saving}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-accent-orange hover:bg-orange-600 text-white font-bold shadow-md hover:shadow-lg transition-all text-xs disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-accent-orange hover:bg-orange-600 text-white font-bold shadow-sm hover:shadow-xl transition-all text-xs disabled:opacity-50"
             >
               {saving ? (
                 <>

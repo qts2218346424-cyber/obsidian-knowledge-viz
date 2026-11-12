@@ -229,23 +229,23 @@ export default function Pomodoro() {
       {/* 顶部双轨角落胶囊顶栏 (Subframe Screen 3 Corner Pills) */}
       <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-neutral-200/80 shadow-xs">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200/80 shadow-xs">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-xs font-semibold text-neutral-800">心流推演舱就绪</span>
-            <span className="text-neutral-300">|</span>
-            <span className="text-[11px] text-neutral-500 font-mono">精密硬件时钟 2.0</span>
+            <span className="text-xs font-semibold text-slate-800">心流推演舱就绪</span>
+            <span className="text-slate-300">|</span>
+            <span className="text-2xs text-slate-500 font-mono">精密硬件时钟 2.0</span>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           {/* 倒计时/正计时胶囊 */}
-          <div className="inline-flex items-center p-0.5 rounded-full bg-neutral-200/80 border border-neutral-300/60 text-xs font-medium">
+          <div className="inline-flex items-center p-0.5 rounded-full bg-slate-200/80 border border-slate-300/60 text-xs font-medium">
             <button
               onClick={() => switchTimerType('countdown')}
               className={`px-3 py-1 rounded-full transition-all cursor-pointer ${
                 timerType === 'countdown'
-                  ? 'bg-white text-neutral-900 shadow-xs font-semibold'
-                  : 'text-neutral-600 hover:text-neutral-900'
+                  ? 'bg-white text-slate-900 shadow-xs font-semibold'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               ⏱ 倒计时
@@ -254,8 +254,8 @@ export default function Pomodoro() {
               onClick={() => switchTimerType('stopwatch')}
               className={`px-3 py-1 rounded-full transition-all cursor-pointer ${
                 timerType === 'stopwatch'
-                  ? 'bg-white text-neutral-900 shadow-xs font-semibold'
-                  : 'text-neutral-600 hover:text-neutral-900'
+                  ? 'bg-white text-slate-900 shadow-xs font-semibold'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               ⏲ 正计时
@@ -265,10 +265,10 @@ export default function Pomodoro() {
           {/* 音效开关 */}
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
-            className="p-1.5 rounded-full bg-white border border-neutral-200 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50 transition-colors cursor-pointer shadow-xs"
+            className="p-1.5 rounded-full bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer shadow-xs"
             title={soundEnabled ? '音效开启' : '音效静音'}
           >
-            {soundEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5 text-neutral-400" />}
+            {soundEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5 text-slate-400" />}
           </button>
         </div>
       </div>
@@ -277,7 +277,7 @@ export default function Pomodoro() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* 左侧：Subframe Screen 1 工业级 3D 金属镀铬外框硬件核心 */}
         <div className="lg:col-span-7 flex flex-col items-center">
-          <div className="w-full bg-[#f4f4f6] rounded-[28px] p-2 sm:p-3 border border-neutral-300/80 shadow-[0_16px_40px_rgba(0,0,0,0.08),inset_0_1px_1px_rgba(255,255,255,0.9)]">
+          <div className="w-full bg-[#f4f4f6] rounded-[28px] p-2 sm:p-3 border border-slate-300/80 shadow-[0_16px_40px_rgba(0,0,0,0.08),inset_0_1px_1px_rgba(255,255,255,0.9)]">
             {/* 3D 金属拨档外框 (Metallic Housing) */}
             <div className="metallic-housing w-full mb-3">
               <div className="metallic-bezel flex items-center justify-between gap-1">
@@ -286,17 +286,17 @@ export default function Pomodoro() {
                     key={m}
                     onClick={() => switchMode(m)}
                     disabled={status === 'running'}
-                    className={`flex-1 py-2 sm:py-2.5 px-3 rounded-[12px] text-xs font-medium transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 ${
+                    className={`flex-1 py-2 sm:py-2.5 px-3 rounded-xl text-xs font-medium transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 ${
                       mode === m
                         ? 'metal-tab-active font-semibold'
-                        : 'metal-tab-inactive hover:text-neutral-200'
+                        : 'metal-tab-inactive hover:text-slate-200'
                     }`}
                   >
                     <span>
                       {m === 'focus' ? '🎯' : m === 'shortBreak' ? '☕' : '🌿'}
                     </span>
                     <span>{MODE_LABELS[m]}</span>
-                    <span className="hidden sm:inline text-[10px] opacity-70">
+                    <span className="hidden sm:inline text-2xs opacity-70">
                       ({m === 'focus' ? focusDuration : m === 'shortBreak' ? shortBreakDuration : longBreakDuration}m)
                     </span>
                   </button>
@@ -305,14 +305,14 @@ export default function Pomodoro() {
             </div>
 
             {/* 硬件底座内胆：纯白圆角磨砂面板 */}
-            <div className="bg-white rounded-[22px] border border-black/[0.06] p-6 sm:p-8 flex flex-col items-center shadow-xs">
+            <div className="bg-white rounded-3xl border border-black/[0.06] p-6 sm:p-8 flex flex-col items-center shadow-xs">
               {/* 表盘上部：当前学科指示灯 */}
               <div className="flex items-center gap-2 mb-4">
                 <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-ping" />
-                <span className="text-[11px] font-semibold tracking-wider uppercase text-neutral-500">
+                <span className="text-2xs font-semibold tracking-wider uppercase text-slate-500">
                   {subjectFocus === '408' ? '408 计算机基础' : subjectFocus === 'math' ? '考研数学高数线代' : subjectFocus === 'politics' ? '政治史纲马原' : '考研英语长难句'}
                 </span>
-                <span className="px-1.5 py-0.5 rounded text-[10px] bg-neutral-100 text-neutral-600 font-mono">
+                <span className="px-1.5 py-0.5 rounded text-2xs bg-slate-100 text-slate-600 font-mono">
                   {status === 'running' ? '推演中' : status === 'paused' ? '暂停' : '待命'}
                 </span>
               </div>
@@ -350,7 +350,7 @@ export default function Pomodoro() {
                     onClick={toggleTimer}
                     className="cursor-pointer group flex flex-col items-center"
                   >
-                    <div className={`text-6xl font-bold font-mono tracking-tight text-neutral-900 ${
+                    <div className={`text-6xl font-bold font-mono tracking-tight text-slate-900 ${
                       status === 'running' ? 'scale-[1.02] transition-transform duration-500' : ''
                     }`}>
                       {timerType === 'stopwatch'
@@ -359,7 +359,7 @@ export default function Pomodoro() {
                       }
                     </div>
 
-                    <div className="mt-3 flex items-center gap-1 text-xs font-medium text-neutral-500 group-hover:text-neutral-900 transition-colors">
+                    <div className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-500 group-hover:text-slate-900 transition-colors">
                       {status === 'running' ? (
                         <>
                           <Pause className="h-3.5 w-3.5" />
@@ -381,7 +381,7 @@ export default function Pomodoro() {
                 <button
                   type="button"
                   onClick={toggleTimer}
-                  className="flex-1 py-2.5 px-4 rounded-[10px] bg-neutral-900 hover:bg-neutral-800 active:scale-[0.98] text-white text-xs font-semibold shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  className="flex-1 py-2.5 px-4 rounded-lg bg-slate-900 hover:bg-slate-800 active:scale-[0.98] text-white text-xs font-semibold shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
                 >
                   {status === 'running' ? (
                     <>
@@ -399,7 +399,7 @@ export default function Pomodoro() {
                 <button
                   type="button"
                   onClick={reset}
-                  className="py-2.5 px-3.5 rounded-[10px] bg-white border border-neutral-200 hover:bg-neutral-50 active:scale-[0.98] text-neutral-700 text-xs font-medium transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
+                  className="py-2.5 px-3.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 active:scale-[0.98] text-slate-700 text-xs font-medium transition-all cursor-pointer shadow-xs flex items-center gap-1.5"
                   title="重置当前时钟"
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
@@ -409,7 +409,7 @@ export default function Pomodoro() {
                 <button
                   type="button"
                   onClick={addFiveMinutes}
-                  className="py-2.5 px-3.5 rounded-[10px] bg-white border border-neutral-200 hover:bg-neutral-50 active:scale-[0.98] text-neutral-700 text-xs font-medium transition-all cursor-pointer shadow-xs flex items-center gap-1"
+                  className="py-2.5 px-3.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 active:scale-[0.98] text-slate-700 text-xs font-medium transition-all cursor-pointer shadow-xs flex items-center gap-1"
                   title="延长 5 分钟"
                 >
                   <Plus className="h-3.5 w-3.5" />
@@ -419,10 +419,10 @@ export default function Pomodoro() {
                 <button
                   type="button"
                   onClick={() => setShowSettings(!showSettings)}
-                  className={`py-2.5 px-3 rounded-[10px] border text-xs font-medium transition-all cursor-pointer shadow-xs ${
+                  className={`py-2.5 px-3 rounded-lg border text-xs font-medium transition-all cursor-pointer shadow-xs ${
                     showSettings
-                      ? 'bg-neutral-100 border-neutral-300 text-neutral-900'
-                      : 'bg-white border-neutral-200 hover:bg-neutral-50 text-neutral-600'
+                      ? 'bg-slate-100 border-slate-300 text-slate-900'
+                      : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-600'
                   }`}
                   title="设置时长"
                 >
@@ -432,8 +432,8 @@ export default function Pomodoro() {
 
               {/* 展开时长调节配置 */}
               {showSettings && (
-                <div className="w-full mt-5 pt-4 border-t border-neutral-200/80 animate-fade-in-up">
-                  <div className="text-[11px] font-semibold text-neutral-500 mb-2 uppercase tracking-wider">
+                <div className="w-full mt-5 pt-4 border-t border-slate-200/80 animate-fade-in-up">
+                  <div className="text-2xs font-semibold text-slate-500 mb-2 uppercase tracking-wider">
                     专注推演预设时长
                   </div>
                   <div className="grid grid-cols-6 gap-1.5">
@@ -446,8 +446,8 @@ export default function Pomodoro() {
                         }}
                         className={`py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                           focusDuration === mins
-                            ? 'bg-neutral-900 text-white shadow-xs font-semibold'
-                            : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                            ? 'bg-slate-900 text-white shadow-xs font-semibold'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                         }`}
                       >
                         {mins}m
@@ -463,13 +463,13 @@ export default function Pomodoro() {
         {/* 右侧：Subframe Screen 2 紧凑考点专注审计检查器 (Inspector Panel) */}
         <div className="lg:col-span-5 space-y-4">
           {/* 专注学科绑定卡片 */}
-          <div className="bg-white rounded-[16px] border border-black/[0.08] p-4 sm:p-5 shadow-xs space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-neutral-100">
-              <span className="text-xs font-semibold text-neutral-800 flex items-center gap-1.5">
-                <BookOpen className="h-3.5 w-3.5 text-neutral-500" />
+          <div className="bg-white rounded-2xl border border-black/[0.08] p-4 sm:p-5 shadow-xs space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <span className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+                <BookOpen className="h-3.5 w-3.5 text-slate-500" />
                 <span>学科绑定推演</span>
               </span>
-              <span className="text-[10px] text-neutral-400 font-mono">POMODORO SYNC</span>
+              <span className="text-2xs text-slate-400 font-mono">POMODORO SYNC</span>
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-xs">
@@ -478,12 +478,12 @@ export default function Pomodoro() {
                 onClick={() => setSubjectFocus('408')}
                 className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                   subjectFocus === '408'
-                    ? 'bg-neutral-900 text-white border-neutral-900 shadow-xs'
-                    : 'bg-neutral-50/60 border-neutral-200 text-neutral-700 hover:bg-white'
+                    ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                    : 'bg-slate-50/60 border-slate-200 text-slate-700 hover:bg-white'
                 }`}
               >
                 <div className="font-semibold">408 计算机学科</div>
-                <div className="text-[10px] opacity-75 mt-0.5">计组 · OS · 计网 · 数据结构</div>
+                <div className="text-2xs opacity-75 mt-0.5">计组 · OS · 计网 · 数据结构</div>
               </button>
 
               <button
@@ -491,12 +491,12 @@ export default function Pomodoro() {
                 onClick={() => setSubjectFocus('math')}
                 className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                   subjectFocus === 'math'
-                    ? 'bg-neutral-900 text-white border-neutral-900 shadow-xs'
-                    : 'bg-neutral-50/60 border-neutral-200 text-neutral-700 hover:bg-white'
+                    ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                    : 'bg-slate-50/60 border-slate-200 text-slate-700 hover:bg-white'
                 }`}
               >
                 <div className="font-semibold">考研数学</div>
-                <div className="text-[10px] opacity-75 mt-0.5">微积分 · 线性代数 · 概率论</div>
+                <div className="text-2xs opacity-75 mt-0.5">微积分 · 线性代数 · 概率论</div>
               </button>
 
               <button
@@ -504,12 +504,12 @@ export default function Pomodoro() {
                 onClick={() => setSubjectFocus('english')}
                 className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                   subjectFocus === 'english'
-                    ? 'bg-neutral-900 text-white border-neutral-900 shadow-xs'
-                    : 'bg-neutral-50/60 border-neutral-200 text-neutral-700 hover:bg-white'
+                    ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                    : 'bg-slate-50/60 border-slate-200 text-slate-700 hover:bg-white'
                 }`}
               >
                 <div className="font-semibold">考研英语</div>
-                <div className="text-[10px] opacity-75 mt-0.5">2000+ 真题核心词汇复盘</div>
+                <div className="text-2xs opacity-75 mt-0.5">2000+ 真题核心词汇复盘</div>
               </button>
 
               <button
@@ -517,52 +517,52 @@ export default function Pomodoro() {
                 onClick={() => setSubjectFocus('politics')}
                 className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
                   subjectFocus === 'politics'
-                    ? 'bg-neutral-900 text-white border-neutral-900 shadow-xs'
-                    : 'bg-neutral-50/60 border-neutral-200 text-neutral-700 hover:bg-white'
+                    ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                    : 'bg-slate-50/60 border-slate-200 text-slate-700 hover:bg-white'
                 }`}
               >
                 <div className="font-semibold">政治史纲</div>
-                <div className="text-[10px] opacity-75 mt-0.5">1840-2026 全景时间轴</div>
+                <div className="text-2xs opacity-75 mt-0.5">1840-2026 全景时间轴</div>
               </button>
             </div>
           </div>
 
           {/* 专注战报指标审计小卡 (Inspector Metrics) */}
-          <div className="bg-white rounded-[16px] border border-black/[0.08] p-4 sm:p-5 shadow-xs space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-neutral-100">
-              <span className="text-xs font-semibold text-neutral-800 flex items-center gap-1.5">
-                <Clock className="h-3.5 w-3.5 text-neutral-500" />
+          <div className="bg-white rounded-2xl border border-black/[0.08] p-4 sm:p-5 shadow-xs space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <span className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5 text-slate-500" />
                 <span>今日研学心流审计</span>
               </span>
-              <span className="text-[10px] text-emerald-600 font-semibold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+              <span className="text-2xs text-emerald-600 font-semibold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
                 实时同步
               </span>
             </div>
 
             <div className="grid grid-cols-2 gap-2.5">
-              <div className="p-3 rounded-xl bg-neutral-50/80 border border-neutral-200/80">
-                <div className="text-[11px] text-neutral-500">今日完成番茄</div>
-                <div className="text-2xl font-bold font-mono text-neutral-900 mt-1 flex items-baseline gap-1">
+              <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-200/80">
+                <div className="text-2xs text-slate-500">今日完成番茄</div>
+                <div className="text-2xl font-bold font-mono text-slate-900 mt-1 flex items-baseline gap-1">
                   <span>{pomodoroCount}</span>
-                  <span className="text-xs font-normal text-neutral-500">个</span>
+                  <span className="text-xs font-normal text-slate-500">个</span>
                 </div>
               </div>
 
-              <div className="p-3 rounded-xl bg-neutral-50/80 border border-neutral-200/80">
-                <div className="text-[11px] text-neutral-500">深度推演时长</div>
-                <div className="text-2xl font-bold font-mono text-neutral-900 mt-1 flex items-baseline gap-1">
+              <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-200/80">
+                <div className="text-2xs text-slate-500">深度推演时长</div>
+                <div className="text-2xl font-bold font-mono text-slate-900 mt-1 flex items-baseline gap-1">
                   <span>{totalFocusMinutes}</span>
-                  <span className="text-xs font-normal text-neutral-500">分钟</span>
+                  <span className="text-xs font-normal text-slate-500">分钟</span>
                 </div>
               </div>
             </div>
 
             {/* 联动跳转行动条 */}
-            <div className="pt-2 flex items-center justify-between text-xs text-neutral-500">
+            <div className="pt-2 flex items-center justify-between text-xs text-slate-500">
               <span>完成推演后？</span>
               <Link
                 to="/quiz"
-                className="inline-flex items-center gap-1 font-semibold text-neutral-900 hover:underline cursor-pointer"
+                className="inline-flex items-center gap-1 font-semibold text-slate-900 hover:underline cursor-pointer"
               >
                 <span>进入真题测验巩固</span>
                 <ArrowRight className="h-3.5 w-3.5" />
@@ -571,19 +571,19 @@ export default function Pomodoro() {
           </div>
 
           {/* 声学白噪音伴学舱快捷卡片 */}
-          <div className="bg-[#fafafa] rounded-[16px] border border-neutral-200/80 p-4 shadow-xs flex items-center justify-between">
+          <div className="bg-[#fafafa] rounded-2xl border border-slate-200/80 p-4 shadow-xs flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-9 w-9 rounded-xl bg-neutral-900 text-white flex items-center justify-center font-semibold text-xs shadow-xs">
+              <div className="h-9 w-9 rounded-xl bg-slate-900 text-white flex items-center justify-center font-semibold text-xs shadow-xs">
                 🎵
               </div>
               <div>
-                <div className="text-xs font-semibold text-neutral-800">声学心流白噪音</div>
-                <div className="text-[10px] text-neutral-500">双耳节拍 · 雨声与咖啡馆环境音</div>
+                <div className="text-xs font-semibold text-slate-800">声学心流白噪音</div>
+                <div className="text-2xs text-slate-500">双耳节拍 · 雨声与咖啡馆环境音</div>
               </div>
             </div>
             <Link
               to="/music"
-              className="py-1.5 px-3 rounded-lg bg-white border border-neutral-200 hover:bg-neutral-50 text-neutral-800 text-xs font-medium shadow-2xs transition-colors"
+              className="py-1.5 px-3 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 text-xs font-medium shadow-xs transition-colors"
             >
               启动播放
             </Link>
