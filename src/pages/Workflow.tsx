@@ -198,10 +198,10 @@ function IngestionPanel() {
 // ─── Research Pipeline ────────────────────────────────────────────────────────
 
 const initialResearchSteps: PipelineStep[] = [
-  { id: '1', label: '发现缺口', desc: '从 Vault 健康检查获取知识空白', icon: 'Lightbulb', status: 'pending' },
-  { id: '2', label: '选择话题', desc: '用户选择要研究的知识缺口', icon: 'Globe', status: 'pending' },
-  { id: '3', label: 'AI 生成笔记', desc: '基于 Vault 上下文生成结构化内容', icon: 'Puzzle', status: 'pending' },
-  { id: '4', label: '知识归档', desc: '写入 Research/ 目录并建立引用', icon: 'Archive', status: 'pending' },
+  { id: '1', label: '发现缺口', desc: '从知识库体检报告中查找知识空白', icon: 'Lightbulb', status: 'pending' },
+  { id: '2', label: '选择话题', desc: '选择需要补充学习的知识点', icon: 'Globe', status: 'pending' },
+  { id: '3', label: 'AI 生成笔记', desc: '结合个人笔记生成结构化内容', icon: 'Puzzle', status: 'pending' },
+  { id: '4', label: '知识归档', desc: '写入知识库目录并建立关联链接', icon: 'Archive', status: 'pending' },
 ]
 
 function ResearchPanel() {
@@ -372,10 +372,10 @@ function ResearchPanel() {
 // ─── Lint Pipeline ────────────────────────────────────────────────────────────
 
 const initialLintSteps: PipelineStep[] = [
-  { id: '1', label: '扫描 Vault', desc: '遍历所有 Markdown 文件', icon: 'FolderSearch', status: 'pending' },
-  { id: '2', label: '8 类检查', desc: '孤立笔记/断链/重复/元数据等', icon: 'ShieldCheck', status: 'pending' },
-  { id: '3', label: '生成报告', desc: '按严重程度列出问题清单', icon: 'FileText', status: 'pending' },
-  { id: '4', label: '自动修复', desc: '选择类别一键修复', icon: 'Wrench', status: 'pending' },
+  { id: '1', label: '扫描笔记库', desc: '梳理全部笔记与讲义文件', icon: 'FolderSearch', status: 'pending' },
+  { id: '2', label: '8 项体检', desc: '检查孤立笔记、失效链接、重复内容等', icon: 'ShieldCheck', status: 'pending' },
+  { id: '3', label: '生成报告', desc: '按重要程度列出改进清单', icon: 'FileText', status: 'pending' },
+  { id: '4', label: '自动修复', desc: '选择类别一键整理修复', icon: 'Wrench', status: 'pending' },
 ]
 
 function LintPanel() {
@@ -487,7 +487,7 @@ function LintPanel() {
     <div className="bg-white border border-neutral-200/80 rounded-xl overflow-hidden flex flex-col h-full">
       <div className="px-5 py-4 border-b border-neutral-200/80 flex items-center gap-3">
         <div className="flex-1">
-          <div className="text-sm font-semibold text-warm-700">Vault 健康检查</div>
+          <div className="text-sm font-semibold text-warm-700">知识库全面体检</div>
           <div className="text-[11px] text-warm-400 mt-0.5">扫描 → 检查 → 报告 → 自动修复</div>
         </div>
         <button

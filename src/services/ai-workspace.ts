@@ -4,6 +4,13 @@ export interface AIWorkspaceMessage {
   content: string
   createdAt: string
   streaming?: boolean
+  agentId?: string
+  agentName?: string
+  agentIcon?: string
+  isProxyReply?: boolean
+  proxySubject?: string
+  provider?: string
+  model?: string
   usage?: {
     prompt_tokens: number
     completion_tokens: number
@@ -77,7 +84,7 @@ export function createInitialWorkspace(): AIWorkspaceState {
   const project: AIProject = {
     id: DEFAULT_PROJECT_ID,
     name: '当前知识库',
-    description: '围绕当前 Obsidian Vault 的学习、整理和写作工作区。',
+    description: '围绕当前考研知识库的学习、整理和答疑工作区。',
     createdAt: now,
     updatedAt: now,
   }

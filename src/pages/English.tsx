@@ -1,5 +1,8 @@
 import { authService } from '../services/auth'
-import { useState, useMemo, useEffect, useRef, lazy, Suspense } from 'react'
+import { useState, useMemo, useEffect, useRef, Suspense } from 'react'
+import { lazyWithRetry } from '../utils/lazyWithRetry'
+import ChunkErrorBoundary from '../components/ChunkErrorBoundary'
+import SuspenseTimeoutFallback from '../components/ui/SuspenseTimeoutFallback'
 import { useSearchParams } from 'react-router-dom'
 import {
   BookOpen,
@@ -47,7 +50,7 @@ import { gradeEssayLocally, type EssayGradingResult } from '../services/essayGra
 import VocabTab from '../components/study/VocabTab'
 import WordBrowser from '../components/vocab/WordBrowser'
 import VocabStats from '../components/vocab/VocabStats'
-const WordRelations = lazy(() => import('../components/vocab/WordRelations'))
+const WordRelations = lazyWithRetry(() => import('../components/vocab/WordRelations'), 'wordRelations')
 import DailyReadingTab from '../components/english/DailyReadingTab'
 import EnglishPracticeView from '../components/english/EnglishPracticeView'
 import EnglishFullPaperView from '../components/english/EnglishFullPaperView'
@@ -1556,9 +1559,11 @@ ${essayInput.trim()}
             {vocabSubTab === 'browse' && <WordBrowser />}
             {vocabSubTab === 'stats' && <VocabStats />}
             {vocabSubTab === 'relations' && (
-              <Suspense fallback={<div className="py-12 text-center text-xs text-slate-400">正在装载词根词缀衍生树...</div>}>
-                <WordRelations />
-              </Suspense>
+              <ChunkErrorBoundary title="词根词缀衍生树加载失败">
+                <Suspense fallback={<SuspenseTimeoutFallback label="正在装载词根词缀衍生树..." />}>
+                  <WordRelations />
+                </Suspense>
+              </ChunkErrorBoundary>
             )}
           </div>
         </div>

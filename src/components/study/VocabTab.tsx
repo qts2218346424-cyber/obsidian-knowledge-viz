@@ -7,7 +7,18 @@ import {
   CheckCircle2, Layers, SlidersHorizontal, Repeat,
 } from 'lucide-react'
 import { api } from '../../services/api'
-import { VOCAB_POOL } from '@shared/data/vocabulary'
+
+type VocabPoolEntry = {
+  word: string
+  phonetic: string
+  definition: string
+  example: string
+  exampleCn: string
+  frequency: string
+  unit: number
+  roots?: string
+  synonyms?: string
+}
 
 // ── 类型定义 ─────────────────────────────────────────────────────────────────
 
@@ -138,12 +149,46 @@ class SoundFxEngine {
 
 const sfx = new SoundFxEngine()
 
-// ── 默认高质量词库备选（保证在离线或首屏极速加载） ─────────────────────────
-const FALLBACK_VOCAB_DATA: VocabData = {
-  totalWords: 2000,
-  dueWords: 20,
+// ── 轻量级兜底词库（零阻塞瞬时可用，完整词库随后异步按需注入） ─────────────────
+const buildFallbackVocabData = (pool: VocabPoolEntry[]): VocabData => ({
+  totalWords: Math.max(2000, pool.length),
+  dueWords: Math.min(20, pool.length || 3),
   stats: { mastered: 42, learning: 96, newWords: 38 },
-  dueRecords: VOCAB_POOL.slice(0, 20).map(item => ({
+  dueRecords: (pool.length > 0 ? pool.slice(0, 20) : [
+    {
+      word: 'perseverance',
+      phonetic: '/ˌpɜːrsəˈvɪrəns/',
+      definition: 'n. 毅力，坚持不懈',
+      example: 'Success in the postgraduate exam demands daily perseverance.',
+      exampleCn: '考研成功需要日复一日的坚持不懈。',
+      frequency: '高频核心',
+      unit: 1,
+      roots: 'per-(始终) + sever(严格) + -ance(名词)',
+      synonyms: 'persistence, tenacity',
+    },
+    {
+      word: 'comprehend',
+      phonetic: '/ˌkɒmprɪˈhend/',
+      definition: 'v. 理解，领会；包含',
+      example: 'Read slowly to comprehend the underlying logic of the passage.',
+      exampleCn: '慢下来精读，去领会文章背后的深层逻辑。',
+      frequency: '高频核心',
+      unit: 1,
+      roots: 'com-(完全) + prehend(抓住)',
+      synonyms: 'grasp, perceive',
+    },
+    {
+      word: 'synthesize',
+      phonetic: '/ˈsɪnθəsaɪz/',
+      definition: 'v. 综合，合成',
+      example: 'You need to synthesize notes from multiple chapters before the mock test.',
+      exampleCn: '模考前需要把多个章节的笔记综合梳理起来。',
+      frequency: '高频核心',
+      unit: 2,
+      roots: 'syn-(共同) + thesis(放置) + -ize',
+      synonyms: 'integrate, combine',
+    },
+  ]).map(item => ({
     word: item.word,
     phonetic: item.phonetic,
     definition: item.definition,
@@ -158,12 +203,15 @@ const FALLBACK_VOCAB_DATA: VocabData = {
   })),
   suggested: [],
   autoAdded: 0,
-}
+})
 
 export default function VocabTab() {
   // ── 状态管理 ──────────────────────────────────────────────────────────────
+  const [vocabPool, setVocabPool] = useState<VocabPoolEntry[]>([])
   const [data, setData] = useState<VocabData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadStep, setLoadStep] = useState<1 | 2 | 3>(1)
+  const [loadElapsed, setLoadElapsed] = useState(0)
   const [error, setError] = useState('')
 
   // 队列与复习轮次
@@ -239,23 +287,43 @@ export default function VocabTab() {
     window.speechSynthesis.speak(utter)
   }, [prefs.accent, prefs.speechRate])
 
+  useEffect(() => {
+    if (!loading) {
+      setLoadElapsed(0)
+      return
+    }
+    const timer = setInterval(() => setLoadElapsed(s => s + 1), 1000)
+    return () => clearInterval(timer)
+  }, [loading])
+
   // ── 数据装载 ──────────────────────────────────────────────────────────────
   const loadData = useCallback(async () => {
     setLoading(true)
+    setLoadStep(1)
     setError('')
+    let loadedPool: VocabPoolEntry[] = []
     try {
+      const poolPromise = import('@shared/data/vocabulary')
+        .then(mod => (mod.VOCAB_POOL || []) as VocabPoolEntry[])
+        .catch(() => [] as VocabPoolEntry[])
+
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('TIMEOUT')), 2500)
       )
-      const result = await Promise.race([
-        api.getVocabulary(),
-        timeoutPromise
-      ]) as unknown as VocabData
+      setLoadStep(2)
+      const [pool, apiRes] = await Promise.all([
+        poolPromise,
+        Promise.race([api.getVocabulary(), timeoutPromise]).catch(() => null),
+      ])
+      loadedPool = pool
+      setVocabPool(pool)
+      setLoadStep(3)
+      const result = apiRes as unknown as VocabData | null
 
       if (result && Array.isArray(result.dueRecords) && result.dueRecords.length > 0) {
-        // 与全局词库深度合并，补全词根词缀与近义词
+        // 与异步按需加载的全量词库深度合并，补全词根词缀与近义词
         const enriched = result.dueRecords.map(item => {
-          const match = VOCAB_POOL.find(v => v.word.toLowerCase() === item.word.toLowerCase())
+          const match = pool.find(v => v.word.toLowerCase() === item.word.toLowerCase())
           return {
             ...item,
             roots: item.roots || match?.roots || '',
@@ -267,8 +335,9 @@ export default function VocabTab() {
         setData({ ...result, dueRecords: enriched })
         setQueue(enriched)
       } else {
-        setData(FALLBACK_VOCAB_DATA)
-        setQueue(FALLBACK_VOCAB_DATA.dueRecords)
+        const fb = buildFallbackVocabData(pool)
+        setData(fb)
+        setQueue(fb.dueRecords)
       }
       setCurrentIdx(0)
       setLoopQueue([])
@@ -281,8 +350,9 @@ export default function VocabTab() {
       setQuizSelected(null)
       setQuizChecked(false)
     } catch {
-      setData(FALLBACK_VOCAB_DATA)
-      setQueue(FALLBACK_VOCAB_DATA.dueRecords)
+      const fb = buildFallbackVocabData(loadedPool)
+      setData(fb)
+      setQueue(fb.dueRecords)
       setCurrentIdx(0)
       setLoopQueue([])
       setIsLoopingRound(false)
@@ -317,8 +387,8 @@ export default function VocabTab() {
   // ── 随堂测验干扰项生成算法 ─────────────────────────────────────────────────
   const quizOptions = useMemo(() => {
     if (!currentWord) return []
-    // 从 VOCAB_POOL 中抽取 3 个互不相同的混淆干扰项
-    const pool = VOCAB_POOL.filter(w => w.word.toLowerCase() !== currentWord.word.toLowerCase())
+    const sourceList = vocabPool.length > 3 ? vocabPool : queue
+    const pool = sourceList.filter(w => w.word.toLowerCase() !== currentWord.word.toLowerCase())
     const shuffledPool = [...pool].sort(() => 0.5 - Math.random()).slice(0, 3)
 
     const items = [
@@ -622,20 +692,37 @@ export default function VocabTab() {
     }
   }, [prefs.theme])
 
-  // ── 加载中占位 ────────────────────────────────────────────────────────────
+  // ── 加载中占位（分步进度条，拒绝黑屏干转圈） ──────────────────────────────
   if (loading) {
+    const pct = loadStep === 1 ? 30 : loadStep === 2 ? 68 : 92
+    const stepText =
+      loadStep === 1
+        ? '第 1/3 步：正在按需装载考研大纲词库...'
+        : loadStep === 2
+          ? '第 2/3 步：正在同步今日复习队列...'
+          : '第 3/3 步：正在整理词根词缀与真题例句...'
     return (
       <div className="max-w-xl mx-auto py-12 px-4 space-y-4 animate-in fade-in">
-        <div className="rounded-2xl bg-white border border-neutral-200/80 p-8 shadow-xs flex flex-col items-center justify-center text-center space-y-4">
-          <div className="relative">
-            <Loader2 className="w-8 h-8 text-neutral-900 animate-spin" />
-            <Sparkles className="w-4 h-4 text-amber-500 absolute -top-1 -right-1 animate-bounce" />
+        <div className="rounded-2xl bg-white border border-neutral-200/80 p-8 shadow-xs space-y-4">
+          <div className="flex items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-2.5">
+              <Loader2 className="w-5 h-5 text-indigo-600 animate-spin shrink-0" />
+              <span className="font-bold text-neutral-900">{stepText}</span>
+            </div>
+            <span className="font-mono text-indigo-600 font-semibold">
+              {pct}%{loadElapsed > 0 ? ` · ${loadElapsed}s` : ''}
+            </span>
           </div>
-          <div>
-            <h4 className="text-sm font-bold text-neutral-900">正在装载不背单词真题语境语料...</h4>
-            <p className="text-xs text-neutral-500 mt-1">
-              基于历年真题语境库，正在准备今日艾宾浩斯抗遗忘队列
-            </p>
+          <div className="w-full h-2 rounded-full bg-neutral-100 overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-indigo-500 to-sky-500 rounded-full transition-all duration-500"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <div className="flex items-center justify-between text-[11px] text-neutral-400">
+            <span className={loadStep === 1 ? 'text-indigo-600 font-semibold' : 'text-emerald-600'}>① 装载词库</span>
+            <span className={loadStep === 2 ? 'text-indigo-600 font-semibold' : loadStep > 2 ? 'text-emerald-600' : ''}>② 同步队列</span>
+            <span className={loadStep === 3 ? 'text-indigo-600 font-semibold' : ''}>③ 生成卡片</span>
           </div>
         </div>
       </div>

@@ -26,7 +26,7 @@ const initialDefuddleSteps: PipelineStep[] = [
   { id: '2', label: '抓取内容', desc: '获取并清理网页文本', icon: 'Download', status: 'pending' },
   { id: '3', label: 'AI 整理', desc: '提取知识点生成结构化笔记', icon: 'Sparkles', status: 'pending' },
   { id: '4', label: '生成元数据', desc: '自动标签和摘要', icon: 'Tag', status: 'pending' },
-  { id: '5', label: '写入 Vault', desc: '保存为 Markdown 笔记', icon: 'Save', status: 'pending' },
+  { id: '5', label: '存入笔记库', desc: '保存为标准排版笔记', icon: 'Save', status: 'pending' },
 ]
 
 export function DefuddlePanel() {
@@ -86,7 +86,7 @@ export function DefuddlePanel() {
       <div className="px-5 py-4 border-b border-cream-200 flex items-center gap-3 flex-wrap">
         <div className="flex-1 min-w-[200px]">
           <div className="text-sm font-semibold text-warm-700">Defuddle 网页抓取</div>
-          <div className="text-[11px] text-warm-400 mt-0.5">粘贴 URL → 抓取 → AI 整理 → 写入 Vault</div>
+          <div className="text-[11px] text-warm-400 mt-0.5">粘贴 URL → 抓取 → AI 整理 → 保存至笔记库</div>
         </div>
         <button
           onClick={handleDefuddle}
@@ -180,7 +180,7 @@ export function DefuddlePanel() {
 
 const initialQuerySteps: PipelineStep[] = [
   { id: '1', label: '输入查询', desc: '描述你要查找的内容', icon: 'MessageSquare', status: 'pending' },
-  { id: '2', label: '搜索 Vault', desc: '多字段加权搜索', icon: 'Search', status: 'pending' },
+  { id: '2', label: '搜索笔记库', desc: '多字段加权搜索', icon: 'Search', status: 'pending' },
   { id: '3', label: 'AI 分析', desc: '综合笔记内容生成洞察', icon: 'Brain', status: 'pending' },
   { id: '4', label: '生成结果', desc: '返回排序后的笔记列表', icon: 'FileText', status: 'pending' },
 ]
@@ -350,7 +350,7 @@ export function QueryPanel() {
 // ─── Fold Panel (笔记整理) ───────────────────────────────────────────────────
 
 const initialFoldSteps: PipelineStep[] = [
-  { id: '1', label: '扫描笔记', desc: '遍历 Vault 中的笔记和目录', icon: 'FolderTree', status: 'pending' },
+  { id: '1', label: '扫描笔记', desc: '梳理个人笔记库中的笔记和目录', icon: 'FolderTree', status: 'pending' },
   { id: '2', label: '结构分析', desc: 'AI 分析目录结构和笔记关系', icon: 'Network', status: 'pending' },
   { id: '3', label: '生成建议', desc: '移动/合并/标签/链接等建议', icon: 'Sparkles', status: 'pending' },
   { id: '4', label: '新结构预览', desc: '展示建议的目录结构', icon: 'GitMerge', status: 'pending' },
@@ -505,7 +505,7 @@ export function FoldPanel() {
           type="text"
           value={folder}
           onChange={e => setFolder(e.target.value)}
-          placeholder="指定目录（留空分析整个 Vault）"
+          placeholder="指定目录（留空分析整个笔记库）"
           className="bg-cream-200 border border-cream-300 rounded-lg px-3 py-1.5 text-xs text-warm-700 outline-none focus:border-accent-orange flex-1"
         />
       </div>
@@ -662,7 +662,7 @@ export function FoldPanel() {
 
 const initialThinkSteps: PipelineStep[] = [
   { id: '1', label: '输入主题', desc: '描述你要探索的主题', icon: 'MessageSquare', status: 'pending' },
-  { id: '2', label: '知识检索', desc: '从 Vault 查找相关笔记', icon: 'Search', status: 'pending' },
+  { id: '2', label: '知识检索', desc: '从个人笔记库查找相关笔记', icon: 'Search', status: 'pending' },
   { id: '3', label: 'AI 生成', desc: '构建思维导图结构', icon: 'Brain', status: 'pending' },
   { id: '4', label: '画布渲染', desc: '可视化交互式思维导图', icon: 'Network', status: 'pending' },
 ]

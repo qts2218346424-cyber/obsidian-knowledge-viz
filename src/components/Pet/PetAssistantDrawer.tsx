@@ -13,6 +13,8 @@ import {
 } from 'lucide-react'
 import MarkdownRenderer from '../MarkdownRenderer'
 import { api, type LocalAgentStatus } from '../../services/api'
+import { STUDY_AGENTS } from '../../data/studyAgents'
+import { formatUnifiedModelName, detectCrossSubjectProxy } from '../../utils/modelDisplay'
 import type { PetMood } from './DesktopPet'
 import LuluAvatar, { PET_PERSONAS, getSavedPetTheme } from './LuluAvatar'
 
@@ -20,6 +22,11 @@ interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
+  agentName?: string
+  agentIcon?: string
+  isProxyReply?: boolean
+  proxySubject?: string
+  modelLabel?: string
   toolCalls?: Array<{
     tool: string
     input?: Record<string, any>
@@ -46,7 +53,7 @@ interface PetAssistantDrawerProps {
 type ProviderType = 'antigravity' | 'codex' | 'claude-code' | 'web'
 
 const PROVIDER_INFO: Record<ProviderType, { label: string; short: string; defaultModel: string }> = {
-  antigravity: { label: '✨ Antigravity', short: '✨ AGY', defaultModel: 'gemini-3.8-flash' },
+  antigravity: { label: '✨ Antigravity (Gemini 3.8 Flash)', short: '✨ Antigravity', defaultModel: 'gemini-3.8-flash' },
   codex: { label: '🤖 Codex', short: '🤖 Codex', defaultModel: 'gpt-5.6-luna' },
   'claude-code': { label: '⚡ Claude', short: '⚡ Claude', defaultModel: 'deepseek-v4-flash' },
   web: { label: '☁️ 云端双核', short: '☁️ 云端', defaultModel: 'deepseek-v4-pro' },
@@ -71,6 +78,8 @@ export default function PetAssistantDrawer({
   const [selectedModel, setSelectedModel] = useState<string>(() => {
     return localStorage.getItem(`coreforge_model_${provider}`) || PROVIDER_INFO[provider].defaultModel
   })
+  const [selectedAgentId, setSelectedAgentId] = useState<string>('agent-408')
+  const activeStudyAgent = STUDY_AGENTS.find(a => a.id === selectedAgentId) || STUDY_AGENTS[0]
   const [agents, setAgents] = useState<LocalAgentStatus[]>([])
   const [showConfig, setShowConfig] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
@@ -141,11 +150,17 @@ export default function PetAssistantDrawer({
       content: text,
     }
 
+    const proxySubject = detectCrossSubjectProxy(text, activeStudyAgent.id)
     const assistantMsgId = `assistant-${Date.now()}`
     const assistantMsg: Message = {
       id: assistantMsgId,
       role: 'assistant',
       content: '',
+      agentName: activeStudyAgent.name,
+      agentIcon: activeStudyAgent.icon,
+      isProxyReply: Boolean(proxySubject),
+      proxySubject: proxySubject || undefined,
+      modelLabel: formatUnifiedModelName(provider, selectedModel),
       toolCalls: [],
     }
 
@@ -153,7 +168,7 @@ export default function PetAssistantDrawer({
     setInput('')
     setLoading(true)
     onSetMood('thinking')
-    setCurrentToolStatus('奶龙正在思考推导中...')
+    setCurrentToolStatus(`${activeStudyAgent.name}正在查阅知识库并推导...`)
 
     try {
       const isLocal = provider === 'codex' || provider === 'claude-code'
@@ -162,7 +177,9 @@ export default function PetAssistantDrawer({
         provider,
         prompt: text,
         model: selectedModel || undefined,
-        agentPrompt: '【角色指令】：你是考生身边软萌又学识渊博的考研伴学小萌宠「奶龙」。请全程使用通俗易懂、严谨规范且充满亲和力的纯正简体中文解答考研数学与 408 核心考点，公式请用标准 LaTeX 格式包裹输出，排版清晰美观。',
+        agentPrompt: `${activeStudyAgent.systemPrompt}${
+          proxySubject ? `\n【跨科代答提示】：本题涉及${proxySubject}，当前由「${activeStudyAgent.name}」代答。` : ''
+        }`,
       }
 
       const res = await fetch(endpoint, {
@@ -367,29 +384,47 @@ export default function PetAssistantDrawer({
           </div>
         </div>
 
-        {/* 极简折叠引擎选择卡（默认收起，点小标签展开） */}
+        {/* 极简折叠引擎与导师选择卡（默认收起，点小标签展开） */}
         {showConfig && (
-          <div className="px-3.5 py-2 bg-amber-50/70 dark:bg-slate-950/80 border-b border-amber-200/60 dark:border-slate-800 shrink-0 animate-in fade-in slide-in-from-top-1 text-xs">
-            <div className="flex items-center justify-between text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1.5">
-              <span>选择伴学引擎:</span>
-              <span className="text-[10px] text-amber-600 dark:text-amber-400 font-mono">
-                {selectedModel}
-              </span>
+          <div className="px-3.5 py-2.5 bg-amber-50/70 dark:bg-slate-950/80 border-b border-amber-200/60 dark:border-slate-800 shrink-0 animate-in fade-in slide-in-from-top-1 text-xs space-y-2">
+            <div>
+              <div className="flex items-center justify-between text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
+                <span>选择伴学引擎:</span>
+                <span className="text-[10px] text-amber-700 dark:text-amber-400 font-mono">
+                  {formatUnifiedModelName(provider, selectedModel)}
+                </span>
+              </div>
+              <div className="grid grid-cols-4 gap-1">
+                {(['antigravity', 'codex', 'claude-code', 'web'] as ProviderType[]).map(p => (
+                  <button
+                    key={p}
+                    onClick={() => handleProviderSelect(p)}
+                    className={`py-1 px-1 rounded-lg text-[10px] font-semibold transition-all text-center truncate cursor-pointer ${
+                      provider === p
+                        ? 'bg-amber-500 text-white shadow-2xs font-bold'
+                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-amber-300'
+                    }`}
+                  >
+                    {PROVIDER_INFO[p].short}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-4 gap-1">
-              {(['antigravity', 'codex', 'claude-code', 'web'] as ProviderType[]).map(p => (
-                <button
-                  key={p}
-                  onClick={() => handleProviderSelect(p)}
-                  className={`py-1 px-1 rounded-lg text-[10px] font-semibold transition-all text-center truncate cursor-pointer ${
-                    provider === p
-                      ? 'bg-amber-500 text-white shadow-2xs font-bold'
-                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-amber-300'
-                  }`}
-                >
-                  {PROVIDER_INFO[p].short}
-                </button>
-              ))}
+            <div>
+              <div className="text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
+                当前值班导师 (涵盖政治/英语/规划):
+              </div>
+              <select
+                value={selectedAgentId}
+                onChange={e => setSelectedAgentId(e.target.value)}
+                className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11px] font-semibold text-slate-800 dark:text-slate-200 cursor-pointer"
+              >
+                {STUDY_AGENTS.map(agent => (
+                  <option key={agent.id} value={agent.id}>
+                    {agent.icon} {agent.name} · {agent.title}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         )}
@@ -412,6 +447,21 @@ export default function PetAssistantDrawer({
               )}
 
               <div className={`space-y-1.5 max-w-[85%] ${m.role === 'user' ? 'items-end' : ''}`}>
+                {m.role === 'assistant' && (m.agentName || m.isProxyReply) && (
+                  <div className="flex flex-wrap items-center gap-1 text-[10px] px-1">
+                    <span className="font-bold text-slate-700 dark:text-slate-300">
+                      {m.agentIcon || '🤖'} {m.agentName || '研小核'}
+                    </span>
+                    {m.isProxyReply && (
+                      <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 border border-amber-200 font-semibold">
+                        研小核（代答）
+                      </span>
+                    )}
+                    {m.modelLabel && (
+                      <span className="text-[9px] text-slate-400 font-mono">{m.modelLabel}</span>
+                    )}
+                  </div>
+                )}
                 <div
                   className={`px-3 py-2 rounded-2xl leading-relaxed break-words ${
                     m.role === 'user'
@@ -419,7 +469,19 @@ export default function PetAssistantDrawer({
                       : 'bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/80 text-slate-800 dark:text-slate-100 shadow-2xs text-[11.5px]'
                   }`}
                 >
-                  <MarkdownRenderer content={m.content} />
+                  {m.role === 'assistant' && !m.content && loading ? (
+                    <div className="space-y-1.5 py-0.5 min-w-[190px]">
+                      <div className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-600">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                        <span>{currentToolStatus || '正在检索知识库并推导...'}</span>
+                      </div>
+                      <div className="w-full h-1 rounded-full bg-amber-100 overflow-hidden">
+                        <div className="h-full bg-amber-500 rounded-full animate-pulse w-2/3" />
+                      </div>
+                    </div>
+                  ) : (
+                    <MarkdownRenderer content={m.content} />
+                  )}
                 </div>
 
                 {/* 消息底部辅助快捷小操作 */}

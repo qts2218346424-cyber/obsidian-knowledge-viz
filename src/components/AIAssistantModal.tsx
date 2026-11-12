@@ -24,6 +24,8 @@ import {
 import MarkdownRenderer from './MarkdownRenderer'
 import ToolCallCard from './ToolCallCard'
 import { AI_SKILLS, getSkills } from '../data/ai-skills'
+import { STUDY_AGENTS } from '../data/studyAgents'
+import { formatUnifiedModelName, detectCrossSubjectProxy } from '../utils/modelDisplay'
 import { api, type LocalAgentStatus } from '../services/api'
 import {
   createInitialWorkspace,
@@ -108,6 +110,21 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath, initialCon
   const lastUserPromptRef = useRef<string>('')
   const [pendingContext, setPendingContext] = useState<string | null>(initialContextPrompt || null)
   const [isFollowUpMode, setIsFollowUpMode] = useState<boolean>(Boolean(initialContextPrompt))
+
+  const getDefaultAgentByPath = (path?: string) => {
+    if (path?.includes('/politics')) return 'agent-politics'
+    if (path?.includes('/english') || path?.includes('/vocabulary')) return 'agent-english'
+    if (path?.includes('/study') || path?.includes('/workflow')) return 'agent-plan'
+    return 'agent-408'
+  }
+  const [selectedAgentId, setSelectedAgentId] = useState<string>(() => getDefaultAgentByPath(pagePath))
+  useEffect(() => {
+    setSelectedAgentId(getDefaultAgentByPath(pagePath))
+  }, [pagePath])
+  const activeStudyAgent = useMemo(
+    () => STUDY_AGENTS.find(agent => agent.id === selectedAgentId) || STUDY_AGENTS[0],
+    [selectedAgentId],
+  )
 
   useEffect(() => {
     if (initialContextPrompt) {
@@ -367,24 +384,49 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath, initialCon
     setPendingContext(null)
 
     const userMessage = createWorkspaceMessage('user', rawText)
-    const assistantMessage = createWorkspaceMessage('assistant', '', { streaming: true, toolCalls: [] })
+    const effectiveModel =
+      activeSession.model ||
+      (activeProvider === 'antigravity'
+        ? 'gemini-3.8-flash'
+        : activeProvider === 'codex'
+          ? 'gpt-5.6-luna'
+          : activeProvider === 'claude-code'
+            ? 'deepseek-flash'
+            : '')
+    const proxySubject = detectCrossSubjectProxy(rawText, activeStudyAgent.id)
+    const assistantMessage = createWorkspaceMessage('assistant', '', {
+      streaming: true,
+      toolCalls: [],
+      agentId: activeStudyAgent.id,
+      agentName: activeStudyAgent.name,
+      agentIcon: activeStudyAgent.icon,
+      isProxyReply: Boolean(proxySubject),
+      proxySubject: proxySubject || undefined,
+      provider: activeProvider,
+      model: effectiveModel,
+    })
     const history = activeSession.messages
       .filter(message => !message.streaming && message.content)
       .slice(-10)
       .map(message => ({ role: message.role, content: message.content }))
     const skillPrompt = activeSkills.length
       ? activeSkills.map(skill => `- ${skill.name}：${skill.instruction}`).join('\n')
-      : '- 知识库问答：优先基于当前 Vault 回答。'
+      : '- 知识库问答：优先基于当前个人知识库回答。'
     const followupInstruction = isFollowUpMode
       ? '\n【🎯 靶向追问模式已激活】：用户当前处于针对性追问模式。请锁定用户的具体疑问细节与思维卡壳点做精准剖析解答，指出认知偏差，严禁给出泛泛而谈、笼统空洞的课本概念复述与宏观套话！'
       : ''
+    const proxyHint = proxySubject
+      ? `\n【跨科代答提示】：当前提问涉及「${proxySubject}」，由408总导师「研小核」暂代解答，请在作答后顺带说明如有需要可切换至对应专科导师。`
+      : ''
     const agentMessage = [
+      `当前指派导师：${activeStudyAgent.name}（${activeStudyAgent.title}）`,
       `当前项目：${activeProject.name}`,
       `项目说明：${activeProject.description || '暂无项目说明'}`,
       `当前页面：${context.title}。${context.description}`,
       `已启用 Skill：\n${skillPrompt}`,
       '【回答习惯与语言要求】：必须全程使用符合中文母语考生阅读习惯的简体中文进行深度解析与推导，除专业英文缩写/代码外，严禁输出整句英文。',
       followupInstruction,
+      proxyHint,
       '',
       `用户问题：${text}`,
     ].filter(Boolean).join('\n')
@@ -413,7 +455,13 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath, initialCon
           },
           body: JSON.stringify(
             activeProvider === 'web'
-              ? { message: agentMessage, history, mode: isFollowUpMode ? 'followup' : undefined }
+              ? {
+                  message: agentMessage,
+                  history,
+                  mode: isFollowUpMode ? 'followup' : undefined,
+                  agentName: activeStudyAgent.name,
+                  agentPrompt: activeStudyAgent.systemPrompt,
+                }
               : {
                   provider: activeProvider,
                   prompt: text,
@@ -421,12 +469,12 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath, initialCon
                   isFollowUp: isFollowUpMode,
                   cwd: activeProject.cwd,
                   sessionId: activeSession.agentSessionId || undefined,
-                  model: activeSession.model || undefined,
+                  model: effectiveModel || undefined,
                   projectName: activeProject.name,
                   projectDescription: activeProject.description,
                   pageContext: `${context.title}。${context.description}`,
                   skillPrompt,
-                  agentPrompt: `【语言与回答习惯铁律】：必须全程使用纯正严谨的简体中文展开深度解答与解析推导，严格符合中文母语考生的思维与阅读习惯，严禁整句英文回答。${followupInstruction}`,
+                  agentPrompt: `${activeStudyAgent.systemPrompt}\n【语言与回答习惯铁律】：必须全程使用纯正严谨的简体中文展开深度解答与解析推导，严格符合中文母语考生的思维与阅读习惯，严禁整句英文回答。${followupInstruction}${proxyHint}`,
                 },
           ),
           signal: controller.signal,
@@ -647,7 +695,7 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath, initialCon
               <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 p-1 shrink-0">
                 {([
                   ['web', '网页 AI'],
-                  ['antigravity', 'Antigravity'],
+                  ['antigravity', 'Antigravity · Gemini 3.8 Flash'],
                   ['claude-code', 'Claude Code'],
                   ['codex', 'Codex'],
                 ] as const).map(([provider, label]) => {
@@ -685,6 +733,21 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath, initialCon
                   )
                 })}
               </div>
+              <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs shrink-0">
+                <span className="text-[11px] text-warm-400">导师:</span>
+                <select
+                  value={selectedAgentId}
+                  onChange={e => setSelectedAgentId(e.target.value)}
+                  className="bg-transparent text-xs font-semibold text-warm-800 outline-none cursor-pointer"
+                  title="切换专职学科导师（含政治政小原、英语英小研、规划规小航）"
+                >
+                  {STUDY_AGENTS.map(agent => (
+                    <option key={agent.id} value={agent.id}>
+                      {agent.icon} {agent.name} · {agent.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <span className="hidden items-center gap-1 text-[10px] text-warm-400 lg:flex">
                 <Cpu className="h-3 w-3" />
                 {localStatusLoading
@@ -692,8 +755,8 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath, initialCon
                   : activeProvider === 'web'
                     ? '网页模式'
                     : activeLocalStatus?.available
-                      ? `${activeProvider === 'antigravity' ? 'Antigravity' : activeProvider === 'claude-code' ? 'Claude Code' : 'Codex'} 已连接 (${activeLocalStatus.version || '就绪'})`
-                      : '本机 Agent 不可用'}
+                      ? `${formatUnifiedModelName(activeProvider, activeSession.model || (activeProvider === 'antigravity' ? 'gemini-3.8-flash' : ''))} 已连接`
+                      : '本机 AI 引擎未开启'}
               </span>
               <button onClick={() => setSkillsOpen(value => !value)} className="flex min-w-0 items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs text-warm-600 hover:border-accent-orange/40">
                 <Sparkles className="h-3.5 w-3.5 text-accent-orange" />
@@ -876,6 +939,23 @@ function MessageBubble({
             ))}
           </div>
         )}
+        {!isUser && (message.agentName || message.model || message.isProxyReply) && (
+          <div className="mb-1.5 flex flex-wrap items-center gap-1.5 border-b border-slate-100 pb-1 text-[10px]">
+            <span className="font-bold text-slate-800">
+              {message.agentIcon || '🤖'} {message.agentName || '研小核'}
+            </span>
+            {message.isProxyReply && (
+              <span className="rounded bg-amber-100 px-1.5 py-0.5 font-semibold text-amber-800 border border-amber-200">
+                研小核（代答{message.proxySubject ? ` · ${message.proxySubject}` : ''}）
+              </span>
+            )}
+            {(message.provider || message.model) && (
+              <span className="ml-auto font-mono text-[9.5px] text-slate-400">
+                {formatUnifiedModelName(message.provider, message.model)}
+              </span>
+            )}
+          </div>
+        )}
         {isUser ? (
           <div className="whitespace-pre-wrap">{message.content}</div>
         ) : (
@@ -883,11 +963,31 @@ function MessageBubble({
             {message.content ? (
               <MarkdownRenderer content={message.content} isStreaming={message.streaming} />
             ) : (
-              <div className="space-y-2.5 py-1">
-                <div className="flex items-center gap-2 text-xs font-medium text-warm-700">
-                  <Loader2 className="h-4 w-4 animate-spin text-accent-orange shrink-0" />
-                  <span className="font-semibold text-accent-orange animate-pulse">
-                    {loadingStatusText || '正在检索知识库并深度推演中...'}
+              <div className="space-y-2.5 py-1 min-w-[220px]">
+                <div className="flex items-center justify-between gap-2 text-xs font-medium text-warm-700">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-accent-orange shrink-0" />
+                    <span className="font-semibold text-accent-orange">
+                      {loadingStatusText || '正在检索知识库并深度推演中...'}
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono text-slate-400 shrink-0">{loadingSeconds}s</span>
+                </div>
+                <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-accent-orange to-indigo-500 rounded-full transition-all duration-700"
+                    style={{ width: `${Math.min(92, Math.max(15, loadingSeconds * 8))}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-slate-400">
+                  <span className={loadingSeconds < 3 ? 'text-accent-orange font-semibold' : 'text-emerald-600'}>
+                    1. 检索笔记库
+                  </span>
+                  <span className={loadingSeconds >= 3 && loadingSeconds < 8 ? 'text-accent-orange font-semibold' : loadingSeconds >= 8 ? 'text-emerald-600' : ''}>
+                    2. 拆解逻辑脉络
+                  </span>
+                  <span className={loadingSeconds >= 8 ? 'text-accent-orange font-semibold' : ''}>
+                    3. 严谨组织回答
                   </span>
                 </div>
                 {loadingSeconds >= 8 && onSwitchFastModel && (

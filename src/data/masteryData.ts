@@ -264,36 +264,18 @@ export function getNodeMastery(nodeId: string, nodeLabel: string): MasteryPoint 
     }
   }
 
-  // 否则返回基于考研大纲基准的诊断
-  if (baseDef) {
-    return {
-      id: nodeId,
-      label: nodeLabel,
-      subject: baseDef.subject,
-      rate: baseDef.defaultRate,
-      totalAttempts: 3,
-      wrongAttempts: baseDef.defaultRate < 50 ? 2 : baseDef.defaultRate < 80 ? 1 : 0,
-      recentStatus: baseDef.defaultRecent,
-      weakReason: baseDef.weakReason,
-      coursewareId: baseDef.coursewareId,
-      practiceSubject: baseDef.practiceSubject,
-      practiceKeyword: baseDef.practiceKeyword,
-    }
-  }
-
-  // 针对用户自建 Obsidian 笔记节点，生成自适应评估
-  const hash = nodeId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
-  const defaultRate = 50 + (hash % 45) // 50 ~ 94
+  // 无做题记录时不显示演示掌握度，统一返回「未练习」状态
   return {
     id: nodeId,
     label: nodeLabel,
-    subject: '知识库考点',
-    rate: defaultRate,
-    totalAttempts: 2,
-    wrongAttempts: defaultRate < 60 ? 1 : 0,
-    recentStatus: defaultRate < 60 ? '近 2 次做错 1 次 (正确率 50%)' : '考点掌握良好',
-    weakReason: '根据考研大纲与知识点关联度分析，该考点与核心算法及真题推演密切相关。',
-    practiceSubject: '408',
-    practiceKeyword: nodeLabel,
+    subject: baseDef?.subject || '知识库考点',
+    rate: 0,
+    totalAttempts: 0,
+    wrongAttempts: 0,
+    recentStatus: '未练习',
+    weakReason: baseDef?.weakReason || '暂无做题记录，完成对应考点练习后将自动生成掌握度诊断。',
+    coursewareId: baseDef?.coursewareId,
+    practiceSubject: baseDef?.practiceSubject || '408',
+    practiceKeyword: baseDef?.practiceKeyword || nodeLabel,
   }
 }

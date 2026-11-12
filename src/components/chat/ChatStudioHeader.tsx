@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import { STUDY_AGENTS, type StudyAgent } from '../../data/studyAgents'
 import { STUDY_SKILLS, type StudySkill } from '../../data/studySkills'
+import { formatUnifiedModelName } from '../../utils/modelDisplay'
 import type { LocalAgentStatus, LocalSkill, CloudEndpoint, FileDetail } from '../../services/api'
 
 export type ProviderType = 'antigravity' | 'codex' | 'claude-code' | 'web'
@@ -42,8 +43,8 @@ const PROVIDER_META: Record<
   { short: string; label: string; badgeBg: string }
 > = {
   antigravity: {
-    short: '✨ 研核官方',
-    label: '✨ 研核官方 (Gemini 3.8 Flash)',
+    short: '✨ Antigravity · Gemini 3.8 Flash',
+    label: '✨ Antigravity (Gemini 3.8 Flash)',
     badgeBg: 'text-neutral-900 bg-neutral-100 border-neutral-200',
   },
   codex: {
@@ -193,11 +194,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
     setAgentDropdownOpen(false)
   }
 
-  const displayModelName = selectedModel
-    ? selectedModel.includes('::')
-      ? selectedModel.split('::')[1]
-      : selectedModel
-    : '默认模型'
+  const displayModelName = formatUnifiedModelName(provider, selectedModel)
 
   const activeProviderMeta = PROVIDER_META[provider]
 
@@ -323,7 +320,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
             className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
             title="快速切换伴学模型"
           >
-            <optgroup label="✨ Antigravity 2.0 (双核主力)">
+            <optgroup label="✨ Antigravity (Gemini 3.8 Flash)">
               {(
                 agents.find(a => a.provider === 'antigravity')?.models ||
                 PROVIDER_PRESET_MODELS.antigravity
@@ -635,7 +632,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                         <div className="grid grid-cols-2 gap-1.5">
                           {(
                             [
-                              { key: 'antigravity', label: '✨ Antigravity' },
+                              { key: 'antigravity', label: '✨ Antigravity · Gemini 3.8 Flash' },
                               { key: 'codex', label: '🤖 Codex' },
                               { key: 'claude-code', label: '⚡ Claude Code' },
                               { key: 'web', label: '☁️ 云端接口' },
@@ -1172,7 +1169,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                 <option value="claude-code">⚡ Claude Code</option>
                 <option value="codex">🤖 Codex</option>
                 <option value="web">☁️ 云端</option>
-                <option value="antigravity">✨ Antigravity</option>
+                <option value="antigravity">✨ Antigravity (Gemini 3.8 Flash)</option>
               </select>
 
               <select

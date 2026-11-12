@@ -398,11 +398,13 @@ aiRouter.post('/chat', async (req, res) => {
 // ===== Agent Chat (SSE Streaming) =====
 
 aiRouter.post('/agent/chat', async (req, res) => {
-  const { message, history, model: reqModel, mode } = req.body as {
+  const { message, history, model: reqModel, mode, agentPrompt, agentName } = req.body as {
     message: string
     history?: { role: 'user' | 'assistant'; content: string }[]
     model?: string
     mode?: string
+    agentPrompt?: string
+    agentName?: string
   }
   if (!message) {
     res.status(400).json({ error: 'Missing message' })
@@ -448,6 +450,9 @@ aiRouter.post('/agent/chat', async (req, res) => {
 
     const userMemoryPath = getRequestAgentMemoryPath(req)
     let agentMemoryPrompt = getEffectiveSystemPrompt(userMemoryPath)
+    if (agentPrompt && agentPrompt.trim()) {
+      agentMemoryPrompt = `【当前指派的专职伴学导师身份】：${agentName || '专职学科导师'}\n${agentPrompt.trim()}\n\n【附加知识库辅助工具说明】：\n如有需要，你可以利用工作区检索、读取、记录笔记工具辅助完成本次解答。`
+    }
     if (mode === 'followup') {
       agentMemoryPrompt += '\n\n【当前处于：🎯 靶向追问模式】\n你必须直接针对用户的具体疑问与卡壳细节进行精准靶向解答与逻辑剖析，深入指出认知偏差，严禁给出泛泛而谈、笼统空洞的课本概念复述与宏观套话！'
     }

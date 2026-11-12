@@ -193,7 +193,7 @@ export default function MemoryTierModal({
               <div className="p-2.5 rounded-lg bg-cream-50 dark:bg-slate-800/40 border border-cream-200/80 dark:border-slate-700">
                 <span className="text-warm-400 font-medium block mb-1">📁 独立工作目录 (cwd)</span>
                 <span className="font-mono text-warm-800 dark:text-slate-200 break-all select-all">
-                  {activeProject?.cwd || '（默认 Vault 根目录）'}
+                  {activeProject?.cwd || '（默认个人笔记库）'}
                 </span>
               </div>
               <div className="p-2.5 rounded-lg bg-cream-50 dark:bg-slate-800/40 border border-cream-200/80 dark:border-slate-700">

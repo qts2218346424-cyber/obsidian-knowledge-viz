@@ -192,18 +192,20 @@ export default function KnowledgeGraph() {
   const scoreColor = overallScore >= 80 ? 'text-accent-sage' : overallScore >= 60 ? 'text-accent-amber' : 'text-accent-rose'
   const orphanNotes = stats?.orphanNotes ?? 0
 
-  // 掌握度统计概况 (基于节点掌握度计算)
+  // 掌握度统计概况 (基于节点掌握度计算，未练习节点单独统计)
   const masterySummary = useMemo(() => {
     let criticalCount = 0
     let moderateCount = 0
     let masteredCount = 0
+    let unpracticedCount = 0
     simNodes.forEach(node => {
       const mp = getNodeMastery(node.id, node.label)
-      if (mp.rate < 50) criticalCount++
+      if (mp.totalAttempts === 0) unpracticedCount++
+      else if (mp.rate < 50) criticalCount++
       else if (mp.rate < 80) moderateCount++
       else masteredCount++
     })
-    return { criticalCount, moderateCount, masteredCount, total: simNodes.length }
+    return { criticalCount, moderateCount, masteredCount, unpracticedCount, total: simNodes.length }
   }, [simNodes])
 
   // Resize observer
@@ -220,10 +222,11 @@ export default function KnowledgeGraph() {
     return () => ro.disconnect()
   }, [])
 
-  // 获取节点填充主色 (支持拓扑色彩与掌握度热力三色动态映射)
+  // 获取节点填充主色 (支持拓扑色彩与掌握度热力动态映射；未练习显示中性灰)
   const getNodeColor = (d: SimNode, currentViewMode: 'topology' | 'mastery') => {
     if (currentViewMode === 'mastery') {
       const mp = getNodeMastery(d.id, d.label)
+      if (mp.totalAttempts === 0) return '#94a3b8' // 中性灰 (未练习)
       if (mp.rate >= 80) return '#10b981' // 翡翠绿 (稳固攻克)
       if (mp.rate >= 50) return '#f59e0b' // 暖橙黄 (进阶巩固)
       return '#ef4444' // 正气红 (薄弱高危)
@@ -252,8 +255,9 @@ export default function KnowledgeGraph() {
       neighborMap.get(t)!.add(s)
     })
 
-    // 考研学科图谱力学优化：增强排斥力与碰撞气囊，彻底消除节点标签互相遮挡
+    // 考研学科图谱力学优化：调高 alphaDecay 并配合离屏预计算，让节点尽快停稳不漂移
     const simulation = d3.forceSimulation<SimNode>(nodes)
+      .alphaDecay(0.055)
       .force('link', d3.forceLink(links).id((d: any) => d.id).distance((d: any) => {
         const linksSum = ((d.source as SimNode).linkCount || 1) + ((d.target as SimNode).linkCount || 1)
         return Math.max(90, 140 - Math.min(35, linksSum * 3))
@@ -301,21 +305,30 @@ export default function KnowledgeGraph() {
       .attr('class', 'node')
       .style('cursor', 'pointer')
       .call(
-        d3.drag<SVGGElement, SimNode>()
-          .on('start', (event, d) => {
-            if (!event.active) simulation.alphaTarget(0.3).restart()
-            d.fx = d.x
-            d.fy = d.y
-          })
-          .on('drag', (event, d) => {
-            d.fx = event.x
-            d.fy = event.y
-          })
-          .on('end', (event, d) => {
-            if (!event.active) simulation.alphaTarget(0)
-            d.fx = null
-            d.fy = null
-          })
+        (() => {
+          let dragMoved = false
+          return d3.drag<SVGGElement, SimNode>()
+            .clickDistance(4)
+            .on('start', (_event, d) => {
+              dragMoved = false
+              d.fx = d.x
+              d.fy = d.y
+            })
+            .on('drag', (event, d) => {
+              if (!dragMoved) {
+                dragMoved = true
+                if (!event.active) simulation.alphaTarget(0.3).restart()
+              }
+              d.fx = event.x
+              d.fy = event.y
+            })
+            .on('end', (event, d) => {
+              if (dragMoved && !event.active) simulation.alphaTarget(0)
+              dragMoved = false
+              d.fx = null
+              d.fy = null
+            })
+        })()
       )
 
     // 单击节点：若处于【考点掌握度热力图】模式，呼出【考点诊断与提分急救舱】；若在拓扑模式，呼出右侧笔记检查器
@@ -346,11 +359,11 @@ export default function KnowledgeGraph() {
       }
     })
 
-    // 🔥 高危薄弱考点呼吸脉冲光晕 (仅在掌握度热力图模式下生效)
+    // 🔥 高危薄弱考点呼吸脉冲光晕 (仅在掌握度热力图模式且已练习薄弱时生效)
     node.each(function (d: SimNode) {
       const el = d3.select(this)
       const mp = getNodeMastery(d.id, d.label)
-      const isCritical = mp.rate < 50
+      const isCritical = mp.totalAttempts > 0 && mp.rate < 50
 
       if (isCritical) {
         el.append('circle')
@@ -550,21 +563,23 @@ export default function KnowledgeGraph() {
 
     fitViewRef.current = fitView
 
-    // Pre-warm initial ticks so nodes enter with a calm settling motion
+    // 离屏预计算 300 步，确保初始渲染即停稳，避免节点飘动影响点击
+    simulation.stop()
     simulation.alpha(1)
-    for (let i = 0; i < 45; ++i) {
+    for (let i = 0; i < 300; ++i) {
       simulation.tick()
     }
+    simulation.alpha(0)
+    link
+      .attr('x1', (d: any) => d.source.x)
+      .attr('y1', (d: any) => d.source.y)
+      .attr('x2', (d: any) => d.target.x)
+      .attr('y2', (d: any) => d.target.y)
+    node.attr('transform', (d: SimNode) => `translate(${d.x ?? 0},${d.y ?? 0})`)
     fitView(false)
     updateLabels()
 
-    // Auto-fit smoothly once after layout stabilizes
-    const timer = setTimeout(() => {
-      fitView(true)
-    }, 600)
-
     return () => {
-      clearTimeout(timer)
       simulation.stop()
       zoomRef.current = null
       fitViewRef.current = null
@@ -972,14 +987,19 @@ export default function KnowledgeGraph() {
                 {viewMode === 'mastery' ? (
                   (() => {
                     const mp = getNodeMastery(hoveredNode.id, hoveredNode.label)
-                    const isCritical = mp.rate < 50
+                    const isUnpracticed = mp.totalAttempts === 0
+                    const isCritical = !isUnpracticed && mp.rate < 50
                     return (
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between text-xs font-semibold">
                           <span className="text-slate-500">掌握度：</span>
-                          <span className={isCritical ? 'text-rose-600 font-bold' : mp.rate < 80 ? 'text-amber-600' : 'text-emerald-600'}>
-                            {mp.rate}% ({isCritical ? '薄弱高危' : mp.rate < 80 ? '进阶巩固' : '稳固攻克'})
-                          </span>
+                          {isUnpracticed ? (
+                            <span className="text-slate-500 font-semibold">未练习</span>
+                          ) : (
+                            <span className={isCritical ? 'text-rose-600 font-bold' : mp.rate < 80 ? 'text-amber-600' : 'text-emerald-600'}>
+                              {mp.rate}% ({isCritical ? '薄弱高危' : mp.rate < 80 ? '进阶巩固' : '稳固攻克'})
+                            </span>
+                          )}
                         </div>
                         <div className="text-[11px] text-slate-500">{mp.recentStatus}</div>
                         <div className="text-[10px] text-rose-600 font-medium pt-1 border-t border-slate-100 flex items-center gap-1">

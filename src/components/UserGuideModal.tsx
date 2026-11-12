@@ -117,7 +117,7 @@ const TOUR_SCENES: TourScene[] = [
     colorBg: 'bg-emerald-50/80',
     colorBorder: 'border-emerald-200/80',
     description:
-      '在做题或研读讲义时，无需跳转页面，随时点击顶栏随手记胶囊即可滑出抽屉。预设多学科标签，支持 LaTeX 公式与拍照上传，一键直写本地 Obsidian Vault。',
+      '在做题或研读讲义时，无需跳转页面，随时点击顶栏随手记胶囊即可滑出抽屉。预设多学科标签，支持 LaTeX 公式与拍照上传，一键保存到个人笔记库。',
     highlights: [
       '0 中断心流：顶栏一键呼出，做题草稿、考点灵感与闪念随手保存',
       '双链与标签：自动按日期归档至随手记目录，并自动纳入全库双链网络',

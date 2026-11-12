@@ -301,8 +301,8 @@ export default function CoursewareViewerModal({
           <div className="flex-1 h-full bg-[#0b0f19] relative overflow-hidden">
             {isLoadingHtml ? (
               <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
-                <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
-                <span className="text-xs font-mono tracking-wider text-slate-400">正在按需装载交互课件核心仿真引擎...</span>
+                <CoursewareLoadingCard title={item.title} />
+                {/* progress card rendered above */}
               </div>
             ) : srcUrl ? (
               <iframe
@@ -387,4 +387,46 @@ export default function CoursewareViewerModal({
   )
 
   return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent
+}
+
+function CoursewareLoadingCard({ title }: { title: string }) {
+  const [elapsed, setElapsed] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => setElapsed(s => s + 1), 1000)
+    return () => clearInterval(t)
+  }, [])
+
+  const progress = Math.min(94, 22 + elapsed * 16)
+  const stepText =
+    elapsed < 2
+      ? '第 1/3 步：正在拉取交互课件结构...'
+      : elapsed < 5
+        ? '第 2/3 步：正在初始化交互动画与画布引擎...'
+        : `第 3/3 步：正在装载知识点演示实例（已耗时 ${elapsed} 秒）...`
+
+  return (
+    <div className="w-full flex flex-col items-center justify-center h-full px-6">
+      <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#13192b]/95 p-6 shadow-xl space-y-4">
+        <div className="flex items-center justify-between gap-2 text-xs text-slate-200">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin shrink-0" />
+            <span className="font-semibold truncate">{title}</span>
+          </div>
+          <span className="font-mono text-[11px] text-cyan-300 shrink-0">{Math.round(progress)}%</span>
+        </div>
+        <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-cyan-400 to-indigo-400 rounded-full transition-all duration-500"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <div className="text-[11px] text-cyan-300/90 font-medium">{stepText}</div>
+        <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-white/10">
+          <span className={elapsed < 2 ? 'text-cyan-300 font-semibold' : 'text-emerald-400'}>① 下载课件</span>
+          <span className={elapsed >= 2 && elapsed < 5 ? 'text-cyan-300 font-semibold' : elapsed >= 5 ? 'text-emerald-400' : ''}>② 启动引擎</span>
+          <span className={elapsed >= 5 ? 'text-cyan-300 font-semibold' : ''}>③ 渲染画布</span>
+        </div>
+      </div>
+    </div>
+  )
 }

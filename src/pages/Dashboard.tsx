@@ -70,9 +70,10 @@ interface MetricCardProps {
   icon: any
   to?: string
   colorTheme?: 'amber' | 'blue' | 'emerald' | 'purple'
+  loading?: boolean
 }
 
-function MetricCard({ label, value, subtext, icon: Icon, to, colorTheme = 'amber' }: MetricCardProps) {
+function MetricCard({ label, value, subtext, icon: Icon, to, colorTheme = 'amber', loading = false }: MetricCardProps) {
   const { isVibrant, toggleThemeStyle } = useThemeStyle()
   
   const vibrantThemeMap = {
@@ -116,16 +117,23 @@ function MetricCard({ label, value, subtext, icon: Icon, to, colorTheme = 'amber
           <Icon className="h-4 w-4" />
         </div>
       </div>
-      <div>
-        <div className={`text-xl sm:text-2xl font-bold font-mono tracking-tight ${
-          v ? v.value : 'text-neutral-900'
-        }`}>
-          {typeof value === 'number' ? value.toLocaleString() : value}
+      {loading ? (
+        <div className="space-y-2 py-0.5" aria-label="加载中">
+          <div className="h-7 w-20 rounded-md bg-neutral-200/80 animate-pulse" />
+          <div className="h-3 w-28 rounded bg-neutral-100 animate-pulse" />
         </div>
-        {subtext && <div className={`mt-1 text-[11px] font-normal truncate ${
-          v ? v.subtext : 'text-neutral-400'
-        }`}>{subtext}</div>}
-      </div>
+      ) : (
+        <div>
+          <div className={`text-xl sm:text-2xl font-bold font-mono tracking-tight ${
+            v ? v.value : 'text-neutral-900'
+          }`}>
+            {typeof value === 'number' ? value.toLocaleString() : value}
+          </div>
+          {subtext && <div className={`mt-1 text-[11px] font-normal truncate ${
+            v ? v.subtext : 'text-neutral-400'
+          }`}>{subtext}</div>}
+        </div>
+      )}
     </div>
   )
 
@@ -531,19 +539,21 @@ export default function Dashboard() {
       <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <MetricCard
           label="知识库笔记"
-          value={statsLoading ? '...' : (stats?.totalNotes ?? 0)}
+          value={stats?.totalNotes ?? 0}
           subtext={`累计 ${(stats?.totalWords ?? 0).toLocaleString()} 字`}
           icon={FileText}
           to="/editor"
           colorTheme="amber"
+          loading={statsLoading || !stats}
         />
         <MetricCard
           label="双链知识网络"
-          value={statsLoading ? '...' : (stats?.totalLinks ?? 0)}
+          value={stats?.totalLinks ?? 0}
           subtext="跨章节双向引用"
           icon={Link2}
           to="/graph"
           colorTheme="blue"
+          loading={statsLoading || !stats}
         />
         <MetricCard
           label="考研四核真题储备"
@@ -555,11 +565,12 @@ export default function Dashboard() {
         />
         <MetricCard
           label="知识体系健康度"
-          value={healthLoading ? '...' : `${healthScore} 分`}
-          subtext={healthLoading ? '正在评估体系健康度...' : `${issueCount} 项结构优化建议`}
+          value={`${healthScore} 分`}
+          subtext={`${issueCount} 项结构优化建议`}
           icon={HeartPulse}
           to="/workflow"
           colorTheme="purple"
+          loading={healthLoading || !report}
         />
       </section>
 
@@ -1107,26 +1118,42 @@ export default function Dashboard() {
                 </h2>
                 <p className="text-[11px] text-neutral-400 mt-0.5">双链完整率与孤立节点诊断</p>
               </div>
-              <span className="text-lg font-bold font-mono text-neutral-900">
-                {healthLoading ? '...' : `${healthScore}%`}
-              </span>
+              {healthLoading || !report ? (
+                <div className="h-6 w-12 rounded bg-neutral-200/80 animate-pulse" aria-label="健康度加载中" />
+              ) : (
+                <span className="text-lg font-bold font-mono text-neutral-900">
+                  {`${healthScore}%`}
+                </span>
+              )}
             </div>
 
             <div className="h-1.5 w-full rounded-full bg-neutral-100 overflow-hidden">
-              <div
-                className="h-full rounded-full bg-neutral-900 transition-all duration-500"
-                style={{ width: `${Math.max(5, Math.min(100, healthScore))}%` }}
-              />
+              {healthLoading || !report ? (
+                <div className="h-full w-1/2 rounded-full bg-neutral-200 animate-pulse" />
+              ) : (
+                <div
+                  className="h-full rounded-full bg-neutral-900 transition-all duration-500"
+                  style={{ width: `${Math.max(5, Math.min(100, healthScore))}%` }}
+                />
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-2 mt-3 text-center">
               <div className="p-2 rounded-lg bg-neutral-50 border border-neutral-200/60">
                 <div className="text-[10px] text-neutral-400">孤立笔记</div>
-                <div className="text-xs font-bold font-mono text-neutral-800 mt-0.5">{stats?.orphanNotes ?? 0} 篇</div>
+                {statsLoading || !stats ? (
+                  <div className="h-4 w-10 mx-auto rounded bg-neutral-200/80 animate-pulse mt-1" />
+                ) : (
+                  <div className="text-xs font-bold font-mono text-neutral-800 mt-0.5">{stats.orphanNotes ?? 0} 篇</div>
+                )}
               </div>
               <div className="p-2 rounded-lg bg-neutral-50 border border-neutral-200/60">
                 <div className="text-[10px] text-neutral-400">悬空双链</div>
-                <div className="text-xs font-bold font-mono text-neutral-800 mt-0.5">{stats?.danglingLinks ?? 0} 条</div>
+                {statsLoading || !stats ? (
+                  <div className="h-4 w-10 mx-auto rounded bg-neutral-200/80 animate-pulse mt-1" />
+                ) : (
+                  <div className="text-xs font-bold font-mono text-neutral-800 mt-0.5">{stats.danglingLinks ?? 0} 条</div>
+                )}
               </div>
             </div>
 

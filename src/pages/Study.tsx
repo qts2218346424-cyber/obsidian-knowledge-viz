@@ -1,6 +1,9 @@
 import MarkdownRenderer from '../components/MarkdownRenderer'
 
 import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
+import { lazyWithRetry } from '../utils/lazyWithRetry'
+import ChunkErrorBoundary from '../components/ChunkErrorBoundary'
+import SuspenseTimeoutFallback from '../components/ui/SuspenseTimeoutFallback'
 
 import { createPortal } from 'react-dom'
 
@@ -14,11 +17,11 @@ import {
 
   Download, RefreshCw, Loader2, ChevronRight,
 
-  Check, ThumbsUp, ThumbsDown, Minus, ArrowRight, Trash2, Sparkles, Edit3, ExternalLink
+  Check, ArrowRight, Trash2, Sparkles, Edit3, ExternalLink
 
 } from 'lucide-react'
 
-import { api, type BookItem, type DailyReviewData } from '../services/api'
+import { api, type BookItem } from '../services/api'
 
 import { getAuthHeaders } from '../services/auth'
 
@@ -54,7 +57,8 @@ const FlashcardsTab = lazy(() => import('../components/study/FlashcardsTab'))
 
 const ProgressDashboardTab = lazy(() => import('../components/study/ProgressDashboardTab'))
 
-const KnowledgeGraph = lazy(() => import('./KnowledgeGraph'))
+const loadKnowledgeGraph = () => import('./KnowledgeGraph')
+const KnowledgeGraph = lazyWithRetry(loadKnowledgeGraph, 'knowledgeGraph')
 
 
 
@@ -64,7 +68,7 @@ let cachedBooksList: BookItem[] | null = null
 
 
 
-type Tab = 'graph' | 'topology' | 'mastery' | 'flashcards' | 'handouts' | 'pdfs' | 'coursewares' | 'errors' | 'progress'
+type Tab = 'graph' | 'topology' | 'mastery' | 'flashcards' | 'handouts' | 'pdfs' | 'coursewares' | 'progress'
 
 
 
@@ -192,7 +196,7 @@ function MasteryPaletteSection({ onSelectTopic }: { onSelectTopic: (topic: strin
 
             >
 
-              <span>同步 Vault</span>
+              <span>刷新资料库</span>
 
             </button>
 
@@ -477,7 +481,7 @@ export default function Study() {
 
   const [tab, setTab] = useState<Tab>(
 
-    ['topology', 'mastery', 'flashcards', 'handouts', 'pdfs', 'coursewares', 'errors', 'progress'].includes(initialTab)
+    ['topology', 'mastery', 'flashcards', 'handouts', 'pdfs', 'coursewares', 'progress'].includes(initialTab)
 
       ? initialTab
 
@@ -849,7 +853,7 @@ export default function Study() {
 
     const tabParam = searchParams.get('tab') as Tab
 
-    if (tabParam && ['graph', 'topology', 'mastery', 'flashcards', 'handouts', 'pdfs', 'coursewares', 'errors', 'progress'].includes(tabParam)) {
+    if (tabParam && ['graph', 'topology', 'mastery', 'flashcards', 'handouts', 'pdfs', 'coursewares', 'progress'].includes(tabParam)) {
 
       setTab(tabParam)
 
@@ -1340,8 +1344,6 @@ export default function Study() {
 
             { key: 'coursewares' as Tab, label: '🌐 仿真课件', shortLabel: '🌐 课件', count: INTERACTIVE_COURSEWARES.length },
 
-            { key: 'errors' as Tab, label: '📝 每日错题', shortLabel: '📝 错题', count: null },
-
             { key: 'progress' as Tab, label: '📊 研学进度', shortLabel: '📊 进度', count: null },
 
           ].map(t => (
@@ -1351,6 +1353,14 @@ export default function Study() {
               key={t.key}
 
               onClick={() => handleTabChange(t.key)}
+
+              onMouseEnter={() => {
+                if (t.key === 'graph') loadKnowledgeGraph().catch(() => {})
+              }}
+
+              onFocus={() => {
+                if (t.key === 'graph') loadKnowledgeGraph().catch(() => {})
+              }}
 
               className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap shrink-0 transition-all cursor-pointer active:scale-95 leading-normal ${
 
@@ -1534,21 +1544,11 @@ export default function Study() {
 
               <div className="flex-1 relative w-full h-full overflow-hidden">
 
-                <Suspense fallback={
-
-                  <div className="flex flex-col items-center justify-center h-full gap-3 text-neutral-500">
-
-                    <Loader2 className="w-6 h-6 animate-spin text-neutral-900" />
-
-                    <span className="text-xs font-medium">正在装载考研知识双链拓扑...</span>
-
-                  </div>
-
-                }>
-
-                  <KnowledgeGraph />
-
-                </Suspense>
+                <ChunkErrorBoundary title="知识图谱加载失败" className="h-full w-full">
+                  <Suspense fallback={<SuspenseTimeoutFallback label="正在装载考研知识双链拓扑..." className="h-full" />}>
+                    <KnowledgeGraph />
+                  </Suspense>
+                </ChunkErrorBoundary>
 
               </div>
 
@@ -2469,13 +2469,7 @@ export default function Study() {
 
 
 
-        {/* TAB 4: 每日错题强化 */}
-
-        {tab === 'errors' && <DailyErrorTab />}
-
-
-
-        {/* TAB 5: 科目研学进度 */}
+        {/* TAB 4: 科目研学进度 */}
 
         {tab === 'progress' && (
 
@@ -2868,432 +2862,3 @@ export default function Study() {
   )
 
 }
-
-
-
-// ─── Daily Error Tab ──────────────────────────────────────────────────────────
-
-
-
-function DailyErrorTab() {
-  const navigate = useNavigate()
-  const [data, setData] = useState<DailyReviewData | null>(null)
-
-  const [loading, setLoading] = useState(true)
-
-  const [currentIdx, setCurrentIdx] = useState(0)
-
-  const [showAnswer, setShowAnswer] = useState(false)
-
-  const [reviewing, setReviewing] = useState(false)
-
-  const [tutorOpen, setTutorOpen] = useState(false)
-
-
-
-  const loadData = useCallback(() => {
-
-    setLoading(true)
-
-    api.getDailyReview()
-
-      .then(setData)
-
-      .catch(() => {})
-
-      .finally(() => setLoading(false))
-
-  }, [])
-
-
-
-  useEffect(() => { loadData() }, [loadData])
-
-
-
-  const handleResult = async (result: 'mastered' | 'easy' | 'hard') => {
-
-    if (!data || currentIdx >= data.dueQuestions.length) return
-
-    const q = data.dueQuestions[currentIdx]
-
-    const date = q._sourceFile?.replace('.md', '') || data.date
-
-
-
-    setReviewing(true)
-
-    try {
-
-      await api.markReviewComplete(date, currentIdx, result)
-
-    } catch { /* ignore */ }
-
-
-
-    if (currentIdx < data.dueQuestions.length - 1) {
-
-      setCurrentIdx(currentIdx + 1)
-
-      setShowAnswer(false)
-
-    } else {
-
-      setCurrentIdx(0)
-
-      setShowAnswer(false)
-
-      await loadData()
-
-    }
-
-    setReviewing(false)
-
-  }
-
-
-
-  if (loading) {
-
-    return (
-
-      <div className="flex items-center gap-2 text-sm text-warm-500 py-12 justify-center">
-
-        <Loader2 className="w-4 h-4 animate-spin" /> 正在调取今日错题数据...
-
-      </div>
-
-    )
-
-  }
-
-
-
-  if (!data || data.dueQuestions.length === 0) {
-
-    return (
-
-      <div className="bg-surface border border-neutral-200/80 rounded-xl text-center py-16 space-y-4 max-w-xl mx-auto">
-
-        <Check className="w-12 h-12 mx-auto text-accent-sage/40" />
-
-        <div className="text-base font-bold text-warm-800">太棒了！今日没有待复习的错题</div>
-
-        <div className="text-xs text-warm-400">
-
-          错题库共收录 {data?.stats.totalQuestions || 0} 道考研错题，已彻底掌握 {data?.stats.masteredCount || 0} 道
-
-        </div>
-
-        <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1">
-          <button
-            onClick={() => navigate('/quiz?tab=errors')}
-            className="px-4 py-2 rounded-xl bg-rose-600 text-xs font-bold text-white hover:bg-rose-700 transition-colors cursor-pointer"
-          >
-            📕 打开新版错题攻克中心
-          </button>
-          <button
-            onClick={loadData}
-            className="px-4 py-2 rounded-xl bg-cream-200 text-xs font-semibold text-warm-600 hover:bg-cream-300 transition-colors cursor-pointer"
-          >
-            刷新检查
-          </button>
-        </div>
-
-      </div>
-
-    )
-
-  }
-
-
-
-  const currentQ = data.dueQuestions[currentIdx]
-
-  const stats = data.stats
-
-
-
-  return (
-
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-2 p-3.5 rounded-xl bg-rose-50/80 border border-rose-200 text-xs">
-        <span className="text-rose-800 font-medium">
-          💡 想要按科目/错因检索、组卷重练、现场做题验证或打印刷题纸？
-        </span>
-        <button
-          type="button"
-          onClick={() => navigate('/quiz?tab=errors')}
-          className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold transition-colors cursor-pointer shrink-0"
-        >
-          📕 进入新版错题攻克中心 →
-        </button>
-      </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
-
-        <div className="bg-surface border border-cream-200 rounded-xl px-4 py-3 text-center">
-
-          <div className="text-xs text-warm-400">今日待复习</div>
-
-          <div className="text-xl font-bold text-accent-amber">{stats.dueCount}</div>
-
-        </div>
-
-        <div className="bg-surface border border-cream-200 rounded-xl px-4 py-3 text-center">
-
-          <div className="text-xs text-warm-400">总错题数</div>
-
-          <div className="text-xl font-bold text-warm-800">{stats.totalQuestions}</div>
-
-        </div>
-
-        <div className="bg-surface border border-cream-200 rounded-xl px-4 py-3 text-center">
-
-          <div className="text-xs text-warm-400">已掌握</div>
-
-          <div className="text-xl font-bold text-accent-sage">{stats.masteredCount}</div>
-
-        </div>
-
-        <div className="bg-surface border border-cream-200 rounded-xl px-4 py-3 text-center">
-
-          <div className="text-xs text-warm-400">当前题号</div>
-
-          <div className="text-xl font-bold text-accent-orange">
-
-            {currentIdx + 1}/{data.dueQuestions.length}
-
-          </div>
-
-        </div>
-
-      </div>
-
-
-
-      <div className="bg-surface border border-neutral-200/80 rounded-xl overflow-hidden shadow-xs">
-
-        <div className="p-6 space-y-4">
-
-          <div className="flex flex-wrap items-center gap-2">
-            <XCircle className="w-4 h-4 text-rose-500" />
-            <span className="text-xs text-warm-500 font-semibold">
-              错题复盘 {currentIdx + 1} / {data.dueQuestions.length}
-            </span>
-            {(currentQ as any).subject && (
-              <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[10px] font-bold">
-                {(currentQ as any).subject}
-              </span>
-            )}
-            {(currentQ as any).errorType && (
-              <span className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-600 border border-rose-200/70 text-[10px] font-semibold">
-                {(currentQ as any).errorType}
-              </span>
-            )}
-            {currentQ.source && (
-              <span className="ml-auto text-[10px] text-warm-400 truncate max-w-[200px]">
-                来源: {currentQ.source}
-              </span>
-            )}
-          </div>
-
-          <div className="text-sm sm:text-base text-warm-800 font-medium leading-relaxed">
-            <MarkdownRenderer content={formatQuestionContent(currentQ.question)} />
-          </div>
-
-          {(currentQ as any).options && Object.keys((currentQ as any).options).length > 0 && (
-            <div className="space-y-1.5 pt-1">
-              {Object.entries((currentQ as any).options as Record<string, string>).map(([optKey, optVal]) => {
-                const isWrongPick = currentQ.userAnswer?.trim().toUpperCase() === optKey.toUpperCase()
-                const isRightAns = showAnswer && currentQ.correctAnswer?.trim().toUpperCase() === optKey.toUpperCase()
-                return (
-                  <div
-                    key={optKey}
-                    className={`flex items-start gap-2 px-3 py-2 rounded-lg border text-xs ${
-                      isRightAns
-                        ? 'bg-emerald-50 border-emerald-300 text-emerald-900 font-semibold'
-                        : isWrongPick
-                          ? 'bg-rose-50 border-rose-300 text-rose-800'
-                          : 'bg-neutral-50/70 border-neutral-200/70 text-warm-700'
-                    }`}
-                  >
-                    <span className="font-bold shrink-0">{optKey}.</span>
-                    <div className="flex-1 min-w-0">
-                      <MarkdownRenderer content={String(optVal)} inline />
-                    </div>
-                    {isWrongPick && (
-                      <span className="text-[10px] text-rose-600 font-semibold shrink-0">当时误选</span>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          )}
-
-          {currentQ.userAnswer && (
-            <div className="px-3 py-2 bg-rose-500/5 border border-rose-500/15 rounded-lg">
-              <span className="text-[10px] text-rose-500 font-semibold block mb-1">当时错误作答 / 选项：</span>
-              <div className="text-xs text-rose-700">
-                <MarkdownRenderer content={currentQ.userAnswer} inline />
-              </div>
-            </div>
-          )}
-
-          {(currentQ as any).notes && (
-            <div className="px-3 py-2 bg-amber-50/80 border border-amber-200/80 rounded-lg">
-              <span className="text-[10px] text-amber-700 font-semibold block mb-1">错因反思原文：</span>
-              <div className="text-xs text-amber-900 leading-relaxed whitespace-pre-wrap">
-                {(currentQ as any).notes}
-              </div>
-            </div>
-          )}
-
-        </div>
-
-
-
-        {showAnswer ? (
-
-          <div className="border-t border-cream-200 bg-cream-100/50 p-6 space-y-3">
-
-            <div className="flex items-center gap-2">
-
-              <Check className="w-4 h-4 text-accent-sage" />
-
-              <span className="text-xs text-accent-sage font-bold">正确答案与推导</span>
-
-            </div>
-
-            <div className="text-sm text-warm-800 leading-relaxed font-semibold">
-
-              <MarkdownRenderer content={currentQ.correctAnswer} inline />
-
-            </div>
-
-            {currentQ.explanation && (
-
-              <div className="mt-2 px-3.5 py-2.5 bg-cream-200/60 rounded-xl">
-
-                <span className="text-[10px] text-warm-400 block mb-1">名师解析与考点归因：</span>
-
-                <div className="text-xs text-warm-700 leading-relaxed">
-
-                  <MarkdownRenderer content={currentQ.explanation} />
-
-                </div>
-
-              </div>
-
-            )}
-
-          </div>
-
-        ) : (
-
-          <div className="border-t border-cream-200 p-4 flex items-center justify-center gap-4 bg-cream-50/50">
-
-            <button
-
-              onClick={() => setTutorOpen(true)}
-
-              className="px-4 py-2 rounded-xl bg-accent-orange/10 hover:bg-accent-orange/20 text-accent-orange text-xs font-bold flex items-center gap-1.5 transition-colors"
-
-            >
-
-              <Sparkles className="w-3.5 h-3.5" />
-
-              💡 AI 启发式分步辅导 (切入点/挑刺)
-
-            </button>
-
-            <button
-
-              onClick={() => setShowAnswer(true)}
-
-              className="px-4 py-2 rounded-xl bg-cream-200 hover:bg-cream-300 text-warm-700 text-xs font-semibold transition-colors"
-
-            >
-
-              点击查看正确答案与解析
-
-            </button>
-
-          </div>
-
-        )}
-
-      </div>
-
-
-
-      <StepTutorModal
-
-        isOpen={tutorOpen}
-
-        onClose={() => setTutorOpen(false)}
-
-        initialQuestion={currentQ.question}
-
-        initialOptions=""
-
-      />
-
-
-
-      {showAnswer && (
-
-        <div className="flex gap-3">
-
-          <button
-
-            onClick={() => handleResult('hard')}
-
-            disabled={reviewing}
-
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-accent-rose/10 border border-accent-rose/20 text-accent-rose text-sm font-semibold hover:bg-accent-rose/20 transition-colors disabled:opacity-50"
-
-          >
-
-            <ThumbsDown className="w-4 h-4" /> 仍有疑惑 (留存)
-
-          </button>
-
-          <button
-
-            onClick={() => handleResult('easy')}
-
-            disabled={reviewing}
-
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-accent-amber/10 border border-accent-amber/20 text-accent-amber text-sm font-semibold hover:bg-accent-amber/20 transition-colors disabled:opacity-50"
-
-          >
-
-            <Minus className="w-4 h-4" /> 稍加思索 (3天后)
-
-          </button>
-
-          <button
-
-            onClick={() => handleResult('mastered')}
-
-            disabled={reviewing}
-
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-accent-sage/10 border border-accent-sage/20 text-accent-sage text-sm font-semibold hover:bg-accent-sage/20 transition-colors disabled:opacity-50"
-
-          >
-
-            <ThumbsUp className="w-4 h-4" /> 完全掌握 (归档)
-
-          </button>
-
-        </div>
-
-      )}
-
-    </div>
-
-  )
-
-}
-

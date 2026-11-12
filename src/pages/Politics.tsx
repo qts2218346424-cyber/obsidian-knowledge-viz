@@ -1,6 +1,9 @@
-import { useState, useMemo, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'react-router-dom'
-const ChinaHistoricalMap = lazy(() => import('../components/ChinaHistoricalMap'))
+import { lazyWithRetry } from '../utils/lazyWithRetry'
+import ChunkErrorBoundary from '../components/ChunkErrorBoundary'
+import SuspenseTimeoutFallback from '../components/ui/SuspenseTimeoutFallback'
+const ChinaHistoricalMap = lazyWithRetry(() => import('../components/ChinaHistoricalMap'), 'chinaHistoricalMap')
 import { useAuth } from '../contexts/AuthContext'
 import { useIsMobile } from '../hooks/useIsMobile'
 import {
@@ -142,8 +145,15 @@ export default function Politics() {
     }
   })
 
-  // 当用户登录状态变更时，重新加载该用户独立的答题历史
+  const prevHistoryKeyRef = useRef<string>(quizHistoryKey)
+  const skipNextHistorySaveRef = useRef<boolean>(false)
+
+  // 当用户登录状态变更时，重新加载该用户独立的答题历史（防止旧账号状态反写覆盖新账号缓存）
   useEffect(() => {
+    if (prevHistoryKeyRef.current !== quizHistoryKey) {
+      prevHistoryKeyRef.current = quizHistoryKey
+      skipNextHistorySaveRef.current = true
+    }
     try {
       const raw = localStorage.getItem(quizHistoryKey)
       setQuizAnswers(raw ? JSON.parse(raw) : {})
@@ -165,6 +175,10 @@ export default function Politics() {
   }, [favQuestionIds, favQuestionsKey])
 
   useEffect(() => {
+    if (skipNextHistorySaveRef.current) {
+      skipNextHistorySaveRef.current = false
+      return
+    }
     try {
       localStorage.setItem(quizHistoryKey, JSON.stringify(quizAnswers))
     } catch {}
@@ -777,14 +791,16 @@ export default function Politics() {
               <div className={`relative my-1 flex-1 flex items-center justify-center ${
                 !showMobileMap ? 'hidden sm:flex min-h-[290px] sm:min-h-[320px]' : 'flex min-h-[250px]'
               }`}>
-                <Suspense fallback={<div className="h-64 flex items-center justify-center text-xs text-amber-500/60 font-mono">正在渲染高精矢量历史地图...</div>}>
-                  <ChinaHistoricalMap
-                    activeCoordinates={activeItem?.coordinates}
-                    activeCityName={activeItem?.cityName}
-                    activeDate={activeItem?.date}
-                    onCityClick={handleMapCityClick}
-                  />
-                </Suspense>
+                <ChunkErrorBoundary title="历史地图加载失败" className="h-64 w-full">
+                  <Suspense fallback={<SuspenseTimeoutFallback label="正在渲染高精矢量历史地图..." className="h-64 text-amber-500/80" />}>
+                    <ChinaHistoricalMap
+                      activeCoordinates={activeItem?.coordinates}
+                      activeCityName={activeItem?.cityName}
+                      activeDate={activeItem?.date}
+                      onCityClick={handleMapCityClick}
+                    />
+                  </Suspense>
+                </ChunkErrorBoundary>
               </div>
 
               {/* ── 🗺️ 地图底沿贴身时空微控滑轨 (0 距离手眼合一 · 实时拖动点亮地图) ── */}
@@ -1160,17 +1176,22 @@ export default function Politics() {
                 {(() => {
                   const q = filteredXiaoQuestions[activeQuestionIdx] || filteredXiaoQuestions[0]
                   const userAnswer = quizAnswers[q.id]
-                  const isSubmitted = userAnswer !== undefined
+                  const isSubmitted =
+                    q.type === 'single'
+                      ? typeof userAnswer === 'string' && userAnswer.trim().length > 0
+                      : Array.isArray(userAnswer) && userAnswer.length > 0
                   const isFav = Boolean(favQuestionIds[q.id])
                   const currentMulti = multiSelectBuffer[q.id] || []
 
                   const isCorrect =
-                    q.type === 'single'
+                    isSubmitted &&
+                    (q.type === 'single'
                       ? userAnswer === q.answer
                       : Array.isArray(userAnswer) &&
                         Array.isArray(q.answer) &&
+                        q.answer.length > 0 &&
                         userAnswer.length === q.answer.length &&
-                        userAnswer.every((x, i) => x === (q.answer as string[])[i])
+                        userAnswer.every((x, i) => x === (q.answer as string[])[i]))
 
                   return (
                     <div className="bg-white rounded-3xl p-5 sm:p-7 space-y-5 border border-slate-200/60 shadow-[0_2px_12px_rgba(0,0,0,0.03)]">

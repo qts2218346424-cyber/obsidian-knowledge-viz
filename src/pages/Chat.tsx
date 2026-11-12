@@ -93,6 +93,7 @@ export interface AgentMessage {
   citedNotes?: { title: string; path: string; excerpt: string; tags: string[] }[]
   timestamp: Date
   streaming?: boolean
+  error?: string
   isDual?: boolean
   peerResponse?: PeerAgentResponse
 }
@@ -1540,6 +1541,22 @@ export default function Chat() {
 
           while (attempt < maxAttempts) {
             attempt++
+            const attemptController = new AbortController()
+            let firstEventTimedOut = false
+            let receivedAnyModelEvent = false
+            const syncAbort = () => attemptController.abort()
+            if (convController.signal.aborted) {
+              attemptController.abort()
+            } else {
+              convController.signal.addEventListener('abort', syncAbort, { once: true })
+            }
+            const firstEventTimer = window.setTimeout(() => {
+              if (!receivedAnyModelEvent) {
+                firstEventTimedOut = true
+                attemptController.abort()
+              }
+            }, 30_000)
+
             try {
               const res = await fetch(endpoint, {
                 method: 'POST',
@@ -1548,10 +1565,11 @@ export default function Chat() {
                   ...authService.getAuthHeaders(),
                 },
                 body: JSON.stringify(body),
-                signal: convController.signal,
+                signal: attemptController.signal,
               })
 
               if (!res.ok) {
+                window.clearTimeout(firstEventTimer)
                 if (res.status === 402) {
                   const errData = await res.json().catch(() => ({}))
                   window.dispatchEvent(new CustomEvent('open-checkin-modal'))
@@ -1565,7 +1583,10 @@ export default function Chat() {
               }
 
               const reader = res.body?.getReader()
-              if (!reader) throw new Error('流式传输不可用')
+              if (!reader) {
+                window.clearTimeout(firstEventTimer)
+                throw new Error('流式传输不可用')
+              }
 
               const decoder = new TextDecoder()
               let buffer = ''
@@ -1585,6 +1606,10 @@ export default function Chat() {
 
                   try {
                     const event = JSON.parse(jsonStr)
+                    if (event.type && event.type !== 'points_updated' && !receivedAnyModelEvent) {
+                      receivedAnyModelEvent = true
+                      window.clearTimeout(firstEventTimer)
+                    }
                     if (event.type === 'points_updated' && typeof event.points === 'number') {
                       window.dispatchEvent(new CustomEvent('points-updated', { detail: { points: event.points } }))
                     } else if (event.type === 'text' && event.content) {
@@ -1609,6 +1634,11 @@ export default function Chat() {
               }
               break
             } catch (retryErr: any) {
+              if (firstEventTimedOut) {
+                hasReportedStreamError = true
+                onErrorMsg?.('响应超时')
+                break
+              }
               const isNetworkErr =
                 retryErr?.name !== 'AbortError' &&
                 !hasReportedStreamError &&
@@ -1623,6 +1653,9 @@ export default function Chat() {
                 continue
               }
               throw retryErr
+            } finally {
+              window.clearTimeout(firstEventTimer)
+              convController.signal.removeEventListener('abort', syncAbort)
             }
           }
           flushNow()
@@ -1897,7 +1930,8 @@ export default function Chat() {
               if (idx === -1) return conv
               msgs[idx] = {
                 ...msgs[idx],
-                content: msgs[idx].content + `\n\n❌ **执行异常**: ${err}`,
+                content: err === '响应超时' ? msgs[idx].content : msgs[idx].content + `\n\n❌ **执行异常**: ${err}`,
+                error: err,
                 streaming: false,
               }
               return { ...conv, messages: msgs }
@@ -1910,11 +1944,14 @@ export default function Chat() {
           const idx = msgs.findIndex(m => m.id === assistantMsgId)
           if (idx !== -1) {
             const rawContent = msgs[idx].content?.trim() || accumulatedAssistantText.trim()
+            const hasError = Boolean(msgs[idx].error)
             msgs[idx] = {
               ...msgs[idx],
               content:
                 rawContent ||
-                '⚠️ **智能体已完成推演，但模型服务暂未返回文本内容（系统已自动保留您的伴学积分，本次未扣费）。**\n\n> 💡 建议检查网络连接或直接点击重新生成。',
+                (hasError
+                  ? ''
+                  : '⚠️ **智能体已完成推演，但模型服务暂未返回文本内容（系统已自动保留您的伴学积分，本次未扣费）。**\n\n> 💡 建议检查网络连接或直接点击重新生成。'),
               streaming: false,
             }
           }
@@ -2708,6 +2745,7 @@ export default function Chat() {
                     onEditMessage={handleEditMessage}
                     onRecallMessage={handleRecallMessage}
                     onPreviewImage={setPreviewImageModal}
+                    onSwitchModel={() => setShowModelManagerModal(true)}
                   />
                 )
               })

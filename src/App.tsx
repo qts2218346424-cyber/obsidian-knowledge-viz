@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AudioProvider } from './contexts/AudioContext'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
@@ -6,6 +6,8 @@ import Layout from './components/Layout'
 import MiniPlayer from './components/music/MiniPlayer'
 import Login from './pages/Login'
 import TopProgressBar from './components/ui/TopProgressBar'
+import ErrorBoundary from './components/ErrorBoundary'
+import { lazyWithRetry } from './utils/lazyWithRetry'
 
 // 路由加载器定义，支持按需加载与空闲/悬浮即时预取 (Route Prefetching)
 export const routeLoaders = {
@@ -72,76 +74,73 @@ export function prefetchRoute(routePath: string) {
   } catch {}
 }
 
-/**
- * 具有自愈机制的安全懒加载器 (Safe Lazy with Chunk Auto-recovery)
- * 彻底解决单页应用构建更新后旧 chunk 404 或网络波动导致的动态 import 失败，
- * 避免 React.lazy 永久缓存 rejected Promise 导致用户反复点击路由持续崩溃。
- */
-function safeLazy<T extends React.ComponentType<any>>(
-  loader: () => Promise<{ default: T }>,
-  name: string
-) {
-  return lazy(async () => {
-    try {
-      const module = await loader()
-      try {
-        sessionStorage.removeItem(`safe_lazy_retry_${name}`)
-      } catch {}
-      return module
-    } catch (err: any) {
-      console.warn(`[SafeLazy] 动态加载模块 "${name}" 遇到异常，尝试自动恢复:`, err)
-      const isChunkError =
-        err?.message?.includes('Failed to fetch dynamically imported module') ||
-        err?.message?.includes('Importing a module script failed') ||
-        err?.message?.includes('Loading chunk') ||
-        err?.name === 'ChunkLoadError' ||
-        err?.message?.includes('Unexpected token')
-
-      const retryKey = `safe_lazy_retry_${name}`
-      let hasRetried = false
-      try {
-        hasRetried = Boolean(sessionStorage.getItem(retryKey))
-      } catch {}
-
-      if (isChunkError && !hasRetried) {
-        try {
-          sessionStorage.setItem(retryKey, 'true')
-        } catch {}
-        // 自动强制重载拉取最新构建资源
-        window.location.reload()
-        return new Promise<{ default: T }>(() => {})
-      }
-
-      throw err
-    }
-  })
-}
-
-const Dashboard = safeLazy(routeLoaders.dashboard, 'dashboard')
-const Chat = safeLazy(routeLoaders.chat, 'chat')
-const LandingPage = safeLazy(routeLoaders.landingPage, 'landingPage')
-const KnowledgeGraph = safeLazy(routeLoaders.knowledgeGraph, 'knowledgeGraph')
-const Workflow = safeLazy(routeLoaders.workflow, 'workflow')
-const Editor = safeLazy(routeLoaders.editor, 'editor')
-const Study = safeLazy(routeLoaders.study, 'study')
-const Settings = safeLazy(routeLoaders.settings, 'settings')
-const Quiz = safeLazy(routeLoaders.quiz, 'quiz')
-const Vocabulary = safeLazy(routeLoaders.vocabulary, 'vocabulary')
-const HistoryOutline = safeLazy(routeLoaders.historyOutline, 'historyOutline')
-const Politics = safeLazy(routeLoaders.politics, 'politics')
-const Music = safeLazy(routeLoaders.music, 'music')
-const Pomodoro = safeLazy(routeLoaders.pomodoro, 'pomodoro')
-const English = safeLazy(routeLoaders.english, 'english')
-const PdfReaderPage = safeLazy(routeLoaders.pdfReader, 'pdfReader')
+const Dashboard = lazyWithRetry(routeLoaders.dashboard, 'dashboard')
+const Chat = lazyWithRetry(routeLoaders.chat, 'chat')
+const LandingPage = lazyWithRetry(routeLoaders.landingPage, 'landingPage')
+const KnowledgeGraph = lazyWithRetry(routeLoaders.knowledgeGraph, 'knowledgeGraph')
+const Workflow = lazyWithRetry(routeLoaders.workflow, 'workflow')
+const Editor = lazyWithRetry(routeLoaders.editor, 'editor')
+const Study = lazyWithRetry(routeLoaders.study, 'study')
+const Settings = lazyWithRetry(routeLoaders.settings, 'settings')
+const Quiz = lazyWithRetry(routeLoaders.quiz, 'quiz')
+const Vocabulary = lazyWithRetry(routeLoaders.vocabulary, 'vocabulary')
+const HistoryOutline = lazyWithRetry(routeLoaders.historyOutline, 'historyOutline')
+const Politics = lazyWithRetry(routeLoaders.politics, 'politics')
+const Music = lazyWithRetry(routeLoaders.music, 'music')
+const Pomodoro = lazyWithRetry(routeLoaders.pomodoro, 'pomodoro')
+const English = lazyWithRetry(routeLoaders.english, 'english')
+const PdfReaderPage = lazyWithRetry(routeLoaders.pdfReader, 'pdfReader')
 
 function PageFallback() {
+  const [elapsed, setElapsed] = useState(0)
+  useEffect(() => {
+    const timer = setInterval(() => setElapsed(s => s + 1), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  const progress = Math.min(92, 24 + elapsed * 14)
+  const stepText =
+    elapsed < 2
+      ? '第 1/3 步：正在连接研学功能模块...'
+      : elapsed < 5
+        ? '第 2/3 步：正在加载学科知识库与组件...'
+        : `第 3/3 步：正在完成页面初始化（已用时 ${elapsed} 秒）...`
+
   return (
     <>
       <TopProgressBar />
-      <div className="flex h-[45vh] w-full items-center justify-center animate-fade-in">
-        <div className="flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/80 backdrop-blur-md px-3.5 py-1.5 text-xs font-medium text-slate-500 shadow-xs">
-          <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-ping" />
-          <span>研学空间准备中...</span>
+      <div className="flex h-[52vh] w-full items-center justify-center px-4 animate-fade-in">
+        <div className="w-full max-w-sm rounded-2xl border border-slate-200/90 bg-white/95 p-6 shadow-sm space-y-3.5 text-center">
+          <div className="flex items-center justify-between text-xs font-semibold text-slate-700">
+            <span className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-indigo-600 animate-ping" />
+              <span>{stepText}</span>
+            </span>
+            <span className="font-mono text-[11px] text-slate-400">{Math.round(progress)}%</span>
+          </div>
+          <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-indigo-500 to-sky-500 rounded-full transition-all duration-500"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <div className="flex items-center justify-between text-[10.5px] text-slate-400">
+            <span className={elapsed < 2 ? 'text-indigo-600 font-semibold' : 'text-emerald-600'}>① 请求资源</span>
+            <span className={elapsed >= 2 && elapsed < 5 ? 'text-indigo-600 font-semibold' : elapsed >= 5 ? 'text-emerald-600' : ''}>② 装载模块</span>
+            <span className={elapsed >= 5 ? 'text-indigo-600 font-semibold' : ''}>③ 渲染界面</span>
+          </div>
+          {elapsed >= 15 && (
+            <div className="pt-2 border-t border-slate-100 space-y-2">
+              <p className="text-xs text-amber-600 font-medium">加载时间较长，可能因网络波动或版本更新导致</p>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="inline-flex items-center justify-center px-4 py-1.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-semibold transition-colors cursor-pointer"
+              >
+                重试加载
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </>
@@ -202,21 +201,23 @@ function App() {
   }, [])
 
   return (
-    <AuthProvider>
-      <AudioProvider>
-        <BrowserRouter>
-          <Suspense fallback={<PageFallback />}>
-            <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/home" element={<LandingPage />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/pdf-reader" element={<PdfReaderPage />} />
-              <Route path="/*" element={<ProtectedRoutes />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-      </AudioProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <AudioProvider>
+          <BrowserRouter>
+            <Suspense fallback={<PageFallback />}>
+              <Routes>
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/home" element={<LandingPage />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/pdf-reader" element={<PdfReaderPage />} />
+                <Route path="/*" element={<ProtectedRoutes />} />
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+        </AudioProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   )
 }
 

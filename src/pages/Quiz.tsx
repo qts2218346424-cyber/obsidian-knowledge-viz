@@ -268,6 +268,7 @@ export default function Quiz() {
   const [blankInput, setBlankInput] = useState('')
   const [showFeedback, setShowFeedback] = useState(false)
   const [showSteps, setShowSteps] = useState(false)
+  const [expandedResultIds, setExpandedResultIds] = useState<Set<string>>(new Set())
   const [timeElapsed, setTimeElapsed] = useState(0)
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set())
   const [errorReasons, setErrorReasons] = useState<Record<string, string>>({})
@@ -910,7 +911,7 @@ export default function Quiz() {
     } catch {}
   }, [])
 
-  const goToQuestion = (index: number) => {
+  const goToQuestion = useCallback((index: number) => {
     if (index < 0 || index >= questions.length) return
     setCurrentIndex(index)
     setMobileDrawerOpen(false)
@@ -919,7 +920,7 @@ export default function Quiz() {
     setBlankInput(answers[q.id] || '')
     setShowFeedback(mode === 'practice' && Boolean(answers[q.id]))
     setShowSteps(false)
-  }
+  }, [questions, answers, mode])
 
   const handleOptionSelect = useCallback((option: string) => {
     if (view !== 'quiz' || questions.length === 0) return
@@ -975,13 +976,14 @@ export default function Quiz() {
     }, 0)
   }
 
+  const finishQuizRef = useRef<() => void>(() => {})
   const advanceQuestion = useCallback(() => {
     if (currentIndex < questions.length - 1) {
       goToQuestion(currentIndex + 1)
     } else {
-      finishQuiz()
+      finishQuizRef.current()
     }
-  }, [currentIndex, questions, answers, mode])
+  }, [currentIndex, questions.length, goToQuestion])
 
   // 原地闭环唤起双核 AI 伴学舱追问当前题目
   const handleAskAI = useCallback((q: ActiveQuizQuestion) => {
@@ -1078,8 +1080,8 @@ export default function Quiz() {
         e.preventDefault()
         advanceQuestion()
       }
-      // 5. Enter 展开 / 收起解析 (原地秒查定理)
-      else if (e.key === 'Enter') {
+      // 5. Enter 展开 / 收起解析 (仅练习模式有效)
+      else if (e.key === 'Enter' && mode === 'practice') {
         e.preventDefault()
         setShowFeedback(prev => !prev)
       }
@@ -1087,7 +1089,7 @@ export default function Quiz() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [view, currentIndex, questions, handleOptionSelect, advanceQuestion, goToQuestion, handleAskAI])
+  }, [view, mode, currentIndex, questions, handleOptionSelect, advanceQuestion, goToQuestion, handleAskAI])
 
 
   const handleExitWithOption = useCallback((option: 'save' | 'clear') => {
@@ -1280,6 +1282,7 @@ export default function Quiz() {
       // Local result shown
     }
   }, [answers, questions, timeElapsed, mode, errorReasons])
+  finishQuizRef.current = finishQuiz
 
 
 
@@ -1294,6 +1297,144 @@ export default function Quiz() {
       return next
     })
   }
+
+  // 统一通过 Portal 挂载到 document.body，避免外层 animate-fade-in-up transform 导致 fixed 弹窗错位或被遮挡
+  const exitAndSubmitModals = typeof document !== 'undefined' && (isExitModalOpen || isSubmitModalOpen)
+    ? createPortal(
+        <>
+          {isExitModalOpen && (
+            <div
+              role="dialog"
+              aria-modal="true"
+              className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/45 backdrop-blur-xs"
+              onClick={() => setIsExitModalOpen(false)}
+            >
+              <div
+                className="w-full max-w-md rounded-2xl bg-white p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-lg shrink-0">
+                    ⚠️
+                  </div>
+                  <div>
+                    <h3 className="text-sm sm:text-base font-bold text-slate-900">确定退出当前刷题？</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">您可以保留进度以便下次回溯继续，也可以彻底清除记录。</p>
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">试卷 / 专题：</span>
+                    <strong className="text-indigo-700 font-bold truncate max-w-[220px]">
+                      {activeTopicLabel || activePaperContext?.title || (questions[0] ? `${questions[0].subject} · 组卷` : '刷题练习')}
+                    </strong>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">停留题号：</span>
+                    <strong className="text-slate-800">第 {currentIndex + 1} 题 / 共 {questions.length} 题</strong>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">已作答进度：</span>
+                    <strong className="text-emerald-700">
+                      {Object.keys(answers).length} 题 ({Math.round((Object.keys(answers).length / Math.max(1, questions.length)) * 100)}%)
+                    </strong>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500">做题累计用时：</span>
+                    <strong className="font-mono text-slate-700">{formatTime(timeElapsed)}</strong>
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => handleExitWithOption('save')}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm transition-all cursor-pointer active:scale-98"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>保存进度并退出 (推荐，下次可回溯继续)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleExitWithOption('clear')}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-all cursor-pointer active:scale-98"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>清除记录并退出 (放弃本次进度，不再保留)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsExitModalOpen(false)}
+                    className="w-full py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                  >
+                    取消，继续做题
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isSubmitModalOpen && (
+            <div
+              role="dialog"
+              aria-modal="true"
+              className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/45 backdrop-blur-xs"
+              onClick={() => setIsSubmitModalOpen(false)}
+            >
+              <div
+                className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl border border-slate-200 space-y-4"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                    📝
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">立即交卷结算成绩报告？</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">交卷后将生成错题剖析与考点雷达图</p>
+                  </div>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span>已作答题目：</span>
+                    <strong className="text-emerald-700 font-bold">{Object.keys(answers).length} 题</strong>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>未作答题目：</span>
+                    <strong className={questions.length - Object.keys(answers).length > 0 ? 'text-amber-600 font-bold' : 'text-slate-500'}>
+                      {questions.length - Object.keys(answers).length} 题
+                    </strong>
+                  </div>
+                </div>
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setIsSubmitModalOpen(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                  >
+                    再检查一下
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSubmitModalOpen(false)
+                      finishQuiz()
+                    }}
+                    className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition-colors cursor-pointer"
+                  >
+                    立即交卷结算
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>,
+        document.body
+      )
+    : null
 
   // ─────────────────────────────────────────────────────────────────────────────
   // VIEW 1: START SELECTION ARENA
@@ -2087,123 +2228,7 @@ export default function Quiz() {
           </button>
         </div>
 
-        {/* 自定义安全退出做题选择弹窗（支持用户选择保存记录或清除记录） */}
-        {isExitModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
-            <div className="w-full max-w-md rounded-2xl bg-white p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-lg shrink-0">
-                  ⚠️
-                </div>
-                <div>
-                  <h3 className="text-sm sm:text-base font-bold text-slate-900">确定退出当前刷题？</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">您可以保留进度以便下次回溯继续，也可以彻底清除记录。</p>
-                </div>
-              </div>
-
-              {/* 当前刷题进度摘要 */}
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">试卷 / 专题：</span>
-                  <strong className="text-indigo-700 font-bold truncate max-w-[220px]">
-                    {activeTopicLabel || activePaperContext?.title || (questions[0] ? `${questions[0].subject} · 组卷` : '刷题练习')}
-                  </strong>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">停留题号：</span>
-                  <strong className="text-slate-800">第 {currentIndex + 1} 题 / 共 {questions.length} 题</strong>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">已作答进度：</span>
-                  <strong className="text-emerald-700">
-                    {Object.keys(answers).length} 题 ({Math.round((Object.keys(answers).length / Math.max(1, questions.length)) * 100)}%)
-                  </strong>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">做题累计用时：</span>
-                  <strong className="font-mono text-slate-700">{formatTime(timeElapsed)}</strong>
-                </div>
-              </div>
-
-              {/* 退出选项选择区 */}
-              <div className="space-y-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => handleExitWithOption('save')}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm transition-all cursor-pointer active:scale-98"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>保存进度并退出 (推荐，下次可回溯继续)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleExitWithOption('clear')}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-all cursor-pointer active:scale-98"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span>清除记录并退出 (放弃本次进度，不再保留)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setIsExitModalOpen(false)}
-                  className="w-full py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  取消，继续做题
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 自定义交卷结算确认弹窗 */}
-        {isSubmitModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
-            <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl border border-slate-200 space-y-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
-                  📝
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">立即交卷结算成绩报告？</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">交卷后将生成错题剖析与考点雷达图</p>
-                </div>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span>已作答题目：</span>
-                  <strong className="text-emerald-700 font-bold">{Object.keys(answers).length} 题</strong>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>未作答题目：</span>
-                  <strong className={questions.length - Object.keys(answers).length > 0 ? "text-amber-600 font-bold" : "text-slate-500"}>
-                    {questions.length - Object.keys(answers).length} 题
-                  </strong>
-                </div>
-              </div>
-              <div className="flex items-center justify-end gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setIsSubmitModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  再检查一下
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsSubmitModalOpen(false)
-                    finishQuiz()
-                  }}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition-colors cursor-pointer"
-                >
-                  立即交卷结算
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {exitAndSubmitModals}
 
         <Suspense fallback={null}>
           <ImportResourceModal
@@ -2631,7 +2656,8 @@ export default function Quiz() {
                     if (!optionText) return null
                     const isSelected = selectedOption === key
                     const isCorrectAnswer = key.toUpperCase() === currentQ.answer.toUpperCase()
-                    const showResult = mode === 'practice' && showFeedback
+                    const hasSelectedOption = Boolean(selectedOption && String(selectedOption).trim())
+                    const showResult = mode === 'practice' && showFeedback && hasSelectedOption
 
                     let btnStyle = 'border-neutral-200/85 bg-white hover:border-neutral-300 hover:bg-neutral-50/60 text-neutral-800'
                     if (isSelected && !showResult) {
@@ -2648,10 +2674,10 @@ export default function Quiz() {
                       <button
                         key={key}
                         onClick={() => handleOptionSelect(key)}
-                        disabled={mode === 'practice' && showFeedback}
+                        disabled={mode === 'practice' && showFeedback && hasSelectedOption}
                         aria-label={`选项 ${key}: ${optionText}`}
                         className={`w-full min-w-0 max-w-full overflow-hidden text-left rounded-xl sm:rounded-2xl border px-3 py-2.5 sm:px-4 sm:py-3.5 transition-all duration-150 group flex items-start gap-2.5 sm:gap-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${btnStyle} ${
-                          mode === 'practice' && showFeedback
+                          mode === 'practice' && showFeedback && hasSelectedOption
                             ? 'cursor-default'
                             : 'cursor-pointer hover:scale-[1.006] active:scale-[0.99] hover:shadow-sm'
                         }`}
@@ -2830,12 +2856,12 @@ export default function Quiz() {
                       value={blankInput}
                       onChange={(e) => setBlankInput(e.target.value)}
                       placeholder="在此键入你的计算结果..."
-                      disabled={mode === 'practice' && showFeedback}
+                      disabled={mode === 'practice' && showFeedback && Boolean(answers[currentQ.id])}
                       className="flex-1 min-w-0 w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-accent-orange font-mono"
                     />
                     <button
                       onClick={handleBlankSubmit}
-                      disabled={(mode === 'practice' && showFeedback) || !blankInput.trim()}
+                      disabled={(mode === 'practice' && showFeedback && Boolean(answers[currentQ.id])) || !blankInput.trim()}
                       className="w-full sm:w-auto shrink-0 rounded-xl bg-accent-orange text-white px-5 py-2.5 text-xs font-semibold hover:bg-accent-orange/90 disabled:opacity-40 transition-all whitespace-nowrap cursor-pointer"
                     >
                       提交验证
@@ -2862,15 +2888,28 @@ export default function Quiz() {
                 <div className="flex flex-wrap items-center justify-center gap-2 min-w-0">
                   <button
                     type="button"
-                    onClick={() => setShowFeedback(prev => !prev)}
-                    className="px-3.5 py-2 sm:py-1.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors whitespace-nowrap"
-                    title="按 Enter 键展开/收起解析"
+                    disabled={mode !== 'practice'}
+                    onClick={() => {
+                      if (mode === 'practice') setShowFeedback(prev => !prev)
+                    }}
+                    className={`px-3.5 py-2 sm:py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap ${
+                      mode === 'practice'
+                        ? 'border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer'
+                        : 'border-slate-200/70 bg-slate-100/80 text-slate-400 cursor-not-allowed opacity-70'
+                    }`}
+                    title={mode === 'practice' ? '按 Enter 键展开/收起解析' : '交卷后可查看解析'}
                   >
-                    <BookOpen size={13} className="text-indigo-600 shrink-0" />
-                    <span>{showFeedback ? '收起解析' : '展开解析'}</span>
-                    <kbd className="hidden sm:inline-block text-[10px] font-mono px-1 py-0.2 rounded border border-slate-200 bg-slate-100 text-slate-400">
-                      Enter
-                    </kbd>
+                    <BookOpen size={13} className={mode === 'practice' ? 'text-indigo-600 shrink-0' : 'text-slate-400 shrink-0'} />
+                    <span>
+                      {mode === 'practice'
+                        ? (showFeedback ? '收起解析' : '展开解析')
+                        : '交卷后可查看解析'}
+                    </span>
+                    {mode === 'practice' && (
+                      <kbd className="hidden sm:inline-block text-[10px] font-mono px-1 py-0.2 rounded border border-slate-200 bg-slate-100 text-slate-400">
+                        Enter
+                      </kbd>
+                    )}
                   </button>
 
                   <button
@@ -2889,11 +2928,14 @@ export default function Quiz() {
 
                 <WarmButton
                   onClick={advanceQuestion}
-                  disabled={mode === 'practice' && !showFeedback && currentIndex < questions.length - 1}
                   className="max-lg:!hidden lg:inline-flex bg-accent-orange text-white px-5 cursor-pointer items-center gap-1.5 whitespace-nowrap"
                   title="下一题（快捷键 →）"
                 >
-                  <span>{currentIndex < questions.length - 1 ? '下一题' : '交卷结算'}</span>
+                  <span>
+                    {currentIndex < questions.length - 1
+                      ? (Boolean(answers[currentQ.id]) || showFeedback || mode !== 'practice' ? '下一题' : '跳过')
+                      : '交卷结算'}
+                  </span>
                   <kbd className="hidden sm:inline-block text-[10px] font-mono px-1.5 py-0.2 rounded border border-white/30 bg-black/20 text-white">
                     →
                   </kbd>
@@ -2909,8 +2951,12 @@ export default function Quiz() {
                     <span className="text-base">💡</span>
                     <span>真题全解与定理依据</span>
                   </div>
-                  <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1 max-w-full overflow-x-auto">
-                    <span className="shrink-0">正确答案:</span>
+                  <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border flex items-center gap-1 max-w-full overflow-x-auto ${
+                    answers[currentQ.id]
+                      ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                      : 'text-slate-700 bg-slate-100 border-slate-200'
+                  }`}>
+                    <span className="shrink-0">{answers[currentQ.id] ? '正确答案:' : '尚未作答 · 参考答案:'}</span>
                     <MarkdownRenderer
                       content={formatMathInline(currentQ.answer)}
                       inline
@@ -3237,14 +3283,17 @@ export default function Quiz() {
           <button
             type="button"
             onClick={advanceQuestion}
-            disabled={mode === 'practice' && !showFeedback && currentIndex < questions.length - 1}
             className={`px-2.5 py-1.5 rounded-lg text-white text-[11px] font-bold active:scale-95 transition-all flex items-center gap-0.5 cursor-pointer shadow-xs whitespace-nowrap shrink-0 ${
               currentIndex < questions.length - 1
-                ? 'bg-slate-900 disabled:opacity-35'
+                ? 'bg-slate-900'
                 : 'bg-emerald-600 hover:bg-emerald-500'
             }`}
           >
-            <span>{currentIndex < questions.length - 1 ? '下一题' : '交卷'}</span>
+            <span>
+              {currentIndex < questions.length - 1
+                ? (Boolean(answers[currentQ.id]) || showFeedback || mode !== 'practice' ? '下一题' : '跳过')
+                : '交卷'}
+            </span>
             <ArrowRight size={12} className="shrink-0" />
           </button>
         </div>
@@ -3360,123 +3409,7 @@ export default function Quiz() {
           </div>
         )}
 
-        {/* 自定义安全退出做题选择弹窗（支持用户选择保存记录或清除记录） */}
-        {isExitModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
-            <div className="w-full max-w-md rounded-2xl bg-white p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-lg shrink-0">
-                  ⚠️
-                </div>
-                <div>
-                  <h3 className="text-sm sm:text-base font-bold text-slate-900">确定退出当前刷题？</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">您可以保留进度以便下次回溯继续，也可以彻底清除记录。</p>
-                </div>
-              </div>
-
-              {/* 当前刷题进度摘要 */}
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">试卷 / 专题：</span>
-                  <strong className="text-indigo-700 font-bold truncate max-w-[220px]">
-                    {activeTopicLabel || activePaperContext?.title || (questions[0] ? `${questions[0].subject} · 组卷` : '刷题练习')}
-                  </strong>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">停留题号：</span>
-                  <strong className="text-slate-800">第 {currentIndex + 1} 题 / 共 {questions.length} 题</strong>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">已作答进度：</span>
-                  <strong className="text-emerald-700">
-                    {Object.keys(answers).length} 题 ({Math.round((Object.keys(answers).length / Math.max(1, questions.length)) * 100)}%)
-                  </strong>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">做题累计用时：</span>
-                  <strong className="font-mono text-slate-700">{formatTime(timeElapsed)}</strong>
-                </div>
-              </div>
-
-              {/* 退出选项选择区 */}
-              <div className="space-y-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => handleExitWithOption('save')}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm transition-all cursor-pointer active:scale-98"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>保存进度并退出 (推荐，下次可回溯继续)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleExitWithOption('clear')}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-all cursor-pointer active:scale-98"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span>清除记录并退出 (放弃本次进度，不再保留)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setIsExitModalOpen(false)}
-                  className="w-full py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  取消，继续做题
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 自定义交卷结算确认弹窗 */}
-        {isSubmitModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
-            <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl border border-slate-200 space-y-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
-                  📝
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">立即交卷结算成绩报告？</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">交卷后将生成错题剖析与考点雷达图</p>
-                </div>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span>已作答题目：</span>
-                  <strong className="text-emerald-700 font-bold">{Object.keys(answers).length} 题</strong>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>未作答题目：</span>
-                  <strong className={questions.length - Object.keys(answers).length > 0 ? "text-amber-600 font-bold" : "text-slate-500"}>
-                    {questions.length - Object.keys(answers).length} 题
-                  </strong>
-                </div>
-              </div>
-              <div className="flex items-center justify-end gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setIsSubmitModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  再检查一下
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsSubmitModalOpen(false)
-                    finishQuiz()
-                  }}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition-colors cursor-pointer"
-                >
-                  立即交卷结算
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {exitAndSubmitModals}
 
         <Suspense fallback={null}>
           <ImportResourceModal
@@ -3871,6 +3804,115 @@ export default function Quiz() {
           </div>
         )}
 
+        {/* 全卷逐题解析清单（支持每道题独立展开/收起解析） */}
+        {questions.length > 0 && (
+          <div className="bento-card rounded-xl border border-neutral-200/80 bg-white shadow-xs p-4 sm:p-6 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <BookOpen size={16} className="text-indigo-600" />
+                <span>全卷逐题解析 ({questions.length} 题)</span>
+              </h2>
+              <div className="flex items-center gap-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setExpandedResultIds(new Set(questions.map(q => q.id)))}
+                  className="px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer"
+                >
+                  全部展开
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExpandedResultIds(new Set())}
+                  className="px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer"
+                >
+                  全部收起
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-2.5">
+              {questions.map((q, idx) => {
+                const userAns = answers[q.id]
+                const isAnswered = Boolean(userAns)
+                const isCorrect = isAnswered && userAns.trim().toLowerCase() === q.answer.trim().toLowerCase()
+                const isExpanded = expandedResultIds.has(q.id)
+
+                return (
+                  <div
+                    key={q.id}
+                    className="rounded-xl border border-slate-200/90 bg-slate-50/40 p-3 sm:p-4 space-y-2.5"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="font-mono font-bold text-slate-500">第 {idx + 1} 题</span>
+                        <span className="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 font-semibold">
+                          {q.subject}
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded-md font-bold ${
+                            !isAnswered
+                              ? 'bg-slate-100 text-slate-500'
+                              : isCorrect
+                                ? 'bg-emerald-50 text-emerald-700'
+                                : 'bg-rose-50 text-rose-600'
+                          }`}
+                        >
+                          {!isAnswered ? '未作答' : isCorrect ? '✓ 正确' : '✗ 错误'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-xs">
+                        {isAnswered && (
+                          <span className="font-mono text-slate-500">你的答案: {userAns}</span>
+                        )}
+                        <span className="font-mono font-semibold text-emerald-700 inline-flex items-center gap-1">
+                          <span>标准答案:</span>
+                          <MarkdownRenderer content={formatMathInline(q.answer)} inline />
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setExpandedResultIds(prev => {
+                              const next = new Set(prev)
+                              if (next.has(q.id)) next.delete(q.id)
+                              else next.add(q.id)
+                              return next
+                            })
+                          }}
+                          className="px-2.5 py-1 rounded-lg border border-indigo-200 bg-indigo-50/80 hover:bg-indigo-100 text-indigo-700 font-semibold cursor-pointer transition-colors"
+                        >
+                          {isExpanded ? '收起解析' : '展开解析'}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="text-xs sm:text-sm text-slate-800 leading-relaxed min-w-0 max-w-full quiz-stem-scroll">
+                      <MarkdownRenderer content={q.question} />
+                    </div>
+
+                    {isExpanded && (
+                      <div className="bg-white rounded-xl p-3 border border-slate-200 text-xs text-slate-700 leading-relaxed space-y-2 animate-fade-in">
+                        <div className="font-bold text-slate-800">真题解析：</div>
+                        <MarkdownRenderer content={q.explanation} />
+                        {q.steps && q.steps.length > 0 && (
+                          <div className="pt-2 border-t border-slate-100 space-y-1.5">
+                            <div className="font-semibold text-slate-700">分步推导：</div>
+                            {q.steps.map((step, sIdx) => (
+                              <div key={sIdx} className="pl-2 border-l-2 border-indigo-200">
+                                <MarkdownRenderer content={step} />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-3">
           <WarmButton onClick={() => { setActivePaperContext(null); setView('start'); }} className="bg-accent-orange text-white px-8">
@@ -3891,123 +3933,7 @@ export default function Quiz() {
           </WarmButton>
         </div>
 
-        {/* 自定义安全退出做题选择弹窗（支持用户选择保存记录或清除记录） */}
-        {isExitModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
-            <div className="w-full max-w-md rounded-2xl bg-white p-5 sm:p-6 shadow-2xl border border-slate-200 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-lg shrink-0">
-                  ⚠️
-                </div>
-                <div>
-                  <h3 className="text-sm sm:text-base font-bold text-slate-900">确定退出当前刷题？</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">您可以保留进度以便下次回溯继续，也可以彻底清除记录。</p>
-                </div>
-              </div>
-
-              {/* 当前刷题进度摘要 */}
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">试卷 / 专题：</span>
-                  <strong className="text-indigo-700 font-bold truncate max-w-[220px]">
-                    {activeTopicLabel || activePaperContext?.title || (questions[0] ? `${questions[0].subject} · 组卷` : '刷题练习')}
-                  </strong>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">停留题号：</span>
-                  <strong className="text-slate-800">第 {currentIndex + 1} 题 / 共 {questions.length} 题</strong>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">已作答进度：</span>
-                  <strong className="text-emerald-700">
-                    {Object.keys(answers).length} 题 ({Math.round((Object.keys(answers).length / Math.max(1, questions.length)) * 100)}%)
-                  </strong>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">做题累计用时：</span>
-                  <strong className="font-mono text-slate-700">{formatTime(timeElapsed)}</strong>
-                </div>
-              </div>
-
-              {/* 退出选项选择区 */}
-              <div className="space-y-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => handleExitWithOption('save')}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm transition-all cursor-pointer active:scale-98"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>保存进度并退出 (推荐，下次可回溯继续)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleExitWithOption('clear')}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-all cursor-pointer active:scale-98"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span>清除记录并退出 (放弃本次进度，不再保留)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setIsExitModalOpen(false)}
-                  className="w-full py-2 rounded-xl text-xs font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  取消，继续做题
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 自定义交卷结算确认弹窗 */}
-        {isSubmitModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
-            <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl border border-slate-200 space-y-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
-                  📝
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">立即交卷结算成绩报告？</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">交卷后将生成错题剖析与考点雷达图</p>
-                </div>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span>已作答题目：</span>
-                  <strong className="text-emerald-700 font-bold">{Object.keys(answers).length} 题</strong>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>未作答题目：</span>
-                  <strong className={questions.length - Object.keys(answers).length > 0 ? "text-amber-600 font-bold" : "text-slate-500"}>
-                    {questions.length - Object.keys(answers).length} 题
-                  </strong>
-                </div>
-              </div>
-              <div className="flex items-center justify-end gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setIsSubmitModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  再检查一下
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsSubmitModalOpen(false)
-                    finishQuiz()
-                  }}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition-colors cursor-pointer"
-                >
-                  立即交卷结算
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {exitAndSubmitModals}
 
         <Suspense fallback={null}>
           <ImportResourceModal
