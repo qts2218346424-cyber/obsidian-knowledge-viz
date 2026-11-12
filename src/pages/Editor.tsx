@@ -1302,7 +1302,7 @@ export default function Editor() {
               <div className="fixed inset-0 z-40" onClick={() => setShowAiMenu(false)} />
               <div className="absolute right-2 sm:right-3 top-full mt-1 w-56 sm:w-60 max-w-[calc(100vw-1rem)] bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden animate-fade-in-up">
                 <div className="px-3 py-2 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between">
-                  <span className="text-2xs font-bold text-slate-700">✨ AI 智能编辑助手</span>
+                  <span className="text-2xs font-bold text-slate-700">AI 编辑助手</span>
                 </div>
                 {aiActions.map(action => (
                   <button
@@ -1353,7 +1353,7 @@ export default function Editor() {
                   className="col-span-2 flex items-center justify-center gap-1.5 p-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[11px] sm:text-xs font-bold shadow-xs disabled:opacity-40 active:scale-[0.99]"
                 >
                   <Target className="w-3.5 h-3.5" />
-                  <span>🎯 即学即练（根据当前笔记出 3 道真题）</span>
+                  <span>即学即练（根据当前笔记出 3 道真题）</span>
                 </button>
 
                 <button

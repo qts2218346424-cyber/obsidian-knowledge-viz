@@ -63,7 +63,67 @@ function isInternalArchNode(node: { label?: string; id?: string; path?: string }
   return INTERNAL_ARCH_REGEX.test(text)
 }
 
-export default function KnowledgeGraph() {
+// 科目下拉值 -> 图谱节点 group 集合映射（用于精准联动大纲分组与学科筛选）
+const SUBJECT_GROUP_MAP: Record<string, string[]> = {
+  cs_408: ['cs_ds', 'cs_co', 'cs_os', 'cs_net'],
+  数据结构: ['cs_ds'],
+  计算机组成原理: ['cs_co'],
+  操作系统: ['cs_os'],
+  计算机网络: ['cs_net'],
+  math: ['math_gaoshu', 'math_xiandai', 'math_gailv'],
+  高等数学: ['math_gaoshu'],
+  线性代数: ['math_xiandai'],
+  概率论: ['math_gailv'],
+}
+
+const KNOWN_SYLLABUS_GROUPS = new Set([
+  'cs_ds', 'cs_co', 'cs_os', 'cs_net',
+  'math_gaoshu', 'math_xiandai', 'math_gailv',
+])
+
+const SUBJECT_KEYWORD_MAP: Record<string, string[]> = {
+  cs_408: ['408', '数据结构', '计组', '组成原理', '操作系统', '计算机网络'],
+  数据结构: ['数据结构', '链表', '栈', '队列', '二叉树', '红黑树', '哈夫曼', '拓扑', '排序', '散列'],
+  计算机组成原理: ['计组', '组成原理', 'ieee', 'cache', '流水线', '寻址', '中断', 'dma', '数据通路'],
+  操作系统: ['操作系统', 'pv', '死锁', '银行家', '分页', 'tlb', '置换', 'inode', '磁盘'],
+  计算机网络: ['计算机网络', 'tcp', '拥塞', '子网', 'cidr', '路由', 'ospf', 'csma', 'dns', 'https'],
+  math: ['数学', '高数', '线代', '概率', '微积分'],
+  高等数学: ['高数', '高等数学', '极限', '洛必达', '泰勒', '中值', '积分', '偏导', '微分方程'],
+  线性代数: ['线代', '线性代数', '矩阵', '线性方程组', '向量组', '特征值', '二次型'],
+  概率论: ['概率', '概率统计', '贝叶斯', '随机变量', '期望', '方差', '分布'],
+  politics: ['政治', '马原', '史纲', '毛中特', '时政', '思修'],
+  政治史纲: ['史纲', '近代史'],
+  马克思主义基本原理: ['马原', '马克思主义', '辩证法', '唯物'],
+  马克思著作: ['马克思著作', '资本论', '共产党宣言'],
+  时事政治: ['时政', '时事'],
+  english: ['英语', '词汇', '阅读', '完形', '写作', '长难句'],
+  general: ['考研', '复试', '规划'],
+}
+
+function matchesSubjectFilter(node: SimNode, subject: string): boolean {
+  if (!subject || subject === 'all') return true
+  const mappedGroups = SUBJECT_GROUP_MAP[subject]
+  // 若节点归属已明确的大纲学科分组，则严格以 group 映射为准，避免跨科关键词误匹配
+  if (KNOWN_SYLLABUS_GROUPS.has(node.group)) {
+    return Boolean(mappedGroups && mappedGroups.includes(node.group))
+  }
+  if (mappedGroups && mappedGroups.includes(node.group)) return true
+  const haystack = `${node.label} ${node.path} ${node.tags.join(' ')} ${allGroupLabels[node.group] || ''}`.toLowerCase()
+  const keywords = SUBJECT_KEYWORD_MAP[subject] || [subject]
+  return keywords.some(kw => haystack.includes(kw.toLowerCase()))
+}
+
+export interface KnowledgeGraphProps {
+  externalSubjectFilter?: string
+  externalSearchQuery?: string
+  onClearExternalFilters?: () => void
+}
+
+export default function KnowledgeGraph({
+  externalSubjectFilter,
+  externalSearchQuery,
+  onClearExternalFilters,
+}: KnowledgeGraphProps = {}) {
   const svgRef = useRef<SVGSVGElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null)
@@ -78,14 +138,34 @@ export default function KnowledgeGraph() {
 
   const [hoveredNode, setHoveredNode] = useState<SimNode | null>(null)
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set())
+  const [internalSubjectFilter, setInternalSubjectFilter] = useState<string>('all')
   const [masteryFilter, setMasteryFilter] = useState<'all' | 'mastered' | 'moderate' | 'critical'>('all')
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchQuery, setSearchQuery] = useState(externalSearchQuery ?? '')
   const [showAllLabels, setShowAllLabels] = useState(false)
   const [previewNode, setPreviewNode] = useState<FileDetail | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [dimensions, setDimensions] = useState({ width: 900, height: 600 })
   const dimensionsRef = useRef(dimensions)
   dimensionsRef.current = dimensions
+
+  const effectiveSubjectFilter = externalSubjectFilter !== undefined ? externalSubjectFilter : internalSubjectFilter
+
+  // 同步外部学科筛选（如学习中心顶部下拉选择）到图谱分组集合
+  useEffect(() => {
+    if (externalSubjectFilter === undefined) return
+    if (externalSubjectFilter === 'all') {
+      setSelectedGroups(new Set())
+      return
+    }
+    const mapped = SUBJECT_GROUP_MAP[externalSubjectFilter]
+    setSelectedGroups(mapped ? new Set(mapped) : new Set())
+  }, [externalSubjectFilter])
+
+  // 同步外部搜索词（如学习中心顶部搜索框）
+  useEffect(() => {
+    if (externalSearchQuery === undefined) return
+    setSearchQuery(externalSearchQuery)
+  }, [externalSearchQuery])
 
   // 🚀 核心视图模式：'topology'（双链拓扑）与 'mastery'（考点掌握度热力图）
   const [viewMode, setViewMode] = useState<'topology' | 'mastery'>('mastery')
@@ -165,17 +245,34 @@ export default function KnowledgeGraph() {
     [rawNodes]
   )
 
-  // Active node IDs based on search + group filter + mastery filter
+  // 先按科目/学科分组锁定当前作用域节点（用于顶部指标与画布筛选双联动）
+  const subjectScopedNodes = useMemo(() => {
+    const hasGroupFilter = selectedGroups.size > 0
+    const hasSubjectFilter = effectiveSubjectFilter !== 'all'
+    if (!hasGroupFilter && !hasSubjectFilter) return simNodes
+    return simNodes.filter(n => {
+      if (hasGroupFilter) {
+        if (selectedGroups.has(n.group)) return true
+        // 若真实笔记未使用大纲内置分组 ID，兜底按学科关键词匹配
+        if (hasSubjectFilter && !KNOWN_SYLLABUS_GROUPS.has(n.group)) {
+          return matchesSubjectFilter(n, effectiveSubjectFilter)
+        }
+        return false
+      }
+      return matchesSubjectFilter(n, effectiveSubjectFilter)
+    })
+  }, [simNodes, selectedGroups, effectiveSubjectFilter])
+
+  // Active node IDs based on search + group/subject filter + mastery filter
   const activeNodeIds = useMemo(() => {
     const q = searchQuery.toLowerCase().trim()
-    const hasGroupFilter = selectedGroups.size > 0
     const hasMasteryFilter = viewMode === 'mastery' && masteryFilter !== 'all'
     return new Set(
-      simNodes
+      subjectScopedNodes
         .filter(n => {
-          if (hasGroupFilter && !selectedGroups.has(n.group)) return false
           if (hasMasteryFilter) {
             const mp = getNodeMastery(n.id, n.label)
+            if (mp.totalAttempts === 0) return false
             if (masteryFilter === 'critical' && mp.rate >= 50) return false
             if (masteryFilter === 'moderate' && (mp.rate < 50 || mp.rate >= 80)) return false
             if (masteryFilter === 'mastered' && mp.rate < 80) return false
@@ -185,9 +282,13 @@ export default function KnowledgeGraph() {
         })
         .map(n => n.id)
     )
-  }, [simNodes, searchQuery, selectedGroups, viewMode, masteryFilter])
+  }, [subjectScopedNodes, searchQuery, viewMode, masteryFilter])
 
-  const hasFilter = searchQuery.trim().length > 0 || selectedGroups.size > 0 || (viewMode === 'mastery' && masteryFilter !== 'all')
+  const hasFilter =
+    searchQuery.trim().length > 0 ||
+    selectedGroups.size > 0 ||
+    effectiveSubjectFilter !== 'all' ||
+    (viewMode === 'mastery' && masteryFilter !== 'all')
 
   // Keep refs in sync for D3 callbacks without forcing re-simulations
   const activeNodeIdsRef = useRef(activeNodeIds)
@@ -206,21 +307,21 @@ export default function KnowledgeGraph() {
   const scoreColor = overallScore >= 80 ? 'text-accent-sage' : overallScore >= 60 ? 'text-accent-amber' : 'text-accent-rose'
   const orphanNotes = stats?.orphanNotes ?? 0
 
-  // 掌握度统计概况 (基于节点掌握度计算，未练习节点单独统计)
+  // 掌握度统计概况 (跟随科目筛选联动，未练习节点单独统计)
   const masterySummary = useMemo(() => {
     let criticalCount = 0
     let moderateCount = 0
     let masteredCount = 0
     let unpracticedCount = 0
-    simNodes.forEach(node => {
+    subjectScopedNodes.forEach(node => {
       const mp = getNodeMastery(node.id, node.label)
       if (mp.totalAttempts === 0) unpracticedCount++
       else if (mp.rate < 50) criticalCount++
       else if (mp.rate < 80) moderateCount++
       else masteredCount++
     })
-    return { criticalCount, moderateCount, masteredCount, unpracticedCount, total: simNodes.length }
-  }, [simNodes])
+    return { criticalCount, moderateCount, masteredCount, unpracticedCount, total: subjectScopedNodes.length }
+  }, [subjectScopedNodes])
 
   // Resize observer
   useEffect(() => {
@@ -316,25 +417,26 @@ export default function KnowledgeGraph() {
       neighborMap.get(t)!.add(s)
     })
 
-    // 考研学科图谱力学配置：保持流体弹性与舒适收敛速度，既有灵动物理感又能稳稳停驻点击
+    // 考研学科图谱力学配置：紧凑有序、强向心约束，避免外围节点/红点飘散过远
+    const radialPull = (d: SimNode) => ((d.linkCount || 0) === 0 ? 0.12 : 0.055)
     const simulation = d3.forceSimulation<SimNode>(nodes)
-      .alphaDecay(0.025)
-      .velocityDecay(0.35)
+      .alphaDecay(0.032)
+      .velocityDecay(0.42)
       .force('link', d3.forceLink(links).id((d: any) => d.id).distance((d: any) => {
         const linksSum = ((d.source as SimNode).linkCount || 1) + ((d.target as SimNode).linkCount || 1)
-        return Math.max(95, 145 - Math.min(35, linksSum * 3))
-      }).strength(0.45))
+        return Math.max(68, 105 - Math.min(28, linksSum * 2.5))
+      }).strength(0.55))
       .force('charge', d3.forceManyBody().strength((d: any) => {
-        const count = (d as SimNode).linkCount || 1
-        return -260 - Math.min(200, count * 14)
-      }).distanceMax(700))
-      .force('center', d3.forceCenter(initW / 2, initH / 2).strength(0.05))
-      .force('x', d3.forceX(initW / 2).strength(0.022))
-      .force('y', d3.forceY(initH / 2).strength(0.022))
+        const count = (d as SimNode).linkCount || 0
+        return -145 - Math.min(130, count * 10)
+      }).distanceMax(400))
+      .force('center', d3.forceCenter(initW / 2, initH / 2).strength(0.08))
+      .force('x', d3.forceX<SimNode>(initW / 2).strength(radialPull))
+      .force('y', d3.forceY<SimNode>(initH / 2).strength(radialPull))
       .force('collision', d3.forceCollide<SimNode>().radius(d => {
-        const labelLen = Math.min(16, d.label ? d.label.length : 4)
-        return Math.max(d.r + 26, labelLen * 6.2 + 12)
-      }).strength(0.88))
+        const labelLen = Math.min(14, d.label ? d.label.length : 4)
+        return Math.max(d.r + 14, Math.min(46, d.r + labelLen * 2.5))
+      }).strength(0.75))
 
     simulationRef.current = simulation
 
@@ -449,37 +551,27 @@ export default function KnowledgeGraph() {
       }
     })
 
-    // 🔥 高危薄弱考点呼吸脉冲光晕 (仅在掌握度热力图模式且已练习薄弱时展示)
+    // 🔥 高危薄弱考点原位闪红光提示（固定位置不飘动，仅在掌握度热力图模式展示）
     node.each(function (d: SimNode) {
       const el = d3.select(this)
       const mp = getNodeMastery(d.id, d.label)
       const isCritical = mp.totalAttempts > 0 && mp.rate < 50
 
       if (isCritical) {
-        const pulse = el.append('circle')
-          .attr('r', d.r + 10)
-          .attr('fill', '#ef4444')
-          .attr('opacity', 0.25)
+        el.append('circle')
+          .attr('r', d.r + 4.5)
+          .attr('fill', 'rgba(239, 68, 68, 0.3)')
+          .attr('stroke', '#ef4444')
+          .attr('stroke-width', 2)
           .attr('class', 'critical-pulse')
+          .style('pointer-events', 'none')
           .style('display', viewModeRef.current === 'mastery' ? 'inline' : 'none')
-
-        pulse.append('animate')
-          .attr('attributeName', 'r')
-          .attr('values', `${d.r + 6};${d.r + 16};${d.r + 6}`)
-          .attr('dur', '2s')
-          .attr('repeatCount', 'indefinite')
-
-        pulse.append('animate')
-          .attr('attributeName', 'opacity')
-          .attr('values', '0.35;0.08;0.35')
-          .attr('dur', '2s')
-          .attr('repeatCount', 'indefinite')
       }
     })
 
     // Node outer glow
     node.append('circle')
-      .attr('r', (d: SimNode) => d.r + 5)
+      .attr('r', (d: SimNode) => d.r + 3.5)
       .attr('fill', (d: SimNode) => getNodeVisualStyle(d, viewModeRef.current).color)
       .attr('opacity', (d: SimNode) => getNodeVisualStyle(d, viewModeRef.current).glowOpacity)
       .attr('class', 'node-glow')
@@ -547,8 +639,8 @@ export default function KnowledgeGraph() {
         .attr('opacity', 1)
       d3.select(this).select('.node-glow')
         .transition().duration(140)
-        .attr('r', d.r + 11)
-        .attr('opacity', 0.42)
+        .attr('r', d.r + 7.5)
+        .attr('opacity', 0.36)
 
       // Highlight active node & neighbors, dim non-neighbors
       node.transition().duration(140)
@@ -584,7 +676,7 @@ export default function KnowledgeGraph() {
         .attr('opacity', style.coreOpacity)
       d3.select(this).select('.node-glow')
         .transition().duration(140)
-        .attr('r', d.r + 5)
+        .attr('r', d.r + 3.5)
         .attr('opacity', style.glowOpacity)
 
       // Restore opacity based on search/group/mastery filter
@@ -673,9 +765,9 @@ export default function KnowledgeGraph() {
 
     fitViewRef.current = fitView
 
-    // 轻度预热 35 步：避免初始团簇重合，同时保留充沛能量让星系动态舒展收敛
+    // 充分预热 180 步使节点一次性稳定收敛成型，初始静止不乱飘；拖拽或点击重排时仍由 d3.drag 随时 restart 联动
     simulation.alpha(1)
-    for (let i = 0; i < 35; ++i) {
+    for (let i = 0; i < 180; ++i) {
       simulation.tick()
     }
     link
@@ -684,17 +776,13 @@ export default function KnowledgeGraph() {
       .attr('x2', (d: any) => d.target.x)
       .attr('y2', (d: any) => d.target.y)
     node.attr('transform', (d: SimNode) => `translate(${d.x ?? 0},${d.y ?? 0})`)
-    fitView(false)
+    fitView(false, hasFilterRef.current && activeNodeIdsRef.current.size > 0 ? activeNodeIdsRef.current : undefined)
     updateLabels()
 
-    // 保持力导向引擎活水运转，约 650ms 后平滑居中聚焦
-    simulation.alpha(0.45).restart()
-    const fitTimer = setTimeout(() => {
-      fitView(true)
-    }, 650)
+    // 能量清零保持页面初开稳固，保留 simulation 实例以便 d3.drag 的 alphaTarget(0.35).restart() 实时牵引
+    simulation.alpha(0)
 
     return () => {
-      clearTimeout(fitTimer)
       simulation.stop()
       simulationRef.current = null
       zoomRef.current = null
@@ -708,10 +796,11 @@ export default function KnowledgeGraph() {
     const sim = simulationRef.current
     if (!sim) return
     const { width, height } = dimensions
-    sim.force('center', d3.forceCenter(width / 2, height / 2).strength(0.05))
-    sim.force('x', d3.forceX(width / 2).strength(0.022))
-    sim.force('y', d3.forceY(height / 2).strength(0.022))
-    fitViewRef.current?.(false)
+    const radialPull = (d: SimNode) => ((d.linkCount || 0) === 0 ? 0.12 : 0.055)
+    sim.force('center', d3.forceCenter(width / 2, height / 2).strength(0.08))
+    sim.force('x', d3.forceX<SimNode>(width / 2).strength(radialPull))
+    sim.force('y', d3.forceY<SimNode>(height / 2).strength(radialPull))
+    fitViewRef.current?.(false, hasFilterRef.current && activeNodeIdsRef.current.size > 0 ? activeNodeIdsRef.current : undefined)
   }, [dimensions])
 
   // 切换【热力图 / 拓扑图】时原地平滑过渡配色与脉冲光晕，不破坏当前力学位置与缩放
@@ -815,10 +904,22 @@ export default function KnowledgeGraph() {
   const totalNodes = rawNodes.length
   const isRealData = Boolean(data)
 
+  const handleInternalSubjectChange = (nextSubject: string) => {
+    setInternalSubjectFilter(nextSubject)
+    if (nextSubject === 'all') {
+      setSelectedGroups(new Set())
+      return
+    }
+    const mapped = SUBJECT_GROUP_MAP[nextSubject]
+    setSelectedGroups(mapped ? new Set(mapped) : new Set())
+  }
+
   const clearFilters = () => {
     setSearchQuery('')
     setSelectedGroups(new Set())
+    setInternalSubjectFilter('all')
     setMasteryFilter('all')
+    onClearExternalFilters?.()
   }
 
   const resetView = () => {
@@ -1018,7 +1119,7 @@ export default function KnowledgeGraph() {
           <>
             <GraphMetric
               label="收录核心考点 (点击查看全部)"
-              value={totalNodes}
+              value={masterySummary.total}
               color="text-slate-900"
               active={masteryFilter === 'all'}
               activeRingClass="border-slate-900 ring-1 ring-slate-900/15 bg-slate-50/70"
@@ -1183,8 +1284,27 @@ export default function KnowledgeGraph() {
               </button>
             </div>
 
-            {/* Search + filter indicator (top-right) */}
+            {/* Search + Subject filter (top-right) */}
             <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+              {externalSubjectFilter === undefined && (
+                <select
+                  value={internalSubjectFilter}
+                  onChange={e => handleInternalSubjectChange(e.target.value)}
+                  aria-label="筛选图谱学科"
+                  className="py-1.5 px-2.5 bg-surface/90 backdrop-blur-md border border-cream-200 rounded-xl text-xs text-warm-700 outline-none focus:border-accent-orange transition-colors shadow-sm cursor-pointer"
+                >
+                  <option value="all">全部学科</option>
+                  <option value="cs_408">408 计算机</option>
+                  <option value="数据结构">数据结构</option>
+                  <option value="计算机组成原理">计组与流水线</option>
+                  <option value="操作系统">操作系统</option>
+                  <option value="计算机网络">计算机网络</option>
+                  <option value="math">考研数学</option>
+                  <option value="高等数学">高等数学</option>
+                  <option value="线性代数">线性代数</option>
+                  <option value="概率论">概率统计</option>
+                </select>
+              )}
               <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-warm-400" />
                 <input
@@ -1192,7 +1312,7 @@ export default function KnowledgeGraph() {
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   placeholder="搜索考点或标签..."
-                  className="w-48 pl-8 pr-7 py-1.5 bg-surface/90 backdrop-blur-md border border-cream-200 rounded-xl text-xs text-warm-700 placeholder-warm-400 outline-none focus:border-accent-orange transition-colors shadow-sm"
+                  className="w-44 sm:w-48 pl-8 pr-7 py-1.5 bg-surface/90 backdrop-blur-md border border-cream-200 rounded-xl text-xs text-warm-700 placeholder-warm-400 outline-none focus:border-accent-orange transition-colors shadow-sm"
                 />
                 {searchQuery && (
                   <button
@@ -1271,7 +1391,7 @@ export default function KnowledgeGraph() {
                         : 'text-slate-600 hover:bg-slate-100'
                     }`}
                   >
-                    全部 ({totalNodes})
+                    全部 ({masterySummary.total})
                   </button>
                   <button
                     type="button"
@@ -1507,7 +1627,7 @@ export default function KnowledgeGraph() {
                   </div>
                   <div className="p-2.5 rounded-lg bg-white border border-rose-200 flex flex-col justify-between">
                     <div className="flex items-center gap-1.5 font-bold text-rose-700">
-                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500 motion-safe:animate-pulse" />
                       <span>高危薄弱 (&lt;50%)</span>
                     </div>
                     <span className="text-[10.5px] text-neutral-500 mt-1">带<b>呼吸脉冲光晕</b>！错题集中区，提分最快的重点攻坚目标。</span>

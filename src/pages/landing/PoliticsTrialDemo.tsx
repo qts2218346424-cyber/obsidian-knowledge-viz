@@ -66,8 +66,8 @@ export function PoliticsTrialDemo({ fullscreen, onEnter }: PoliticsTrialDemoProp
 
   return (
     <div
-      className={`flex flex-col bg-[#070b14] text-slate-100 ${
-        fullscreen ? 'w-full max-w-5xl m-auto p-4 sm:p-8 gap-5' : 'h-[520px] p-4 sm:p-6 gap-3 overflow-y-auto'
+      className={`w-full min-w-0 flex flex-col bg-[#070b14] text-slate-100 ${
+        fullscreen ? 'max-w-5xl m-auto p-4 sm:p-8 gap-5' : 'h-[520px] p-4 sm:p-6 gap-3 overflow-y-auto overflow-x-hidden'
       }`}
     >
       <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-amber-500/20">
@@ -143,14 +143,14 @@ export function PoliticsTrialDemo({ fullscreen, onEnter }: PoliticsTrialDemoProp
       </svg>
 
       {/* 节点卡片（与时间轴同步，便于小屏点按） */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-1.5 sm:gap-2 min-w-0">
         {NODES.map((n, i) => (
           <button
             key={n.year}
             type="button"
             onClick={() => setIdx(i)}
             aria-pressed={i === idx}
-            className={`p-2.5 sm:p-3 rounded-xl border text-left transition-colors cursor-pointer ${
+            className={`min-w-0 p-2 sm:p-3 rounded-xl border text-left transition-colors cursor-pointer ${
               i === idx
                 ? 'bg-amber-500/15 border-amber-400/80 text-white'
                 : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-600'

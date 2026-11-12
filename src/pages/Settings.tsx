@@ -8,7 +8,7 @@ import {
   Save, RefreshCw, CheckCircle, AlertCircle, FolderOpen, Globe, Cpu, Palette,
   Eye, EyeOff, Folder, AlertTriangle, Zap, ChevronRight, ArrowUp,
   Loader2, X, HardDrive, Check, Download, Plug, Plus, Trash2, Star, KeyRound, ShieldCheck, Lock, Copy, ShieldAlert,
-  Moon, Leaf
+  Moon, Leaf, LogOut
 } from 'lucide-react'
 
 declare global {
@@ -21,7 +21,7 @@ declare global {
 }
 
 export default function Settings() {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
   const isAdmin = user?.role === 'admin'
   const [settings, setSettings] = useState<AppSettings | null>(null)
   const [loading, setLoading] = useState(true)
@@ -598,20 +598,33 @@ export default function Settings() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-2">
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-wrap items-center justify-between gap-2">
                 <div className="space-y-1 min-w-0">
                   <span className="text-slate-400">当前备考登录身份：</span>
                   <p className="font-bold text-slate-900 text-sm truncate">{user?.username || '未登录备考者'} <span className="text-xs text-slate-400 font-normal">({user?.role === 'admin' ? '系统管理员' : '考研学员'})</span></p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => window.dispatchEvent(new CustomEvent('open-change-password-modal'))}
-                  className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 text-slate-700 hover:text-indigo-600 text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
-                  title="修改当前账号的登录密码"
-                >
-                  <KeyRound className="w-3.5 h-3.5 text-indigo-500" />
-                  <span>修改密码</span>
-                </button>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new CustomEvent('open-change-password-modal'))}
+                    className="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 text-slate-700 hover:text-indigo-600 text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+                    title="修改当前账号的登录密码"
+                  >
+                    <KeyRound className="w-3.5 h-3.5 text-indigo-500" />
+                    <span>修改密码</span>
+                  </button>
+                  {user && (
+                    <button
+                      type="button"
+                      onClick={() => logout()}
+                      className="px-2.5 py-1.5 rounded-lg bg-rose-50 border border-rose-200/90 hover:bg-rose-100 text-rose-600 text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+                      title="退出当前登录账号"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span>退出登录</span>
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
                 <span className="text-slate-400">伴学积分余额：</span>

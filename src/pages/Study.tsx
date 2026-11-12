@@ -4,7 +4,7 @@ import ChunkErrorBoundary from '../components/ChunkErrorBoundary'
 import SuspenseTimeoutFallback from '../components/ui/SuspenseTimeoutFallback'
 import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { BookOpen, Code2, XCircle, Plus, Search, RefreshCw, Loader2, Sparkles, Edit3 } from 'lucide-react'
+import { BookOpen, Code2, XCircle, Plus, Search, RefreshCw, Loader2, Sparkles, Edit3, Network, Flame, Layers, FileText, Target } from 'lucide-react'
 import { api, type BookItem } from '../services/api'
 import { getAuthHeaders } from '../services/auth'
 import { useAuth } from '../contexts/AuthContext'
@@ -780,13 +780,13 @@ export default function Study() {
 
             <span className="px-2 py-0.5 rounded-md text-2xs sm:text-2xs font-bold bg-accent-orange/15 text-warm-800 border border-accent-orange/20 whitespace-nowrap leading-tight">
 
-              COREFORGE 研学中心
+              研学中心
 
             </span>
 
             <span className="text-2xs sm:text-xs text-warm-400 whitespace-nowrap leading-tight">
 
-              408 统考 & 考研数学权威教研
+              408 统考与考研数学教研
 
             </span>
 
@@ -796,13 +796,13 @@ export default function Study() {
 
             <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-accent-orange shrink-0" />
 
-            <span className="truncate">讲义 · 教材 · 交互课件工作台</span>
+            <span className="truncate">讲义与仿真课件工作台</span>
 
           </h1>
 
           <p className="text-xs text-warm-500 mt-1 max-w-2xl hidden sm:block">
 
-            精选官方核心讲义、PDF 电子参考书与直观的 HTML 交互仿真课件，即学即练。
+            精选核心讲义、真题教材与交互式仿真课件，即学即练。
 
           </p>
 
@@ -812,7 +812,7 @@ export default function Study() {
 
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 self-auto justify-end">
 
-          {/* 桌面端专属切换条：讲义列表 vs 全景图谱（移动端下方已有全量 TabBar，避免顶部挤压超出格子） */}
+          {/* 桌面端专属切换条 */}
 
           <div className="hidden md:inline-flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200/80 shadow-xs">
 
@@ -834,7 +834,8 @@ export default function Study() {
 
             >
 
-              <span>📖 讲义精读列表</span>
+              <BookOpen className="w-3.5 h-3.5 shrink-0" />
+              <span>讲义列表</span>
 
             </button>
 
@@ -856,7 +857,8 @@ export default function Study() {
 
             >
 
-              <span>🕸️ 全景知识图谱</span>
+              <Network className="w-3.5 h-3.5 shrink-0" />
+              <span>全景图谱</span>
 
             </button>
 
@@ -872,13 +874,13 @@ export default function Study() {
 
             className="subframe-btn-secondary h-7 sm:h-8 px-2 sm:px-3 text-2xs sm:text-xs font-semibold cursor-pointer whitespace-nowrap flex items-center gap-1 leading-none shrink-0"
 
-            title="一键呼出考点批注，随时记下心得并归档进知识库"
+            title="一键呼出随手记，记录心得并归档"
 
           >
 
             <Edit3 className="w-3.5 h-3.5 text-slate-600 shrink-0" />
 
-            <span className="hidden xs:inline">考点批注</span>
+            <span className="hidden xs:inline">记批注</span>
 
             <span className="xs:hidden">批注</span>
 
@@ -896,7 +898,7 @@ export default function Study() {
 
             <Plus className="w-3.5 h-3.5 shrink-0" />
 
-            <span>导入资料</span>
+            <span>导入</span>
 
           </button>
 
@@ -928,77 +930,80 @@ export default function Study() {
 
       <div className="bento-card rounded-xl px-3 py-2 sm:px-4 sm:py-2.5 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-2 sm:gap-3 shrink-0">
 
-        {/* Navigation tabs - Subframe Pill Design (自适应移动端标签，防止徽标撑破格子) */}
+        {/* Navigation tabs - 简洁矢量图标 + 统一4字规范 */}
 
         <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 scroll-smooth shrink-0">
 
           {[
 
-            { key: 'graph' as Tab, label: '🕸️ 全景知识图谱', shortLabel: '🕸️ 知识图谱', count: null },
+            { key: 'graph' as Tab, icon: Network, label: '全景图谱', shortLabel: '图谱', count: null },
 
-            { key: 'handouts' as Tab, label: '📖 核心讲义', shortLabel: '📖 讲义', count: filteredHandouts.length },
+            { key: 'handouts' as Tab, icon: BookOpen, label: '核心讲义', shortLabel: '讲义', count: filteredHandouts.length },
 
-            { key: 'topology' as Tab, label: '🔥 考点掌握度热力图', shortLabel: '🔥 掌握度', count: null },
+            { key: 'topology' as Tab, icon: Flame, label: '掌握热力', shortLabel: '热力', count: null },
 
-            { key: 'mastery' as Tab, label: '🎨 考点色谱', shortLabel: '🎨 色谱', count: 22 },
+            { key: 'mastery' as Tab, icon: Layers, label: '考点色谱', shortLabel: '色谱', count: 22 },
 
-            { key: 'flashcards' as Tab, label: '🎴 易忘闪卡', shortLabel: '🎴 闪卡', count: null },
+            { key: 'flashcards' as Tab, icon: Sparkles, label: '记忆闪卡', shortLabel: '闪卡', count: null },
 
-            { key: 'pdfs' as Tab, label: '📑 PDF 教材与真题', shortLabel: '📑 教材真题', count: filteredPdfs.length },
+            { key: 'pdfs' as Tab, icon: FileText, label: '真题教材', shortLabel: '教材', count: filteredPdfs.length },
 
-            { key: 'coursewares' as Tab, label: '🌐 仿真课件', shortLabel: '🌐 课件', count: INTERACTIVE_COURSEWARES.length },
+            { key: 'coursewares' as Tab, icon: Code2, label: '仿真课件', shortLabel: '课件', count: INTERACTIVE_COURSEWARES.length },
 
-            { key: 'progress' as Tab, label: '📊 研学进度', shortLabel: '📊 进度', count: null },
+            { key: 'progress' as Tab, icon: Target, label: '研学进度', shortLabel: '进度', count: null },
 
-          ].map(t => (
+          ].map(t => {
+            const TabIcon = t.icon
+            return (
+              <button
 
-            <button
+                key={t.key}
 
-              key={t.key}
+                onClick={() => handleTabChange(t.key)}
 
-              onClick={() => handleTabChange(t.key)}
+                onMouseEnter={() => {
+                  if (t.key === 'graph') loadKnowledgeGraph().catch(() => {})
+                }}
 
-              onMouseEnter={() => {
-                if (t.key === 'graph') loadKnowledgeGraph().catch(() => {})
-              }}
+                onFocus={() => {
+                  if (t.key === 'graph') loadKnowledgeGraph().catch(() => {})
+                }}
 
-              onFocus={() => {
-                if (t.key === 'graph') loadKnowledgeGraph().catch(() => {})
-              }}
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap shrink-0 transition-all cursor-pointer active:scale-95 leading-normal ${
 
-              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap shrink-0 transition-all cursor-pointer active:scale-95 leading-normal ${
+                  tab === t.key
 
-                tab === t.key
+                    ? 'bg-slate-900 text-white shadow-xs font-semibold'
 
-                  ? 'bg-slate-900 text-white shadow-xs font-semibold'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
 
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+                }`}
 
-              }`}
+              >
 
-            >
+                <TabIcon className={`w-3.5 h-3.5 shrink-0 ${tab === t.key ? 'text-white' : 'text-slate-400'}`} />
 
-              <span className="hidden sm:inline">{t.label}</span>
+                <span className="hidden sm:inline">{t.label}</span>
 
-              <span className="sm:hidden">{t.shortLabel}</span>
+                <span className="sm:hidden">{t.shortLabel}</span>
 
-              {t.count !== null && (
+                {t.count !== null && (
 
-                <span className={`text-2xs px-1.5 py-0.5 rounded-md font-mono leading-none inline-flex items-center justify-center shrink-0 ${
+                  <span className={`text-2xs px-1.5 py-0.5 rounded-md font-mono leading-none inline-flex items-center justify-center shrink-0 ${
 
-                  tab === t.key ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-500 border border-slate-200/60'
+                    tab === t.key ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-500 border border-slate-200/60'
 
-                }`}>
+                  }`}>
 
-                  {t.count}
+                    {t.count}
 
-                </span>
+                  </span>
 
-              )}
+                )}
 
-            </button>
-
-          ))}
+              </button>
+            )
+          })}
 
         </div>
 
@@ -1150,7 +1155,14 @@ export default function Study() {
 
                 <ChunkErrorBoundary title="知识图谱加载失败" className="h-full w-full">
                   <Suspense fallback={<SuspenseTimeoutFallback label="正在装载考研知识双链拓扑..." className="h-full" />}>
-                    <KnowledgeGraph />
+                    <KnowledgeGraph
+                      externalSubjectFilter={subjectFilter}
+                      externalSearchQuery={searchQuery}
+                      onClearExternalFilters={() => {
+                        setSubjectFilter('all')
+                        setSearchQuery('')
+                      }}
+                    />
                   </Suspense>
                 </ChunkErrorBoundary>
 
@@ -1162,7 +1174,12 @@ export default function Study() {
 
 
 
-          {tab === 'topology' && <MasteryTopologyView />}
+          {tab === 'topology' && (
+            <MasteryTopologyView
+              externalSubjectFilter={subjectFilter}
+              externalSearchQuery={searchQuery}
+            />
+          )}
 
 
 

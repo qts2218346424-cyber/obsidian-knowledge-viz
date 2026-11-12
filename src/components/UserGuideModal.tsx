@@ -21,6 +21,7 @@ import {
   FileEdit,
   Palette,
   PenTool,
+  PenLine,
   AlertTriangle,
   BookOpen,
   Landmark,
@@ -34,13 +35,16 @@ import {
   Smartphone,
   HelpCircle,
   Lightbulb,
-  Keyboard,
-  Sliders,
+  Zap,
+  LayoutGrid,
+  Languages,
+  MapPin,
+  ChevronsDownUp,
 } from 'lucide-react'
 import {
   FEATURE_MANUAL_DATA,
   MANUAL_CATEGORIES,
-  type FeatureManualItem,
+  QUICK_SCENARIO_GUIDES,
 } from '../data/featureManualData'
 
 interface UserGuideModalProps {
@@ -67,121 +71,121 @@ interface TourScene {
   routeText: string
 }
 
-// 扩充后的全景 6 幕巡礼场景：强化考点掌握度色谱图、极速随手记等小功能体验
+// 6 幕功能巡礼：用通俗语言快速了解系统怎么帮你复习
 const TOUR_SCENES: TourScene[] = [
   {
     id: 1,
-    title: '为什么是 CoreForge 研核？',
-    subtitle: '408 计算机综合 + 考研数学 · 智能双核研学体系',
-    badge: '初衷与定位',
+    title: '一站式考研工作台 · 学、练、记全部打通',
+    subtitle: '408 专业课 + 数学 + 英语 + 政治，一个地方就能搞定',
+    badge: '总体介绍',
     icon: Sparkles,
     colorText: 'text-indigo-600',
     colorBg: 'bg-indigo-50/80',
     colorBorder: 'border-indigo-200/80',
     description:
-      '考研并非孤立的背题过程。CoreForge 将您的本地 Obsidian Markdown 知识库与全真历年真题库无缝联结，打破笔记与刷题的物理隔阂，构建网状拓扑知识体系。',
+      '很多同学资料在网盘、错题在纸上、笔记在软件里，找起来特别散。这里把你的笔记、真题试卷、错题本、背诵卡片和 AI 老师放到了一起，学完马上就能练，错题自动攒成专属巩固本。',
     highlights: [
-      '双核联动：深度适配 408 计组/操作系统/计网/数据结构与高数/线代/概率论',
-      '本地优先：纯本地 Markdown 存储，永不被任何第三方云端格式绑架',
-      '多端协同：支持局域网多设备、平板与手机浏览器即插即用协同复习',
+      '首页直接看初试倒计时、今日复习提醒和四门科目直达入口',
+      '所有笔记纯文本保存在本地，不用担心格式锁定或找不到原文件',
+      '电脑上做的笔记和刷题记录，手机扫码打开也能同步接着学',
     ],
     route: '/dashboard',
-    routeText: '查看备考驾驶舱',
+    routeText: '回首页工作台',
   },
   {
     id: 2,
-    title: '考点掌握度色谱图与提分急救舱',
-    subtitle: '红黄绿三色热力透视 · 呼吸光晕锁定高危考点',
-    badge: '掌握度色谱 /graph',
-    icon: Flame,
-    colorText: 'text-rose-600',
-    colorBg: 'bg-rose-50/80',
-    colorBorder: 'border-rose-200/80',
-    description:
-      '将抽象考纲转化为直观掌握度热力色谱。绿色稳固(≥80%)、黄色巩固(50%~80%)、红色高危薄弱(<50%)带呼吸脉冲闪烁。单击红色薄弱考点直达提分急救舱，5题速测与仿真课件立即可用。',
-    highlights: [
-      '动态三色色谱：客观感知薄弱盲区，告别“以为自己掌握了”的复习盲目感',
-      '提分急救舱：一键定位关联错题记录并抽取同考点精选变式题',
-      '算法仿真联动：配套红黑树、LRU页面置换、TCP握手等动态步进课件',
-    ],
-    route: '/graph',
-    routeText: '体验掌握度色谱图',
-  },
-  {
-    id: 3,
-    title: '极速随手记与沉浸式笔记',
-    subtitle: '随时随地顶栏滑出 · 碎片推导灵感0中断入库',
-    badge: '随手记抽屉 ⚡',
-    icon: Sparkles,
-    colorText: 'text-emerald-600',
-    colorBg: 'bg-emerald-50/80',
-    colorBorder: 'border-emerald-200/80',
-    description:
-      '在做题或研读讲义时，无需跳转页面，随时点击顶栏随手记胶囊即可滑出抽屉。预设多学科标签，支持 LaTeX 公式与拍照上传，一键保存到个人笔记库。',
-    highlights: [
-      '0 中断心流：顶栏一键呼出，做题草稿、考点灵感与闪念随手保存',
-      '双链与标签：自动按日期归档至随手记目录，并自动纳入全库双链网络',
-      '多端插图：支持本地截图与手机扫码拍照直传，自动生成 Markdown 语法',
-    ],
-    route: '/editor',
-    routeText: '查看笔记编辑器',
-  },
-  {
-    id: 4,
-    title: '全真做题、答题卡调色板与错题归因',
-    subtitle: 'LeetCode 风格色板矩阵 · 分步解析与真题收录',
+    title: '刷题中心 · 真题整卷、题型专项与错题本',
+    subtitle: '右边就是答题卡和草稿纸，做错自动记到错题本',
     badge: '刷题中心 /quiz',
     icon: ClipboardList,
     colorText: 'text-amber-600',
     colorBg: 'bg-amber-50/80',
     colorBorder: 'border-amber-200/80',
     description:
-      '内置历年 408 统考真题与考研数学精选题库，支持高质量 KaTeX 公式渲染。右侧答题卡调色板矩阵直观显示已答、未答与标记状态，做题草稿纸随时推演。',
+      '点开顶部「刷题中心」，可以根据当前复习阶段自由选择：想成套限时模拟就选「真题整卷」；想专题打基础就选「题型专项」；想随便抽几题测验就选「自由组卷」。交卷后错题会自动收入「错题本」。',
     highlights: [
-      '答题卡矩阵调色板：题号色彩实时区分作答状态，一键平滑跳转题号',
-      '做题草稿板 (Scratchpad)：压感草稿纸，随时演算微积分或二进制推导',
-      '多维错因归因：概念混淆、计算失误、审题疏漏分类沉淀并推荐变式题',
+      '右侧自带答题卡矩阵，点一下题号就能跳过去，标星后交卷前方便复查',
+      '旁边就是屏幕草稿纸，用鼠标或手写笔随时打草稿，还能一键查常用定理',
+      '做题遇到卡壳？点题目旁的「追问 AI」，导师会针对这道题手把手给你讲明白',
     ],
     route: '/quiz',
-    routeText: '进入真题刷题中心',
+    routeText: '进入刷题中心',
   },
   {
-    id: 5,
-    title: '全库双链网络图谱与盲区雷达',
-    subtitle: '从宏观上帝视角透视全科目考点联系',
-    badge: '知识图谱 /graph',
-    icon: Network,
-    colorText: 'text-purple-600',
-    colorBg: 'bg-purple-50/80',
-    colorBorder: 'border-purple-200/80',
+    id: 3,
+    title: '考点掌握热力图 · 一眼看出哪里没学透',
+    subtitle: '绿稳黄一般红报警 · 点开薄弱点直接急救 5 题',
+    badge: '热力图 /graph',
+    icon: Flame,
+    colorText: 'text-rose-600',
+    colorBg: 'bg-rose-50/80',
+    colorBorder: 'border-rose-200/80',
     description:
-      '基于 D3 力导向物理引擎，自动提取所有笔记的双链（[[链接]]）与标签体系。直观识别高频枢纽核心概念，实时排查无连接的孤立节点（Orphan Notes）。',
+      '系统会根据你的刷题对错和闪卡情况，把知识点涂成绿、黄、红三种颜色。看到闪烁红光的圆点别慌，直接点它就会弹出「提分急救舱」，顺着看历史错题、看动画课件，再练 5 道同类题把它救绿！',
     highlights: [
-      '动态拓扑漫游：自由缩放拖拽知识网络，感受考点之间的脉络互联',
-      '孤立笔记雷达：红绿警示快速发现未建立关联的遗漏死角，二轮复盘神器',
-      '属性检查器：双击节点右侧滑出抽屉，实时阅读笔记 Markdown 正文与大纲',
+      '绿色 (≥80%) 代表稳了，黄色 (50%~80%) 需要巩固，红色 (<50%) 要优先抢救',
+      '急救舱里整合了错题记录、配套仿真课件和 5 题靶向小测',
+      '切换成「关系图谱」模式，还能看清不同章节知识是怎么连在一起的',
     ],
     route: '/graph',
-    routeText: '打开双链图谱',
+    routeText: '查看考点热力图',
   },
   {
-    id: 6,
-    title: 'SM-2 艾宾浩斯闪卡与科学抗遗忘',
-    subtitle: '在临界点抗遗忘巩固 · 智能多 Agent 导师伴学',
-    badge: '学习中心 /study',
-    icon: ShieldCheck,
+    id: 4,
+    title: '研学中心 · 讲义、仿真动画课件与记忆闪卡',
+    subtitle: '看动画学懂红黑树/页面置换，用闪卡在快忘时提醒复习',
+    badge: '研学中心 /study',
+    icon: GraduationCap,
     colorText: 'text-teal-600',
     colorBg: 'bg-teal-50/80',
     colorBorder: 'border-teal-200/80',
     description:
-      '内置基于认知心理学的 SM-2 间隔重复算法，在即将遗忘的黄金临界点自动推送复习。全站按下 Ctrl+Shift+A 随时召唤 AI 伴学导师，解答复杂大题推导。',
+      '「研学中心」把核心讲义、PDF 教材、仿真课件、记忆闪卡和学习进度放在同一个工作台里。难懂的 408 算法可以看单步动画推演；容易忘的公式和概念交给记忆闪卡，快忘的时候系统会自动推给你复习。',
     highlights: [
-      'SM-2 记忆曲线：自适应评估掌握度，高频核心概念定理永不生疏',
-      'AI 导师随时召唤：Ctrl+Shift+A 快捷呼出，结合本地笔记给出严谨证明步骤',
-      '伴学萌宠与专属 Skills：右下角常驻奶龙/小猫伙伴，自主执行笔记治理与大纲重构',
+      '仿真课件支持「上一步 / 下一步 / 自己输入数据」，看清算法每一步怎么变',
+      '记忆闪卡点一下「忘记 / 模糊 / 记得」，记不牢的会自动安排更频繁复盘',
+      '看讲义或 PDF 时，点右上角「记批注」就能直接在屏幕上涂写勾重点',
     ],
     route: '/study',
-    routeText: '体验艾宾浩斯闪卡',
+    routeText: '打开研学中心',
+  },
+  {
+    id: 5,
+    title: '随手记与笔记编辑 · 想到重点一秒记下',
+    subtitle: '不打断当前做题流程 · 支持公式、双向链接与扫码传图',
+    badge: '随手记 /editor',
+    icon: PenLine,
+    colorText: 'text-emerald-600',
+    colorBg: 'bg-emerald-50/80',
+    colorBorder: 'border-emerald-200/80',
+    description:
+      '做题或看书时突然记起一个易错结论，不用关掉题目切页面，在「更多功能」或手机首页点开「随手记」，写完点保存就能自动归入笔记库。需要长篇梳理时，打开完整笔记编辑器还能分栏实时预览数学公式。',
+    highlights: [
+      '随手记自带 408、高数、线代、错题复盘等快捷标签，一键分类',
+      '编辑器支持写 `[[另一篇笔记]]` 把相关考点串联成超链接',
+      '写完一篇总结笔记，还能点「即学即练」让系统根据笔记内容现场出 3 道题测测自己',
+    ],
+    route: '/editor',
+    routeText: '打开笔记编辑器',
+  },
+  {
+    id: 6,
+    title: 'AI 伴学导师、白噪音与番茄专注',
+    subtitle: '24 小时随时问大题推导，开着白噪音专心学不被打断',
+    badge: 'AI 与专注',
+    icon: Bot,
+    colorText: 'text-purple-600',
+    colorBg: 'bg-purple-50/80',
+    colorBorder: 'border-purple-200/80',
+    description:
+      '遇到看不懂的定理证明或 408 代码题，随时按 Ctrl+Shift+A（或点顶部「AI 伴学」）问导师，支持直接把解答存进笔记。学习前打开「白噪音」挑个自习室雨声或电台，切去刷题、背单词声音依然不断线。',
+    highlights: [
+      'AI 伴学不仅给答案，更按“结论 + 分步推导 + 避坑提示”帮你理顺思路',
+      '右下角伴学小萌宠能帮忙整理笔记大纲、查找错题和梳理目录',
+      '支持在右上角一键切换 极简、鲜艳、护眼、暗黑 4 种舒服的界面风格',
+    ],
+    route: '/chat',
+    routeText: '体验 AI 伴学',
   },
 ]
 
@@ -202,19 +206,23 @@ export default function UserGuideModal({
   // 手册搜索与筛选状态
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'all')
-  const [expandedFeatureId, setExpandedFeatureId] = useState<string | null>(initialFeatureId || null)
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
+    if (initialFeatureId) return new Set([initialFeatureId])
+    // 默认展开第一条高频功能，方便新手打开就能直接看到示范卡片
+    return new Set([FEATURE_MANUAL_DATA[0]?.id].filter(Boolean))
+  })
 
   // 响应外部属性变化
   useEffect(() => {
     if (initialTab) setActiveTab(initialTab)
     if (initialCategory) setSelectedCategory(initialCategory)
     if (initialFeatureId) {
-      setExpandedFeatureId(initialFeatureId)
+      setExpandedIds(new Set([initialFeatureId]))
       setActiveTab('doc')
     }
   }, [initialTab, initialCategory, initialFeatureId])
 
-  // 视频/巡礼自动轮播定时器
+  // 自动轮播定时器
   useEffect(() => {
     if (!isOpen || !isPlaying || activeTab !== 'tour') return
     const timer = setInterval(() => {
@@ -234,6 +242,7 @@ export default function UserGuideModal({
       return (
         item.name.toLowerCase().includes(q) ||
         item.summary.toLowerCase().includes(q) ||
+        item.whereToFind.toLowerCase().includes(q) ||
         item.problemSolved.toLowerCase().includes(q) ||
         item.categoryName.toLowerCase().includes(q) ||
         item.howToUse.some((step) => step.toLowerCase().includes(q)) ||
@@ -287,32 +296,57 @@ export default function UserGuideModal({
     navigate('/editor?file=💡 新手指引 · CoreForge 研核完全使用手册.md')
   }
 
+  const toggleExpandItem = (id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const allExpanded =
+    filteredManualItems.length > 0 &&
+    filteredManualItems.every((item) => expandedIds.has(item.id))
+
+  const toggleExpandAll = () => {
+    if (allExpanded) {
+      setExpandedIds(new Set())
+    } else {
+      setExpandedIds(new Set(filteredManualItems.map((i) => i.id)))
+    }
+  }
+
   // 动态渲染功能手册图标
-  const renderItemIcon = (iconName: string) => {
-    const iconClass = 'w-4 h-4'
+  const renderItemIcon = (iconName: string, className = 'w-4 h-4') => {
     switch (iconName) {
-      case 'Flame': return <Flame className={iconClass} />
-      case 'Network': return <Network className={iconClass} />
-      case 'ShieldAlert': return <ShieldAlert className={iconClass} />
-      case 'Sparkles': return <Sparkles className={iconClass} />
-      case 'FileEdit': return <FileEdit className={iconClass} />
-      case 'Palette': return <Palette className={iconClass} />
-      case 'PenTool': return <PenTool className={iconClass} />
-      case 'AlertTriangle': return <AlertTriangle className={iconClass} />
-      case 'GraduationCap': return <GraduationCap className={iconClass} />
-      case 'BookOpen': return <BookOpen className={iconClass} />
-      case 'Landmark': return <Landmark className={iconClass} />
-      case 'Cpu': return <Cpu className={iconClass} />
-      case 'Music': return <Music className={iconClass} />
-      case 'Timer': return <Timer className={iconClass} />
-      case 'Highlighter': return <Highlighter className={iconClass} />
-      case 'Bot': return <Bot className={iconClass} />
-      case 'Smile': return <Smile className={iconClass} />
-      case 'Workflow': return <Workflow className={iconClass} />
-      case 'Search': return <Search className={iconClass} />
-      case 'ShieldCheck': return <ShieldCheck className={iconClass} />
-      case 'Smartphone': return <Smartphone className={iconClass} />
-      default: return <Sparkles className={iconClass} />
+      case 'Flame': return <Flame className={className} />
+      case 'Network': return <Network className={className} />
+      case 'ShieldAlert': return <ShieldAlert className={className} />
+      case 'Sparkles': return <Sparkles className={className} />
+      case 'FileEdit': return <FileEdit className={className} />
+      case 'Palette': return <Palette className={className} />
+      case 'PenTool': return <PenTool className={className} />
+      case 'PenLine': return <PenLine className={className} />
+      case 'AlertTriangle': return <AlertTriangle className={className} />
+      case 'GraduationCap': return <GraduationCap className={className} />
+      case 'BookOpen': return <BookOpen className={className} />
+      case 'Landmark': return <Landmark className={className} />
+      case 'Cpu': return <Cpu className={className} />
+      case 'Music': return <Music className={className} />
+      case 'Timer': return <Timer className={className} />
+      case 'Highlighter': return <Highlighter className={className} />
+      case 'Bot': return <Bot className={className} />
+      case 'Smile': return <Smile className={className} />
+      case 'Workflow': return <Workflow className={className} />
+      case 'Search': return <Search className={className} />
+      case 'ShieldCheck': return <ShieldCheck className={className} />
+      case 'Smartphone': return <Smartphone className={className} />
+      case 'Zap': return <Zap className={className} />
+      case 'ClipboardList': return <ClipboardList className={className} />
+      case 'LayoutGrid': return <LayoutGrid className={className} />
+      case 'Languages': return <Languages className={className} />
+      default: return <Sparkles className={className} />
     }
   }
 
@@ -327,39 +361,39 @@ export default function UserGuideModal({
       case 'teal': return 'bg-teal-50 text-teal-700 border-teal-200'
       case 'cyan': return 'bg-cyan-50 text-cyan-700 border-cyan-200'
       case 'indigo': return 'bg-indigo-50 text-indigo-700 border-indigo-200'
-      default: return 'bg-neutral-50 text-neutral-700 border-neutral-200'
+      default: return 'bg-slate-100 text-slate-700 border-slate-200'
     }
   }
 
   const modalContent = (
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center p-2 sm:p-5 bg-black/40 backdrop-blur-sm animate-fade-in font-sans"
+      className="fixed inset-0 z-[70] flex items-center justify-center p-2 sm:p-5 bg-black/45 backdrop-blur-sm animate-fade-in font-sans"
       onClick={handleClose}
       role="dialog"
       aria-modal="true"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-5xl rounded-2xl sm:rounded-3xl bg-white border border-slate-200/90 shadow-[0_24px_50px_-12px_rgba(0,0,0,0.16)] overflow-hidden flex flex-col max-h-[92vh] text-slate-900"
+        className="relative w-full max-w-5xl rounded-2xl sm:rounded-3xl bg-white border border-slate-200/90 shadow-[0_24px_50px_-12px_rgba(0,0,0,0.18)] overflow-hidden flex flex-col max-h-[92dvh] text-slate-900"
       >
-        {/* Top Header - 纯净现代玻璃质感 */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 px-5 sm:px-6 py-4 bg-white/95 shrink-0">
-          <div className="flex items-center justify-between gap-3 min-w-0">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 p-2 text-white shadow-xs">
-                <Compass className="h-5 w-5" />
+        {/* 顶部标题栏 */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-100 px-4 sm:px-6 py-3.5 sm:py-4 bg-white/95 shrink-0">
+          <div className="flex items-center justify-between gap-2.5 min-w-0">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+              <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 p-2 text-white shadow-xs">
+                <Compass className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight truncate">
-                    CoreForge 研核 · 全功能与小功能完全使用手册
+                    研核使用手册与新手导览
                   </h3>
                   <span className="hidden md:inline-flex px-2 py-0.5 text-2xs font-semibold rounded-md bg-slate-100 text-slate-600 border border-slate-200/70 shrink-0">
-                    22 大功能全景
+                    共 {FEATURE_MANUAL_DATA.length} 项功能说明
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">
-                  涵盖色谱图、知识图谱、随手记、答题卡调色板、SM-2 闪卡与所有小功能的作用与使用说明
+                <p className="text-2xs sm:text-xs text-slate-500 line-clamp-1 mt-0.5">
+                  哪里找不到功能、不确定怎么操作，在这里一看就懂
                 </p>
               </div>
             </div>
@@ -369,12 +403,12 @@ export default function UserGuideModal({
               className="sm:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
               aria-label="关闭"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4.5 w-4.5" />
             </button>
           </div>
 
           <div className="flex items-center justify-between sm:justify-end gap-2.5 shrink-0">
-            {/* Tab Switch */}
+            {/* 标签切换 */}
             <div className="flex w-full sm:w-auto p-1 rounded-xl bg-slate-100 border border-slate-200/60 text-xs">
               <button
                 type="button"
@@ -385,7 +419,7 @@ export default function UserGuideModal({
                     : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
-                功能巡礼导览
+                1 分钟快速看懂
               </button>
               <button
                 type="button"
@@ -396,7 +430,7 @@ export default function UserGuideModal({
                     : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
-                全功能使用手册字典
+                全功能使用手册
               </button>
             </div>
 
@@ -410,16 +444,15 @@ export default function UserGuideModal({
           </div>
         </div>
 
-        {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto">
+        {/* 主体内容区 */}
+        <div className="flex-1 overflow-y-auto overscroll-contain">
           {activeTab === 'tour' ? (
-            <div className="p-4 sm:p-6 space-y-5">
-              {/* Feature Preview Card */}
-              <div className="relative rounded-2xl border border-slate-200/90 bg-slate-50/70 p-5 sm:p-7 overflow-hidden transition-all duration-300">
-                {/* 顶部控制栏 */}
+            <div className="p-3.5 sm:p-6 space-y-4 sm:space-y-5">
+              {/* 6 幕概览轮播卡 */}
+              <div className="relative rounded-2xl border border-slate-200/90 bg-slate-50/70 p-4 sm:p-6 overflow-hidden transition-all duration-300">
                 <div className="flex flex-wrap items-center justify-between gap-2 relative z-10">
                   <span
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border ${scene.colorBg} ${scene.colorBorder} ${scene.colorText} whitespace-nowrap`}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-2xs sm:text-xs font-bold border ${scene.colorBg} ${scene.colorBorder} ${scene.colorText} whitespace-nowrap`}
                   >
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                     <span>
@@ -429,13 +462,13 @@ export default function UserGuideModal({
 
                   <button
                     onClick={() => setIsPlaying(!isPlaying)}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 text-xs font-medium transition-all cursor-pointer whitespace-nowrap shadow-xs shrink-0"
-                    title={isPlaying ? '暂停自动演播' : '继续自动演播'}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 text-2xs sm:text-xs font-medium transition-all cursor-pointer whitespace-nowrap shadow-xs shrink-0"
+                    title={isPlaying ? '暂停自动轮播' : '继续自动轮播'}
                   >
                     {isPlaying ? (
                       <>
                         <Pause className="h-3 w-3 shrink-0" />
-                        <span>自动演示中</span>
+                        <span>自动轮播中</span>
                       </>
                     ) : (
                       <>
@@ -446,15 +479,15 @@ export default function UserGuideModal({
                   </button>
                 </div>
 
-                {/* 核心内容展示区 */}
-                <div className="my-5 relative z-10 max-w-2xl">
+                {/* 展示正文 */}
+                <div className="my-4 sm:my-5 relative z-10 max-w-3xl">
                   <div className="flex items-center gap-2.5">
                     <span
-                      className={`p-1.5 rounded-xl border ${scene.colorBg} ${scene.colorBorder} ${scene.colorText} shadow-xs`}
+                      className={`p-1.5 rounded-xl border ${scene.colorBg} ${scene.colorBorder} ${scene.colorText} shadow-xs shrink-0`}
                     >
                       <scene.icon className="h-4 w-4" />
                     </span>
-                    <h4 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+                    <h4 className="text-base sm:text-xl font-bold text-slate-900 tracking-tight">
                       {scene.title}
                     </h4>
                   </div>
@@ -465,8 +498,7 @@ export default function UserGuideModal({
                     {scene.description}
                   </p>
 
-                  {/* Highlights Bullet Points */}
-                  <div className="mt-4 space-y-1.5">
+                  <div className="mt-3.5 space-y-1.5">
                     {scene.highlights.map((h, idx) => (
                       <div key={idx} className="flex items-start gap-2 text-xs text-slate-700">
                         <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" />
@@ -476,9 +508,8 @@ export default function UserGuideModal({
                   </div>
                 </div>
 
-                {/* 底部时间线与直达体验按钮 */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-4 border-t border-slate-200/80 relative z-10">
-                  {/* 时间线微指示点 */}
+                {/* 底部切换指示条与跳转体验 */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-3.5 border-t border-slate-200/80 relative z-10">
                   <div className="flex items-center gap-1.5">
                     {TOUR_SCENES.map((s, idx) => (
                       <button
@@ -497,139 +528,140 @@ export default function UserGuideModal({
                     ))}
                   </div>
 
-                  <button
-                    onClick={() => handleNavigate(scene.route)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300/80 bg-white hover:bg-slate-50 px-3.5 py-1.5 text-xs font-semibold text-slate-800 shadow-xs transition-all active:scale-95 cursor-pointer"
-                  >
-                    <span>{scene.routeText}</span>
-                    <ChevronRight className="h-3.5 w-3.5 text-slate-500" />
-                  </button>
+                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    <button
+                      onClick={() => setActiveTab('doc')}
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 transition-all cursor-pointer"
+                    >
+                      <span>看详细图文手册</span>
+                    </button>
+                    <button
+                      onClick={() => handleNavigate(scene.route)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300/80 bg-white hover:bg-slate-50 px-3.5 py-1.5 text-xs font-semibold text-slate-800 shadow-xs transition-all active:scale-95 cursor-pointer"
+                    >
+                      <span>{scene.routeText}</span>
+                      <ChevronRight className="h-3.5 w-3.5 text-slate-500" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              {/* 每日研学 4 步通关指南 */}
+              {/* 1 分钟按场景找功能 */}
               <div>
-                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5 text-slate-500" />
-                  <span>每日研学 4 步高分通关指南</span>
+                <div className="text-xs font-bold text-slate-500 mb-2.5 flex items-center gap-1.5">
+                  <Zap className="h-3.5 w-3.5 text-indigo-600" />
+                  <span>按想法直达 · 我现在想做什么就点哪里</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-                  <div
-                    onClick={() => handleNavigate('/dashboard')}
-                    className="p-3 rounded-xl bg-white border border-slate-200/90 hover:border-slate-300 hover:shadow-xs transition-all cursor-pointer group"
-                  >
-                    <span className="text-2xs font-bold text-indigo-600">第一步 · 驾驶舱</span>
-                    <h6 className="mt-1 text-xs font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
-                      查看备考倒计时与待办
-                    </h6>
-                    <p className="mt-1 text-2xs text-slate-500 leading-relaxed">
-                      掌握初试剩余天数，快速查看今日艾宾浩斯复习卡与薄弱考点提示。
-                    </p>
-                  </div>
-
-                  <div
-                    onClick={() => handleNavigate('/quiz')}
-                    className="p-3 rounded-xl bg-white border border-slate-200/90 hover:border-slate-300 hover:shadow-xs transition-all cursor-pointer group"
-                  >
-                    <span className="text-2xs font-bold text-amber-600">第二步 · 真题刷题</span>
-                    <h6 className="mt-1 text-xs font-bold text-slate-900 group-hover:text-amber-600 transition-colors">
-                      答题卡调色板与草稿演练
-                    </h6>
-                    <p className="mt-1 text-2xs text-slate-500 leading-relaxed">
-                      做 408 与考研数学历年真题，利用调色板快速跳题，手写板即时演练。
-                    </p>
-                  </div>
-
-                  <div
-                    onClick={() => handleNavigate('/graph')}
-                    className="p-3 rounded-xl bg-white border border-slate-200/90 hover:border-slate-300 hover:shadow-xs transition-all cursor-pointer group"
-                  >
-                    <span className="text-2xs font-bold text-rose-600">第三步 · 掌握度色谱</span>
-                    <h6 className="mt-1 text-xs font-bold text-slate-900 group-hover:text-rose-600 transition-colors">
-                      透视红黄盲区直通急救舱
-                    </h6>
-                    <p className="mt-1 text-2xs text-slate-500 leading-relaxed">
-                      在色谱图中查看红灯高危考点，单击呼出急救舱开展 5 题靶向速测。
-                    </p>
-                  </div>
-
-                  <div
-                    onClick={() => handleNavigate('/study')}
-                    className="p-3 rounded-xl bg-white border border-slate-200/90 hover:border-slate-300 hover:shadow-xs transition-all cursor-pointer group"
-                  >
-                    <span className="text-2xs font-bold text-teal-600">第四步 · 间隔记忆</span>
-                    <h6 className="mt-1 text-xs font-bold text-slate-900 group-hover:text-teal-600 transition-colors">
-                      SM-2 艾宾浩斯闪卡
-                    </h6>
-                    <p className="mt-1 text-2xs text-slate-500 leading-relaxed">
-                      早晚各 15 分钟抗遗忘复盘，强化定理公式与计算机协议细节。
-                    </p>
-                  </div>
+                  {QUICK_SCENARIO_GUIDES.map((sc) => {
+                    const badgeClass = getBadgeStyle(sc.color)
+                    return (
+                      <button
+                        key={sc.id}
+                        type="button"
+                        onClick={() => sc.route && handleNavigate(sc.route)}
+                        className="p-3 rounded-xl bg-white border border-slate-200/90 hover:border-indigo-300 hover:shadow-xs transition-all cursor-pointer group text-left flex flex-col justify-between"
+                      >
+                        <div>
+                          <div className="flex items-center justify-between gap-2 mb-1.5">
+                            <span className={`p-1.5 rounded-lg border ${badgeClass}`}>
+                              {renderItemIcon(sc.iconName, 'w-3.5 h-3.5')}
+                            </span>
+                            <span className="text-2xs font-bold text-indigo-600 group-hover:translate-x-0.5 transition-transform inline-flex items-center gap-0.5">
+                              <span>{sc.actionLabel}</span>
+                              <ArrowRight className="w-3 h-3" />
+                            </span>
+                          </div>
+                          <h6 className="text-xs font-bold text-slate-900 group-hover:text-indigo-700 transition-colors">
+                            {sc.title}
+                          </h6>
+                          <p className="mt-1 text-2xs text-slate-500 leading-relaxed">
+                            {sc.subtitle}
+                          </p>
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             </div>
           ) : (
-            /* 全功能与小功能完全使用手册字典 Tab */
-            <div className="p-4 sm:p-6 space-y-5">
-              {/* 顶部搜索与官方 Markdown 打开条 */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200/90">
+            /* 全功能使用手册字典 Tab */
+            <div className="p-3.5 sm:p-6 space-y-4">
+              {/* 顶部搜索与全部展开控制 */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200/90">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="搜索小功能作用或说明 (如：色谱图、知识图谱、随手记、答题卡、草稿纸、仿真课件...)"
-                    className="w-full pl-9 pr-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                    placeholder="搜一搜功能名称或问题（如：错题本、答题卡、热力图、背单词、白噪音...）"
+                    className="w-full pl-9 pr-8 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900"
                   />
                   {searchQuery && (
                     <button
                       onClick={() => setSearchQuery('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-700"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-700 cursor-pointer"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
 
-                <button
-                  onClick={handleOpenDocInEditor}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-800 px-3.5 py-1.5 text-xs font-semibold shadow-xs transition-all shrink-0 cursor-pointer"
-                  title="在 Obsidian 笔记编辑器中查看原始 Markdown 文件"
-                >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  <span>在笔记编辑器中打开文档</span>
-                </button>
-              </div>
-
-              {/* 分类快捷标签栏 */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
-                {MANUAL_CATEGORIES.map((cat) => (
+                <div className="flex items-center gap-2 shrink-0">
                   <button
-                    key={cat.key}
-                    onClick={() => setSelectedCategory(cat.key)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all cursor-pointer ${
-                      selectedCategory === cat.key
-                        ? 'bg-neutral-900 text-white font-semibold shadow-2xs'
-                        : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200/70 hover:text-neutral-900'
-                    }`}
+                    type="button"
+                    onClick={toggleExpandAll}
+                    className="inline-flex items-center justify-center gap-1 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 px-3 py-1.5 text-xs font-medium transition-all cursor-pointer"
                   >
-                    <span>{cat.emoji}</span>
-                    <span>{cat.label}</span>
+                    <ChevronsDownUp className="h-3.5 w-3.5 text-slate-500" />
+                    <span>{allExpanded ? '全部收起' : '全部展开'}</span>
                   </button>
-                ))}
+                  <button
+                    type="button"
+                    onClick={handleOpenDocInEditor}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-800 px-3 py-1.5 text-xs font-semibold shadow-xs transition-all cursor-pointer"
+                    title="在笔记编辑器中打开完整 Markdown 手册"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">编辑器打开文档</span>
+                    <span className="sm:hidden">原文档</span>
+                  </button>
+                </div>
               </div>
 
-              {/* 功能卡片列表 */}
-              <div className="space-y-4">
+              {/* 分类标签栏 */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
+                {MANUAL_CATEGORIES.map((cat) => {
+                  const isActive = selectedCategory === cat.key
+                  return (
+                    <button
+                      key={cat.key}
+                      onClick={() => setSelectedCategory(cat.key)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all cursor-pointer ${
+                        isActive
+                          ? 'bg-slate-900 text-white font-semibold shadow-2xs'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70 hover:text-slate-900'
+                      }`}
+                    >
+                      {renderItemIcon(cat.iconName, `w-3.5 h-3.5 ${isActive ? 'text-amber-300' : 'text-slate-500'}`)}
+                      <span>{cat.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* 手册条目列表 */}
+              <div className="space-y-3">
                 {filteredManualItems.length === 0 ? (
                   <div className="text-center py-12 text-slate-400 text-xs">
                     <HelpCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    未找到与「{searchQuery}」匹配的小功能说明。您可以尝试更换关键词或清除搜索。
+                    没有找到与「{searchQuery}」相关的说明，可以换个词试试或点右侧清空搜索。
                   </div>
                 ) : (
                   filteredManualItems.map((item) => {
-                    const isExpanded = expandedFeatureId === item.id
+                    const isExpanded = expandedIds.has(item.id)
                     const badgeClass = getBadgeStyle(item.color)
 
                     return (
@@ -638,22 +670,22 @@ export default function UserGuideModal({
                         id={`manual-${item.id}`}
                         className={`rounded-2xl border transition-all duration-200 bg-white ${
                           isExpanded
-                            ? 'border-slate-900/40 shadow-sm ring-1 ring-slate-900/10'
+                            ? 'border-slate-900/35 shadow-sm ring-1 ring-slate-900/10'
                             : 'border-slate-200/90 hover:border-slate-300 hover:shadow-xs'
                         }`}
                       >
                         {/* 卡片头部 */}
                         <div
-                          onClick={() => setExpandedFeatureId(isExpanded ? null : item.id)}
-                          className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer select-none"
+                          onClick={() => toggleExpandItem(item.id)}
+                          className="p-3.5 sm:p-4.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 cursor-pointer select-none"
                         >
                           <div className="flex items-start sm:items-center gap-3 min-w-0">
                             <div className={`p-2 rounded-xl border shrink-0 ${badgeClass}`}>
                               {renderItemIcon(item.iconName)}
                             </div>
                             <div className="min-w-0">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <h4 className="text-sm sm:text-base font-bold text-slate-900">
+                              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                                <h4 className="text-xs sm:text-sm font-bold text-slate-900">
                                   {item.name}
                                 </h4>
                                 <span
@@ -691,6 +723,7 @@ export default function UserGuideModal({
                             )}
                             <button
                               type="button"
+                              aria-label={isExpanded ? '收起说明' : '展开说明'}
                               className="p-1 rounded-md text-slate-400 hover:text-slate-700"
                             >
                               <ChevronRight
@@ -702,30 +735,39 @@ export default function UserGuideModal({
                           </div>
                         </div>
 
-                        {/* 展开的详尽说明内容 */}
+                        {/* 展开的通俗操作指南 */}
                         {isExpanded && (
-                          <div className="px-4 pb-5 sm:px-5 sm:pb-5 border-t border-slate-100 space-y-4 pt-4 text-xs text-slate-700">
-                            {/* 解决的核心痛点 */}
+                          <div className="px-3.5 pb-4 sm:px-5 sm:pb-5 border-t border-slate-100 space-y-3.5 pt-3.5 text-xs text-slate-700">
+                            {/* 在哪找到它 */}
+                            <div className="px-3 py-2 rounded-xl bg-indigo-50/70 border border-indigo-200/70 text-indigo-900 flex items-start gap-2">
+                              <MapPin className="w-3.5 h-3.5 text-indigo-600 shrink-0 mt-0.5" />
+                              <div>
+                                <span className="font-bold">入口位置：</span>
+                                <span>{item.whereToFind}</span>
+                              </div>
+                            </div>
+
+                            {/* 什么时候用 / 解决什么麻烦 */}
                             <div className="p-3 rounded-xl bg-amber-50/60 border border-amber-200/70 text-amber-900 flex items-start gap-2.5">
                               <Lightbulb className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                               <div>
                                 <span className="font-bold text-2xs block text-amber-800">
-                                  功能作用与解决的备考痛点：
+                                  什么时候适合用它：
                                 </span>
                                 <p className="mt-0.5 leading-relaxed">{item.problemSolved}</p>
                               </div>
                             </div>
 
-                            {/* 具体使用步骤与操作说明 */}
+                            {/* 一步步怎么操作 */}
                             <div>
                               <div className="font-bold text-slate-900 mb-2 flex items-center gap-1.5">
                                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                                <span>具体使用说明与操作步骤：</span>
+                                <span>一步步怎么操作：</span>
                               </div>
-                              <div className="space-y-1.5 pl-1">
+                              <div className="space-y-2 pl-0.5">
                                 {item.howToUse.map((step, idx) => (
-                                  <div key={idx} className="flex items-start gap-2 leading-relaxed">
-                                    <span className="h-4 w-4 rounded-full bg-slate-100 text-slate-700 font-bold text-2xs flex items-center justify-center shrink-0 mt-0.5">
+                                  <div key={idx} className="flex items-start gap-2 leading-relaxed whitespace-pre-line">
+                                    <span className="h-4.5 w-4.5 rounded-full bg-slate-900 text-white font-bold text-2xs flex items-center justify-center shrink-0 mt-0.5">
                                       {idx + 1}
                                     </span>
                                     <span>{step}</span>
@@ -734,14 +776,14 @@ export default function UserGuideModal({
                               </div>
                             </div>
 
-                            {/* 进阶提效与实战技巧 */}
+                            {/* 实用小技巧 */}
                             {item.proTips.length > 0 && (
                               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
                                 <div className="font-bold text-slate-900 mb-1.5 flex items-center gap-1.5 text-2xs">
                                   <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                                  <span>进阶实战提效技巧 (Pro Tips)：</span>
+                                  <span>顺手提效小窍门：</span>
                                 </div>
-                                <ul className="list-disc list-inside space-y-1 text-slate-600 leading-relaxed pl-1">
+                                <ul className="list-disc list-inside space-y-1 text-slate-600 leading-relaxed pl-0.5">
                                   {item.proTips.map((tip, idx) => (
                                     <li key={idx}>{tip}</li>
                                   ))}
@@ -759,8 +801,8 @@ export default function UserGuideModal({
           )}
         </div>
 
-        {/* Modal Footer */}
-        <div className="border-t border-slate-100 px-5 sm:px-6 py-3.5 bg-slate-50/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shrink-0">
+        {/* 底部操作栏 */}
+        <div className="border-t border-slate-100 px-4 sm:px-6 py-3 bg-slate-50/80 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs shrink-0">
           <label className="flex items-center gap-2 text-slate-500 cursor-pointer select-none">
             <input
               type="checkbox"
@@ -768,7 +810,7 @@ export default function UserGuideModal({
               onChange={(e) => setDontShowAgain(e.target.checked)}
               className="rounded border-slate-300 text-slate-900 focus:ring-slate-900 h-3.5 w-3.5"
             />
-            <span>不再自动弹出新手巡礼（可在导航栏点击「使用手册」图标随时打开）</span>
+            <span>以后不再自动弹出（随时可在顶部「使用手册」再打开）</span>
           </label>
 
           <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
@@ -783,8 +825,8 @@ export default function UserGuideModal({
               onClick={handleStartTour}
               className="px-4 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
             >
-              <Compass className="h-3.5 w-3.5" />
-              <span>开启实战全景漫游</span>
+              <Compass className="h-3.5 w-3.5 text-amber-400" />
+              <span>开启手把手细致导览</span>
             </button>
           </div>
         </div>

@@ -144,17 +144,17 @@ export function MathTrialDemo({ fullscreen, onEnter }: DemoProps) {
 
   return (
     <div
-      className={`flex flex-col bg-[#0b0f19] text-white ${
-        fullscreen ? 'w-full h-full min-h-0' : 'h-[520px]'
+      className={`flex flex-col w-full min-w-0 overflow-hidden bg-[#0b0f19] text-white ${
+        fullscreen ? 'h-full min-h-0' : 'h-[520px]'
       }`}
     >
       {/* 顶部真实功能实验室切换条 */}
-      <div className="px-3 sm:px-4 py-2.5 bg-slate-900/95 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs shrink-0">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="px-2 py-0.5 rounded bg-pink-500/20 text-pink-300 font-bold font-mono text-2xs">
+      <div className="px-3 sm:px-4 py-2.5 bg-slate-900/95 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs shrink-0 w-full min-w-0">
+        <div className="flex items-center gap-1.5 flex-wrap min-w-0 max-w-full">
+          <span className="px-2 py-0.5 rounded bg-pink-500/20 text-pink-300 font-bold font-mono text-2xs shrink-0">
             考研数学实战实验室
           </span>
-          <div className="inline-flex items-center gap-1 p-0.5 rounded-lg bg-slate-950 border border-slate-800">
+          <div className="inline-flex items-center gap-1 p-0.5 rounded-lg bg-slate-950 border border-slate-800 max-w-full overflow-x-auto no-scrollbar">
             <button
               type="button"
               onClick={() => setSubTab('taylor')}
@@ -695,13 +695,13 @@ export function AgentTrialDemo({ fullscreen, onEnter }: DemoProps) {
 
   return (
     <div
-      className={`flex flex-col bg-[#0a0f1c] text-white ${
-        fullscreen ? 'w-full h-full min-h-0' : 'h-[520px]'
+      className={`flex flex-col w-full min-w-0 overflow-hidden bg-[#0a0f1c] text-white ${
+        fullscreen ? 'h-full min-h-0' : 'h-[520px]'
       }`}
     >
       {/* 顶部工作台控制栏：4大名师 + 伴学语调 + 双师同台 */}
-      <div className="px-3 sm:px-4 py-2.5 bg-slate-900/95 border-b border-violet-500/20 flex flex-wrap items-center justify-between gap-2 shrink-0">
-        <div className="flex items-center gap-1.5 flex-wrap">
+      <div className="px-3 sm:px-4 py-2.5 bg-slate-900/95 border-b border-violet-500/20 flex flex-wrap items-center justify-between gap-2 shrink-0 w-full min-w-0">
+        <div className="flex items-center gap-1.5 flex-wrap min-w-0 max-w-full">
           {(Object.keys(DEMO_AGENTS) as DemoAgentId[]).map(id => {
             const ag = DEMO_AGENTS[id]
             const active = agentId === id
@@ -723,7 +723,7 @@ export function AgentTrialDemo({ fullscreen, onEnter }: DemoProps) {
           })}
         </div>
 
-        <div className="flex items-center gap-1.5 flex-wrap text-2xs">
+        <div className="flex items-center gap-1.5 flex-wrap text-2xs min-w-0 max-w-full">
           <div className="inline-flex items-center p-0.5 rounded-lg bg-slate-950 border border-slate-800">
             {[
               { key: 'rigorous' as const, label: '📐 严谨' },
@@ -769,47 +769,47 @@ export function AgentTrialDemo({ fullscreen, onEnter }: DemoProps) {
       {/* 对话消息流 */}
       <div
         ref={scrollRef}
-        className={`flex-1 min-h-0 overflow-y-auto px-3 sm:px-5 py-3 space-y-3 ${
-          fullscreen ? 'max-w-5xl w-full mx-auto' : ''
+        className={`flex-1 min-h-0 min-w-0 w-full overflow-y-auto overflow-x-hidden px-3 sm:px-5 py-3 space-y-3 ${
+          fullscreen ? 'max-w-5xl mx-auto' : ''
         }`}
       >
         {messages.map(m => (
           <div
             key={m.id}
-            className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in-up`}
+            className={`flex min-w-0 ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in-up`}
           >
             <div
-              className={`max-w-[90%] sm:max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed space-y-2 ${
+              className={`min-w-0 max-w-[92%] sm:max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed space-y-2 break-words ${
                 m.role === 'user'
                   ? 'bg-white text-slate-900 font-medium shadow-xs'
                   : 'bg-slate-900/95 border border-violet-500/25 text-slate-100'
               }`}
             >
               {m.role === 'assistant' && (
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-2xs font-bold text-violet-300 flex items-center gap-1">
+                <div className="flex flex-wrap items-center justify-between gap-1.5 min-w-0">
+                  <span className="text-2xs font-bold text-violet-300 flex items-center gap-1 shrink-0">
                     <span>{m.agentIcon}</span>
                     <span>{m.agentName}</span>
                   </span>
                   {m.toolTrace && (
-                    <span className="text-2xs text-emerald-300/90 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full truncate max-w-[260px]">
+                    <span className="text-2xs text-emerald-300/90 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full truncate max-w-full min-w-0">
                       {m.toolTrace}
                     </span>
                   )}
                 </div>
               )}
 
-              <div className="whitespace-pre-wrap">{m.content || '正在推理并检索关联笔记...'}</div>
+              <div className="whitespace-pre-wrap break-words">{m.content || '正在推理并检索关联笔记...'}</div>
 
               {m.noteRef && (
-                <div className="pt-2 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 text-2xs">
-                  <span className="text-slate-300 font-mono truncate max-w-full">
+                <div className="pt-2 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 text-2xs min-w-0">
+                  <span className="text-slate-300 font-mono truncate max-w-full min-w-0">
                     🔗 引用笔记：{m.noteRef.path}
                   </span>
                   <button
                     type="button"
                     onClick={() => toggleSaveToReview(m.id)}
-                    className={`px-2 py-0.5 rounded-md font-bold border transition-colors cursor-pointer ${
+                    className={`px-2 py-0.5 rounded-md font-bold border transition-colors cursor-pointer shrink-0 ${
                       m.savedToReview
                         ? 'bg-emerald-500/20 border-emerald-400/60 text-emerald-300'
                         : 'bg-violet-500/15 border-violet-400/40 text-violet-200 hover:bg-violet-500/25'
@@ -821,7 +821,7 @@ export function AgentTrialDemo({ fullscreen, onEnter }: DemoProps) {
               )}
 
               {m.peerReply && (
-                <div className="mt-2 p-2.5 rounded-xl bg-orange-500/10 border border-orange-400/30 text-2xs text-orange-100 space-y-1">
+                <div className="mt-2 p-2.5 rounded-xl bg-orange-500/10 border border-orange-400/30 text-2xs text-orange-100 space-y-1 break-words">
                   <div className="font-bold text-orange-300">
                     {m.peerReply.agentIcon} {m.peerReply.agentName}
                   </div>
@@ -835,11 +835,11 @@ export function AgentTrialDemo({ fullscreen, onEnter }: DemoProps) {
 
       {/* 快捷真题预设 + 真实自由提问输入栏 */}
       <div
-        className={`px-3 sm:px-5 py-2.5 bg-slate-900/90 border-t border-slate-800 space-y-2 shrink-0 ${
-          fullscreen ? 'max-w-5xl w-full mx-auto rounded-t-2xl' : ''
+        className={`px-3 sm:px-5 py-2.5 bg-slate-900/90 border-t border-slate-800 space-y-2 shrink-0 w-full min-w-0 overflow-hidden ${
+          fullscreen ? 'max-w-5xl mx-auto rounded-t-2xl' : ''
         }`}
       >
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+        <div className="flex items-center gap-1.5 w-full min-w-0 max-w-full overflow-x-auto no-scrollbar pb-0.5">
           <span className="text-2xs text-slate-400 shrink-0">一键试问：</span>
           {activeAgent.quickPrompts.map(qp => (
             <button
@@ -847,7 +847,7 @@ export function AgentTrialDemo({ fullscreen, onEnter }: DemoProps) {
               type="button"
               disabled={isStreaming}
               onClick={() => handleSend(qp)}
-              className="px-2.5 py-1 rounded-full bg-slate-800/90 hover:bg-violet-600/30 border border-slate-700 hover:border-violet-400/60 text-2xs text-slate-200 whitespace-nowrap transition-colors cursor-pointer disabled:opacity-50"
+              className="px-2.5 py-1 rounded-full bg-slate-800/90 hover:bg-violet-600/30 border border-slate-700 hover:border-violet-400/60 text-2xs text-slate-200 whitespace-nowrap shrink-0 transition-colors cursor-pointer disabled:opacity-50"
             >
               {qp}
             </button>
@@ -859,14 +859,14 @@ export function AgentTrialDemo({ fullscreen, onEnter }: DemoProps) {
             e.preventDefault()
             handleSend()
           }}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 w-full min-w-0"
         >
           <input
             type="text"
             value={inputText}
             onChange={e => setInputText(e.target.value)}
-            placeholder={`向 ${activeAgent.name} 输入考研问题（例如：等价无穷小什么时候不能直接换？或点上方快捷问题）`}
-            className="flex-1 bg-slate-950 border border-slate-700 focus:border-violet-400 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-500 outline-none"
+            placeholder={`向 ${activeAgent.name} 输入考研问题...`}
+            className="flex-1 min-w-0 w-full bg-slate-950 border border-slate-700 focus:border-violet-400 rounded-xl px-3 py-2 text-xs text-white placeholder:text-slate-500 outline-none"
           />
           <button
             type="submit"

@@ -31,6 +31,8 @@ import {
   Headphones,
   Moon,
   Leaf,
+  Cpu,
+  Calculator,
 } from 'lucide-react'
 import { useVaultStats, useApiHealth } from '../hooks/useVaultData'
 import { useThemeStyle } from '../hooks/useThemeStyle'
@@ -61,35 +63,36 @@ interface NavItem {
   label: string
   shortLabel?: string
   icon: any
-  emoji: string
+  iconBg?: string
+  iconColor?: string
   badge?: string
   desc?: string
 }
 
 const subjectSpecialties = [
-  { to: '/quiz?domain=cs_408', label: '408 计算机专项', badge: '核心大题', emoji: '💻', desc: '数据结构 · 计组 · 操作系统 · 计网' },
-  { to: '/quiz?domain=math', label: '考研数学', badge: '数一/数二/数三', emoji: '📐', desc: '高等数学 · 线性代数 · 概率统计' },
-  { to: '/politics', label: '考研政治', badge: '肖秀荣1000题', emoji: '🏛️', desc: '史纲时空轴 · 肖秀荣1000题 · 考点收藏' },
-  { to: '/english', label: '考研英语', badge: '作文批改', emoji: '📖', desc: '真题精读 · 写作批改 · 核心词库' },
+  { to: '/quiz?domain=cs_408', label: '408 计算机', badge: '核心大题', icon: Cpu, iconBg: 'bg-blue-50', iconColor: 'text-blue-600', desc: '数构 · 计组 · OS · 网络' },
+  { to: '/quiz?domain=math', label: '考研数学', badge: '数一/二/三', icon: Calculator, iconBg: 'bg-purple-50', iconColor: 'text-purple-600', desc: '高数 · 线代 · 概率论' },
+  { to: '/politics', label: '考研政治', badge: '史纲千题', icon: Landmark, iconBg: 'bg-rose-50', iconColor: 'text-rose-600', desc: '时空编年 · 肖秀荣1000题' },
+  { to: '/english', label: '考研英语', badge: '作文批改', icon: BookOpen, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600', desc: '真题精读 · 作文批改 · 词库' },
 ]
 
 const primaryNavItems: NavItem[] = [
-  { to: '/dashboard', label: '首页', shortLabel: '首页', icon: Home, emoji: '🏠', desc: '备考驾驶舱与每日概览' },
-  { to: '/vocabulary', label: '背单词', shortLabel: '单词', icon: Headphones, emoji: '⚡', badge: '2000+真题词', desc: '大纲核心词汇、艾宾浩斯复盘与随堂测验' },
-  { to: '/english', label: '考研英语', shortLabel: '英语', icon: BookOpen, emoji: '📖', badge: '作文批改+真题', desc: '写作模板、AI智能批改、历年真题精读与大纲词库' },
-  { to: '/quiz', label: '做题中心', shortLabel: '做题', icon: ClipboardList, emoji: '📝', badge: '408+数学', desc: '真题精练、AI 组卷与错题本' },
-  { to: '/politics', label: '考研政治', shortLabel: '政治', icon: Landmark, emoji: '🏛️', badge: '史纲+1000题', desc: '全屏时空轴、肖秀荣1000题与考点收藏' },
-  { to: '/study', label: '学习中心', shortLabel: '讲义', icon: GraduationCap, emoji: '📚', desc: '讲义精读、闪卡记忆与掌握度' },
-  { to: '/graph', label: '知识图谱', shortLabel: '图谱', icon: Network, emoji: '🕸️', desc: '全库双链网络可视化探索' },
-  { to: '/editor', label: '笔记编辑', shortLabel: '笔记', icon: FileEdit, emoji: '✏️', desc: 'Markdown 写作与手写批注' },
-  { to: '/chat', label: 'AI 伴学', shortLabel: '伴学', icon: MessageCircle, emoji: '💬', desc: '多智能体导师答疑与推导' },
+  { to: '/dashboard', label: '首页', shortLabel: '首页', icon: Home, iconBg: 'bg-slate-100', iconColor: 'text-slate-700', desc: '备考概览与每日计划' },
+  { to: '/quiz', label: '刷题中心', shortLabel: '刷题', icon: ClipboardList, iconBg: 'bg-indigo-50', iconColor: 'text-indigo-600', badge: '真题+错题', desc: '真题试卷、自由组卷与错题本' },
+  { to: '/study', label: '研学中心', shortLabel: '研学', icon: GraduationCap, iconBg: 'bg-amber-50', iconColor: 'text-amber-600', desc: '核心讲义、闪卡与仿真课件' },
+  { to: '/vocabulary', label: '考研背词', shortLabel: '单词', icon: Headphones, iconBg: 'bg-sky-50', iconColor: 'text-sky-600', badge: '2000+词汇', desc: '大纲词库与艾宾浩斯复盘' },
+  { to: '/english', label: '考研英语', shortLabel: '英语', icon: BookOpen, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600', badge: '作文批改', desc: '真题精读与写作智能批改' },
+  { to: '/politics', label: '考研政治', shortLabel: '政治', icon: Landmark, iconBg: 'bg-rose-50', iconColor: 'text-rose-600', badge: '史纲千题', desc: '史纲时空轴与千题库训练' },
+  { to: '/graph', label: '知识图谱', shortLabel: '图谱', icon: Network, iconBg: 'bg-violet-50', iconColor: 'text-violet-600', desc: '双链考点网络可视化' },
+  { to: '/editor', label: '笔记编辑', shortLabel: '笔记', icon: FileEdit, iconBg: 'bg-teal-50', iconColor: 'text-teal-600', desc: 'Markdown 写作与公式批注' },
+  { to: '/chat', label: 'AI 伴学', shortLabel: '伴学', icon: MessageCircle, iconBg: 'bg-amber-50', iconColor: 'text-amber-600', desc: '智能体导师答疑与推导' },
 ]
 
 const moreNavItems: NavItem[] = [
-  { to: '/workflow', label: '知识库整理', shortLabel: '整理', icon: Workflow, emoji: '🧭', desc: '质检、标签治理与结构优化' },
-  { to: '/pomodoro', label: '专注番茄钟', shortLabel: '番茄钟', icon: Timer, emoji: '🍅', desc: '心流沉浸与时间切片' },
-  { to: '/music', label: '声学专注氛围', shortLabel: '白噪音', icon: Music, emoji: '🎵', desc: '双耳节拍与白噪音音频' },
-  { to: '/settings', label: '全局系统设置', shortLabel: '设置', icon: Settings, emoji: '⚙️', desc: '知识库路径与 AI 服务模型' },
+  { to: '/workflow', label: '知识整理', shortLabel: '整理', icon: Workflow, iconBg: 'bg-blue-50', iconColor: 'text-blue-600', desc: '质检、标签治理与结构优化' },
+  { to: '/pomodoro', label: '番茄专注', shortLabel: '专注', icon: Timer, iconBg: 'bg-orange-50', iconColor: 'text-orange-600', desc: '心流计时与专注统计' },
+  { to: '/music', label: '白噪音', shortLabel: '白噪音', icon: Music, iconBg: 'bg-purple-50', iconColor: 'text-purple-600', desc: '双耳节拍与沉浸自习音景' },
+  { to: '/settings', label: '系统设置', shortLabel: '设置', icon: Settings, iconBg: 'bg-slate-100', iconColor: 'text-slate-600', desc: '知识库路径与模型配置' },
 ]
 
 const allNavItems = [...primaryNavItems, ...moreNavItems]
@@ -143,6 +146,7 @@ export default function Layout({ children }: LayoutProps) {
   const [quickNoteOpen, setQuickNoteOpen] = useState(false)
   const { user, isAdmin, isStudent, logout, points, canCheckinToday } = useAuth()
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [mobileUserMenuOpen, setMobileUserMenuOpen] = useState(false)
   const [userManagementOpen, setUserManagementOpen] = useState(false)
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
   const [guideOpen, setGuideOpen] = useState(false)
@@ -290,6 +294,8 @@ export default function Layout({ children }: LayoutProps) {
     setMobileNavOpen(false)
     setMobileSubjectOpen(false)
     setMoreOpen(false)
+    setUserMenuOpen(false)
+    setMobileUserMenuOpen(false)
 
     // 核心研学空间后台闲时预取 (Idle Route Prefetching)
     // 利用空闲网络带宽提前将「做题中心」与「学习中心」缓存到浏览器，消除点击等待
@@ -318,11 +324,82 @@ export default function Layout({ children }: LayoutProps) {
 
   const mobileBottomTabs = [
     { to: '/dashboard', label: '首页', icon: Home },
-    { to: '/study', label: '学习中心', icon: BookOpen },
+    { to: '/study', label: '研学', icon: GraduationCap },
     { to: '/chat', label: 'AI伴学', icon: Bot, isCenter: true },
-    { to: '__subject__', label: '学科专攻', icon: GraduationCap, isSubject: true },
-    { to: '__tools__', label: '全部功能', icon: LayoutGrid, isAction: true },
+    { to: '__subject__', label: '专项', icon: BookOpen, isSubject: true },
+    { to: '__tools__', label: '全部', icon: LayoutGrid, isAction: true },
   ]
+
+  /** 桌面端与移动端顶栏头像菜单共用的个人账号操作卡片 */
+  const renderUserMenuCard = (closeMenu: () => void) => {
+    if (!user) return null
+    return (
+      <>
+        <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 mb-1.5">
+          <div className="text-xs font-bold text-slate-900 truncate">{user.displayName || user.username}</div>
+          <div className="text-2xs text-slate-400 font-mono truncate">@{user.username}</div>
+          <div className="mt-1 flex items-center gap-1.5">
+            <span className="inline-flex items-center gap-1 text-2xs font-semibold px-2 py-0.5 rounded-full bg-white text-indigo-700 border border-slate-200/80 shadow-xs">
+              {user.role === 'admin' ? '👑 超级管理员' : '🎓 考研研学者'}
+            </span>
+            <span className="text-2xs font-mono text-amber-700">⚡ {points.toFixed(1)}分</span>
+          </div>
+        </div>
+
+        <div className="px-2.5 pt-1.5 pb-0.5 text-2xs font-bold text-slate-400 uppercase tracking-wider">
+          账号与系统
+        </div>
+        <div className="space-y-0.5">
+          <Link
+            to="/settings"
+            onClick={closeMenu}
+            className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+          >
+            <Settings className="h-3.5 w-3.5 text-slate-500" />
+            <span className="font-medium">全局系统设置</span>
+          </Link>
+
+          <button
+            type="button"
+            onClick={() => {
+              closeMenu()
+              setChangePasswordOpen(true)
+            }}
+            className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+          >
+            <KeyRound className="h-3.5 w-3.5 text-slate-500" />
+            <span className="font-medium">修改登录密码</span>
+          </button>
+
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => {
+                closeMenu()
+                setUserManagementOpen(true)
+              }}
+              className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            >
+              <UsersIcon className="h-3.5 w-3.5 text-indigo-600" />
+              <span className="font-medium">用户权限管理</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => {
+              closeMenu()
+              logout()
+            }}
+            className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            <span>退出登录</span>
+          </button>
+        </div>
+      </>
+    )
+  }
 
   return (
     <div className="min-h-dvh aurora-mesh w-full max-w-full overflow-x-clip text-slate-900 selection:bg-accent-orange/20 selection:text-accent-orange font-sans antialiased relative">
@@ -333,8 +410,8 @@ export default function Layout({ children }: LayoutProps) {
           {/* 左侧：Logo + 考研倒计时金牌 */}
           <div className="flex items-center gap-1.5 select-none shrink-0 min-w-0">
             <Link to="/dashboard" className="flex items-center gap-1 shrink-0 active:scale-95 transition-transform">
-              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-slate-950 p-1 shadow-xs shrink-0">
-                <img src="/favicon.svg" alt="研核" className="h-full w-full object-contain" />
+              <div className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-md shadow-xs ring-1 ring-rose-200/70 shrink-0">
+                <img src="/favicon.svg" alt="研核" className="h-full w-full object-cover" />
               </div>
               <span className="text-[13px] font-extrabold tracking-tight text-slate-900">
                 研核
@@ -366,7 +443,7 @@ export default function Layout({ children }: LayoutProps) {
               <span>随手记</span>
             </button>
 
-            {/* 顶栏使用手册快捷胶囊 */}
+            {/* 手机端顶栏使用手册快捷按钮 */}
             <button
               type="button"
               onClick={() => {
@@ -374,11 +451,11 @@ export default function Layout({ children }: LayoutProps) {
                 setGuideOpen(true)
                 openModal('user-guide')
               }}
-              className="hidden lg:inline-flex items-center gap-1 px-2 py-1 rounded-xl bg-neutral-100 hover:bg-neutral-200/80 text-neutral-700 text-[11px] font-bold shadow-2xs active:scale-95 transition-all shrink-0 cursor-pointer"
-              title="全功能使用手册与小功能作用说明"
+              className="w-7 h-7 inline-flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200/80 text-indigo-600 active:scale-95 transition-all shrink-0 cursor-pointer"
+              title="使用手册与操作说明"
+              aria-label="使用手册"
             >
-              <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
-              <span>手册</span>
+              <BookOpen className="w-3.5 h-3.5" />
             </button>
 
             <button
@@ -396,6 +473,7 @@ export default function Layout({ children }: LayoutProps) {
 
             <button
               type="button"
+              data-tour="btn-mobile-search"
               onClick={() => {
                 setSearchOpen(true)
                 openModal('search')
@@ -406,6 +484,28 @@ export default function Layout({ children }: LayoutProps) {
             >
               <Search className="w-3.5 h-3.5" />
             </button>
+
+            {user && (
+              <div className="relative shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setMobileUserMenuOpen(prev => !prev)}
+                  aria-label="打开个人账号菜单"
+                  title={`${user.displayName || user.username} · 个人账号与退出登录`}
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-2xs font-bold text-white bg-indigo-600 shadow-xs border border-indigo-200/80 active:scale-95 transition-transform cursor-pointer"
+                >
+                  {user.displayName ? user.displayName.slice(0, 1).toUpperCase() : user.username.slice(0, 1).toUpperCase()}
+                </button>
+                {mobileUserMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setMobileUserMenuOpen(false)} />
+                    <div className="absolute right-0 top-full z-50 mt-1.5 w-56 rounded-2xl border border-slate-200/90 bg-white/98 p-2 shadow-[0_16px_40px_rgba(0,0,0,0.12)] backdrop-blur-xl animate-fade-in-up text-slate-800">
+                      {renderUserMenuCard(() => setMobileUserMenuOpen(false))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -413,8 +513,8 @@ export default function Layout({ children }: LayoutProps) {
         <div className="hidden md:flex mx-auto h-13 sm:h-14 max-w-[1600px] items-center gap-2 2xl:gap-3 px-3 sm:px-5">
           {/* Logo & Subframe Pill */}
           <Link to="/dashboard" className="flex min-w-0 items-center gap-2 rounded-xl outline-none group select-none shrink-0">
-            <div className="relative flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center overflow-hidden rounded-lg bg-slate-950 p-1 shadow-xs ring-1 ring-slate-900/10 transition-transform group-hover:scale-105 shrink-0">
-              <img src="/favicon.svg" alt="研核图标" className="h-full w-full object-contain" />
+            <div className="relative flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center overflow-hidden rounded-lg shadow-xs ring-1 ring-rose-200/70 transition-transform group-hover:scale-105 shrink-0">
+              <img src="/favicon.svg" alt="研核图标" className="h-full w-full object-cover" />
             </div>
             <div className="flex items-center gap-1.5 min-w-0">
               <span className="text-sm sm:text-[15px] font-bold tracking-tight text-slate-900 whitespace-nowrap">
@@ -437,6 +537,7 @@ export default function Layout({ children }: LayoutProps) {
             {/* 1. 总览 */}
             <NavLink
               to="/dashboard"
+              data-tour="nav-dashboard"
               onPointerEnter={() => prefetchRoute('/dashboard')}
               className={({ isActive }) => navClass(isActive)}
               title="备考驾驶舱与每日概览"
@@ -449,25 +550,27 @@ export default function Layout({ children }: LayoutProps) {
               )}
             </NavLink>
 
-            {/* 2. 题库与模考 */}
+            {/* 2. 刷题中心 */}
             <NavLink
               to="/quiz"
+              data-tour="nav-quiz"
               onPointerEnter={() => prefetchRoute('/quiz')}
               className={({ isActive }) => navClass(isActive && !['/politics', '/english'].includes(location.pathname))}
-              title="真题精练、AI 组卷与错题本"
+              title="真题试卷、自由组卷与错题本"
             >
               {({ isActive }) => (
                 <>
                   <ClipboardList className={`h-3.5 w-3.5 shrink-0 ${isActive && !['/politics', '/english'].includes(location.pathname) ? 'text-white' : 'text-slate-400'}`} />
-                  <span className="whitespace-nowrap font-medium">题库与模考</span>
+                  <span className="whitespace-nowrap font-medium">刷题中心</span>
                 </>
               )}
             </NavLink>
 
-            {/* 3. 学科专攻 (408 / 考研数学 / 考研政治 / 考研英语 精准下拉) */}
+            {/* 3. 学科专项 */}
             <div className="relative shrink-0" onMouseLeave={() => setSubjectMenuOpen(false)}>
               <button
                 type="button"
+                data-tour="nav-subjects"
                 onClick={() => setSubjectMenuOpen(prev => !prev)}
                 onMouseEnter={() => setSubjectMenuOpen(true)}
                 className={navClass(
@@ -477,12 +580,12 @@ export default function Layout({ children }: LayoutProps) {
                 )}
                 aria-expanded={subjectMenuOpen}
               >
-                <GraduationCap className={`h-3.5 w-3.5 shrink-0 ${
+                <BookOpen className={`h-3.5 w-3.5 shrink-0 ${
                   subjectMenuOpen || ['/politics', '/english'].includes(location.pathname) || location.search.includes('subject=')
                     ? 'text-white'
                     : 'text-slate-400'
                 }`} />
-                <span className="whitespace-nowrap font-medium">学科专攻</span>
+                <span className="whitespace-nowrap font-medium">学科专项</span>
                 <ChevronDown className={`h-3 w-3 shrink-0 transition-transform duration-200 ${subjectMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
@@ -494,8 +597,8 @@ export default function Layout({ children }: LayoutProps) {
                     className="absolute left-1/2 -translate-x-1/2 top-full z-50 mt-1.5 w-64 rounded-2xl border border-slate-200/80 bg-white/95 p-2 shadow-[0_12px_32px_rgba(0,0,0,0.08)] backdrop-blur-xl animate-fade-in-up"
                   >
                     <div className="px-2.5 py-1 text-2xs font-semibold uppercase tracking-wider text-slate-400 flex items-center justify-between">
-                      <span>考研核心科目专区</span>
-                      <span className="text-2xs text-indigo-500 font-mono">4 大专项</span>
+                      <span>考研统考专项</span>
+                      <span className="text-2xs text-indigo-500 font-mono">4 大科目</span>
                     </div>
                     <div className="space-y-1 mt-1">
                       {subjectSpecialties.map(sub => {
@@ -503,6 +606,7 @@ export default function Layout({ children }: LayoutProps) {
                           (sub.to === '/politics' && location.pathname === '/politics') ||
                           (sub.to === '/english' && location.pathname === '/english') ||
                           (location.pathname === '/quiz' && sub.to.includes(location.search) && location.search.length > 0)
+                        const SubIcon = sub.icon
                         return (
                           <Link
                             key={sub.to}
@@ -514,7 +618,9 @@ export default function Layout({ children }: LayoutProps) {
                                 : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
                             }`}
                           >
-                            <span className="text-base shrink-0 mt-0.5">{sub.emoji}</span>
+                            <div className={`w-7 h-7 rounded-lg ${sub.iconBg} flex items-center justify-center shrink-0 mt-0.5`}>
+                              <SubIcon className={`w-3.5 h-3.5 ${sub.iconColor}`} />
+                            </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center justify-between gap-1">
                                 <span className="font-bold text-slate-800 text-xs">{sub.label}</span>
@@ -535,17 +641,18 @@ export default function Layout({ children }: LayoutProps) {
               )}
             </div>
 
-            {/* 4. 讲义与闪卡 */}
+            {/* 4. 研学中心 */}
             <NavLink
               to="/study"
+              data-tour="nav-study"
               onPointerEnter={() => prefetchRoute('/study')}
               className={({ isActive }) => navClass(isActive)}
-              title="讲义精读、闪卡记忆、掌握度与仿真课件"
+              title="核心讲义、闪卡记忆、掌握度与仿真课件"
             >
               {({ isActive }) => (
                 <>
-                  <BookOpen className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                  <span className="whitespace-nowrap font-medium">讲义与闪卡</span>
+                  <GraduationCap className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                  <span className="whitespace-nowrap font-medium">研学中心</span>
                 </>
               )}
             </NavLink>
@@ -553,6 +660,7 @@ export default function Layout({ children }: LayoutProps) {
             {/* 5. AI 伴学 */}
             <NavLink
               to="/chat"
+              data-tour="nav-chat"
               onPointerEnter={() => prefetchRoute('/chat')}
               className={({ isActive }) => navClass(isActive)}
               title="多智能体导师答疑与推导"
@@ -566,12 +674,13 @@ export default function Layout({ children }: LayoutProps) {
             </NavLink>
           </nav>
 
-          {/* ── 右侧极简工具矩阵：视觉风格、搜索 ⌘K、算力积分胶囊与用户矩阵头像 ── */}
+          {/* ── 右侧极简工具矩阵：视觉风格、搜索 ⌘K、使用手册、算力积分与更多功能 ── */}
           <div className="ml-auto flex items-center gap-2 shrink-0">
 
             {/* 0.1 视觉风格一键切换胶囊 (鲜艳风 / 极简风 / 护眼风 / 黑夜风) */}
             <button
               type="button"
+              data-tour="btn-theme"
               onClick={toggleThemeStyle}
               className={`inline-flex items-center gap-1.5 h-8 px-2.5 rounded-xl border text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95 shrink-0 ${
                 isDark
@@ -593,12 +702,13 @@ export default function Layout({ children }: LayoutProps) {
               ) : (
                 <Palette className="h-3.5 w-3.5 text-slate-400" />
               )}
-              <span className="hidden lg:inline">{currentThemeMeta.icon} {currentThemeMeta.shortName}</span>
+              <span className="hidden lg:inline">{currentThemeMeta.shortName}</span>
             </button>
 
             {/* 1. 全局快捷搜索框 ⌘K */}
             <button
               type="button"
+              data-tour="btn-search"
               onClick={() => {
                 setSearchOpen(true)
                 openModal('search')
@@ -612,6 +722,22 @@ export default function Layout({ children }: LayoutProps) {
               <kbd className="inline-flex items-center text-2xs font-mono text-slate-400 bg-white border border-slate-200/90 rounded px-1.5 py-0.5 shadow-xs">
                 ⌘K
               </kbd>
+            </button>
+
+            {/* 1.5 使用手册快捷入口 */}
+            <button
+              type="button"
+              data-tour="btn-guide"
+              onClick={() => {
+                setGuideOptions({ tab: 'doc' })
+                setGuideOpen(true)
+                openModal('user-guide')
+              }}
+              className="hidden lg:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-xl border border-slate-200/80 bg-slate-50/80 hover:bg-white hover:border-indigo-300 text-slate-600 hover:text-indigo-700 text-xs font-medium shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
+              title="打开全功能通俗使用手册与新手导览"
+            >
+              <BookOpen className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
+              <span className="hidden xl:inline">手册</span>
             </button>
 
             {/* 2. 算力伴学积分胶囊 */}
@@ -643,6 +769,7 @@ export default function Layout({ children }: LayoutProps) {
             <div className="relative shrink-0">
               <button
                 type="button"
+                data-tour="btn-more"
                 onClick={() => {
                   setMoreOpen(prev => !prev)
                   setUserMenuOpen(false)
@@ -806,13 +933,14 @@ export default function Layout({ children }: LayoutProps) {
                         type="button"
                         onClick={() => {
                           setMoreOpen(false)
+                          setGuideOptions({ tab: 'doc' })
                           setGuideOpen(true)
                           openModal('user-guide')
                         }}
                         className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                       >
                         <HelpCircle className="h-3.5 w-3.5 text-slate-500" />
-                        <span className="font-medium">新手指引全景手册</span>
+                        <span className="font-medium">全功能使用手册</span>
                       </button>
 
                       <button
@@ -824,7 +952,7 @@ export default function Layout({ children }: LayoutProps) {
                         className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                       >
                         <Compass className="h-3.5 w-3.5 text-indigo-500" />
-                        <span className="font-medium">开启交互式新功能导览</span>
+                        <span className="font-medium">开启手把手细致导览</span>
                       </button>
                     </div>
                   </div>
@@ -853,70 +981,7 @@ export default function Layout({ children }: LayoutProps) {
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
                     <div className="absolute right-0 top-full z-50 mt-1.5 w-56 rounded-2xl border border-slate-200/90 bg-white/98 p-2 shadow-[0_16px_40px_rgba(0,0,0,0.1)] backdrop-blur-xl animate-fade-in-up text-slate-800">
-                      {/* 用户基础信息卡片 */}
-                      <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 mb-1.5">
-                        <div className="text-xs font-bold text-slate-900 truncate">{user.displayName || user.username}</div>
-                        <div className="text-2xs text-slate-400 font-mono truncate">@{user.username}</div>
-                        <div className="mt-1 flex items-center gap-1.5">
-                          <span className="inline-flex items-center gap-1 text-2xs font-semibold px-2 py-0.5 rounded-full bg-white text-indigo-700 border border-slate-200/80 shadow-xs">
-                            {user.role === 'admin' ? '👑 超级管理员' : '🎓 考研研学者'}
-                          </span>
-                          <span className="text-2xs font-mono text-amber-700">⚡ {points.toFixed(1)}分</span>
-                        </div>
-                      </div>
-
-                      {/* 账号与系统设置 */}
-                      <div className="px-2.5 pt-1.5 pb-0.5 text-2xs font-bold text-slate-400 uppercase tracking-wider">
-                        账号与系统
-                      </div>
-                      <div className="space-y-0.5">
-                        <Link
-                          to="/settings"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                        >
-                          <Settings className="h-3.5 w-3.5 text-slate-500" />
-                          <span className="font-medium">全局系统设置</span>
-                        </Link>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setUserMenuOpen(false)
-                            setChangePasswordOpen(true)
-                          }}
-                          className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                        >
-                          <KeyRound className="h-3.5 w-3.5 text-slate-500" />
-                          <span className="font-medium">修改登录密码</span>
-                        </button>
-
-                        {isAdmin && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setUserMenuOpen(false)
-                              setUserManagementOpen(true)
-                            }}
-                            className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                          >
-                            <UsersIcon className="h-3.5 w-3.5 text-indigo-600" />
-                            <span className="font-medium">用户权限管理</span>
-                          </button>
-                        )}
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setUserMenuOpen(false)
-                            logout()
-                          }}
-                          className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                        >
-                          <LogOut className="h-3.5 w-3.5" />
-                          <span>退出登录</span>
-                        </button>
-                      </div>
+                      {renderUserMenuCard(() => setUserMenuOpen(false))}
                     </div>
                   </>
                 )}
@@ -1009,8 +1074,51 @@ export default function Layout({ children }: LayoutProps) {
 
             {/* Scrollable Sheet Content */}
             <div className="p-4 overflow-y-auto modal-scroll-contain space-y-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+              {/* Mobile Account Summary & Logout Card */}
+              {user && (
+                <div className="flex items-center justify-between gap-2 rounded-2xl bg-slate-50 border border-slate-200/80 p-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white shadow-xs">
+                      {user.displayName ? user.displayName.slice(0, 1).toUpperCase() : user.username.slice(0, 1).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-slate-900 truncate">{user.displayName || user.username}</span>
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-white text-indigo-700 border border-slate-200/80 shrink-0">
+                          {user.role === 'admin' ? '管理员' : '研学者'}
+                        </span>
+                      </div>
+                      <div className="text-2xs text-slate-400 font-mono truncate">@{user.username} · ⚡ {points.toFixed(1)}分</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileNavOpen(false)
+                        setChangePasswordOpen(true)
+                      }}
+                      className="px-2.5 py-1.5 rounded-xl bg-white border border-slate-200/90 text-2xs font-semibold text-slate-700 active:scale-95 transition-transform cursor-pointer"
+                    >
+                      改密
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileNavOpen(false)
+                        logout()
+                      }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-50 border border-rose-200/80 text-2xs font-bold text-rose-600 active:scale-95 transition-transform cursor-pointer"
+                    >
+                      <LogOut className="h-3 w-3" />
+                      <span>退出登录</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Quick Actions Bar */}
-              <div className="grid grid-cols-3 gap-2">
+              <div className={`grid ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}>
                 <button
                   onClick={() => {
                     setMobileNavOpen(false)
@@ -1031,69 +1139,109 @@ export default function Layout({ children }: LayoutProps) {
                   <Database className="h-4 w-4 text-blue-600" />
                   <span className="text-xs font-bold">导入资料</span>
                 </button>
+                {isAdmin && (
+                  <button
+                    onClick={() => {
+                      setMobileNavOpen(false)
+                      setMobileModalOpen(true)
+                    }}
+                    className="flex flex-col items-center justify-center gap-1.5 rounded-2xl bg-emerald-50/80 border border-emerald-200/70 p-3 text-emerald-700 active:scale-95 transition-transform"
+                  >
+                    <Smartphone className="h-4 w-4 text-emerald-600" />
+                    <span className="text-xs font-bold">多端扫码</span>
+                  </button>
+                )}
+              </div>
+
+              {/* 帮助与导览 */}
+              <div className="grid grid-cols-2 gap-2">
                 <button
+                  type="button"
                   onClick={() => {
                     setMobileNavOpen(false)
-                    setMobileModalOpen(true)
+                    setGuideOptions({ tab: 'doc' })
+                    setGuideOpen(true)
+                    openModal('user-guide')
                   }}
-                  className="flex flex-col items-center justify-center gap-1.5 rounded-2xl bg-emerald-50/80 border border-emerald-200/70 p-3 text-emerald-700 active:scale-95 transition-transform"
+                  className="flex items-center justify-center gap-1.5 rounded-xl bg-slate-50 border border-slate-200/80 px-3 py-2 text-xs font-bold text-slate-700 active:scale-95 transition-transform cursor-pointer"
                 >
-                  <Smartphone className="h-4 w-4 text-emerald-600" />
-                  <span className="text-xs font-bold">多端扫码</span>
+                  <BookOpen className="h-3.5 w-3.5 text-indigo-600" />
+                  <span>使用手册</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileNavOpen(false)
+                    setInteractiveTourOpen(true)
+                  }}
+                  className="flex items-center justify-center gap-1.5 rounded-xl bg-indigo-50 border border-indigo-200/80 px-3 py-2 text-xs font-bold text-indigo-700 active:scale-95 transition-transform cursor-pointer"
+                >
+                  <Compass className="h-3.5 w-3.5 text-indigo-600" />
+                  <span>细致导览</span>
                 </button>
               </div>
 
               {/* Core Modules */}
               <div>
-                <div className="text-2xs font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">核心研学空间</div>
+                <div className="text-2xs font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">核心研学</div>
                 <div className="grid grid-cols-2 gap-2">
-                  {primaryNavItems.map(item => (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      onPointerEnter={() => prefetchRoute(item.to)}
-                      onTouchStart={() => prefetchRoute(item.to)}
-                      onClick={() => setMobileNavOpen(false)}
-                      className={({ isActive }) => `flex items-center gap-2.5 rounded-2xl border p-3 transition-all active:scale-[0.98] ${
-                        isActive
-                          ? 'border-indigo-500/40 bg-indigo-50/80 text-indigo-900 shadow-xs'
-                          : 'border-slate-200/80 bg-slate-50/50 text-slate-700 hover:bg-slate-100/70'
-                      }`}
-                    >
-                      <span className="text-lg shrink-0">{item.emoji}</span>
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold truncate">{item.label}</div>
-                        {item.desc && <div className="text-2xs text-slate-400 truncate mt-0.5">{item.desc}</div>}
-                      </div>
-                    </NavLink>
-                  ))}
+                  {primaryNavItems.map(item => {
+                    const ItemIcon = item.icon
+                    return (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        onPointerEnter={() => prefetchRoute(item.to)}
+                        onTouchStart={() => prefetchRoute(item.to)}
+                        onClick={() => setMobileNavOpen(false)}
+                        className={({ isActive }) => `flex items-center gap-2.5 rounded-xl border p-2.5 transition-all active:scale-[0.98] ${
+                          isActive
+                            ? 'border-indigo-500/40 bg-indigo-50/80 text-indigo-900 shadow-xs'
+                            : 'border-slate-200/80 bg-slate-50/50 text-slate-700 hover:bg-slate-100/70'
+                        }`}
+                      >
+                        <div className={`w-7.5 h-7.5 rounded-lg ${item.iconBg || 'bg-slate-100'} flex items-center justify-center shrink-0`}>
+                          <ItemIcon className={`w-3.5 h-3.5 ${item.iconColor || 'text-slate-600'}`} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold truncate">{item.label}</div>
+                          {item.desc && <div className="text-2xs text-slate-400 truncate mt-0.5">{item.desc}</div>}
+                        </div>
+                      </NavLink>
+                    )
+                  })}
                 </div>
               </div>
 
               {/* Utility Modules */}
               <div>
-                <div className="text-2xs font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">效率工具与系统</div>
+                <div className="text-2xs font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">效率工具</div>
                 <div className="grid grid-cols-2 gap-2">
-                  {moreNavItems.map(item => (
-                    <NavLink
-                      key={item.to}
-                      to={item.to}
-                      onPointerEnter={() => prefetchRoute(item.to)}
-                      onTouchStart={() => prefetchRoute(item.to)}
-                      onClick={() => setMobileNavOpen(false)}
-                      className={({ isActive }) => `flex items-center gap-2.5 rounded-2xl border p-3 transition-all active:scale-[0.98] ${
-                        isActive
-                          ? 'border-indigo-500/40 bg-indigo-50/80 text-indigo-900 shadow-xs'
-                          : 'border-slate-200/80 bg-white text-slate-700 hover:bg-slate-50'
-                      }`}
-                    >
-                      <span className="text-lg shrink-0">{item.emoji}</span>
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold truncate">{item.label}</div>
-                        {item.desc && <div className="text-2xs text-slate-400 truncate mt-0.5">{item.desc}</div>}
-                      </div>
-                    </NavLink>
-                  ))}
+                  {moreNavItems.map(item => {
+                    const ItemIcon = item.icon
+                    return (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        onPointerEnter={() => prefetchRoute(item.to)}
+                        onTouchStart={() => prefetchRoute(item.to)}
+                        onClick={() => setMobileNavOpen(false)}
+                        className={({ isActive }) => `flex items-center gap-2.5 rounded-xl border p-2.5 transition-all active:scale-[0.98] ${
+                          isActive
+                            ? 'border-indigo-500/40 bg-indigo-50/80 text-indigo-900 shadow-xs'
+                            : 'border-slate-200/80 bg-white text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className={`w-7.5 h-7.5 rounded-lg ${item.iconBg || 'bg-slate-100'} flex items-center justify-center shrink-0`}>
+                          <ItemIcon className={`w-3.5 h-3.5 ${item.iconColor || 'text-slate-600'}`} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold truncate">{item.label}</div>
+                          {item.desc && <div className="text-2xs text-slate-400 truncate mt-0.5">{item.desc}</div>}
+                        </div>
+                      </NavLink>
+                    )
+                  })}
                 </div>
               </div>
 
@@ -1142,6 +1290,7 @@ export default function Layout({ children }: LayoutProps) {
               <button
                 key={tab.label}
                 type="button"
+                data-tour="nav-mobile-all"
                 onClick={() => setMobileNavOpen(true)}
                 className="flex flex-col items-center justify-center flex-1 py-0.5 select-none group cursor-pointer"
                 title="打开全站所有功能矩阵"
@@ -1162,6 +1311,7 @@ export default function Layout({ children }: LayoutProps) {
               <button
                 key={tab.label}
                 type="button"
+                data-tour="nav-mobile-vocab"
                 onClick={() => setMobileSubjectOpen(prev => !prev)}
                 className="flex flex-col items-center justify-center flex-1 py-0.5 select-none group cursor-pointer"
                 title="考研学科专攻：408、数学、政治、英语"
@@ -1232,6 +1382,15 @@ export default function Layout({ children }: LayoutProps) {
             <NavLink
               key={tab.to}
               to={tab.to}
+              data-tour={
+                tab.to === '/dashboard'
+                  ? 'nav-mobile-home'
+                  : tab.to === '/quiz'
+                    ? 'nav-mobile-quiz'
+                    : tab.to === '/study'
+                      ? 'nav-mobile-study'
+                      : undefined
+              }
               onPointerEnter={() => prefetchRoute(tab.to)}
               onTouchStart={() => prefetchRoute(tab.to)}
               className="flex flex-col items-center justify-center flex-1 py-0.5 select-none group cursor-pointer"
@@ -1303,13 +1462,14 @@ export default function Layout({ children }: LayoutProps) {
                   (sub.to === '/politics' && location.pathname === '/politics') ||
                   (sub.to === '/english' && location.pathname === '/english') ||
                   (location.pathname === '/quiz' && sub.to.includes('?') && location.search.includes(sub.to.split('?')[1]))
+                const SubIcon = sub.icon
 
                 return (
                   <Link
                     key={sub.to}
                     to={sub.to}
                     onClick={() => setMobileSubjectOpen(false)}
-                    className={`flex items-center gap-3 p-3 rounded-2xl border transition-all active:scale-[0.98] cursor-pointer ${
+                    className={`flex items-center gap-3 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border transition-all active:scale-[0.98] cursor-pointer ${
                       isSubActive
                         ? isDark
                           ? 'bg-sky-950/50 border-sky-500/50 text-sky-200 shadow-sm shadow-sky-500/10'
@@ -1325,8 +1485,8 @@ export default function Layout({ children }: LayoutProps) {
                           : 'bg-white hover:bg-slate-50 border-slate-200/80'
                     }`}
                   >
-                    <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-xl shrink-0 shadow-xs">
-                      {sub.emoji}
+                    <div className={`w-9 h-9 rounded-xl ${sub.iconBg} flex items-center justify-center shrink-0 shadow-2xs`}>
+                      <SubIcon className={`w-4 h-4 ${sub.iconColor}`} />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-1.5">
@@ -1385,7 +1545,7 @@ export default function Layout({ children }: LayoutProps) {
           />
         )}
         {(importModalOpen || activeModals['import-resource']) && <ImportResourceModal isOpen={true} onClose={() => { setImportModalOpen(false); closeModal('import-resource') }} />}
-        {(mobileModalOpen || activeModals['mobile-device']) && <MobileDeviceModal isOpen={true} onClose={() => { setMobileModalOpen(false); closeModal('mobile-device') }} />}
+        {isAdmin && (mobileModalOpen || activeModals['mobile-device']) && <MobileDeviceModal isOpen={true} onClose={() => { setMobileModalOpen(false); closeModal('mobile-device') }} />}
         {(quickNoteOpen || activeModals['quick-note']) && <QuickNoteDrawer isOpen={true} onClose={() => { setQuickNoteOpen(false); closeModal('quick-note') }} />}
       </Suspense>
     </div>

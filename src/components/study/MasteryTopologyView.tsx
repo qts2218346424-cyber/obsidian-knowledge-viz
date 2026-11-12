@@ -28,12 +28,39 @@ interface DomainSummary {
   tree: HierarchyNode[]
 }
 
-export default function MasteryTopologyView() {
+export interface MasteryTopologyViewProps {
+  externalSubjectFilter?: string
+  externalSearchQuery?: string
+}
+
+const CS_408_SUBJECTS = new Set(['cs_408', '数据结构', '计算机组成原理', '操作系统', '计算机网络'])
+const MATH_SUBJECTS = new Set(['math', '高等数学', '线性代数', '概率论'])
+const SPECIFIC_SUBJECT_FILTER_NAMES = new Set(['数据结构', '计算机组成原理', '操作系统', '计算机网络', '高等数学', '线性代数', '概率论'])
+
+export default function MasteryTopologyView({
+  externalSubjectFilter,
+  externalSearchQuery,
+}: MasteryTopologyViewProps = {}) {
   const [activeDomain, setActiveDomain] = useState<'cs_408' | 'math'>('cs_408')
   const [summaries, setSummaries] = useState<DomainSummary[]>([])
   const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchQuery, setSearchQuery] = useState(externalSearchQuery ?? '')
   const [statusFilter, setStatusFilter] = useState<'all' | 'red' | 'yellow' | 'green'>('all')
+
+  useEffect(() => {
+    if (!externalSubjectFilter) return
+    if (MATH_SUBJECTS.has(externalSubjectFilter)) {
+      setActiveDomain('math')
+    } else if (CS_408_SUBJECTS.has(externalSubjectFilter)) {
+      setActiveDomain('cs_408')
+    }
+  }, [externalSubjectFilter])
+
+  useEffect(() => {
+    if (externalSearchQuery !== undefined) {
+      setSearchQuery(externalSearchQuery)
+    }
+  }, [externalSearchQuery])
 
   // 折叠状态记录 (key: subject-level1 或 subject-level1-level2)
   const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set())
@@ -77,10 +104,24 @@ export default function MasteryTopologyView() {
     loadData()
   }, [loadData])
 
-  // 当前选中学科领域的汇总数据
+  // 当前选中学科领域的汇总数据与单科过滤树
   const currentSummary = useMemo(() => {
     return summaries.find(s => s.domain === activeDomain) || null
   }, [summaries, activeDomain])
+
+  const filteredTree = useMemo(() => {
+    if (!currentSummary) return []
+    if (!externalSubjectFilter || externalSubjectFilter === 'all' || externalSubjectFilter === 'cs_408' || externalSubjectFilter === 'math') {
+      return currentSummary.tree
+    }
+    if (SPECIFIC_SUBJECT_FILTER_NAMES.has(externalSubjectFilter)) {
+      return currentSummary.tree.filter(subjectNode =>
+        subjectNode.name.includes(externalSubjectFilter) ||
+        (externalSubjectFilter === '概率论' && subjectNode.name.includes('概率'))
+      )
+    }
+    return []
+  }, [currentSummary, externalSubjectFilter])
 
   // 折叠切换
   const toggleCollapse = (nodeKey: string) => {
@@ -333,12 +374,12 @@ export default function MasteryTopologyView() {
               <Loader2 className="w-6 h-6 animate-spin text-accent-orange" />
               <div className="text-xs">正在实时聚合考点掌握度热力分布...</div>
             </div>
-          ) : !currentSummary || currentSummary.tree.length === 0 ? (
+          ) : !currentSummary || filteredTree.length === 0 ? (
             <div className="py-24 bg-surface border border-cream-200 rounded-2xl text-center text-warm-400 text-xs">
-              暂无考纲拓扑数据
+              {externalSubjectFilter && externalSubjectFilter !== 'all' ? `当前「${externalSubjectFilter}」暂无对应考纲拓扑数据` : '暂无考纲拓扑数据'}
             </div>
           ) : (
-            currentSummary.tree.map((subjectNode) => (
+            filteredTree.map((subjectNode) => (
               <div
                 key={subjectNode.name}
                 className="bg-surface border border-cream-200 rounded-2xl overflow-hidden shadow-xs"

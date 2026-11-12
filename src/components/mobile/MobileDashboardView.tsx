@@ -23,9 +23,16 @@ import {
   Network,
   Activity,
   ShieldAlert,
+  Palette,
+  Moon,
+  Leaf,
+  Target,
+  Cpu,
+  Sigma,
+  Bot,
+  Settings,
 } from 'lucide-react'
 import { useExamCountdown } from '../../utils/examDate'
-import { Palette, Moon, Leaf } from 'lucide-react'
 import { useThemeStyle } from '../../hooks/useThemeStyle'
 
 interface MobileDashboardViewProps {
@@ -103,21 +110,7 @@ export default function MobileDashboardView({
               <button
                 type="button"
                 onClick={toggleThemeStyle}
-                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer ${
-                  isVibrant
-                    ? 'bg-gradient-to-r from-pink-500/25 via-purple-500/25 to-indigo-500/25 border border-indigo-400/50 text-indigo-200'
-                    : 'bg-white/10 hover:bg-white/15 border border-white/20 text-slate-300'
-                }`}
-                title={isVibrant ? '当前为鲜艳活力风，点击切换为极简黑白风' : '当前为经典极简风，点击切换为鲜艳活力风'}
-              >
-                <Palette className={`w-3.5 h-3.5 ${isVibrant ? 'text-pink-400 animate-pulse' : 'text-slate-300'}`} />
-                <span>{isVibrant ? '🎨 鲜艳风' : '极简风'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={toggleThemeStyle}
-                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer ${
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer ${
                   isDark
                     ? 'bg-slate-900/90 border border-sky-400/50 text-sky-300'
                     : isEyecare
@@ -126,18 +119,18 @@ export default function MobileDashboardView({
                     ? 'bg-gradient-to-r from-pink-500/25 via-purple-500/25 to-indigo-500/25 border border-indigo-400/50 text-indigo-200'
                     : 'bg-white/10 hover:bg-white/15 border border-white/20 text-slate-300'
                 }`}
-                title={`当前为${currentThemeMeta.name}，点击切换为下一模式`}
+                title={`当前为${currentThemeMeta.name}，点击切换视觉风格`}
               >
                 {isDark ? (
-                  <Moon className="w-3.5 h-3.5 text-sky-300 animate-pulse" />
+                  <Moon className="w-3.5 h-3.5 text-sky-300" />
                 ) : isEyecare ? (
-                  <Leaf className="w-3.5 h-3.5 text-emerald-300 animate-pulse" />
+                  <Leaf className="w-3.5 h-3.5 text-emerald-300" />
                 ) : isVibrant ? (
-                  <Palette className="w-3.5 h-3.5 text-pink-400 animate-pulse" />
+                  <Palette className="w-3.5 h-3.5 text-pink-400" />
                 ) : (
                   <Palette className="w-3.5 h-3.5 text-slate-300" />
                 )}
-                <span>{currentThemeMeta.icon} {currentThemeMeta.shortName}</span>
+                <span>{currentThemeMeta.shortName}</span>
               </button>
             </div>
           </div>
@@ -180,8 +173,8 @@ export default function MobileDashboardView({
       <section className="space-y-2">
         <div className="flex items-center justify-between px-0.5">
           <div className="text-xs font-black text-slate-900 flex items-center gap-1.5">
-            <span className="text-sm">🎯</span>
-            <span>四门核心统考专区</span>
+            <Target className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+            <span>核心统考专区</span>
           </div>
           <span className="text-2xs text-slate-500 font-mono">题池储备 {totalQuestions} 道</span>
         </div>
@@ -198,7 +191,9 @@ export default function MobileDashboardView({
           >
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-base sm:text-lg">💻</span>
+                <span className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                  <Cpu className="w-4 h-4" />
+                </span>
                 <span className="text-2xs font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-md font-mono">
                   {csQuestionsCount} 题
                 </span>
@@ -223,7 +218,9 @@ export default function MobileDashboardView({
           >
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-base sm:text-lg">📐</span>
+                <span className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                  <Sigma className="w-4 h-4" />
+                </span>
                 <span className="text-2xs font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded-md">
                   KaTeX公式
                 </span>
@@ -248,7 +245,9 @@ export default function MobileDashboardView({
           >
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-base sm:text-lg">🏛️</span>
+                <span className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                  <Landmark className="w-4 h-4" />
+                </span>
                 <span className="text-2xs font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded-md">
                   时空编年
                 </span>
@@ -273,7 +272,9 @@ export default function MobileDashboardView({
           >
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-base sm:text-lg">📖</span>
+                <span className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                  <BookOpen className="w-4 h-4" />
+                </span>
                 <span className="text-2xs font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded-md">
                   AI 批改
                 </span>
@@ -289,15 +290,15 @@ export default function MobileDashboardView({
         </div>
       </section>
 
-      {/* ── 2.5 🤖 考研 AI 伴学导师专属工作舱 (首屏吸睛直达) ── */}
+      {/* ── 2.5 AI 伴学工作舱 (首屏吸睛直达) ── */}
       <section className="p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-900 text-white border border-indigo-500/30 shadow-xs flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-7.5 h-7.5 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 text-white flex items-center justify-center font-bold text-base shrink-0 shadow-2xs">
-            🤖
+          <div className="w-7.5 h-7.5 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 text-white flex items-center justify-center shrink-0 shadow-2xs">
+            <Bot className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <h4 className="text-xs font-black text-white truncate">考研 AI 伴学导师</h4>
+              <h4 className="text-xs font-black text-white truncate">AI 伴学</h4>
               <span className="px-1.5 py-0.2 rounded-full bg-amber-400 text-slate-950 text-2xs font-black shrink-0">
                 在线伴读
               </span>
@@ -348,16 +349,17 @@ export default function MobileDashboardView({
         </div>
       </section>
 
-      {/* ── 4. 全站提分功能与工具矩阵 (高频九宫格，一览无遗) ── */}
+      {/* ── 4. 常用工具矩阵 ── */}
       <section className="space-y-1.5">
         <div className="flex items-center justify-between px-0.5">
-          <div className="text-xs font-extrabold text-slate-700">全站研学与提分功能</div>
+          <div className="text-xs font-extrabold text-slate-700">常用功能入口</div>
           <button
             type="button"
             onClick={() => navigate('/settings')}
-            className="text-2xs text-indigo-600 font-bold hover:underline"
+            className="inline-flex items-center gap-1 text-2xs text-indigo-600 font-bold hover:underline cursor-pointer"
           >
-            系统设置 ⚙️
+            <Settings className="w-3 h-3" />
+            <span>系统设置</span>
           </button>
         </div>
         <div className="grid grid-cols-2 gap-2">
@@ -366,9 +368,11 @@ export default function MobileDashboardView({
             to="/quiz?tab=errors"
             className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-white border border-slate-200/80 shadow-xs hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-2 text-left"
           >
-            <span className="text-lg">📕</span>
+            <span className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+              <Flame className="w-4 h-4" />
+            </span>
             <div className="min-w-0">
-              <div className="text-2xs sm:text-xs font-bold text-slate-800">错题攻克中心</div>
+              <div className="text-2xs sm:text-xs font-bold text-slate-800">错题本</div>
               <div className="text-2xs text-slate-400 truncate">艾宾浩斯·组卷重练</div>
             </div>
           </Link>
@@ -378,34 +382,40 @@ export default function MobileDashboardView({
             to="/graph"
             className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-white border border-slate-200/80 shadow-xs hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-2 text-left"
           >
-            <span className="text-lg">🕸️</span>
+            <span className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+              <Network className="w-4 h-4" />
+            </span>
             <div className="min-w-0">
-              <div className="text-2xs sm:text-xs font-bold text-slate-800">考点知识图谱</div>
+              <div className="text-2xs sm:text-xs font-bold text-slate-800">知识图谱</div>
               <div className="text-2xs text-slate-400 truncate">全库双链网络拓扑</div>
             </div>
           </Link>
 
-          {/* 核心讲义 */}
+          {/* 研学中心 */}
           <Link
             to="/study"
             className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-white border border-slate-200/80 shadow-xs hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-2 text-left"
           >
-            <span className="text-lg">📚</span>
+            <span className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+              <GraduationCap className="w-4 h-4" />
+            </span>
             <div className="min-w-0">
-              <div className="text-2xs sm:text-xs font-bold text-slate-800">考研核心讲义</div>
-              <div className="text-2xs text-slate-400 truncate">大纲知识与课件</div>
+              <div className="text-2xs sm:text-xs font-bold text-slate-800">研学中心</div>
+              <div className="text-2xs text-slate-400 truncate">大纲讲义与课件</div>
             </div>
           </Link>
 
-          {/* 随手速记 */}
+          {/* 随手记 */}
           <button
             type="button"
             onClick={onOpenQuickNote}
             className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-white border border-slate-200/80 shadow-xs hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-2 cursor-pointer text-left"
           >
-            <span className="text-lg">✍️</span>
+            <span className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+              <FileEdit className="w-4 h-4" />
+            </span>
             <div className="min-w-0">
-              <div className="text-2xs sm:text-xs font-bold text-slate-800">随手速记</div>
+              <div className="text-2xs sm:text-xs font-bold text-slate-800">随手记</div>
               <div className="text-2xs text-slate-400 truncate">双链考点备忘</div>
             </div>
           </button>
@@ -415,21 +425,25 @@ export default function MobileDashboardView({
             to="/pomodoro"
             className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-white border border-slate-200/80 shadow-xs hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-2 text-left"
           >
-            <span className="text-lg">🍅</span>
+            <span className="w-7 h-7 rounded-lg bg-red-50 text-red-500 flex items-center justify-center shrink-0">
+              <Timer className="w-4 h-4" />
+            </span>
             <div className="min-w-0">
               <div className="text-2xs sm:text-xs font-bold text-slate-800">番茄专注</div>
               <div className="text-2xs text-slate-400 truncate">深度沉浸学习</div>
             </div>
           </Link>
 
-          {/* 白噪音伴学 */}
+          {/* 白噪音 */}
           <Link
             to="/music"
             className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-white border border-slate-200/80 shadow-xs hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-2 text-left"
           >
-            <span className="text-lg">🎵</span>
+            <span className="w-7 h-7 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center shrink-0">
+              <Music className="w-4 h-4" />
+            </span>
             <div className="min-w-0">
-              <div className="text-2xs sm:text-xs font-bold text-slate-800">白噪音伴学</div>
+              <div className="text-2xs sm:text-xs font-bold text-slate-800">白噪音</div>
               <div className="text-2xs text-slate-400 truncate">自习室与雨声</div>
             </div>
           </Link>

@@ -1362,21 +1362,20 @@ input[type="range"].history-range-slider:focus-visible {
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3) !important;
 }
 
-/* 考点掌握度热力图关键帧呼吸动效 */
+/* 考点掌握度热力图原位红光闪烁动效（无位移/无缩放，避免 SVG 原点偏移飘动） */
 @keyframes masteryCriticalPulse {
   0%, 100% {
-    transform: scale(1);
-    opacity: 0.35;
+    opacity: 0.12;
   }
   50% {
-    transform: scale(1.4);
-    opacity: 0.75;
+    opacity: 0.88;
   }
 }
 
 .critical-pulse {
-  animation: masteryCriticalPulse 2.4s ease-in-out infinite;
-  transform-origin: center;
+  animation: masteryCriticalPulse 1.6s ease-in-out infinite;
+  transform: none;
+  filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.85));
 }
 
 /* ==========================================================================

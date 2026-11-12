@@ -28,6 +28,8 @@ import {
   RotateCcw,
   Clock,
   History,
+  LayoutGrid,
+  PenLine,
 } from 'lucide-react'
 import WarmButton from '../components/ui/WarmButton'
 import MarkdownRenderer from '../components/MarkdownRenderer'
@@ -1474,7 +1476,7 @@ export default function Quiz() {
           </div>
         )}
 
-        {/* 三模式顶栏切换：历年真题整卷库 / 题型归纳专项突破 / 学科自由组卷 */}
+        {/* 四模式顶栏切换：真题整卷 / 题型专项 / 自由组卷 / 错题本 */}
         <div className="flex flex-wrap items-center justify-between gap-2.5 bg-white p-2 sm:p-3 rounded-2xl border border-slate-200/85 shadow-xs min-w-0 max-w-full">
           <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar max-w-full py-0.5">
             <button
@@ -1487,7 +1489,7 @@ export default function Quiz() {
               }`}
             >
               <BookOpen className="w-4 h-4 text-amber-400 shrink-0" />
-              <span>📑 真题与模拟整卷库</span>
+              <span>真题整卷</span>
               <span className={`text-2xs px-1.5 py-0.5 rounded-full font-mono ${
                 hubTab === 'papers' ? 'bg-amber-400/20 text-amber-300' : 'bg-slate-100 text-slate-500'
               }`}>
@@ -1505,7 +1507,7 @@ export default function Quiz() {
               }`}
             >
               <Layers className="w-4 h-4 text-indigo-400 shrink-0" />
-              <span>🗂️ 题型归纳专项</span>
+              <span>题型专项</span>
               <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
                 hubTab === 'categories' ? 'bg-indigo-400/25 text-indigo-200' : 'bg-indigo-50 text-indigo-600'
               }`}>
@@ -1523,7 +1525,7 @@ export default function Quiz() {
               }`}
             >
               <Sparkles className="w-4 h-4 text-accent-orange shrink-0" />
-              <span>🎯 学科自由组卷</span>
+              <span>自由组卷</span>
               <span className={`text-2xs px-1.5 py-0.5 rounded-full font-mono ${
                 hubTab === 'topics' ? 'bg-orange-500/20 text-orange-300' : 'bg-slate-100 text-slate-500'
               }`}>
@@ -1541,12 +1543,12 @@ export default function Quiz() {
               }`}
             >
               <Flame className="w-4 h-4 text-rose-400 shrink-0" />
-              <span>📕 错题攻克中心</span>
+              <span>错题本</span>
               {errorStats && errorStats.active > 0 && (
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
-                  hubTab === 'errors' ? 'bg-white text-rose-700' : 'bg-rose-100 text-rose-700 animate-pulse'
+                  hubTab === 'errors' ? 'bg-white text-rose-700' : 'bg-rose-100 text-rose-700'
                 }`}>
-                  🔥 {errorStats.active}
+                  {errorStats.active}
                 </span>
               )}
             </button>
@@ -2139,7 +2141,7 @@ export default function Quiz() {
         <div className="md:hidden fixed bottom-[calc(3.85rem+env(safe-area-inset-bottom,0px))] left-2.5 right-2.5 z-30 rounded-xl bg-slate-900/95 text-white px-3 py-2 shadow-xl backdrop-blur-xl flex items-center justify-between gap-2.5 border border-white/10">
           <div className="min-w-0">
             <div className="text-[11.5px] font-bold truncate">
-              {mode === 'practice' ? '📖 练习模式' : '📋 考试模式'} · 抽 {effectiveCount} 题
+              {mode === 'practice' ? '练习模式' : '考试模式'} · 抽 {effectiveCount} 题
             </div>
             <div className="text-2xs text-slate-400 truncate">
               已选 {selectedSubjects.size} 门科目（题池共 {availableCount} 题）
@@ -2372,9 +2374,10 @@ export default function Quiz() {
             </span>
             <button
               onClick={() => setMobileDrawerOpen(true)}
-              className="text-2xs font-bold px-2 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer active:scale-95 transition-colors"
+              className="inline-flex items-center gap-1 text-2xs font-bold px-2 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer active:scale-95 transition-colors"
             >
-              🧮 卡
+              <LayoutGrid size={12} />
+              <span>答题卡</span>
             </button>
             <button
               type="button"
@@ -2479,7 +2482,8 @@ export default function Quiz() {
               onClick={() => setMobileDrawerOpen(true)}
               className="lg:hidden ml-1 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold shadow-xs active:scale-95 cursor-pointer"
             >
-              <span>🧮 答题卡</span>
+              <LayoutGrid size={13} />
+              <span>答题卡</span>
             </button>
           </div>
         </div>
@@ -2555,7 +2559,7 @@ export default function Quiz() {
                     className="p-1.5 px-2.5 rounded-xl text-indigo-700 bg-indigo-50/90 border border-indigo-200/90 hover:bg-indigo-100 hover:border-indigo-300 transition-all text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95 whitespace-nowrap"
                   >
                     <Sparkles size={13} className="text-indigo-600 shrink-0" />
-                    <span>✨ 追问 AI</span>
+                    <span>追问 AI</span>
                     <kbd className="hidden sm:inline-block text-2xs font-mono text-indigo-500 bg-white/90 border border-indigo-200 rounded px-1 py-0.2">⌘J</kbd>
                   </button>
 
@@ -2848,7 +2852,7 @@ export default function Quiz() {
                     title="唤起双核 AI 伴学舱追问（快捷键 ⌘J / Ctrl+J）"
                   >
                     <Sparkles size={13} className="text-indigo-600 shrink-0" />
-                    <span>✨ 追问 AI</span>
+                    <span>追问 AI</span>
                     <kbd className="hidden sm:inline-block text-2xs font-mono px-1 py-0.2 rounded border border-indigo-200 bg-white/80 text-indigo-500">
                       ⌘J
                     </kbd>
@@ -3000,27 +3004,30 @@ export default function Quiz() {
             <div className="flex rounded-xl bg-slate-100 p-1">
               <button
                 onClick={() => setActiveSideTab('palette')}
-                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                   activeSideTab === 'palette' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
-                🧮 答题卡大纲
+                <LayoutGrid size={12} />
+                <span>答题卡</span>
               </button>
               <button
                 onClick={() => setActiveSideTab('scratchpad')}
-                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                   activeSideTab === 'scratchpad' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
-                ✍️ 手写演算白板
+                <PenLine size={12} />
+                <span>草稿纸</span>
               </button>
               <button
                 onClick={() => setActiveSideTab('hints')}
-                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                   activeSideTab === 'hints' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
-                💡 定理速查
+                <Lightbulb size={12} />
+                <span>定理速查</span>
               </button>
             </div>
 
@@ -3186,16 +3193,18 @@ export default function Quiz() {
             <button
               type="button"
               onClick={() => { setActiveSideTab('palette'); setMobileDrawerOpen(true) }}
-              className="px-1.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-[11px] font-bold active:scale-95 transition-all cursor-pointer whitespace-nowrap shrink-0"
+              className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-[11px] font-bold active:scale-95 transition-all cursor-pointer whitespace-nowrap shrink-0"
             >
-              🧮 {answeredCount}/{questions.length}
+              <LayoutGrid size={12} />
+              <span>{answeredCount}/{questions.length}</span>
             </button>
             <button
               type="button"
               onClick={() => { setActiveSideTab('scratchpad'); setMobileDrawerOpen(true) }}
-              className="px-1.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-[11px] font-bold active:scale-95 transition-all cursor-pointer whitespace-nowrap shrink-0"
+              className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-[11px] font-bold active:scale-95 transition-all cursor-pointer whitespace-nowrap shrink-0"
             >
-              📝 草稿
+              <PenLine size={12} />
+              <span>草稿</span>
             </button>
             <button
               type="button"
@@ -3246,27 +3255,30 @@ export default function Quiz() {
               <div className="flex rounded-xl bg-slate-100 p-1">
                 <button
                   onClick={() => setActiveSideTab('palette')}
-                  className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                     activeSideTab === 'palette' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
-                  🧮 答题卡
+                  <LayoutGrid size={12} />
+                  <span>答题卡</span>
                 </button>
                 <button
                   onClick={() => setActiveSideTab('scratchpad')}
-                  className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                     activeSideTab === 'scratchpad' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
-                  📝 草稿纸
+                  <PenLine size={12} />
+                  <span>草稿纸</span>
                 </button>
                 <button
                   onClick={() => setActiveSideTab('hints')}
-                  className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
                     activeSideTab === 'hints' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
-                  💡 定理提示
+                  <Lightbulb size={12} />
+                  <span>定理提示</span>
                 </button>
               </div>
 
@@ -3703,7 +3715,7 @@ export default function Quiz() {
                           className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl subframe-btn-secondary text-rose-600 hover:text-rose-700 px-3.5 py-2 font-medium"
                         >
                           <Save size={13} />
-                          <span>{isSaved ? '✅ 已存入错题本' : '💾 存入 Obsidian 错题本'}</span>
+                          <span>{isSaved ? '已存入错题本' : '存入错题本'}</span>
                         </button>
 
                         <button
@@ -3713,7 +3725,7 @@ export default function Quiz() {
                           title="唤起双核 AI 伴学抽屉深度答疑此错题（快捷键 ⌘J / Ctrl+J）"
                         >
                           <Sparkles size={13} className="text-indigo-600" />
-                          <span>✨ 追问 AI (⌘J)</span>
+                          <span>追问 AI (⌘J)</span>
                         </button>
 
                         <button
@@ -3722,7 +3734,7 @@ export default function Quiz() {
                           className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl subframe-btn-secondary px-3.5 py-2 text-xs font-semibold text-indigo-700 bg-indigo-50/60 border border-indigo-200/80 hover:bg-indigo-100/70 transition-all cursor-pointer shadow-xs active:scale-95"
                         >
                           <Sparkles size={13} className={`text-indigo-600 ${generatingVariants && variantSourceQ?.id === q.id ? 'animate-spin' : ''}`} />
-                          <span>{generatingVariants && variantSourceQ?.id === q.id ? 'AI 命题构思中...' : '🔄 AI 变式题强化'}</span>
+                          <span>{generatingVariants && variantSourceQ?.id === q.id ? 'AI 命题中...' : 'AI 变式强化'}</span>
                         </button>
                       </div>
                     </div>
@@ -3855,7 +3867,8 @@ export default function Quiz() {
             }}
             className="bg-rose-600 hover:bg-rose-700 text-white px-6 flex items-center gap-1.5"
           >
-            <span>📕 前往错题攻克中心</span>
+            <Flame size={15} />
+            <span>前往错题本</span>
           </WarmButton>
           <WarmButton variant="secondary" onClick={() => window.location.href = '/dashboard'}>
             返回首页工作台

@@ -9,7 +9,6 @@ import {
   Smartphone,
   Globe,
   Sparkles,
-  ShieldCheck,
   CheckCircle2,
   ArrowRight,
   BookOpen,
@@ -384,7 +383,7 @@ export default function LandingPage() {
             href="#download"
             className="px-3.5 py-1 rounded-lg text-[13px] font-medium text-[#6e7178] hover:text-[#171719] hover:bg-white/50 transition-colors"
           >
-            多端下载
+            电脑端与扫码
           </a>
           <a
             href="#preview"
@@ -436,13 +435,13 @@ export default function LandingPage() {
       </header>
 
       {/*  */}
-      <section className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 sm:px-6 pt-5 sm:pt-14 pb-8 sm:pb-16 text-center my-auto">
+      <section className="relative z-10 w-full min-w-0 flex-1 flex flex-col items-center justify-center px-3 sm:px-6 pt-5 sm:pt-14 pb-8 sm:pb-16 text-center my-auto">
         {/* Subframe 标志性 3D 镀铬金属硬件药丸切换器 (3D Metallic Chrome Switcher, 移动端紧凑自适应) */}
-        <div className="relative mb-4 sm:mb-12 select-none">
-          <div className="metallic-ambient-glow" />
+        <div className="relative w-full max-w-full flex justify-center mb-4 sm:mb-12 select-none">
+          <div className="metallic-ambient-glow max-w-full" />
 
-          <div className="metallic-housing relative z-10">
-            <div className="metallic-bezel flex items-center gap-0.5 sm:gap-2 p-0.5 sm:p-1">
+          <div className="metallic-housing relative z-10 max-w-full">
+            <div className="metallic-bezel flex items-center gap-0.5 sm:gap-2 p-0.5 sm:p-1 max-w-full overflow-x-auto no-scrollbar">
               {/* Tab 1: 408 计算机综合 */}
               <button
                 type="button"
@@ -450,11 +449,11 @@ export default function LandingPage() {
                   setActiveMode('408')
                   showToast('已切换至 408 计算机学科综合研学模式')
                 }}
-                className={`mode-switch-btn relative flex items-center justify-center gap-1 sm:gap-2 px-1.5 sm:px-6 py-1.5 sm:py-3 rounded-lg sm:rounded-xl text-2xs sm:text-sm font-medium transition-all duration-200 cursor-pointer ${
+                className={`mode-switch-btn relative flex items-center justify-center gap-0.5 sm:gap-2 px-1.5 sm:px-6 py-1.5 sm:py-3 rounded-lg sm:rounded-xl text-[10px] sm:text-sm font-medium whitespace-nowrap shrink-0 transition-all duration-200 cursor-pointer ${
                   activeMode === '408' ? 'metal-tab-active' : 'metal-tab-inactive'
                 }`}
               >
-                <Cpu className="w-3.5 h-3.5 sm:w-4 sm:h-4 drop-shadow-[0_0_6px_rgba(255,255,255,0.7)]" />
+                <Cpu className="w-3 h-3 sm:w-4 sm:h-4 shrink-0 drop-shadow-[0_0_6px_rgba(255,255,255,0.7)]" />
                 <span>408 计算机</span>
               </button>
 
@@ -465,11 +464,11 @@ export default function LandingPage() {
                   setActiveMode('math')
                   showToast('已切换至 全国考研数学 智能推导模式')
                 }}
-                className={`mode-switch-btn relative flex items-center justify-center gap-1 sm:gap-2 px-1.5 sm:px-6 py-1.5 sm:py-3 rounded-lg sm:rounded-xl text-2xs sm:text-sm font-medium transition-all duration-200 cursor-pointer ${
+                className={`mode-switch-btn relative flex items-center justify-center gap-0.5 sm:gap-2 px-1.5 sm:px-6 py-1.5 sm:py-3 rounded-lg sm:rounded-xl text-[10px] sm:text-sm font-medium whitespace-nowrap shrink-0 transition-all duration-200 cursor-pointer ${
                   activeMode === 'math' ? 'metal-tab-active' : 'metal-tab-inactive'
                 }`}
               >
-                <GraduationCap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <GraduationCap className="w-3 h-3 sm:w-4 sm:h-4 shrink-0" />
                 <span>考研数学</span>
               </button>
 
@@ -480,11 +479,11 @@ export default function LandingPage() {
                   setActiveMode('politics')
                   showToast('已切换至 考研政治 全屏史纲时空轴模式')
                 }}
-                className={`mode-switch-btn relative flex items-center justify-center gap-1 sm:gap-1.5 px-1.5 sm:px-5 py-1.5 sm:py-3 rounded-lg sm:rounded-xl text-2xs sm:text-sm font-medium transition-all duration-200 cursor-pointer ${
+                className={`mode-switch-btn relative flex items-center justify-center gap-0.5 sm:gap-1.5 px-1.5 sm:px-5 py-1.5 sm:py-3 rounded-lg sm:rounded-xl text-[10px] sm:text-sm font-medium whitespace-nowrap shrink-0 transition-all duration-200 cursor-pointer ${
                   activeMode === 'politics' ? 'metal-tab-active' : 'metal-tab-inactive'
                 }`}
               >
-                <Landmark className="w-3.5 h-3.5 sm:w-4 sm:h-4 drop-shadow-[0_0_6px_rgba(255,255,255,0.7)]" />
+                <Landmark className="w-3 h-3 sm:w-4 sm:h-4 shrink-0 drop-shadow-[0_0_6px_rgba(255,255,255,0.7)]" />
                 <span>考研政治</span>
               </button>
 
@@ -495,11 +494,11 @@ export default function LandingPage() {
                   setActiveMode('english')
                   showToast('已切换至 考研英语 作文模板与智能批改模式')
                 }}
-                className={`mode-switch-btn relative flex items-center justify-center gap-1 sm:gap-1.5 px-1.5 sm:px-5 py-1.5 sm:py-3 rounded-lg sm:rounded-xl text-2xs sm:text-sm font-medium transition-all duration-200 cursor-pointer ${
+                className={`mode-switch-btn relative flex items-center justify-center gap-0.5 sm:gap-1.5 px-1.5 sm:px-5 py-1.5 sm:py-3 rounded-lg sm:rounded-xl text-[10px] sm:text-sm font-medium whitespace-nowrap shrink-0 transition-all duration-200 cursor-pointer ${
                   activeMode === 'english' ? 'metal-tab-active' : 'metal-tab-inactive'
                 }`}
               >
-                <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 drop-shadow-[0_0_6px_rgba(255,255,255,0.7)]" />
+                <BookOpen className="w-3 h-3 sm:w-4 sm:h-4 shrink-0 drop-shadow-[0_0_6px_rgba(255,255,255,0.7)]" />
                 <span>考研英语</span>
               </button>
 
@@ -510,11 +509,11 @@ export default function LandingPage() {
                   setActiveMode('ai')
                   showToast('已切换至 分科专属 AI 导师陪学模式')
                 }}
-                className={`mode-switch-btn relative flex items-center justify-center gap-1 sm:gap-2 px-1.5 sm:px-6 py-1.5 sm:py-3 rounded-lg sm:rounded-xl text-2xs sm:text-sm font-medium transition-all duration-200 cursor-pointer ${
+                className={`mode-switch-btn relative flex items-center justify-center gap-0.5 sm:gap-2 px-1.5 sm:px-6 py-1.5 sm:py-3 rounded-lg sm:rounded-xl text-[10px] sm:text-sm font-medium whitespace-nowrap shrink-0 transition-all duration-200 cursor-pointer ${
                   activeMode === 'ai' ? 'metal-tab-active' : 'metal-tab-inactive'
                 }`}
               >
-                <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 shrink-0" />
                 <span>AI 导师</span>
               </button>
             </div>
@@ -532,45 +531,45 @@ export default function LandingPage() {
         </p>
 
         {/* Subframe 动态模式状态胶囊 (mode-live-pill) */}
-        <div className="mb-4 sm:mb-9 inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full bg-black/[0.04] border border-black/[0.06] text-2xs sm:text-xs text-[#52525b] max-w-2xl backdrop-blur-xs">
+        <div className="mb-4 sm:mb-9 inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full bg-black/[0.04] border border-black/[0.06] text-2xs sm:text-xs text-[#52525b] max-w-full sm:max-w-2xl backdrop-blur-xs overflow-hidden">
           <span className="w-1.5 h-1.5 rounded-full bg-slate-800 shrink-0" />
-          <span className="truncate">{modeConfigs[activeMode].badge}</span>
+          <span className="min-w-0 truncate">{modeConfigs[activeMode].badge}</span>
         </div>
 
         {/* 核心三大优势：笔记 · AI · 知识库（首屏直达核心卖点） */}
         <div className="w-full max-w-3xl mx-auto mb-5 sm:mb-8 grid grid-cols-3 gap-2 sm:gap-4 px-1">
-          <div className="p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white/80 backdrop-blur-sm border border-zinc-200/80 shadow-xs text-left">
-            <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          <div className="min-w-0 p-2 sm:p-4 rounded-xl sm:rounded-2xl bg-white/80 backdrop-blur-sm border border-zinc-200/80 shadow-xs text-left overflow-hidden">
+            <div className="flex items-center gap-1 sm:gap-2 mb-1 min-w-0">
+              <div className="w-5 h-5 sm:w-8 sm:h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                <BookOpen className="w-3 h-3 sm:w-4 sm:h-4" />
               </div>
-              <span className="text-[12px] sm:text-[15px] font-bold text-zinc-900">沉浸笔记</span>
+              <span className="text-[11px] sm:text-[15px] font-bold text-zinc-900 truncate">沉浸笔记</span>
             </div>
-            <p className="text-[10px] sm:text-[12px] text-zinc-500 leading-snug">
+            <p className="text-[10px] sm:text-[12px] text-zinc-500 leading-snug break-words">
               手写批注、公式推导与真题双链自动沉淀，复习直接回顾。
             </p>
           </div>
 
-          <div className="p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white/80 backdrop-blur-sm border border-zinc-200/80 shadow-xs text-left">
-            <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-                <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          <div className="min-w-0 p-2 sm:p-4 rounded-xl sm:rounded-2xl bg-white/80 backdrop-blur-sm border border-zinc-200/80 shadow-xs text-left overflow-hidden">
+            <div className="flex items-center gap-1 sm:gap-2 mb-1 min-w-0">
+              <div className="w-5 h-5 sm:w-8 sm:h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
               </div>
-              <span className="text-[12px] sm:text-[15px] font-bold text-zinc-900">AI 导师</span>
+              <span className="text-[11px] sm:text-[15px] font-bold text-zinc-900 truncate">AI 导师</span>
             </div>
-            <p className="text-[10px] sm:text-[12px] text-zinc-500 leading-snug">
+            <p className="text-[10px] sm:text-[12px] text-zinc-500 leading-snug break-words">
               408/数/英/政/规划专属导师随时答疑，逐题纠错不跳步。
             </p>
           </div>
 
-          <div className="p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-white/80 backdrop-blur-sm border border-zinc-200/80 shadow-xs text-left">
-            <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                <Network className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          <div className="min-w-0 p-2 sm:p-4 rounded-xl sm:rounded-2xl bg-white/80 backdrop-blur-sm border border-zinc-200/80 shadow-xs text-left overflow-hidden">
+            <div className="flex items-center gap-1 sm:gap-2 mb-1 min-w-0">
+              <div className="w-5 h-5 sm:w-8 sm:h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <Network className="w-3 h-3 sm:w-4 sm:h-4" />
               </div>
-              <span className="text-[12px] sm:text-[15px] font-bold text-zinc-900">考研知识库</span>
+              <span className="text-[11px] sm:text-[15px] font-bold text-zinc-900 truncate">考研知识库</span>
             </div>
-            <p className="text-[10px] sm:text-[12px] text-zinc-500 leading-snug">
+            <p className="text-[10px] sm:text-[12px] text-zinc-500 leading-snug break-words">
               全科考纲知识点图谱与仿真课件串联，系统化不遗漏。
             </p>
           </div>
@@ -608,7 +607,7 @@ export default function LandingPage() {
               className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-800 transition-colors"
             >
               <Download className="w-3 h-3" />
-              <span>客户端与移动端下载 ↓</span>
+              <span>电脑客户端下载 ↓</span>
             </a>
           </div>
         </div>
@@ -655,15 +654,15 @@ export default function LandingPage() {
       </section>
 
       {/*  */}
-      <section id="preview" className="max-w-[1280px] mx-auto px-4 sm:px-8 pb-20">
+      <section id="preview" className="w-full min-w-0 max-w-[1280px] mx-auto px-3 sm:px-8 pb-20">
         {/* 📱 手机端专属沉浸全屏试玩推荐横幅 (紧凑精致) */}
-        <div className="sm:hidden mb-2.5 p-2.5 rounded-xl bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 text-white border border-indigo-400/40 flex items-center justify-between gap-2 shadow-xs">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-base">🎮</span>
-            <div className="min-w-0">
-              <div className="text-2xs font-bold text-white flex items-center gap-1 truncate">
-                <span>手机端沉浸全屏试玩</span>
-                <span className="text-[8.5px] px-1 py-0.2 rounded-full bg-amber-400 text-amber-950 font-extrabold">推荐</span>
+        <div className="sm:hidden w-full min-w-0 mb-2.5 p-2.5 rounded-xl bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 text-white border border-indigo-400/40 flex items-center justify-between gap-2 shadow-xs">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <span className="text-base shrink-0">🎮</span>
+            <div className="min-w-0 flex-1">
+              <div className="text-2xs font-bold text-white flex items-center gap-1 min-w-0">
+                <span className="truncate">手机端沉浸全屏试玩</span>
+                <span className="text-[8.5px] px-1 py-0.2 rounded-full bg-amber-400 text-amber-950 font-extrabold shrink-0">推荐</span>
               </div>
               <div className="text-2xs text-indigo-200/90 truncate">画布宽广 · 无黑边截断 · 顺畅滑动</div>
             </div>
@@ -681,10 +680,10 @@ export default function LandingPage() {
 
         {/* 试玩模式与视窗切换药丸控制栏 */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 text-2xs font-bold text-emerald-700 shadow-xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>免登录沉浸试玩体验已就绪</span>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 text-2xs font-bold text-emerald-700 shadow-xs max-w-full">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              <span className="truncate">免登录沉浸试玩体验已就绪</span>
             </span>
             <span className="text-xs text-slate-500 hidden md:inline">· 无需注册，直接动手体验 408 动画课件与时空时局图</span>
           </div>
@@ -692,16 +691,16 @@ export default function LandingPage() {
         </div>
 
         {/* 视窗外壳 */}
-        <div className="rounded-2xl bg-[#e3e3e6] p-2.5 sm:p-3 shadow-[0_24px_64px_rgba(0,0,0,0.12)] border border-white/60">
-          <div className="w-full bg-white rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.06)] border border-black/[0.08] overflow-hidden text-left select-none">
+        <div className="w-full min-w-0 rounded-2xl bg-[#e3e3e6] p-2 sm:p-3 shadow-[0_24px_64px_rgba(0,0,0,0.12)] border border-white/60">
+          <div className="w-full min-w-0 bg-white rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.06)] border border-black/[0.08] overflow-hidden text-left select-none">
             {/* 工作台顶部仿 Chrome 导航条 */}
-            <div className="h-9 px-3 sm:px-4 bg-[#fafafa] border-b border-slate-200/80 flex items-center justify-between text-2xs text-slate-500 overflow-hidden">
-              <div className="flex items-center gap-2 sm:gap-3.5 truncate">
+            <div className="h-9 px-3 sm:px-4 bg-[#fafafa] border-b border-slate-200/80 flex items-center justify-between gap-2 text-2xs text-slate-500 overflow-hidden">
+              <div className="flex items-center gap-2 sm:gap-3.5 min-w-0 flex-1">
                 <span className="font-semibold text-slate-900 truncate">CoreForge 考研研核 · 沉浸实景视窗</span>
-                <span className="text-slate-400 hidden sm:inline">·</span>
-                <span className="hidden sm:inline">🎮 动态仿真试玩实验室</span>
+                <span className="text-slate-400 hidden sm:inline shrink-0">·</span>
+                <span className="hidden sm:inline shrink-0">🎮 动态仿真试玩实验室</span>
               </div>
-              <div className="flex items-center gap-1.5 font-medium text-slate-800 shrink-0">
+              <div className="hidden md:flex items-center gap-1.5 font-medium text-slate-800 shrink-0">
                 <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span className="text-2xs sm:text-2xs">{modeConfigs[activeMode].heroSubject}</span>
               </div>
@@ -709,7 +708,7 @@ export default function LandingPage() {
                 <button
                   type="button"
                   onClick={() => setFullScreenSandbox(true)}
-                  className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 font-bold text-2xs transition-all active:scale-95 flex items-center gap-1 cursor-pointer"
+                  className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 font-bold text-2xs transition-all active:scale-95 flex items-center gap-1 cursor-pointer shrink-0"
                   title="全屏沉浸试玩（无黑边截断，大屏操作更舒适）"
                 >
                   <Maximize2 className="w-3 h-3 text-indigo-600" />
@@ -731,16 +730,16 @@ export default function LandingPage() {
             </div>
 
             {/* ── 免登录动手试玩专区 ── */}
-            <div className="min-h-[500px] bg-slate-950 text-white relative">
+            <div className="w-full min-w-0 min-h-[500px] bg-slate-950 text-white relative overflow-hidden">
                 {activeMode === '408' ? (
                   /* 408 模块：直接嵌入 AVL 平衡二叉树仿真课件 */
-                  <div className="flex flex-col h-[520px]">
-                    <div className="p-3 bg-slate-900/90 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 font-bold font-mono">
+                  <div className="flex flex-col h-[520px] w-full min-w-0">
+                    <div className="p-3 bg-slate-900/90 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs min-w-0">
+                      <div className="flex items-center gap-2 min-w-0 max-w-full">
+                        <span className="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 font-bold font-mono shrink-0">
                           408 数据结构真题实验室
                         </span>
-                        <span className="text-slate-300 font-semibold truncate">
+                        <span className="text-slate-300 font-semibold truncate min-w-0">
                           🌳 AVL 平衡二叉树四种自平衡旋转 (LL/RR/LR/RL)
                         </span>
                       </div>
@@ -751,7 +750,7 @@ export default function LandingPage() {
                     <iframe
                       srcDoc={avlTreeCourseware.embedHtml}
                       title="AVL 树动态仿真课件"
-                      className="w-full flex-1 border-0 bg-transparent"
+                      className="w-full flex-1 border-0 bg-transparent min-w-0"
                       sandbox="allow-scripts allow-same-origin"
                     />
                   </div>
@@ -763,23 +762,23 @@ export default function LandingPage() {
                   <AgentTrialDemo onEnter={() => (isAuthenticated ? navigate('/chat') : setAuthModalOpen(true))} />
                 ) : (
                   /* 英语模块试玩 */
-                  <div className="flex flex-col h-[520px] bg-slate-900 p-6 text-white justify-between">
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between pb-3 border-b border-indigo-500/20">
-                        <span className="font-bold text-indigo-300 text-sm">考研英语 · 20 分制 AI 智能批改示范</span>
-                        <span className="text-xs text-indigo-400 bg-indigo-500/20 px-2 py-0.5 rounded-lg">~1.2s 极速精批</span>
+                  <div className="flex flex-col h-[520px] w-full min-w-0 overflow-y-auto bg-slate-900 p-4 sm:p-6 text-white justify-between gap-4">
+                    <div className="space-y-4 min-w-0">
+                      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-indigo-500/20">
+                        <span className="font-bold text-indigo-300 text-xs sm:text-sm">考研英语 · 20 分制 AI 智能批改示范</span>
+                        <span className="text-2xs sm:text-xs text-indigo-400 bg-indigo-500/20 px-2 py-0.5 rounded-lg shrink-0">~1.2s 极速精批</span>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                        <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 text-xs min-w-0">
+                        <div className="min-w-0 p-3.5 sm:p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
                           <span className="text-slate-400 font-bold">考生原始作答草稿：</span>
-                          <p className="font-mono text-slate-300 leading-relaxed text-2xs">
+                          <p className="font-mono text-slate-300 leading-relaxed text-2xs break-words">
                             "As is vividly depicted in the cartoon, two individuals are standing at a crossroads. Many people lose their minds in smartphones. I think it is very good if government can help us make better rules."
                           </p>
                         </div>
-                        <div className="p-4 rounded-2xl bg-indigo-950/60 border border-indigo-500/30 space-y-2">
+                        <div className="min-w-0 p-3.5 sm:p-4 rounded-2xl bg-indigo-950/60 border border-indigo-500/30 space-y-2">
                           <span className="text-amber-300 font-bold">AI 20 分制深度诊断与词汇升级：</span>
-                          <p className="font-mono text-indigo-200 leading-relaxed text-2xs">
+                          <p className="font-mono text-indigo-200 leading-relaxed text-2xs break-words">
                             得分：18.5 / 20.0 (一档良好)<br />
                             平庸词升级：<br />
                             • very good → of paramount importance<br />
@@ -790,7 +789,7 @@ export default function LandingPage() {
                       </div>
                     </div>
 
-                    <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                    <div className="pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400 shrink-0">
                       <span>支持拍照 OCR 录入、历年图画/图表真题模板对比</span>
                       <button
                         type="button"
@@ -798,7 +797,7 @@ export default function LandingPage() {
                           if (isAuthenticated) navigate('/english')
                           else setAuthModalOpen(true)
                         }}
-                        className="text-indigo-400 hover:text-indigo-300 font-bold underline cursor-pointer"
+                        className="text-indigo-400 hover:text-indigo-300 font-bold underline cursor-pointer shrink-0"
                       >
                         进入英语作文研学舱 →
                       </button>
@@ -811,132 +810,94 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/*  */}
-            {/* ── 知识库本地所有权与 Obsidian 双向同步安全背书 ── */}
-      <section className="py-14 border-t border-slate-200/80 bg-white">
-        <div className="max-w-[1280px] mx-auto px-4 sm:px-8">
-          <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-50 p-6 sm:p-10 shadow-sm">
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-              <div className="space-y-2 max-w-2xl">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 text-2xs font-bold text-emerald-800">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>100% 本地优先与数据自主权承诺</span>
-                </div>
-                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-                  拒绝格式锁定，你的备考笔记永远属于你自己
-                </h2>
-                <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
-                  通过现代化 Web File System Access API 授权，网页端可直接挂载并双向同步您本地磁盘的 Obsidian 知识库目录；更支持一键将全部考研讲义、真题笔记与手写草稿打包导出为通用 .zip 知识库，终身离线可用。
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 shrink-0 w-full md:w-auto">
-                <div className="p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
-                  <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                    <span>📂 本地目录原生直连</span>
-                  </div>
-                  <div className="text-2xs text-slate-600 mt-1">无缝联动 Obsidian 桌面端</div>
-                </div>
-                <div className="p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
-                  <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                    <span>📦 一键导出 .zip 全量包</span>
-                  </div>
-                  <div className="text-2xs text-slate-600 mt-1">随时离线迁移，数据零丢失</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="download" className="py-20 border-t border-slate-200/80 bg-[#f4f4f6]/80 relative">
-        <div className="max-w-[1280px] mx-auto px-4 sm:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-14">
-            <h2 className="text-2xl sm:text-4xl font-bold text-[#18181b] tracking-[-0.03em]">
+      <section id="download" className="w-full min-w-0 py-16 sm:py-20 border-t border-slate-200/80 bg-[#f4f4f6]/80 relative overflow-hidden">
+        <div className="w-full max-w-[1280px] mx-auto px-3 sm:px-8 min-w-0">
+          <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-14 min-w-0">
+            <h2 className="text-xl sm:text-4xl font-bold text-[#18181b] tracking-[-0.03em] break-words">
               全平台多端覆盖 · 随时随地进入心流
             </h2>
-            <p className="mt-2 sm:mt-3 text-xs sm:text-base text-[#71717a]">
-              无论主力电脑深度刷题，还是手机随时背闪卡，同一套知识库全场景自由切换。
+            <p className="mt-2 sm:mt-3 text-xs sm:text-base text-[#71717a] break-words">
+              电脑大屏深度学习，手机随时刷题背卡，学习进度与错题记录实时同步。
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 items-stretch">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 items-stretch min-w-0">
             {/* 1. Windows 桌面旗舰端 */}
-            <div className="rounded-2xl bg-white border-2 border-slate-900/10 p-4 sm:p-7 shadow-[0_2px_14px_rgba(0,0,0,0.05)] flex flex-col justify-between relative">
+            <div className="min-w-0 rounded-2xl bg-white border-2 border-slate-900/10 p-4 sm:p-7 shadow-[0_2px_14px_rgba(0,0,0,0.05)] flex flex-col justify-between relative">
               <div className="absolute -top-3 left-6 px-3 py-0.5 rounded-full bg-[#18181b] text-white text-2xs font-bold tracking-wide shadow-sm">
                 主力备考推荐
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-5">
-                  <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-900">
+              <div className="min-w-0">
+                <div className="flex items-center justify-between gap-2 mb-5 min-w-0">
+                  <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-900 shrink-0">
                     <Laptop className="w-6 h-6" />
                   </div>
-                  <span className="text-xs font-mono text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md">
+                  <span className="text-xs font-mono text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md shrink-0">
                     {downloadInfo?.desktop?.version ? `桌面版 v${downloadInfo.desktop.version}` : '桌面版'}
                   </span>
                 </div>
 
-                <h3 className="text-xl font-bold text-slate-900 mb-2">Windows 桌面客户端</h3>
-                <p className="text-xs text-slate-500 leading-relaxed mb-6">
-                  笔记本与台式机首选。本地优先（Local-First），直接读取本机 Obsidian 知识库，离线断网亦可全量运行，支持本地 Claude Code / Codex CLI 智能体联动。
+                <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-2 break-words">Windows 桌面客户端</h3>
+                <p className="text-xs text-slate-500 leading-relaxed mb-6 break-words">
+                  笔记本与台式机首选。独立桌面端运行更稳定，支持离线查看已下载的讲义与真题笔记，备考更专注。
                 </p>
 
                 <ul className="space-y-2.5 text-xs text-slate-700 mb-8 font-medium">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>本地数据自主掌控，无厂商闭源格式锁定</span>
+                  <li className="flex items-start gap-2 min-w-0">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span className="min-w-0 break-words">独立软件窗口，全屏沉浸复习少分心</span>
                   </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>独立运行壳，全屏沉浸防干扰</span>
+                  <li className="flex items-start gap-2 min-w-0">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span className="min-w-0 break-words">本地笔记一键导出备份，复习资料安心保存</span>
                   </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>内嵌极速后端，安装即用无需复杂配置</span>
+                  <li className="flex items-start gap-2 min-w-0">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span className="min-w-0 break-words">下载安装即可使用，无需复杂设置</span>
                   </li>
                 </ul>
               </div>
 
-              <div>
+              <div className="min-w-0">
                 <button
                   type="button"
                   onClick={handleDownloadDesktop}
                   disabled={downloading}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#1c1c1f] hover:bg-[#2a2a2e] active:scale-[0.98] py-3 px-4 text-sm font-semibold text-white shadow-sm transition-all cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#1c1c1f] hover:bg-[#2a2a2e] active:scale-[0.98] py-3 px-4 text-xs sm:text-sm font-semibold text-white shadow-sm transition-all cursor-pointer text-center"
                 >
-                  <Download className="w-4 h-4" />
-                  <span>
+                  <Download className="w-4 h-4 shrink-0" />
+                  <span className="break-words">
                     {downloading
                       ? '正在启动下载...'
                       : `一键下载 Windows 安装包${downloadInfo?.desktop?.size ? ` (${downloadInfo.desktop.size})` : ''}`}
                   </span>
                 </button>
-                <div className="mt-2 text-center text-2xs text-slate-400">
+                <div className="mt-2 text-center text-2xs text-slate-400 break-words">
                   支持 Windows 10 / 11 (64位) · 点击直接下载
                 </div>
               </div>
             </div>
 
-            {/* 2. 移动端 (Android / PWA 扫码) */}
-            <div className="rounded-2xl bg-white border border-slate-200/80 p-4 sm:p-7 shadow-[0_2px_14px_rgba(0,0,0,0.05)] flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-5">
-                  <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-900">
+            {/* 2. 移动端 (手机扫码) */}
+            <div className="min-w-0 rounded-2xl bg-white border border-slate-200/80 p-4 sm:p-7 shadow-[0_2px_14px_rgba(0,0,0,0.05)] flex flex-col justify-between">
+              <div className="min-w-0">
+                <div className="flex items-center justify-between gap-2 mb-5 min-w-0">
+                  <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-900 shrink-0">
                     <Smartphone className="w-6 h-6" />
                   </div>
-                  <span className="text-xs font-mono text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md">
+                  <span className="text-xs font-mono text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md shrink-0">
                     手机/平板扫码
                   </span>
                 </div>
 
-                <h3 className="text-xl font-bold text-slate-900 mb-2">Android / 移动伴学端</h3>
-                <p className="text-xs text-slate-500 leading-relaxed mb-4">
-                  自习室、床头背卡片神器。单手大拇指做题与翻转闪卡，手机只负责轻量渲染，发热极低、续航持久。
+                <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-2 break-words">手机 / 移动伴学端</h3>
+                <p className="text-xs text-slate-500 leading-relaxed mb-4 break-words">
+                  自习室、睡前背卡片神器。单手即可刷题与翻转记忆卡，省电流畅、随时掏出手机就能学。
                 </p>
 
                 {/* 二维码展示区 */}
-                <div className="my-4 rounded-xl bg-slate-50 p-4 border border-slate-200/90 flex flex-col sm:flex-row items-center gap-4">
+                <div className="my-4 rounded-xl bg-slate-50 p-3.5 sm:p-4 border border-slate-200/90 flex flex-col sm:flex-row items-center gap-3 sm:gap-4 min-w-0 overflow-hidden">
                   <div className="bg-white p-2 rounded-lg shrink-0 border border-slate-200 shadow-xs">
                     {qrCodeDataUrl ? (
                       <img src={qrCodeDataUrl} alt="手机扫码二维码" className="h-24 w-24 object-contain" />
@@ -946,77 +907,85 @@ export default function LandingPage() {
                       </div>
                     )}
                   </div>
-                  <div className="text-left text-xs space-y-1">
-                    <p className="font-semibold text-slate-900">📱 扫码即刻体验：</p>
-                    <p className="text-slate-500 text-2xs">1. 手机微信或自带浏览器扫描二维码</p>
-                    <p className="text-slate-500 text-2xs">
-                      2. 点击菜单 <strong className="text-slate-900">「添加到主屏幕」</strong>
+                  <div className="text-center sm:text-left text-xs space-y-1 min-w-0 w-full sm:w-auto">
+                    <p className="font-semibold text-slate-900 break-words">📱 手机扫码即刻使用：</p>
+                    <p className="text-slate-500 text-2xs break-words">1. 用手机相机或微信扫描二维码</p>
+                    <p className="text-slate-500 text-2xs break-words">
+                      2. 点击浏览器菜单 <strong className="text-slate-900">「添加到主屏幕」</strong>
                     </p>
-                    <p className="text-emerald-600 text-2xs font-semibold">
-                      ✨ 3 秒秒变手机 App，沉浸全屏！
+                    <p className="text-emerald-600 text-2xs font-semibold break-words">
+                      ✨ 桌面直接生成图标，打开就是全屏体验！
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div>
-                <a
-                  href="/api/downloads/android"
-                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-300 hover:border-slate-400 bg-slate-100 hover:bg-slate-200/70 py-3 px-4 text-xs font-semibold text-slate-800 transition-all text-center"
+              <div className="min-w-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isAuthenticated) {
+                      navigate('/dashboard')
+                    } else {
+                      setModalTab('login')
+                      setAuthModalOpen(true)
+                    }
+                  }}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-300 hover:border-slate-400 bg-slate-100 hover:bg-slate-200/70 py-3 px-4 text-xs font-semibold text-slate-800 transition-all text-center cursor-pointer"
                 >
-                  <Download className="w-4 h-4" />
-                  <span>下载 Android 原生 APK 安装包</span>
-                </a>
-                <div className="mt-2 text-center text-2xs text-slate-400">
-                  支持安卓 8.0 及以上机型 / 鸿蒙系统
+                  <Smartphone className="w-4 h-4 shrink-0" />
+                  <span className="break-words">直接进入手机网页版（免安装）</span>
+                </button>
+                <div className="mt-2 text-center text-2xs text-slate-400 break-words">
+                  支持安卓 / 鸿蒙 / iPhone 手机浏览器直接使用
                 </div>
               </div>
             </div>
 
-            {/* 3. Web 云端版 */}
-            <div className="rounded-2xl bg-white border border-slate-200/80 p-4 sm:p-7 shadow-[0_2px_14px_rgba(0,0,0,0.05)] flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-5">
-                  <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-900">
+            {/* 3. Web 在线版 */}
+            <div className="min-w-0 rounded-2xl bg-white border border-slate-200/80 p-4 sm:p-7 shadow-[0_2px_14px_rgba(0,0,0,0.05)] flex flex-col justify-between">
+              <div className="min-w-0">
+                <div className="flex items-center justify-between gap-2 mb-5 min-w-0">
+                  <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-900 shrink-0">
                     <Globe className="w-6 h-6" />
                   </div>
-                  <span className="text-xs font-mono text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md">
-                    免安装秒开
+                  <span className="text-xs font-mono text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md shrink-0">
+                    打开即用
                   </span>
                 </div>
 
-                <h3 className="text-xl font-bold text-slate-900 mb-2">Web 云端工作台</h3>
-                <p className="text-xs text-slate-500 leading-relaxed mb-6">
-                  无需安装任何客户端。在图书馆公用电脑或 iPad 随时随地打开浏览器学习。内置多用户独立沙箱隔离与防误删改保护。
+                <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-2 break-words">网页在线版</h3>
+                <p className="text-xs text-slate-500 leading-relaxed mb-6 break-words">
+                  无需安装任何软件。在图书馆公用电脑、iPad 或手机浏览器中打开就能开始学习，个人账号数据独立保存。
                 </p>
 
                 <ul className="space-y-2.5 text-xs text-slate-700 mb-8 font-medium">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>0 门槛跨端即开，云端多用户鉴权隔离</span>
+                  <li className="flex items-start gap-2 min-w-0">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span className="min-w-0 break-words">零门槛打开即学，不占用设备存储空间</span>
                   </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>做题与错题归因实时记录，多端同步</span>
+                  <li className="flex items-start gap-2 min-w-0">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span className="min-w-0 break-words">做题进度、错题本与复习笔记多端实时同步</span>
                   </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>分级权限管理（超级管理员 / 学生只读研学）</span>
+                  <li className="flex items-start gap-2 min-w-0">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span className="min-w-0 break-words">支持电脑、平板与手机跨设备无缝接力复习</span>
                   </li>
                 </ul>
               </div>
 
-              <div>
+              <div className="min-w-0">
                 <button
                   type="button"
                   onClick={() => setAuthModalOpen(true)}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#1c1c1f] hover:bg-[#2a2a2e] active:scale-[0.98] py-3 px-4 text-sm font-semibold text-white shadow-sm transition-all cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#1c1c1f] hover:bg-[#2a2a2e] active:scale-[0.98] py-3 px-4 text-xs sm:text-sm font-semibold text-white shadow-sm transition-all cursor-pointer"
                 >
-                  <ArrowRight className="w-4 h-4" />
-                  <span>{isAuthenticated ? '直接进入研学空间' : '前往登录 / 注册空间'}</span>
+                  <ArrowRight className="w-4 h-4 shrink-0" />
+                  <span className="break-words">{isAuthenticated ? '直接进入研学空间' : '前往登录 / 注册账号'}</span>
                 </button>
-                <div className="mt-2 text-center text-2xs text-slate-400">
-                  支持 Chrome, Edge, Safari, 现代移动浏览器
+                <div className="mt-2 text-center text-2xs text-slate-400 break-words">
+                  兼容常见电脑、平板与手机浏览器
                 </div>
               </div>
             </div>
@@ -1025,7 +994,7 @@ export default function LandingPage() {
       </section>
 
       {/*  */}
-      <section id="subjects" className="py-20 max-w-[1280px] mx-auto px-4 sm:px-8">
+      <section id="subjects" className="w-full min-w-0 py-16 sm:py-20 max-w-[1280px] mx-auto px-3 sm:px-8">
         <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-14">
           <span className="text-2xs sm:text-2xs font-bold text-slate-400 uppercase tracking-widest">
             QUAD-CORE ECOSYSTEM
@@ -1503,7 +1472,7 @@ export default function LandingPage() {
                     </button>
                   )}
 
-                  <span className="text-slate-400">本地优先 · 安全隔离</span>
+                  <span className="text-slate-400">多端同步 · 隐私保护</span>
                 </div>
               </div>
 
@@ -1572,7 +1541,6 @@ export default function LandingPage() {
             >
               登录研学空间
             </button>
-            <span className="text-slate-400 font-mono">Local-First & Multi-Agent Architecture</span>
           </div>
         </div>
       </footer>
@@ -1584,68 +1552,75 @@ export default function LandingPage() {
           aria-modal="true"
         >
           {/* 全屏顶栏 (移动端紧凑自适应) */}
-          <div className="h-11 sm:h-13 px-2 sm:px-5 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 flex items-center justify-between shrink-0 pt-[env(safe-area-inset-top,0px)]">
+          <div className="h-11 sm:h-13 px-2 sm:px-5 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 flex items-center justify-between gap-1.5 shrink-0 pt-[env(safe-area-inset-top,0px)]">
             {/* 左侧：Logo + 标题 */}
-            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-              <div className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-lg bg-slate-900 p-0.5 sm:p-1 border border-slate-700 shrink-0">
-                <img src="/favicon.svg" alt="研核" className="h-full w-full object-contain" />
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <div className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center overflow-hidden rounded-lg border border-rose-200/30 shadow-xs shrink-0">
+                <img src="/favicon.svg" alt="研核" className="h-full w-full object-cover" />
               </div>
-              <span className="font-extrabold text-white text-2xs sm:text-sm truncate">
+              <span className="hidden xs:inline font-extrabold text-white text-2xs sm:text-sm whitespace-nowrap">
                 试玩实验室
               </span>
-              <span className="hidden sm:inline-flex items-center gap-1 text-2xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              <span className="hidden md:inline-flex items-center gap-1 text-2xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 免登录免注册
               </span>
             </div>
 
-            {/* 中间：学科切换胶囊 */}
-            <div className="flex items-center gap-0.5 sm:gap-1 p-0.5 rounded-xl bg-slate-800/80 border border-slate-700 text-2xs sm:text-xs">
-              <button
-                type="button"
-                onClick={() => setActiveMode('408')}
-                className={`px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                  activeMode === '408' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                408 仿真
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveMode('politics')}
-                className={`px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                  activeMode === 'politics' ? 'bg-amber-500 text-slate-950 font-black shadow-xs' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                史纲时空
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveMode('math')}
-                className={`px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                  activeMode === 'math' ? 'bg-pink-500 text-white shadow-xs' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                数学推导
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveMode('english')}
-                className={`px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                  activeMode === 'english' ? 'bg-sky-500 text-white shadow-xs' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                英语批改
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveMode('ai')}
-                className={`hidden sm:inline-block px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-lg font-bold transition-all cursor-pointer ${
-                  activeMode === 'ai' ? 'bg-violet-500 text-white shadow-xs' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                双核 Agent
-              </button>
+            {/* 中间：学科切换胶囊（含手机端横向滚动，确保 AI 导师随时可点） */}
+            <div className="flex-1 min-w-0 flex justify-center">
+              <div className="flex items-center gap-0.5 sm:gap-1 p-0.5 rounded-xl bg-slate-800/80 border border-slate-700 text-2xs sm:text-xs max-w-full overflow-x-auto no-scrollbar">
+                <button
+                  type="button"
+                  onClick={() => setActiveMode('408')}
+                  className={`px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-lg font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                    activeMode === '408' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <span className="sm:hidden">408</span>
+                  <span className="hidden sm:inline">408 仿真</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveMode('politics')}
+                  className={`px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-lg font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                    activeMode === 'politics' ? 'bg-amber-500 text-slate-950 font-black shadow-xs' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <span className="sm:hidden">史纲</span>
+                  <span className="hidden sm:inline">史纲时空</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveMode('math')}
+                  className={`px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-lg font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                    activeMode === 'math' ? 'bg-pink-500 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <span className="sm:hidden">数学</span>
+                  <span className="hidden sm:inline">数学推导</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveMode('english')}
+                  className={`px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-lg font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                    activeMode === 'english' ? 'bg-sky-500 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <span className="sm:hidden">英语</span>
+                  <span className="hidden sm:inline">英语批改</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveMode('ai')}
+                  className={`px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-lg font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                    activeMode === 'ai' ? 'bg-violet-500 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <span className="sm:hidden">AI 导师</span>
+                  <span className="hidden sm:inline">AI 导师</span>
+                </button>
+              </div>
             </div>
 
             {/* 右侧：横屏提示 + 退出全屏按钮 */}
