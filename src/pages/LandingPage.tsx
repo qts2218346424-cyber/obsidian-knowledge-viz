@@ -35,6 +35,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { MathTrialDemo, AgentTrialDemo } from './landing/TrialDemos'
+import { PoliticsTrialDemo } from './landing/PoliticsTrialDemo'
 import { getSecurityQuestion, resetPassword } from '../services/auth'
 
 interface DownloadInfo {
@@ -74,7 +75,6 @@ export default function LandingPage() {
   // 试玩交互视窗切换: 'interactive' (免登录动手试玩) | 'workbench' (三栏工作台实景)
   const [previewTab, setPreviewTab] = useState<'interactive' | 'workbench'>('interactive')
   // 政治时空大屏试玩当前选中的节点索引 (0: 1851 金田起义, 1: 1935 遵义会议, 2: 1945 中共七大)
-  const [politicsDemoIdx, setPoliticsDemoIdx] = useState(0)
 
   // 🎮 手机/全平台试玩全屏沉浸视窗显隐
   const [fullScreenSandbox, setFullScreenSandbox] = useState(false)
@@ -779,7 +779,11 @@ export default function LandingPage() {
           <div className="flex items-center gap-1.5 p-1 rounded-xl bg-zinc-200/80 border border-zinc-300/80 text-xs self-start sm:self-auto">
             <button
               type="button"
-              onClick={() => setPreviewTab('interactive')}
+              onClick={() => {
+                if (previewTab === 'interactive') showToast('已处于试玩模式，直接在下方视窗中操作即可')
+                setPreviewTab('interactive')
+              }}
+              aria-pressed={previewTab === 'interactive'}
               className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                 previewTab === 'interactive'
                   ? 'bg-white text-zinc-900 shadow-xs'
@@ -872,98 +876,7 @@ export default function LandingPage() {
                     />
                   </div>
                 ) : activeMode === 'politics' ? (
-                  /* 政治模块：嵌入史纲时空大屏前 3 个核心节点试玩 */
-                  <div className="flex flex-col h-[520px] bg-[#070b14] p-4 sm:p-6 text-slate-100 justify-between">
-                    <div>
-                      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-amber-500/20">
-                        <div className="flex items-center gap-2">
-                          <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
-                          <span className="font-bold text-amber-300 text-sm tracking-wide">
-                            考研政治 · 史纲时空全景大屏 (试玩演示)
-                          </span>
-                          <span className="text-[10px] text-amber-400/70 border border-amber-500/30 px-2 py-0.5 rounded-full">
-                            肖秀荣 1000 题考点联动
-                          </span>
-                        </div>
-                        <span className="text-xs text-slate-400">
-                          试玩节点 3 个 · 完整工作台收录 1840~2024 近代全史
-                        </span>
-                      </div>
-
-                      {/* 3 个试玩节点横向切换条 */}
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 my-3 sm:my-4">
-                        {[
-                          { year: 1851, title: '金田起义与太平天国', city: '广西桂平', tag: '旧民主主义' },
-                          { year: 1935, title: '遵义会议伟大转折', city: '贵州遵义', tag: '生死攸关' },
-                          { year: 1945, title: '中共七大与思想确立', city: '陕西延安', tag: '毛泽东思想' },
-                        ].map((node, idx) => (
-                          <button
-                            key={node.year}
-                            type="button"
-                            onClick={() => setPoliticsDemoIdx(idx)}
-                            className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                              politicsDemoIdx === idx
-                                ? 'bg-amber-500/20 border-amber-400 text-white shadow-[0_0_20px_rgba(245,158,11,0.25)]'
-                                : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700'
-                            }`}
-                          >
-                            <div className="text-sm font-black font-mono text-amber-400">{node.year} 年</div>
-                            <div className="text-xs font-bold text-white mt-0.5 truncate">{node.title}</div>
-                            <div className="text-[10px] text-slate-400 mt-1 flex items-center justify-between">
-                              <span>📍 {node.city}</span>
-                              <span className="text-[9px] px-1 rounded bg-white/10 text-amber-300">{node.tag}</span>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-
-                      {/* 选中的节点深度考点卡 */}
-                      <div className="rounded-2xl border border-amber-500/30 bg-slate-900/80 p-4 sm:p-5 space-y-2.5">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
-                            <span>📜 肖秀荣 1000 题核心命题眼与陷阱解析</span>
-                          </span>
-                          <span className="text-[11px] font-mono text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-lg border border-amber-500/20">
-                            {politicsDemoIdx === 0
-                              ? '纲领对比: 天朝田亩制度 vs 资政新篇'
-                              : politicsDemoIdx === 1
-                              ? '转折标志: 军事与组织领导地位确立'
-                              : '思想里程碑: 毛泽东思想写入党章'}
-                          </span>
-                        </div>
-
-                        <p className="text-xs sm:text-sm text-slate-200 leading-relaxed font-sans">
-                          {politicsDemoIdx === 0
-                            ? '《天朝田亩制度》是最能体现太平天国农民战争特点的纲领性文件，具有绝对平均主义空想色彩；《资政新篇》是中国近代历史上第一个比较系统的发展资本主义的方案，但未能付诸实施。'
-                            : politicsDemoIdx === 1
-                            ? '遵义会议集中解决了当时具有决定意义的军事问题和组织问题，结束了王明“左”倾冒险主义在党中央的统治，事实上确立了毛泽东同志在党中央和红军的领导地位，是中国共产党第一次独立自主地运用马克思主义原理解决自己的路线问题。'
-                            : '中共七大总结了中国新民主主义革命二十多年曲折发展的历史经验，制定了正确的政治路线，把毛泽东思想确立为全党的指导思想并写入党章，为争取抗日战争的彻底胜利奠定了思想基础。'}
-                        </p>
-
-                        <div className="p-2.5 rounded-xl bg-black/40 border border-white/5 text-[11px] text-amber-200/90 font-mono">
-                          考题陷阱提示：{politicsDemoIdx === 0
-                            ? '易混淆点：《资政新篇》没有涉及农民土地问题，并非农民战争的直接产物。'
-                            : politicsDemoIdx === 1
-                            ? '易混淆点：遵义会议并未解决思想路线问题（思想问题在延安整风中解决）。'
-                            : '易混淆点：中共七大确立毛泽东思想为指导思想，八大开始探索社会主义建设道路。'}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-                      <span>已载入 3D 阿里 DataV 矢量中国地图高精度时空坐标</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (isAuthenticated) navigate('/politics')
-                          else setAuthModalOpen(true)
-                        }}
-                        className="text-amber-400 hover:text-amber-300 font-bold underline cursor-pointer"
-                      >
-                        解锁全部 1840~2024 时空大屏 →
-                      </button>
-                    </div>
-                  </div>
+                  <PoliticsTrialDemo onEnter={() => (isAuthenticated ? navigate('/politics') : setAuthModalOpen(true))} />
                 ) : activeMode === 'math' ? (
                   <MathTrialDemo onEnter={() => (isAuthenticated ? navigate('/quiz') : setAuthModalOpen(true))} />
                 ) : activeMode === 'ai' ? (
@@ -1053,7 +966,7 @@ export default function LandingPage() {
                       <span className="px-2 py-0.5 rounded-full bg-zinc-900 text-white font-mono text-[10px]">
                         {workbenchPreviews[activeMode].mainBadge}
                       </span>
-                      <span className="text-zinc-400 text-[10px]">难度：{workbenchPreviews[activeMode].difficulty}</span>
+                      <span className="text-zinc-500 text-[10px]">难度：{workbenchPreviews[activeMode].difficulty}</span>
                     </div>
 
                     <h3 className="text-[14px] font-semibold text-zinc-900 leading-snug mb-3">
@@ -1074,7 +987,7 @@ export default function LandingPage() {
                     </div>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-zinc-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-zinc-400 text-[11px]">
+                  <div className="mt-4 pt-3 border-t border-zinc-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-zinc-500 text-[11px]">
                     <span>已联动「{modeConfigs[activeMode].heroSubject}」</span>
                     <button
                       onClick={() => setAuthModalOpen(true)}
@@ -1153,13 +1066,13 @@ export default function LandingPage() {
                   <div className="text-xs font-bold text-zinc-800 flex items-center gap-1.5">
                     <span>📂 本地目录原生直连</span>
                   </div>
-                  <div className="text-[11px] text-zinc-400 mt-1">无缝联动 Obsidian 桌面端</div>
+                  <div className="text-[11px] text-zinc-600 mt-1">无缝联动 Obsidian 桌面端</div>
                 </div>
                 <div className="p-3.5 rounded-2xl bg-white border border-zinc-200/80 shadow-2xs">
                   <div className="text-xs font-bold text-zinc-800 flex items-center gap-1.5">
                     <span>📦 一键导出 .zip 全量包</span>
                   </div>
-                  <div className="text-[11px] text-zinc-400 mt-1">随时离线迁移，数据零丢失</div>
+                  <div className="text-[11px] text-zinc-600 mt-1">随时离线迁移，数据零丢失</div>
                 </div>
               </div>
             </div>
@@ -1996,97 +1909,15 @@ export default function LandingPage() {
                 />
               </div>
             ) : activeMode === 'politics' ? (
-              <div className="w-full h-full overflow-y-auto p-4 sm:p-6 bg-[#070b14] text-slate-100 flex flex-col">
-                <div className="w-full max-w-5xl mx-auto mt-auto">
-                  <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-amber-500/20">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
-                      <span className="font-bold text-amber-300 text-base tracking-wide">
-                        考研政治 · 史纲近代全景时空 (全屏试玩版)
-                      </span>
-                      <span className="text-xs text-amber-400/80 border border-amber-500/30 px-2 py-0.5 rounded-full">
-                        肖秀荣 1000 题考点实时联动
-                      </span>
-                    </div>
-                    <span className="text-xs text-slate-400">
-                      试玩核心 3 大转折节点 · 完整工作台收录 1840~2024 近代全史
-                    </span>
-                  </div>
-
-                  {/* 3 个试玩节点 */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 my-4">
-                    {[
-                      { year: 1851, title: '金田起义与太平天国', city: '广西桂平', tag: '旧民主主义' },
-                      { year: 1935, title: '遵义会议伟大转折', city: '贵州遵义', tag: '生死攸关' },
-                      { year: 1945, title: '中共七大与思想确立', city: '陕西延安', tag: '毛泽东思想' },
-                    ].map((node, idx) => (
-                      <button
-                        key={node.year}
-                        type="button"
-                        onClick={() => setPoliticsDemoIdx(idx)}
-                        className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
-                          politicsDemoIdx === idx
-                            ? 'bg-amber-500/20 border-amber-400 text-white shadow-[0_0_20px_rgba(245,158,11,0.25)]'
-                            : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700'
-                        }`}
-                      >
-                        <div className="text-base font-black font-mono text-amber-400">{node.year} 年</div>
-                        <div className="text-xs sm:text-sm font-bold text-white mt-1 truncate">{node.title}</div>
-                        <div className="text-[11px] text-slate-400 mt-1.5 flex items-center justify-between">
-                          <span>📍 {node.city}</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-amber-300">{node.tag}</span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* 选中的节点深度考点卡 */}
-                  <div className="rounded-2xl border border-amber-500/30 bg-slate-900/80 p-4 sm:p-5 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs sm:text-sm font-bold text-amber-300 flex items-center gap-1.5">
-                        <span>📜 肖秀荣 1000 题核心命题眼与陷阱解析</span>
-                      </span>
-                      <span className="text-xs font-mono text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-lg border border-amber-500/20">
-                        {politicsDemoIdx === 0
-                          ? '纲领对比: 天朝田亩制度 vs 资政新篇'
-                          : politicsDemoIdx === 1
-                          ? '转折标志: 军事与组织领导地位确立'
-                          : '思想里程碑: 毛泽东思想写入党章'}
-                      </span>
-                    </div>
-
-                    <p className="text-xs sm:text-sm text-slate-200 leading-relaxed font-sans">
-                      {politicsDemoIdx === 0
-                        ? '《天朝田亩制度》是最能体现太平天国农民战争特点的纲领性文件，具有绝对平均主义空想色彩；《资政新篇》是中国近代历史上第一个比较系统的发展资本主义的方案，但未能付诸实施。'
-                        : politicsDemoIdx === 1
-                        ? '遵义会议集中解决了当时具有决定意义的军事问题和组织问题，结束了王明“左”倾冒险主义在党中央的统治，事实上确立了毛泽东同志在党中央和红军的领导地位，是中国共产党第一次独立自主地运用马克思主义原理解决自己的路线问题。'
-                        : '中共七大总结了中国新民主主义革命二十多年曲折发展的历史经验，制定了正确的政治路线，把毛泽东思想确立为全党的指导思想并写入党章，为争取抗日战争的彻底胜利奠定了思想基础。'}
-                    </p>
-
-                    <div className="p-3 rounded-xl bg-black/40 border border-white/5 text-xs text-amber-200/90 font-mono">
-                      考题陷阱提示：{politicsDemoIdx === 0
-                        ? '易混淆点：《资政新篇》没有涉及农民土地问题，并非农民战争的直接产物。'
-                        : politicsDemoIdx === 1
-                        ? '易混淆点：遵义会议并未解决思想路线问题（思想问题在延安整风中解决）。'
-                        : '易混淆点：中共七大确立毛泽东思想为指导思想，八大开始探索社会主义建设道路。'}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="w-full max-w-5xl mx-auto mb-auto pt-4 border-t border-slate-800 flex items-center justify-between gap-3 text-xs text-slate-400 mt-4">
-                  <span>试玩版收录 3 个核心节点 · 中国地图时空大屏需进入完整工作台</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFullScreenSandbox(false)
-                      if (isAuthenticated) navigate('/politics')
-                      else setAuthModalOpen(true)
-                    }}
-                    className="text-amber-400 hover:text-amber-300 font-bold underline cursor-pointer"
-                  >
-                    解锁完整时空大屏 →
-                  </button>
-                </div>
+              <div className="w-full h-full overflow-y-auto flex bg-[#070b14]">
+                <PoliticsTrialDemo
+                  fullscreen
+                  onEnter={() => {
+                    setFullScreenSandbox(false)
+                    if (isAuthenticated) navigate('/politics')
+                    else setAuthModalOpen(true)
+                  }}
+                />
               </div>
             ) : activeMode === 'math' ? (
               <div className="w-full h-full overflow-y-auto flex bg-[#0b1020]">
