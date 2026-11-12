@@ -688,7 +688,7 @@ export default function Politics() {
                       {activeItem.illustration.symbolIcon}
                     </div>
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
                       <span className="text-2xs font-bold text-amber-300">
                         {activeItem.illustration.subtitle}
                       </span>

@@ -37,9 +37,6 @@ const ProgressDashboardTab = lazy(() => import('../components/study/ProgressDash
 
 const loadKnowledgeGraph = () => import('./KnowledgeGraph')
 const KnowledgeGraph = lazyWithRetry(loadKnowledgeGraph, 'knowledgeGraph')
-
-
-
 import MasteryPaletteSection from '../features/study/components/MasteryPaletteSection'
 import PdfShelfTab from '../features/study/components/PdfShelfTab'
 import CoursewaresTab from '../features/study/components/CoursewaresTab'

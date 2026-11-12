@@ -85,7 +85,19 @@ export function safeLazy<T extends React.ComponentType<any>>(
 ) {
   return lazy(async () => {
     try {
-      const module = await loader()
+      // 先原地重试 2 次（网络抖动常见），仍失败再走整页重载
+      let module: { default: T } | undefined
+      let lastErr: unknown
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          module = await loader()
+          break
+        } catch (e) {
+          lastErr = e
+          if (attempt < 2) await new Promise(r => setTimeout(r, 600 * (attempt + 1)))
+        }
+      }
+      if (!module) throw lastErr
       try {
         sessionStorage.removeItem(`safe_lazy_retry_${name}`)
       } catch {}

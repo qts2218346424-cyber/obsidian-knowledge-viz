@@ -231,7 +231,7 @@ export const ChatMessageItem = memo(
                   <div className="flex items-center gap-1 shrink-0">
                     {msg.streaming ? (
                       <span className="text-2xs text-accent-orange font-semibold flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full bg-accent-orange animate-ping" />
+                        <span className="w-2 h-2 rounded-full bg-accent-orange animate-pulse" />
                         推演中...
                       </span>
                     ) : (
@@ -349,7 +349,7 @@ export const ChatMessageItem = memo(
                   <div className="flex items-center gap-1 shrink-0">
                     {msg.peerResponse.streaming ? (
                       <span className="text-2xs text-purple-600 font-semibold flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full bg-purple-500 animate-ping" />
+                        <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
                         协同解答中...
                       </span>
                     ) : (

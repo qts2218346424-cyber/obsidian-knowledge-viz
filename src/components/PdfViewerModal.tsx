@@ -149,7 +149,7 @@ export default function PdfViewerModal({
         </div>
 
         {/* 手机端便捷操作栏：引导一键独立全屏或下载 */}
-        <div className="sm:hidden px-3 py-1.5 bg-[#121520] border-b border-white/10 flex items-center justify-between gap-2 text-[11px] text-slate-300">
+        <div className="sm:hidden px-3 py-1.5 bg-[#121520] border-b border-white/10 flex items-center justify-between gap-2 text-2xs text-slate-300">
           <span className="flex items-center gap-1 text-emerald-400 truncate">
             <Smartphone className="w-3.5 h-3.5" />
             已开启 Canvas 极速光栅化

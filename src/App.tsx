@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react'
+import { Suspense } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AudioProvider } from './contexts/AudioContext'
 import { AuthProvider } from './contexts/AuthContext'
@@ -13,7 +13,7 @@ export { routeLoaders, prefetchRoute } from './app/routes'
 const LandingPage = safeLazy(() => import('./pages/LandingPage'), 'landing')
 const Login = safeLazy(() => import('./pages/Login'), 'login')
 const PdfReaderPage = safeLazy(routeLoaders.pdfReader, 'pdfReader')
-const ProtectedRoutes = lazy(() => import('./app/ProtectedRoutes'))
+const ProtectedRoutes = safeLazy(() => import('./app/ProtectedRoutes'), 'protected-routes')
 
 function App() {
   return (

@@ -265,7 +265,7 @@ export default function StepTutorModal({
           {loading ? (
             <div className="py-12 flex flex-col items-center justify-center gap-3 text-warm-500">
               <Loader2 className="w-6 h-6 animate-spin text-accent-orange" />
-              <div className="text-xs font-medium">正在调取导师思维链，进行深度启发分析...</div>
+              <div className="text-xs font-medium">导师正在分析…</div>
             </div>
           ) : result ? (
             <div className="space-y-3 animate-fade-in">
