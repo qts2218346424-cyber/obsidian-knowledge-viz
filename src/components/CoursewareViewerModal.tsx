@@ -222,10 +222,10 @@ export default function CoursewareViewerModal({
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-semibold bg-cyan-500/15 text-cyan-300 border border-cyan-500/25">
+                <span className="px-2 py-0.5 rounded text-2xs sm:text-2xs font-semibold bg-cyan-500/15 text-cyan-300 border border-cyan-500/25">
                   {item.domain === 'cs_408' ? '408 计算机' : item.domain === 'politics' ? '考研政治' : '考研数学'} · {item.subject}
                 </span>
-                <span className="px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-medium bg-amber-500/15 text-amber-300 border border-amber-500/25 hidden xs:inline-block">
+                <span className="px-1.5 py-0.5 rounded text-2xs sm:text-2xs font-medium bg-amber-500/15 text-amber-300 border border-amber-500/25 hidden xs:inline-block">
                   {item.difficulty}
                 </span>
               </div>
@@ -301,8 +301,8 @@ export default function CoursewareViewerModal({
           <div className="flex-1 h-full bg-[#0b0f19] relative overflow-hidden">
             {isLoadingHtml ? (
               <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
-                <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
-                <span className="text-xs font-mono tracking-wider text-slate-400">正在按需装载交互课件核心仿真引擎...</span>
+                <CoursewareLoadingCard title={item.title} />
+                {/* progress card rendered above */}
               </div>
             ) : srcUrl ? (
               <iframe
@@ -332,7 +332,7 @@ export default function CoursewareViewerModal({
                 onClick={() => setShowGuide(false)}
                 className="md:hidden fixed inset-0 bg-black/50 backdrop-blur-[2px] z-20"
               />
-              <div className="fixed md:static inset-x-0 bottom-0 max-h-[72dvh] md:max-h-none md:w-80 lg:w-88 z-30 md:z-auto rounded-t-2xl md:rounded-none border-t md:border-t-0 md:border-l border-white/15 bg-[#13192b]/98 backdrop-blur-xl p-5 overflow-y-auto space-y-4 shrink-0 shadow-2xl animate-in slide-in-from-bottom md:slide-in-from-right duration-200">
+              <div className="fixed md:static inset-x-0 bottom-0 max-h-[72dvh] md:max-h-none md:w-80 lg:w-88 z-30 md:z-auto rounded-t-2xl md:rounded-none border-t md:border-t-0 md:border-l border-white/15 bg-[#13192b]/98 backdrop-blur-xl p-5 overflow-y-auto space-y-4 shrink-0 shadow-xl animate-in slide-in-from-bottom md:slide-in-from-right duration-200">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-xs font-bold text-cyan-400">
                     <Sparkles className="w-4 h-4" />
@@ -352,7 +352,7 @@ export default function CoursewareViewerModal({
                 </p>
 
                 <div className="space-y-2.5 pt-2 border-t border-white/10">
-                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  <div className="text-2xs font-bold text-slate-400 uppercase tracking-wider">
                     核心研学收获与考场结论
                   </div>
                   {item.learningPoints.map((pt, i) => (
@@ -371,7 +371,7 @@ export default function CoursewareViewerModal({
                         setShowGuide(false)
                         onPractice(item)
                       }}
-                      className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs font-bold hover:opacity-95 transition-opacity flex items-center justify-center gap-1.5 shadow-lg shadow-orange-500/20 cursor-pointer"
+                      className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs font-bold hover:opacity-95 transition-opacity flex items-center justify-center gap-1.5 shadow-xl shadow-orange-500/20 cursor-pointer"
                     >
                       <Target className="w-4 h-4" />
                       即刻检验直观理解 (3道随堂真题)
@@ -387,4 +387,46 @@ export default function CoursewareViewerModal({
   )
 
   return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent
+}
+
+function CoursewareLoadingCard({ title }: { title: string }) {
+  const [elapsed, setElapsed] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => setElapsed(s => s + 1), 1000)
+    return () => clearInterval(t)
+  }, [])
+
+  const progress = Math.min(94, 22 + elapsed * 16)
+  const stepText =
+    elapsed < 2
+      ? '第 1/3 步：正在拉取交互课件结构...'
+      : elapsed < 5
+        ? '第 2/3 步：正在初始化交互动画与画布引擎...'
+        : `第 3/3 步：正在装载知识点演示实例（已耗时 ${elapsed} 秒）...`
+
+  return (
+    <div className="w-full flex flex-col items-center justify-center h-full px-6">
+      <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-[#13192b]/95 p-6 shadow-xl space-y-4">
+        <div className="flex items-center justify-between gap-2 text-xs text-slate-200">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin shrink-0" />
+            <span className="font-semibold truncate">{title}</span>
+          </div>
+          <span className="font-mono text-[11px] text-cyan-300 shrink-0">{Math.round(progress)}%</span>
+        </div>
+        <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-cyan-400 to-indigo-400 rounded-full transition-all duration-500"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <div className="text-[11px] text-cyan-300/90 font-medium">{stepText}</div>
+        <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-white/10">
+          <span className={elapsed < 2 ? 'text-cyan-300 font-semibold' : 'text-emerald-400'}>① 下载课件</span>
+          <span className={elapsed >= 2 && elapsed < 5 ? 'text-cyan-300 font-semibold' : elapsed >= 5 ? 'text-emerald-400' : ''}>② 启动引擎</span>
+          <span className={elapsed >= 5 ? 'text-cyan-300 font-semibold' : ''}>③ 渲染画布</span>
+        </div>
+      </div>
+    </div>
+  )
 }

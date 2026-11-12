@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import { STUDY_AGENTS, type StudyAgent } from '../../data/studyAgents'
 import { STUDY_SKILLS, type StudySkill } from '../../data/studySkills'
+import { formatUnifiedModelName } from '../../utils/modelDisplay'
 import type { LocalAgentStatus, LocalSkill, CloudEndpoint, FileDetail } from '../../services/api'
 
 export type ProviderType = 'antigravity' | 'codex' | 'claude-code' | 'web'
@@ -42,9 +43,9 @@ const PROVIDER_META: Record<
   { short: string; label: string; badgeBg: string }
 > = {
   antigravity: {
-    short: '✨ 研核官方',
-    label: '✨ 研核官方 (Gemini 3.8 Flash)',
-    badgeBg: 'text-neutral-900 bg-neutral-100 border-neutral-200',
+    short: '✨ Antigravity · Gemini 3.8 Flash',
+    label: '✨ Antigravity (Gemini 3.8 Flash)',
+    badgeBg: 'text-slate-900 bg-slate-100 border-slate-200',
   },
   codex: {
     short: '🤖 Codex',
@@ -193,11 +194,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
     setAgentDropdownOpen(false)
   }
 
-  const displayModelName = selectedModel
-    ? selectedModel.includes('::')
-      ? selectedModel.split('::')[1]
-      : selectedModel
-    : '默认模型'
+  const displayModelName = formatUnifiedModelName(provider, selectedModel)
 
   const activeProviderMeta = PROVIDER_META[provider]
 
@@ -207,7 +204,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
     <div className={`shrink-0 space-y-2 relative ${isAnyPopoverOpen ? 'z-40' : 'z-20'}`}>
       {/* 📱 移动端折叠收缩后的极简超细微型胶囊 (高度仅 26px，完全释放上方聊天视野) */}
       {isHeaderCollapsed && (
-        <div className="flex md:hidden items-center justify-between gap-1 px-2 py-0.5 bg-white/95 border-b border-slate-200/80 shadow-2xs backdrop-blur-md relative z-20">
+        <div className="flex md:hidden items-center justify-between gap-1 px-2 py-0.5 bg-white/95 border-b border-slate-200/80 shadow-xs backdrop-blur-md relative z-20">
           <div className="flex items-center gap-1 min-w-0">
             <button
               type="button"
@@ -219,13 +216,13 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
             </button>
             <div
               onClick={toggleHeaderCollapse}
-              className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-800 text-[11px] font-bold cursor-pointer active:scale-95 truncate"
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-800 text-2xs font-bold cursor-pointer active:scale-95 truncate"
               title="点击展开完整引擎与导师设置"
             >
               <span>{activeAgent.icon}</span>
               <span className="truncate max-w-[76px]">{activeAgent.name}</span>
               <span className="w-1 h-1 rounded-full bg-emerald-500 shrink-0" />
-              <span className="font-mono text-[9.5px] text-slate-500 truncate max-w-[65px]">{displayModelName}</span>
+              <span className="font-mono text-2xs text-slate-500 truncate max-w-[65px]">{displayModelName}</span>
             </div>
           </div>
 
@@ -241,7 +238,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
             <button
               type="button"
               onClick={toggleHeaderCollapse}
-              className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-bold text-[10px] border border-indigo-200/70 active:scale-95 cursor-pointer"
+              className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-bold text-2xs border border-indigo-200/70 active:scale-95 cursor-pointer"
               title="展开顶部设置"
             >
               <span>设置</span>
@@ -280,7 +277,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
 
         {/* 中间：快速模型切换胶囊 */}
         <div className="relative flex items-center min-w-0 flex-1 max-w-[115px] sm:max-w-[140px] mx-0.5">
-          <div className="w-full flex items-center justify-between gap-1 h-8 px-2 rounded-lg bg-slate-50 border border-slate-200/80 text-[10.5px] text-slate-700 font-medium truncate pointer-events-none">
+          <div className="w-full flex items-center justify-between gap-1 h-8 px-2 rounded-lg bg-slate-50 border border-slate-200/80 text-2xs text-slate-700 font-medium truncate pointer-events-none">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
             <span className="font-mono truncate flex-1">{displayModelName}</span>
             <ChevronDown className="w-2.5 h-2.5 text-slate-400 shrink-0" />
@@ -323,7 +320,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
             className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
             title="快速切换伴学模型"
           >
-            <optgroup label="✨ Antigravity 2.0 (双核主力)">
+            <optgroup label="✨ Antigravity (Gemini 3.8 Flash)">
               {(
                 agents.find(a => a.provider === 'antigravity')?.models ||
                 PROVIDER_PRESET_MODELS.antigravity
@@ -396,7 +393,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
           <button
             type="button"
             onClick={onCreateNewConversation}
-            className="h-8 w-8 inline-flex items-center justify-center rounded-lg bg-slate-900 text-white active:scale-95 transition-all shadow-2xs"
+            className="h-8 w-8 inline-flex items-center justify-center rounded-lg bg-slate-900 text-white active:scale-95 transition-all shadow-xs"
             title="新建对话"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -414,7 +411,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
 
       {/* 🖥️ 桌面端收起态微型悬浮条 */}
       {isHeaderCollapsed && (
-        <div className="hidden md:flex items-center justify-between gap-3 bg-white/95 border border-neutral-200/80 rounded-xl px-3 py-1 shadow-2xs backdrop-blur-md relative z-20">
+        <div className="hidden md:flex items-center justify-between gap-3 bg-white/95 border border-slate-200/80 rounded-xl px-3 py-1 shadow-xs backdrop-blur-md relative z-20">
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -423,7 +420,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
               title="切换会话栏"
             >
               <PanelLeft className="w-3 h-3" />
-              <span className="text-[10px] font-mono">{conversationsCount}</span>
+              <span className="text-2xs font-mono">{conversationsCount}</span>
             </button>
             <div
               onClick={toggleHeaderCollapse}
@@ -434,7 +431,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
               <span className="font-bold">{activeAgent.name}</span>
               <span className="text-slate-300">·</span>
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              <span className="font-mono text-slate-500 text-[11px]">{displayModelName}</span>
+              <span className="font-mono text-slate-500 text-2xs">{displayModelName}</span>
             </div>
           </div>
 
@@ -442,7 +439,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
             <button
               type="button"
               onClick={onCreateNewConversation}
-              className="h-6 px-2 rounded-lg bg-neutral-900 hover:bg-black text-white text-[11px] font-medium flex items-center gap-1 cursor-pointer shadow-2xs"
+              className="h-6 px-2 rounded-lg bg-slate-900 hover:bg-black text-white text-2xs font-medium flex items-center gap-1 cursor-pointer shadow-xs"
               title="开启全新伴学对话"
             >
               <Plus className="w-3 h-3" />
@@ -451,7 +448,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
             <button
               type="button"
               onClick={toggleHeaderCollapse}
-              className="h-6 px-2.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-all active:scale-95"
+              className="h-6 px-2.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 text-2xs font-bold flex items-center gap-1 cursor-pointer transition-all active:scale-95"
               title="展开完整引擎、模型、技能与双师设置"
             >
               <span>展开设置</span>
@@ -462,7 +459,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
       )}
 
       {/* 🖥️ 桌面端：清爽呼吸感双组工作台顶栏 (支持一键收缩) */}
-      <div className={`${isHeaderCollapsed ? 'hidden' : 'hidden md:flex'} items-center justify-between gap-4 bg-white border border-neutral-200/80 rounded-xl px-3.5 py-2 shadow-xs backdrop-blur-md relative ${isAnyPopoverOpen ? 'z-40' : 'z-20'}`}>
+      <div className={`${isHeaderCollapsed ? 'hidden' : 'hidden md:flex'} items-center justify-between gap-4 bg-white border border-slate-200/80 rounded-xl px-3.5 py-2 shadow-xs backdrop-blur-md relative ${isAnyPopoverOpen ? 'z-40' : 'z-20'}`}>
         {/* 左组：侧栏开关 + 当值导师切换 + 新对话 */}
         <div className="flex items-center gap-2 min-w-0">
           <button
@@ -476,13 +473,13 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
             title={showSessions ? '收起左侧会话栏' : '展开左侧会话栏'}
           >
             <PanelLeft className="w-4 h-4 text-slate-500" />
-            <span className="text-[11px] font-mono px-1.5 py-0.2 rounded-md bg-slate-200/70 text-slate-600">
+            <span className="text-2xs font-mono px-1.5 py-0.2 rounded-md bg-slate-200/70 text-slate-600">
               {conversationsCount}
             </span>
           </button>
 
           {/* 宽屏 (xl+)：舒展无挤压的 5 导师分段胶囊 */}
-          <div className="hidden xl:flex items-center gap-1 bg-neutral-100 p-1 rounded-lg border border-neutral-200/70 shrink-0">
+          <div className="hidden xl:flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200/70 shrink-0">
             {STUDY_AGENTS.map(agent => {
               const isSelected = activeAgent.id === agent.id
               return (
@@ -493,8 +490,8 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                   title={`${agent.name} (${agent.title})：${agent.description}`}
                   className={`px-2.5 py-1 rounded-md text-xs whitespace-nowrap shrink-0 transition-all flex items-center gap-1.5 cursor-pointer ${
                     isSelected
-                      ? 'bg-neutral-900 text-white shadow-xs font-semibold'
-                      : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200/60 font-medium'
+                      ? 'bg-slate-900 text-white shadow-xs font-semibold'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 font-medium'
                   }`}
                 >
                   <span>{agent.icon}</span>
@@ -517,7 +514,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
             >
               <span>{activeAgent.icon}</span>
               <span>{activeAgent.name}</span>
-              <span className="text-[11px] font-normal text-slate-500 hidden lg:inline">
+              <span className="text-2xs font-normal text-slate-500 hidden lg:inline">
                 · {activeAgent.title}
               </span>
               <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
@@ -526,8 +523,8 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
             {agentDropdownOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setAgentDropdownOpen(false)} />
-                <div className="absolute left-0 top-full mt-1.5 w-72 bg-white border border-neutral-200 rounded-xl shadow-xl p-2 z-50 space-y-1 animate-fade-in-up max-h-[calc(100vh-6rem)] overflow-y-auto">
-                  <div className="px-2.5 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                <div className="absolute left-0 top-full mt-1.5 w-72 bg-white border border-slate-200 rounded-xl shadow-xl p-2 z-50 space-y-1 animate-fade-in-up max-h-[calc(100vh-6rem)] overflow-y-auto">
+                  <div className="px-2.5 py-1 text-2xs font-bold text-slate-400 uppercase tracking-wider">
                     切换当值伴学导师
                   </div>
                   {STUDY_AGENTS.map(agent => {
@@ -548,9 +545,9 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-xs font-bold text-slate-900">{agent.name}</span>
-                            <span className="text-[10px] text-slate-500">{agent.title}</span>
+                            <span className="text-2xs text-slate-500">{agent.title}</span>
                           </div>
-                          <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
+                          <p className="text-2xs text-slate-500 line-clamp-1 mt-0.5">
                             {agent.description}
                           </p>
                         </div>
@@ -565,7 +562,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
           <button
             type="button"
             onClick={onCreateNewConversation}
-            className="h-9 px-3 rounded-lg bg-neutral-900 hover:bg-black text-white text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer shrink-0 active:scale-95 shadow-xs"
+            className="h-9 px-3 rounded-lg bg-slate-900 hover:bg-black text-white text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer shrink-0 active:scale-95 shadow-xs"
             title="开启全新伴学对话"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -588,14 +585,14 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                   }}
                   className={`h-9 px-3 rounded-lg border text-xs flex items-center gap-2 transition-all cursor-pointer ${
                     modelPopoverOpen
-                      ? 'bg-neutral-100 border-neutral-900 text-neutral-900 shadow-xs'
-                      : 'bg-neutral-50 hover:bg-neutral-100 border-neutral-200/80 text-neutral-800'
+                      ? 'bg-slate-100 border-slate-900 text-slate-900 shadow-xs'
+                      : 'bg-slate-50 hover:bg-slate-100 border-slate-200/80 text-slate-800'
                   }`}
                   title={`当前引擎：${activeProviderMeta.label} · 模型：${displayModelName}`}
                 >
                   <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
                   <span
-                    className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold border ${activeProviderMeta.badgeBg}`}
+                    className={`px-1.5 py-0.5 rounded-md text-2xs font-bold border ${activeProviderMeta.badgeBg}`}
                   >
                     {activeProviderMeta.short}
                   </span>
@@ -611,11 +608,11 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                       className="fixed inset-0 z-40"
                       onClick={() => setModelPopoverOpen(false)}
                     />
-                    <div className="absolute right-0 top-full mt-1.5 w-84 sm:w-96 bg-white border border-neutral-200 rounded-xl shadow-xl p-3.5 z-50 space-y-3 animate-fade-in-up max-h-[calc(100vh-6rem)] overflow-y-auto">
+                    <div className="absolute right-0 top-full mt-1.5 w-84 sm:w-96 bg-white border border-slate-200 rounded-xl shadow-xl p-3.5 z-50 space-y-3 animate-fade-in-up max-h-[calc(100vh-6rem)] overflow-y-auto">
                       {/* 1. 引擎切换 */}
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                          <span className="text-2xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
                             <Cpu className="w-3 h-3" />
                             <span>选择推理引擎</span>
                           </span>
@@ -623,7 +620,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                             type="button"
                             onClick={onScanModels}
                             disabled={syncingModels}
-                            className="text-[11px] font-semibold text-indigo-600 hover:underline flex items-center gap-1 cursor-pointer"
+                            className="text-2xs font-semibold text-indigo-600 hover:underline flex items-center gap-1 cursor-pointer"
                           >
                             <RefreshCw
                               className={`w-3 h-3 ${syncingModels ? 'animate-spin' : ''}`}
@@ -635,7 +632,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                         <div className="grid grid-cols-2 gap-1.5">
                           {(
                             [
-                              { key: 'antigravity', label: '✨ Antigravity' },
+                              { key: 'antigravity', label: '✨ Antigravity · Gemini 3.8 Flash' },
                               { key: 'codex', label: '🤖 Codex' },
                               { key: 'claude-code', label: '⚡ Claude Code' },
                               { key: 'web', label: '☁️ 云端接口' },
@@ -651,7 +648,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                                 onClick={() => onProviderChange(tab.key)}
                                 className={`px-2.5 py-2 rounded-xl text-xs font-semibold border transition-all flex items-center justify-between cursor-pointer ${
                                   active
-                                    ? 'bg-slate-900 text-white border-slate-900 shadow-2xs'
+                                    ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
                                     : 'bg-slate-50 text-slate-700 border-slate-200/80 hover:bg-slate-100'
                                 }`}
                               >
@@ -672,7 +669,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                       {/* 2. 当前引擎下的模型列表 */}
                       <div className="pt-2.5 border-t border-slate-100">
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          <span className="text-2xs font-bold text-slate-400 uppercase tracking-wider">
                             切换模型
                           </span>
                           {isAdmin && (
@@ -682,7 +679,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                                 setModelPopoverOpen(false)
                                 onOpenModelManager()
                               }}
-                              className="text-[11px] text-slate-500 hover:text-slate-800 cursor-pointer"
+                              className="text-2xs text-slate-500 hover:text-slate-800 cursor-pointer"
                             >
                               管理模型列表
                             </button>
@@ -693,7 +690,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                           {provider === 'web' && cloudEndpoints.length > 0 ? (
                             cloudEndpoints.map(ep => (
                               <div key={ep.id} className="space-y-0.5">
-                                <div className="px-2 py-1 text-[10px] font-semibold text-slate-400">
+                                <div className="px-2 py-1 text-2xs font-semibold text-slate-400">
                                   🌐 {ep.name}
                                 </div>
                                 {(ep.models && ep.models.length > 0
@@ -782,7 +779,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                             </button>
                           </div>
                           {modelSyncFeedback && (
-                            <p className="mt-1.5 text-[11px] text-emerald-600 font-medium">
+                            <p className="mt-1.5 text-2xs text-emerald-600 font-medium">
                               {modelSyncFeedback}
                             </p>
                           )}
@@ -799,7 +796,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                 onClick={onToggleDualMode}
                 className={`h-9 px-3 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer border shrink-0 ${
                   isDualMode
-                    ? 'bg-orange-50 text-orange-700 border-orange-300 font-bold shadow-2xs'
+                    ? 'bg-orange-50 text-orange-700 border-orange-300 font-bold shadow-xs'
                     : 'bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 border-slate-200/85'
                 }`}
                 title="开启后，一次提问同时由两位导师并排对比解答"
@@ -818,7 +815,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
             onClick={onToggleFiles}
             className={`h-9 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
               showFiles || selectedNote
-                ? 'bg-amber-50 text-amber-800 border-amber-300 shadow-2xs'
+                ? 'bg-amber-50 text-amber-800 border-amber-300 shadow-xs'
                 : 'bg-white text-slate-600 border-slate-200/85 hover:bg-slate-50 hover:text-slate-900'
             }`}
             title="打开知识库目录与笔记原文伴读面板"
@@ -841,7 +838,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
               }}
               className={`h-9 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                 activeSkill || selectedLocalSkill
-                  ? 'bg-purple-50 text-purple-800 border-purple-300 shadow-2xs'
+                  ? 'bg-purple-50 text-purple-800 border-purple-300 shadow-xs'
                   : 'bg-white text-slate-600 border-slate-200/85 hover:bg-slate-50 hover:text-slate-900'
               }`}
               title="调用考研自动化技能或系统自带技能库"
@@ -863,9 +860,9 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                   className="fixed inset-0 z-40"
                   onClick={() => setSkillsDropdownOpen(false)}
                 />
-                <div className="absolute right-0 top-full mt-1.5 w-72 bg-white border border-neutral-200 rounded-xl shadow-xl p-2 z-50 space-y-1 animate-fade-in-up max-h-[calc(100vh-6rem)] overflow-y-auto">
+                <div className="absolute right-0 top-full mt-1.5 w-72 bg-white border border-slate-200 rounded-xl shadow-xl p-2 z-50 space-y-1 animate-fade-in-up max-h-[calc(100vh-6rem)] overflow-y-auto">
                   <div className="flex items-center justify-between px-2.5 py-1.5 border-b border-slate-100">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    <span className="text-2xs font-bold text-slate-400 uppercase tracking-wider">
                       考研自动化专项技能
                     </span>
                     <button
@@ -874,7 +871,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                         setSkillsDropdownOpen(false)
                         onOpenSkillPicker()
                       }}
-                      className="text-[11px] font-bold text-purple-600 hover:underline cursor-pointer flex items-center gap-1"
+                      className="text-2xs font-bold text-purple-600 hover:underline cursor-pointer flex items-center gap-1"
                     >
                       <Sparkles className="w-3 h-3" />
                       <span>系统自带技能库</span>
@@ -895,11 +892,11 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                           <span>{skill.emoji}</span>
                           <span>{skill.shortName}</span>
                         </div>
-                        <span className="text-[10px] text-purple-600 font-mono">
+                        <span className="text-2xs text-purple-600 font-mono">
                           {skill.command}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                      <p className="text-2xs text-slate-500 mt-0.5 leading-relaxed">
                         {skill.desc}
                       </p>
                     </button>
@@ -931,10 +928,10 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
             {hubPopoverOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setHubPopoverOpen(false)} />
-                <div className="absolute right-0 top-full mt-1.5 w-80 bg-white border border-neutral-200 rounded-xl shadow-xl p-3.5 z-50 space-y-3.5 animate-fade-in-up max-h-[calc(100vh-6rem)] overflow-y-auto">
+                <div className="absolute right-0 top-full mt-1.5 w-80 bg-white border border-slate-200 rounded-xl shadow-xl p-3.5 z-50 space-y-3.5 animate-fade-in-up max-h-[calc(100vh-6rem)] overflow-y-auto">
                   {/* 1. 认知记忆与本机技能中心 */}
                   <div>
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                    <div className="text-2xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                       认知记忆与扩展技能
                     </div>
                     <div className="space-y-1.5">
@@ -966,7 +963,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                   {/* 2. 模型治理 - 仅超级管理员可见 */}
                   {isAdmin && (
                     <div className="pt-2.5 border-t border-slate-100">
-                      <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                      <div className="text-2xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                         模型探测与列表治理
                       </div>
                       <div className="flex items-center gap-1.5">
@@ -997,7 +994,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
 
                   {/* 3. 作答语调风格 */}
                   <div className="pt-2.5 border-t border-slate-100">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                    <div className="text-2xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                       导师作答风格
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 bg-slate-100 p-1 rounded-xl">
@@ -1011,9 +1008,9 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                           key={t.key}
                           type="button"
                           onClick={() => onStudyToneChange(t.key)}
-                          className={`py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+                          className={`py-1 rounded-lg text-2xs font-semibold transition-all cursor-pointer ${
                             studyTone === t.key
-                              ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                              ? 'bg-white text-slate-900 shadow-xs font-bold'
                               : 'text-slate-600 hover:text-slate-900'
                           }`}
                         >
@@ -1026,7 +1023,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                   {/* 4. 阅读版面宽度与字号 */}
                   <div className="pt-2.5 border-t border-slate-100 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-slate-600">版面宽度</span>
+                      <span className="text-2xs font-semibold text-slate-600">版面宽度</span>
                       <div className="flex items-center gap-0.5 bg-slate-100 p-0.5 rounded-lg">
                         {[
                           { key: 'normal' as const, label: '标准' },
@@ -1037,7 +1034,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                             key={w.key}
                             type="button"
                             onClick={() => onWidthModeChange(w.key)}
-                            className={`px-2.5 py-0.5 rounded-md text-[11px] font-medium cursor-pointer ${
+                            className={`px-2.5 py-0.5 rounded-md text-2xs font-medium cursor-pointer ${
                               chatWidthMode === w.key
                                 ? 'bg-slate-900 text-white font-bold'
                                 : 'text-slate-600 hover:text-slate-900'
@@ -1050,7 +1047,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-slate-600">正文字号</span>
+                      <span className="text-2xs font-semibold text-slate-600">正文字号</span>
                       <div className="flex items-center gap-0.5 bg-slate-100 p-0.5 rounded-lg">
                         {[
                           { key: 'sm' as const, label: 'A-' },
@@ -1061,7 +1058,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                             key={s.key}
                             type="button"
                             onClick={() => onFontSizeChange(s.key)}
-                            className={`px-2.5 py-0.5 rounded-md text-[11px] font-medium cursor-pointer ${
+                            className={`px-2.5 py-0.5 rounded-md text-2xs font-medium cursor-pointer ${
                               chatFontSize === s.key
                                 ? 'bg-slate-900 text-white font-bold'
                                 : 'text-slate-600 hover:text-slate-900'
@@ -1085,11 +1082,11 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
             className="hidden sm:inline-flex h-9 items-center gap-1.5 rounded-xl border border-amber-200/90 bg-amber-50/80 px-2.5 text-xs font-bold text-amber-900 hover:bg-amber-100 transition-all cursor-pointer active:scale-95"
             title="伴学积分中心 (单次提问消耗 0.1 积分，每日签到领 1 积分)"
           >
-            <Coins className="w-3.5 h-3.5 text-amber-600 animate-bounce" />
+            <Coins className="w-3.5 h-3.5 text-amber-600" />
             <span className="font-mono text-amber-950">{points.toFixed(1)}</span>
-            <span className="text-[10px] text-amber-700 font-medium">分</span>
+            <span className="text-2xs text-amber-700 font-medium">分</span>
             {canCheckinToday && (
-              <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-amber-500 text-white font-bold animate-pulse">
+              <span className="text-2xs px-1.5 py-0.2 rounded-full bg-amber-500 text-white font-bold animate-pulse">
                 签到+1
               </span>
             )}
@@ -1101,7 +1098,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
             onClick={onToggleFocusMode}
             className={`h-9 w-9 inline-flex items-center justify-center rounded-xl border text-xs transition-all cursor-pointer active:scale-95 ${
               isFocusMode
-                ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs'
+                ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
                 : 'bg-white text-slate-600 border-slate-200/85 hover:bg-slate-50 hover:text-slate-900'
             }`}
             title={isFocusMode ? '退出专注视野' : '开启专注大视野'}
@@ -1121,7 +1118,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
             title="收起顶部设置栏，获得更大聊天屏幕视野"
           >
             <ChevronUp className="w-3.5 h-3.5 text-slate-500" />
-            <span className="hidden lg:inline text-[11px]">收起</span>
+            <span className="hidden lg:inline text-2xs">收起</span>
           </button>
         </div>
       </div>
@@ -1135,19 +1132,19 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
               <span>双师同台对比：</span>
             </span>
 
-            <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-xl border border-orange-200/80 text-slate-800 font-medium shadow-2xs">
+            <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-xl border border-orange-200/80 text-slate-800 font-medium shadow-xs">
               <span className="font-bold text-orange-600">主导师 A:</span>
               <span>
                 {activeAgent.icon} {activeAgent.name}
               </span>
-              <span className="text-[10px] text-slate-400 font-mono">
+              <span className="text-2xs text-slate-400 font-mono">
                 [{provider} · {displayModelName}]
               </span>
             </div>
 
-            <span className="text-[11px] font-bold text-slate-400">VS</span>
+            <span className="text-2xs font-bold text-slate-400">VS</span>
 
-            <div className="flex items-center gap-2 bg-white px-2.5 py-1 rounded-xl border border-purple-200/80 text-slate-800 font-medium shadow-2xs">
+            <div className="flex items-center gap-2 bg-white px-2.5 py-1 rounded-xl border border-purple-200/80 text-slate-800 font-medium shadow-xs">
               <span className="font-bold text-purple-600">协同导师 B:</span>
               <select
                 value={peerAgent.id}
@@ -1172,7 +1169,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                 <option value="claude-code">⚡ Claude Code</option>
                 <option value="codex">🤖 Codex</option>
                 <option value="web">☁️ 云端</option>
-                <option value="antigravity">✨ Antigravity</option>
+                <option value="antigravity">✨ Antigravity (Gemini 3.8 Flash)</option>
               </select>
 
               <select

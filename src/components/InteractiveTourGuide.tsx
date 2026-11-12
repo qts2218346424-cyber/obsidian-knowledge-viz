@@ -51,7 +51,7 @@ export const TOUR_STEPS: TourStep[] = [
     icon: Home,
     badge: '第一站 · 驾驶舱',
     highlightColor: 'text-indigo-600 bg-indigo-50 border-indigo-200',
-    summary: '这里是您的每日考研指挥中心，汇聚初试倒计时、备战闭环进度、Vault 健康体检与每日待办。',
+    summary: '这里是您的每日考研指挥中心，汇聚初试倒计时、备战闭环进度、知识库体检与每日待办。',
     taskHint: '体验任务：查看今日复习建议与初试倒计时，感受一站式备考大盘。',
     tips: ['支持按科目快速定位弱项', '自动统计知识库内双链与笔记总数'],
     actionLabel: '🏠 浏览备战驾驶舱大盘',
@@ -78,7 +78,7 @@ export const TOUR_STEPS: TourStep[] = [
     highlightColor: 'text-emerald-600 bg-emerald-50 border-emerald-200',
     summary: '常驻顶栏的闪电速记胶囊。做题或阅读时无需离开当前页面，一键滑出抽屉记录灵感或推导草稿。',
     taskHint: '体验任务：点击下方按钮直接滑出随手记抽屉，体验预设学科标签与公式输入。',
-    tips: ['支持 LaTeX 公式、待办清单与手机扫码拍照插图', '自动保存到本地 Obsidian Vault 随手记目录'],
+    tips: ['支持 LaTeX 公式、待办清单与手机扫码拍照插图', '自动保存到个人随手记目录'],
     actionLabel: '⚡ 立即滑出随手记抽屉',
     actionType: 'open_quicknote',
   },
@@ -312,14 +312,14 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
       >
         <button
           onClick={() => setIsMinimized(false)}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-neutral-900 text-white shadow-xl hover:bg-neutral-800 transition-all cursor-pointer font-sans text-xs border border-neutral-700 active:scale-95"
+          className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-slate-900 text-white shadow-xl hover:bg-slate-800 transition-all cursor-pointer font-sans text-xs border border-slate-700 active:scale-95"
           title="展开实战新手引导"
         >
           <Compass className="h-4 w-4 animate-spin-slow text-amber-400" />
           <span className="font-semibold">
             实战引导 ({currentStepIndex + 1}/{TOUR_STEPS.length})
           </span>
-          <Maximize2 className="h-3.5 w-3.5 text-neutral-400" />
+          <Maximize2 className="h-3.5 w-3.5 text-slate-400" />
         </button>
       </aside>
     )
@@ -334,15 +334,15 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
   return (
     <aside
       aria-label="实战功能引导导航"
-      className={`fixed z-[55] w-[calc(100vw-2rem)] sm:w-[420px] rounded-2xl bg-white border border-neutral-200/90 shadow-[0_20px_45px_-10px_rgba(0,0,0,0.2)] overflow-hidden animate-fade-in font-sans text-neutral-900 ${dockPositionClass}`}
+      className={`fixed z-[55] w-[calc(100vw-2rem)] sm:w-[420px] rounded-2xl bg-white border border-slate-200/90 shadow-[0_20px_45px_-10px_rgba(0,0,0,0.2)] overflow-hidden animate-fade-in font-sans text-slate-900 ${dockPositionClass}`}
     >
       {/* 头部控制栏 */}
-      <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-2.5 bg-neutral-50/90 shrink-0">
+      <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5 bg-slate-50/90 shrink-0">
         <div className="flex items-center gap-2">
-          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-neutral-900 text-white text-[11px] font-bold">
+          <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-900 text-white text-2xs font-bold">
             <Compass className="h-3.5 w-3.5 text-amber-400" />
           </span>
-          <span className="text-xs font-bold text-neutral-900">
+          <span className="text-xs font-bold text-slate-900">
             实战功能引导 · 第 {step.id}/{TOUR_STEPS.length} 站
           </span>
         </div>
@@ -360,14 +360,14 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
 
           <button
             onClick={() => setIsMinimized(true)}
-            className="p-1 rounded-md text-neutral-400 hover:text-neutral-700 hover:bg-neutral-200/60 transition-colors cursor-pointer"
+            className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors cursor-pointer"
             title="最小化"
           >
             <Minimize2 className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={handleSkipTour}
-            className="p-1 rounded-md text-neutral-400 hover:text-neutral-700 hover:bg-neutral-200/60 transition-colors cursor-pointer"
+            className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors cursor-pointer"
             title="退出引导"
           >
             <X className="h-3.5 w-3.5" />
@@ -381,12 +381,12 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
         <div className="flex items-start justify-between gap-2">
           <div>
             <span
-              className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border ${step.highlightColor}`}
+              className={`inline-block px-2 py-0.5 rounded text-2xs font-bold border ${step.highlightColor}`}
             >
               {step.badge}
             </span>
-            <h4 className="mt-1 text-sm font-bold text-neutral-900 flex items-center gap-1.5">
-              <step.icon className="h-4 w-4 text-neutral-700" />
+            <h4 className="mt-1 text-sm font-bold text-slate-900 flex items-center gap-1.5">
+              <step.icon className="h-4 w-4 text-slate-700" />
               <span>{step.title}</span>
             </h4>
           </div>
@@ -394,7 +394,7 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
           {!isCurrentRoute && (
             <button
               onClick={() => handleGoToRoute()}
-              className="shrink-0 px-2.5 py-1 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-white text-[10.5px] font-semibold transition-all shadow-2xs flex items-center gap-1 cursor-pointer active:scale-95"
+              className="shrink-0 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-2xs font-semibold transition-all shadow-xs flex items-center gap-1 cursor-pointer active:scale-95"
             >
               <span>跳转此页</span>
               <ArrowRight className="h-3 w-3" />
@@ -403,7 +403,7 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
         </div>
 
         {/* 作用概要 */}
-        <p className="text-xs text-neutral-600 leading-relaxed">{step.summary}</p>
+        <p className="text-xs text-slate-600 leading-relaxed">{step.summary}</p>
 
         {/* 实战操作任务提示 */}
         <div className="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/80 text-amber-900 text-xs">
@@ -419,7 +419,7 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
             <button
               type="button"
               onClick={() => handlePerformAction()}
-              className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-gradient-to-r from-neutral-900 via-neutral-800 to-neutral-900 text-white text-xs font-bold shadow-xs hover:shadow-sm active:scale-[0.98] transition-all cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white text-xs font-bold shadow-xs hover:shadow-sm active:scale-[0.98] transition-all cursor-pointer"
             >
               {step.actionType === 'play_music' && <Play className="w-3.5 h-3.5 fill-current text-sky-400" />}
               {step.actionType === 'ask_ai' && <MessageCircle className="w-3.5 h-3.5 text-cyan-400" />}
@@ -430,7 +430,7 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
             {/* AI 专属引导：提供一键发送的考研真题问题胶囊 */}
             {step.sampleQuestions && step.sampleQuestions.length > 0 && (
               <div className="space-y-1.5 pt-1">
-                <span className="text-[10.5px] font-bold text-neutral-500 flex items-center gap-1">
+                <span className="text-2xs font-bold text-slate-500 flex items-center gap-1">
                   <Lightbulb className="w-3 h-3 text-amber-500" />
                   <span>或点击下方高频问题直接向导师提问：</span>
                 </span>
@@ -440,10 +440,10 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
                       key={idx}
                       type="button"
                       onClick={() => handlePerformAction(q)}
-                      className="w-full text-left p-2 rounded-lg bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/70 text-[11px] text-neutral-800 transition-colors flex items-center justify-between gap-2 group cursor-pointer"
+                      className="w-full text-left p-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200/70 text-2xs text-slate-800 transition-colors flex items-center justify-between gap-2 group cursor-pointer"
                     >
                       <span className="truncate">{q}</span>
-                      <Send className="w-3 h-3 text-neutral-400 group-hover:text-cyan-600 shrink-0" />
+                      <Send className="w-3 h-3 text-slate-400 group-hover:text-cyan-600 shrink-0" />
                     </button>
                   ))}
                 </div>
@@ -452,7 +452,7 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
 
             {/* 动作即时反馈提示 */}
             {actionFeedback && (
-              <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-medium animate-fade-in flex items-center gap-1.5">
+              <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-2xs font-medium animate-fade-in flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                 <span>{actionFeedback}</span>
               </div>
@@ -461,9 +461,9 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
         )}
 
         {/* 贴士列表 */}
-        <div className="space-y-1 pt-1 border-t border-neutral-100">
+        <div className="space-y-1 pt-1 border-t border-slate-100">
           {step.tips.map((t, idx) => (
-            <div key={idx} className="flex items-center gap-1.5 text-[11px] text-neutral-500">
+            <div key={idx} className="flex items-center gap-1.5 text-2xs text-slate-500">
               <CheckCircle2 className="h-3 w-3 text-emerald-600 shrink-0" />
               <span className="truncate">{t}</span>
             </div>
@@ -472,11 +472,11 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
       </div>
 
       {/* 底部前后翻页与完成 */}
-      <div className="flex items-center justify-between border-t border-neutral-100 px-4 py-2.5 bg-neutral-50/70 text-xs shrink-0">
+      <div className="flex items-center justify-between border-t border-slate-100 px-4 py-2.5 bg-slate-50/70 text-xs shrink-0">
         <button
           onClick={handlePrev}
           disabled={currentStepIndex === 0}
-          className="inline-flex items-center gap-1 text-neutral-500 hover:text-neutral-900 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+          className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-900 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
           <span>上一步</span>
@@ -494,8 +494,8 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
               }}
               className={`h-1.5 rounded-full transition-all cursor-pointer ${
                 idx === currentStepIndex
-                  ? 'w-4 bg-neutral-900'
-                  : 'w-1.5 bg-neutral-300 hover:bg-neutral-400'
+                  ? 'w-4 bg-slate-900'
+                  : 'w-1.5 bg-slate-300 hover:bg-slate-400'
               }`}
               title={s.title}
             />

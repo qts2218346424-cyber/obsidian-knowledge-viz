@@ -322,7 +322,7 @@ export default function Music() {
                 navigate('/dashboard')
               }
             }}
-            className="p-2 sm:px-3 sm:py-2 rounded-xl bg-white dark:bg-slate-800 border border-warm-200/90 dark:border-slate-700 hover:bg-warm-100 dark:hover:bg-slate-700 text-warm-800 dark:text-slate-100 font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-2xs active:scale-95 transition-all cursor-pointer shrink-0"
+            className="p-2 sm:px-3 sm:py-2 rounded-xl bg-white dark:bg-slate-800 border border-warm-200/90 dark:border-slate-700 hover:bg-warm-100 dark:hover:bg-slate-700 text-warm-800 dark:text-slate-100 font-semibold text-xs sm:text-sm flex items-center gap-1.5 shadow-xs active:scale-95 transition-all cursor-pointer shrink-0"
             title="退出音乐电台，返回上一页"
           >
             <ArrowLeft className="w-4 h-4 text-warm-700 dark:text-slate-200" />
@@ -331,7 +331,7 @@ export default function Music() {
           <button
             type="button"
             onClick={() => navigate('/dashboard')}
-            className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-warm-200/90 dark:border-slate-700 hover:bg-warm-100 dark:hover:bg-slate-700 text-warm-600 dark:text-slate-300 font-medium text-xs flex items-center gap-1 shadow-2xs active:scale-95 transition-all cursor-pointer shrink-0"
+            className="p-2 rounded-xl bg-white dark:bg-slate-800 border border-warm-200/90 dark:border-slate-700 hover:bg-warm-100 dark:hover:bg-slate-700 text-warm-600 dark:text-slate-300 font-medium text-xs flex items-center gap-1 shadow-xs active:scale-95 transition-all cursor-pointer shrink-0"
             title="返回首页仪表盘"
           >
             <Home className="w-3.5 h-3.5" />
@@ -375,7 +375,7 @@ export default function Music() {
             <FolderOpen className="w-4 h-4" />
             <span>我的曲库</span>
             {cloudFiles.length > 0 && (
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+              <span className={`px-1.5 py-0.2 rounded-full text-2xs ${
                 activeTab === 'library' ? 'bg-white/25 text-white' : 'bg-warm-200 dark:bg-slate-700 text-warm-700 dark:text-slate-200'
               }`}>
                 {cloudFiles.length}
@@ -394,7 +394,7 @@ export default function Music() {
               onClick={() => setLibrarySubTab('cloud')}
               className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-medium flex items-center justify-center gap-2 transition-all cursor-pointer ${
                 librarySubTab === 'cloud'
-                  ? 'bg-white dark:bg-slate-900 text-accent-orange shadow-2xs font-semibold'
+                  ? 'bg-white dark:bg-slate-900 text-accent-orange shadow-xs font-semibold'
                   : 'text-warm-600 dark:text-slate-400 hover:text-warm-900 hover:bg-white/40'
               }`}
             >
@@ -405,7 +405,7 @@ export default function Music() {
               onClick={() => setLibrarySubTab('device')}
               className={`flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-medium flex items-center justify-center gap-2 transition-all cursor-pointer ${
                 librarySubTab === 'device'
-                  ? 'bg-white dark:bg-slate-900 text-accent-orange shadow-2xs font-semibold'
+                  ? 'bg-white dark:bg-slate-900 text-accent-orange shadow-xs font-semibold'
                   : 'text-warm-600 dark:text-slate-400 hover:text-warm-900 hover:bg-white/40'
               }`}
             >
@@ -528,7 +528,7 @@ export default function Music() {
                   <p className="text-xs sm:text-sm font-semibold text-warm-700 dark:text-slate-200">
                     点击上方按钮，或将手机/电脑中的音频文件拖拽至此上传
                   </p>
-                  <p className="text-[11px] text-warm-400 dark:text-slate-400 mt-1">
+                  <p className="text-2xs text-warm-400 dark:text-slate-400 mt-1">
                     全面支持 MP3、WAV、FLAC、OGG、M4A、AAC 等格式 · 单文件最高支持 300MB
                   </p>
                 </div>
@@ -545,7 +545,7 @@ export default function Music() {
                             onClick={() => playCloudFile(file)}
                             className={`group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer ${
                               isPlaying
-                                ? 'bg-accent-orange/15 dark:bg-accent-orange/20 text-warm-900 dark:text-white border border-accent-orange/30 shadow-2xs'
+                                ? 'bg-accent-orange/15 dark:bg-accent-orange/20 text-warm-900 dark:text-white border border-accent-orange/30 shadow-xs'
                                 : 'text-warm-700 dark:text-slate-200 hover:bg-cream-100 dark:hover:bg-slate-800/70'
                             }`}
                           >
@@ -564,10 +564,10 @@ export default function Music() {
                             <span className="flex-1 text-xs sm:text-sm font-medium truncate">
                               {file.name}
                             </span>
-                            <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded-md bg-warm-200/80 dark:bg-slate-800 text-warm-600 dark:text-slate-300 shrink-0">
+                            <span className="text-2xs uppercase font-mono px-1.5 py-0.5 rounded-md bg-warm-200/80 dark:bg-slate-800 text-warm-600 dark:text-slate-300 shrink-0">
                               {file.ext}
                             </span>
-                            <span className="text-[10px] text-warm-400 dark:text-slate-400 font-mono shrink-0 hidden sm:inline">
+                            <span className="text-2xs text-warm-400 dark:text-slate-400 font-mono shrink-0 hidden sm:inline">
                               {formatSize(file.size)}
                             </span>
                             {/* 删除按钮 */}
@@ -611,7 +611,7 @@ export default function Music() {
 
                 {showServerAdvanced && (
                   <div className="p-4 pt-1 border-t border-cream-200/80 dark:border-slate-800 space-y-3">
-                    <p className="text-[11px] text-warm-400 dark:text-slate-400 leading-relaxed">
+                    <p className="text-2xs text-warm-400 dark:text-slate-400 leading-relaxed">
                       💡 提示：此选项仅适用于管理员或自建服务器用户，直接读取云主机本地磁盘路径。普通用户在手机或个人电脑端，建议直接使用上方的“上传音乐”即可。
                     </p>
                     <div className="flex flex-col sm:flex-row gap-2">
@@ -644,7 +644,7 @@ export default function Music() {
                       </div>
                     </div>
                     {effectivePath && (
-                      <div className="text-[11px] text-warm-400 dark:text-slate-500 font-mono">
+                      <div className="text-2xs text-warm-400 dark:text-slate-500 font-mono">
                         当前云端存储物理路径：{effectivePath}
                       </div>
                     )}
@@ -713,7 +713,7 @@ export default function Music() {
                         onClick={() => playDeviceAudio(file)}
                         className={`group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer ${
                           isPlaying
-                            ? 'bg-accent-orange/15 dark:bg-accent-orange/20 text-warm-900 dark:text-white border border-accent-orange/30 shadow-2xs'
+                            ? 'bg-accent-orange/15 dark:bg-accent-orange/20 text-warm-900 dark:text-white border border-accent-orange/30 shadow-xs'
                             : 'text-warm-700 dark:text-slate-200 hover:bg-cream-100 dark:hover:bg-slate-800/70'
                         }`}
                       >
@@ -732,10 +732,10 @@ export default function Music() {
                         <span className="flex-1 text-xs sm:text-sm font-medium truncate">
                           {file.name}
                         </span>
-                        <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded-md bg-warm-200/80 dark:bg-slate-800 text-warm-600 dark:text-slate-300 shrink-0">
+                        <span className="text-2xs uppercase font-mono px-1.5 py-0.5 rounded-md bg-warm-200/80 dark:bg-slate-800 text-warm-600 dark:text-slate-300 shrink-0">
                           {file.type}
                         </span>
-                        <span className="text-[10px] text-warm-400 dark:text-slate-400 font-mono shrink-0">
+                        <span className="text-2xs text-warm-400 dark:text-slate-400 font-mono shrink-0">
                           {formatSize(file.size)}
                         </span>
                       </div>
@@ -796,9 +796,9 @@ export default function Music() {
                     <h2 className="text-base font-semibold text-warm-700 dark:text-slate-200">
                       {category.emoji} {category.label}
                     </h2>
-                    <p className="text-[11px] text-warm-400 dark:text-slate-400">{category.description}</p>
+                    <p className="text-2xs text-warm-400 dark:text-slate-400">{category.description}</p>
                   </div>
-                  <span className="ml-auto text-[10px] text-warm-400 dark:text-slate-400 bg-cream-200 dark:bg-slate-700 px-2 py-1 rounded-full">
+                  <span className="ml-auto text-2xs text-warm-400 dark:text-slate-400 bg-cream-200 dark:bg-slate-700 px-2 py-1 rounded-full">
                     {category.stations.length} 个电台
                   </span>
                 </div>
@@ -842,7 +842,7 @@ export default function Music() {
                               target="_blank"
                               rel="noopener noreferrer"
                               onClick={e => e.stopPropagation()}
-                              className="inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-white/90 dark:bg-slate-700 hover:bg-white text-warm-600 dark:text-slate-300 hover:text-accent-orange border border-cream-300 dark:border-slate-600 shadow-2xs transition-all"
+                              className="inline-flex items-center gap-0.5 text-2xs font-medium px-1.5 py-0.5 rounded-md bg-white/90 dark:bg-slate-700 hover:bg-white text-warm-600 dark:text-slate-300 hover:text-accent-orange border border-cream-300 dark:border-slate-600 shadow-xs transition-all"
                               title="访问电台官方主页 (外部跳转)"
                             >
                               <span>官网</span>
@@ -852,8 +852,8 @@ export default function Music() {
                         </div>
 
                         <div className="text-sm font-medium text-warm-700 dark:text-slate-200 leading-tight">{station.title}</div>
-                        <div className="text-[10px] text-warm-400 dark:text-slate-400 mt-0.5">{station.artist}</div>
-                        <div className="text-[10px] text-warm-400 dark:text-slate-400 mt-1 truncate opacity-70">{station.description}</div>
+                        <div className="text-2xs text-warm-400 dark:text-slate-400 mt-0.5">{station.artist}</div>
+                        <div className="text-2xs text-warm-400 dark:text-slate-400 mt-1 truncate opacity-70">{station.description}</div>
                       </button>
                     )
                   })}

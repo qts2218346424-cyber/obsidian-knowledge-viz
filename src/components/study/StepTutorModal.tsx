@@ -82,7 +82,7 @@ export default function StepTutorModal({
 
   const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-3xl bg-surface border border-cream-200 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="relative w-full max-w-3xl bg-surface border border-cream-200 rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-cream-200 bg-cream-50/70">
           <div className="flex items-center gap-2.5">
@@ -92,7 +92,7 @@ export default function StepTutorModal({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-warm-900">启发式多轮分步辅导 (Step-by-Step CoT)</h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-accent-amber/10 text-accent-amber border border-accent-amber/20">
+                <span className="px-2 py-0.5 rounded-full text-2xs font-semibold bg-accent-amber/10 text-accent-amber border border-accent-amber/20">
                   绝不直接剧透答案
                 </span>
               </div>
@@ -159,11 +159,11 @@ export default function StepTutorModal({
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-[11px] text-warm-400">调度引擎:</span>
+            <span className="text-2xs text-warm-400">调度引擎:</span>
             <div className="flex items-center gap-1 p-0.5 bg-cream-200/60 rounded-lg">
               <button
                 onClick={() => setProvider('claude-code')}
-                className={`px-2 py-1 rounded text-[11px] font-medium transition-colors ${
+                className={`px-2 py-1 rounded text-2xs font-medium transition-colors ${
                   provider === 'claude-code' ? 'bg-surface text-warm-900 shadow-xs' : 'text-warm-500'
                 }`}
                 title="本地 Claude Code CLI"
@@ -172,7 +172,7 @@ export default function StepTutorModal({
               </button>
               <button
                 onClick={() => setProvider('codex')}
-                className={`px-2 py-1 rounded text-[11px] font-medium transition-colors ${
+                className={`px-2 py-1 rounded text-2xs font-medium transition-colors ${
                   provider === 'codex' ? 'bg-surface text-warm-900 shadow-xs' : 'text-warm-500'
                 }`}
                 title="本地 OpenAI Codex CLI"
@@ -181,7 +181,7 @@ export default function StepTutorModal({
               </button>
               <button
                 onClick={() => setProvider('web')}
-                className={`px-2 py-1 rounded text-[11px] font-medium transition-colors ${
+                className={`px-2 py-1 rounded text-2xs font-medium transition-colors ${
                   provider === 'web' ? 'bg-surface text-warm-900 shadow-xs' : 'text-warm-500'
                 }`}
                 title="云端 DeepSeek / OpenAI API"
@@ -199,7 +199,7 @@ export default function StepTutorModal({
             <label className="text-xs font-semibold text-warm-700 flex items-center justify-between">
               <span>考研题面内容:</span>
               {initialSubject && (
-                <span className="text-[11px] text-accent-orange font-normal">科目：{initialSubject}</span>
+                <span className="text-2xs text-accent-orange font-normal">科目：{initialSubject}</span>
               )}
             </label>
             <textarea
@@ -216,7 +216,7 @@ export default function StepTutorModal({
             <div className="space-y-1.5 animate-fade-in">
               <label className="text-xs font-semibold text-rose-700 flex items-center justify-between">
                 <span>你的草稿演算步骤（供导师逐行挑刺）:</span>
-                <span className="text-[10px] text-warm-400">可贴上已写出的推导过程或逻辑断点</span>
+                <span className="text-2xs text-warm-400">可贴上已写出的推导过程或逻辑断点</span>
               </label>
               <textarea
                 value={studentSteps}
@@ -265,7 +265,7 @@ export default function StepTutorModal({
           {loading ? (
             <div className="py-12 flex flex-col items-center justify-center gap-3 text-warm-500">
               <Loader2 className="w-6 h-6 animate-spin text-accent-orange" />
-              <div className="text-xs font-medium">正在调取导师思维链，进行深度启发分析...</div>
+              <div className="text-xs font-medium">导师正在分析…</div>
             </div>
           ) : result ? (
             <div className="space-y-3 animate-fade-in">
@@ -273,12 +273,12 @@ export default function StepTutorModal({
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-warm-800">导师启发指导：</span>
                   {result.engineUsed && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-cream-200 text-warm-600">
+                    <span className="px-2 py-0.5 rounded-full text-2xs bg-cream-200 text-warm-600">
                       引擎：{result.engineUsed}
                     </span>
                   )}
                   {result.syllabusMatch && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-accent-sage/10 text-accent-sage border border-accent-sage/20">
+                    <span className="px-2 py-0.5 rounded-full text-2xs bg-accent-sage/10 text-accent-sage border border-accent-sage/20">
                       考点：{result.syllabusMatch.level3}
                     </span>
                   )}
@@ -286,7 +286,7 @@ export default function StepTutorModal({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleCopy}
-                    className="flex items-center gap-1 text-[11px] text-warm-500 hover:text-warm-800 transition-colors"
+                    className="flex items-center gap-1 text-2xs text-warm-500 hover:text-warm-800 transition-colors"
                   >
                     {copied ? <Check className="w-3.5 h-3.5 text-accent-sage" /> : <Copy className="w-3.5 h-3.5" />}
                     {copied ? '已复制' : '复制思路'}

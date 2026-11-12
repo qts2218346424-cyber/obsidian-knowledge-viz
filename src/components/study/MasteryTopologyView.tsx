@@ -147,7 +147,7 @@ export default function MasteryTopologyView() {
   const getStatusBadge = (status: 'red' | 'yellow' | 'green', score: number) => {
     if (status === 'green') {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
           <CheckCircle2 className="w-3 h-3" />
           熟练 · {score}分
         </span>
@@ -155,14 +155,14 @@ export default function MasteryTopologyView() {
     }
     if (status === 'yellow') {
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20">
           <AlertTriangle className="w-3 h-3" />
           巩固 · {score}分
         </span>
       )
     }
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-600 border border-rose-500/20 animate-pulse">
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-bold bg-rose-500/10 text-rose-600 border border-rose-500/20 animate-pulse">
         <Flame className="w-3 h-3" />
         盲区 · {score}分
       </span>
@@ -178,7 +178,7 @@ export default function MasteryTopologyView() {
           <div className="text-2xl font-bold text-warm-900 mt-1">
             {currentSummary?.totalPoints || 0} <span className="text-xs font-normal text-warm-400">个考纲考点</span>
           </div>
-          <div className="text-[11px] text-warm-500 mt-1">三级精细化知识拓扑</div>
+          <div className="text-2xs text-warm-500 mt-1">三级精细化知识拓扑</div>
         </div>
 
         <div className="bg-surface border border-emerald-500/20 rounded-2xl p-4 shadow-xs bg-emerald-500/5">
@@ -188,7 +188,7 @@ export default function MasteryTopologyView() {
           <div className="text-2xl font-bold text-emerald-700 mt-1">
             {currentSummary?.masteredCount || 0} <span className="text-xs font-normal text-emerald-600">个 (🟢)</span>
           </div>
-          <div className="text-[11px] text-emerald-600/80 mt-1">掌握度 ≥ 80%</div>
+          <div className="text-2xs text-emerald-600/80 mt-1">掌握度 ≥ 80%</div>
         </div>
 
         <div className="bg-surface border border-amber-500/20 rounded-2xl p-4 shadow-xs bg-amber-500/5">
@@ -198,7 +198,7 @@ export default function MasteryTopologyView() {
           <div className="text-2xl font-bold text-amber-700 mt-1">
             {currentSummary?.inProgressCount || 0} <span className="text-xs font-normal text-amber-600">个 (🟡)</span>
           </div>
-          <div className="text-[11px] text-amber-600/80 mt-1">掌握度 50% ~ 80%</div>
+          <div className="text-2xs text-amber-600/80 mt-1">掌握度 50% ~ 80%</div>
         </div>
 
         <div className="bg-surface border border-rose-500/20 rounded-2xl p-4 shadow-xs bg-rose-500/5">
@@ -208,7 +208,7 @@ export default function MasteryTopologyView() {
           <div className="text-2xl font-bold text-rose-700 mt-1">
             {currentSummary?.weakCount || 0} <span className="text-xs font-normal text-rose-600">个 (🔴)</span>
           </div>
-          <div className="text-[10.5px] sm:text-[11px] text-rose-600/80 mt-1 truncate">掌握度 &lt; 50% · 错题</div>
+          <div className="text-2xs sm:text-2xs text-rose-600/80 mt-1 truncate">掌握度 &lt; 50% · 错题</div>
         </div>
 
         <div className="bg-surface border border-cream-200 rounded-2xl p-4 shadow-xs col-span-2 md:col-span-1">
@@ -253,7 +253,7 @@ export default function MasteryTopologyView() {
 
         {/* 状态过滤与搜索 */}
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 p-0.5 bg-cream-200/60 rounded-lg text-[11px]">
+          <div className="flex items-center gap-1 p-0.5 bg-cream-200/60 rounded-lg text-2xs">
             <button
               onClick={() => setStatusFilter('all')}
               className={`px-2.5 py-1 rounded-md font-semibold transition-colors ${
@@ -388,9 +388,9 @@ export default function MasteryTopologyView() {
                           <div className="p-3 pt-0 space-y-2 border-t border-cream-200/60 bg-surface">
                             {l1.children?.map((l2) => (
                               <div key={l2.name} className="pl-4 py-2 space-y-1.5 border-l-2 border-cream-200">
-                                <div className="text-[11px] font-semibold text-warm-500 flex items-center justify-between">
+                                <div className="text-2xs font-semibold text-warm-500 flex items-center justify-between">
                                   <span>{l2.name}</span>
-                                  <span className="text-[10px] text-warm-400 font-normal">平均: {l2.score}分</span>
+                                  <span className="text-2xs text-warm-400 font-normal">平均: {l2.score}分</span>
                                 </div>
 
                                 {/* 三级叶子考点网格 */}
@@ -423,7 +423,7 @@ export default function MasteryTopologyView() {
                                           </span>
                                         </div>
 
-                                        <div className="flex items-center justify-between pt-1 border-t border-black/5 text-[10px]">
+                                        <div className="flex items-center justify-between pt-1 border-t border-black/5 text-2xs">
                                           <span className="text-warm-400">
                                             作答 {leaf.attempted} 次 (正确率 {leaf.attempted > 0 ? Math.round((leaf.correct / leaf.attempted) * 100) : 0}%)
                                           </span>
@@ -452,7 +452,7 @@ export default function MasteryTopologyView() {
             {loadingDetail ? (
               <div className="py-16 flex flex-col items-center justify-center gap-2 text-warm-400 text-xs">
                 <Loader2 className="w-5 h-5 animate-spin text-accent-orange" />
-                正在调取考点全量元数据与历史错题...
+                正在加载考点与错题…
               </div>
             ) : !nodeDetail ? (
               <div className="py-20 text-center space-y-3">
@@ -460,7 +460,7 @@ export default function MasteryTopologyView() {
                   <Network className="w-6 h-6" />
                 </div>
                 <div className="text-xs font-bold text-warm-700">点击任意考点节点</div>
-                <div className="text-[11px] text-warm-400 max-w-[200px] mx-auto">
+                <div className="text-2xs text-warm-400 max-w-[200px] mx-auto">
                   展开考点大纲要求、一键 AI 分步辅导、专项刷题自测及关联错题复盘
                 </div>
               </div>
@@ -469,7 +469,7 @@ export default function MasteryTopologyView() {
                 {/* 考点头部 */}
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] text-accent-orange font-semibold">
+                    <span className="text-2xs text-accent-orange font-semibold">
                       {nodeDetail.node.subject} · {nodeDetail.node.level1}
                     </span>
                     <button
@@ -484,7 +484,7 @@ export default function MasteryTopologyView() {
                   </h4>
                   <div className="flex flex-wrap gap-1 mt-2">
                     {(nodeDetail.node.keywords || []).map((kw: string) => (
-                      <span key={kw} className="px-2 py-0.5 rounded-md text-[10px] bg-cream-200/80 text-warm-600 font-medium">
+                      <span key={kw} className="px-2 py-0.5 rounded-md text-2xs bg-cream-200/80 text-warm-600 font-medium">
                         #{kw}
                       </span>
                     ))}
@@ -499,15 +499,15 @@ export default function MasteryTopologyView() {
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-center pt-2 border-t border-cream-200/60 text-xs">
                     <div>
-                      <div className="text-[10px] text-warm-400">总作答</div>
+                      <div className="text-2xs text-warm-400">总作答</div>
                       <div className="font-bold text-warm-800">{nodeDetail.record.totalAttempted} 次</div>
                     </div>
                     <div>
-                      <div className="text-[10px] text-warm-400">做对次数</div>
+                      <div className="text-2xs text-warm-400">做对次数</div>
                       <div className="font-bold text-emerald-600">{nodeDetail.record.correctCount} 次</div>
                     </div>
                     <div>
-                      <div className="text-[10px] text-warm-400">掌握得分</div>
+                      <div className="text-2xs text-warm-400">掌握得分</div>
                       <div className="font-bold text-accent-orange">{nodeDetail.record.masteryScore} 分</div>
                     </div>
                   </div>
@@ -515,7 +515,7 @@ export default function MasteryTopologyView() {
 
                 {/* 手动调整熟练度胶囊 */}
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-semibold text-warm-500">标记掌握状态：</label>
+                  <label className="text-2xs font-semibold text-warm-500">标记掌握状态：</label>
                   <div className="grid grid-cols-3 gap-1.5">
                     <button
                       onClick={() => handleUpdateStatus('green')}
@@ -561,13 +561,13 @@ export default function MasteryTopologyView() {
                 <div className="space-y-2 pt-2 border-t border-cream-200">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-bold text-warm-800">关联收录错题</span>
-                    <span className="text-[10px] text-warm-400">
+                    <span className="text-2xs text-warm-400">
                       {nodeDetail.errorQuestions.length} 道
                     </span>
                   </div>
 
                   {nodeDetail.errorQuestions.length === 0 ? (
-                    <div className="p-3 bg-cream-50 rounded-xl text-center text-[11px] text-warm-400">
+                    <div className="p-3 bg-cream-50 rounded-xl text-center text-2xs text-warm-400">
                       该考点暂无收录错题，继续保持！
                     </div>
                   ) : (
@@ -582,7 +582,7 @@ export default function MasteryTopologyView() {
                           <div className="font-medium text-warm-900 line-clamp-2">
                             {eq.question}
                           </div>
-                          <div className="flex items-center justify-between text-[10px] text-rose-600">
+                          <div className="flex items-center justify-between text-2xs text-rose-600">
                             <span>错误类型: {eq.errorType || '概念模糊'}</span>
                             <span className="flex items-center gap-0.5">
                               辅导此题 <ArrowRight className="w-2.5 h-2.5" />

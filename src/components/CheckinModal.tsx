@@ -193,7 +193,7 @@ export default function CheckinModal({ isOpen, onClose, defaultTab = 'checkin' }
   const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-fade-in">
       <div
-        className="w-full max-w-lg rounded-2xl bg-white border border-slate-200/90 shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-scale-up"
+        className="w-full max-w-lg rounded-2xl bg-white border border-slate-200/90 shadow-xl overflow-hidden flex flex-col max-h-[92vh] animate-scale-up"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Hero Banner */}
@@ -206,7 +206,7 @@ export default function CheckinModal({ isOpen, onClose, defaultTab = 'checkin' }
           </button>
 
           <div className="flex items-center gap-2 mb-1.5">
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/20 text-white text-[11px] font-semibold backdrop-blur-xs">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/20 text-white text-2xs font-semibold backdrop-blur-xs">
               <Sparkles className="h-3.5 w-3.5 text-amber-200" />
               CoreForge 研学激励与算力中心
             </span>
@@ -220,11 +220,11 @@ export default function CheckinModal({ isOpen, onClose, defaultTab = 'checkin' }
           {/* Current Balance Card */}
           <div className="mt-4 p-3.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-between">
             <div>
-              <div className="text-[11px] text-white/80 font-medium">当前伴学积分余额</div>
+              <div className="text-2xs text-white/80 font-medium">当前伴学积分余额</div>
               <div className="text-2xl font-black tracking-tight text-white flex items-baseline gap-1 mt-0.5">
                 <span>{points.toFixed(1)}</span>
                 <span className="text-xs font-normal text-amber-200">积分</span>
-                <span className="text-[11px] text-white/60 ml-2 font-normal">
+                <span className="text-2xs text-white/60 ml-2 font-normal">
                   (约可向导师提问 {Math.round(points * 10)} 次)
                 </span>
               </div>
@@ -234,7 +234,7 @@ export default function CheckinModal({ isOpen, onClose, defaultTab = 'checkin' }
               <button
                 onClick={handleDoCheckin}
                 disabled={isSubmitting}
-                className="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer active:scale-95 bg-white text-amber-700 hover:bg-amber-50 shadow-white/20 animate-pulse"
+                className="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95 bg-white text-amber-700 hover:bg-amber-50 shadow-white/20 animate-pulse"
               >
                 <CalendarCheck className="h-4 w-4 text-amber-600" />
                 <span>{isSubmitting ? '签到中...' : '签到 +1'}</span>
@@ -325,7 +325,7 @@ export default function CheckinModal({ isOpen, onClose, defaultTab = 'checkin' }
           {activeTab === 'checkin' && (
             <div className="space-y-4">
               <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/90 text-center space-y-3">
-                <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-md shadow-amber-500/20">
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-sm shadow-amber-500/20">
                   <CalendarCheck className="h-6 w-6" />
                 </div>
                 <div>
@@ -339,7 +339,7 @@ export default function CheckinModal({ isOpen, onClose, defaultTab = 'checkin' }
                   <button
                     onClick={handleDoCheckin}
                     disabled={!canCheckinToday || isSubmitting}
-                    className={`w-full py-2.5 rounded-xl font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer active:scale-95 ${
+                    className={`w-full py-2.5 rounded-xl font-bold text-xs transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer active:scale-95 ${
                       canCheckinToday
                         ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-amber-600/20'
                         : 'bg-slate-200 text-slate-500 cursor-not-allowed shadow-none'
@@ -365,7 +365,7 @@ export default function CheckinModal({ isOpen, onClose, defaultTab = 'checkin' }
                 <div className="font-bold text-slate-800 flex items-center gap-1.5">
                   <HelpCircle className="h-4 w-4 text-amber-600" /> 伴学积分机制说明
                 </div>
-                <div className="space-y-1 text-[11px] leading-relaxed">
+                <div className="space-y-1 text-2xs leading-relaxed">
                   <p>• <strong>单次提问消耗</strong>：向 408 导师/考研数学导师发起提问扣除 <strong>0.1 积分</strong>。</p>
                   <p>• <strong>每日打卡刷新</strong>：北京时间每日 00:00 自动刷新打卡资格，每日限领 1 次。</p>
                   <p>• <strong>额度用尽解决</strong>：可参与每日签到领分，或在「优惠码兑换」输入卡密券码，如需更多额度请联系管理员。</p>
@@ -394,14 +394,14 @@ export default function CheckinModal({ isOpen, onClose, defaultTab = 'checkin' }
                       placeholder="例如：CF-A8K2-9XP3 或 KAOYAN-2026-WIN"
                       value={couponCodeInput}
                       onChange={(e) => setCouponCodeInput(e.target.value.toUpperCase())}
-                      className="w-full rounded-xl border border-indigo-200 bg-white px-3.5 py-2.5 text-xs font-mono font-bold tracking-wider text-slate-900 uppercase focus:outline-none focus:border-indigo-500 shadow-2xs"
+                      className="w-full rounded-xl border border-indigo-200 bg-white px-3.5 py-2.5 text-xs font-mono font-bold tracking-wider text-slate-900 uppercase focus:outline-none focus:border-indigo-500 shadow-xs"
                     />
                   </div>
 
                   <button
                     type="submit"
                     disabled={isSubmitting || !couponCodeInput.trim()}
-                    className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-600/20 transition-all cursor-pointer disabled:opacity-50 active:scale-95 flex items-center justify-center gap-1.5"
+                    className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-sm shadow-indigo-600/20 transition-all cursor-pointer disabled:opacity-50 active:scale-95 flex items-center justify-center gap-1.5"
                   >
                     <Gift className="h-4 w-4" />
                     <span>{isSubmitting ? '正在核销兑换...' : '立即兑换到账'}</span>
@@ -409,7 +409,7 @@ export default function CheckinModal({ isOpen, onClose, defaultTab = 'checkin' }
                 </form>
               </div>
 
-              <div className="rounded-xl border border-slate-200/80 p-3 bg-slate-50/60 text-[11px] text-slate-500 space-y-1">
+              <div className="rounded-xl border border-slate-200/80 p-3 bg-slate-50/60 text-2xs text-slate-500 space-y-1">
                 <p>💡 提示：优惠码大小写不敏感，系统会自动为您转为大写。单次券核销后即作废，多次券每个账号仅限使用一次。</p>
               </div>
             </div>
@@ -445,7 +445,7 @@ export default function CheckinModal({ isOpen, onClose, defaultTab = 'checkin' }
 
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-800">选择研学充值套餐 (管理员测试)</span>
-                  <span className="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-semibold">
+                  <span className="text-2xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-semibold">
                     ⚡ 管理员调试通道
                   </span>
                 </div>
@@ -469,7 +469,7 @@ export default function CheckinModal({ isOpen, onClose, defaultTab = 'checkin' }
                       >
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-bold text-slate-900">{plan.title}</span>
-                          <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.2 rounded">
+                          <span className="text-2xs font-semibold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.2 rounded">
                             {plan.tag}
                           </span>
                         </div>
@@ -477,7 +477,7 @@ export default function CheckinModal({ isOpen, onClose, defaultTab = 'checkin' }
                           <span>+{plan.amount}</span>
                           <span className="text-xs font-normal text-slate-500">积分</span>
                         </div>
-                        <p className="text-[11px] text-slate-500 mt-1">{plan.desc}</p>
+                        <p className="text-2xs text-slate-500 mt-1">{plan.desc}</p>
                       </div>
                     )
                   })}
@@ -507,7 +507,7 @@ export default function CheckinModal({ isOpen, onClose, defaultTab = 'checkin' }
                   </div>
                 </div>
 
-                <div className="p-3 rounded-xl bg-amber-50/60 border border-amber-200/80 text-[11px] text-amber-900 space-y-1">
+                <div className="p-3 rounded-xl bg-amber-50/60 border border-amber-200/80 text-2xs text-amber-900 space-y-1">
                   <p className="font-semibold flex items-center gap-1">
                     <CreditCard className="h-3.5 w-3.5 text-amber-700" /> 研学公益与个人 API 额度支持：
                   </p>
@@ -564,7 +564,7 @@ export default function CheckinModal({ isOpen, onClose, defaultTab = 'checkin' }
                           <div className="font-semibold text-slate-800">
                             {log.remark || (log.type === 'checkin' ? '每日签到奖励' : 'AI 伴学提问消耗')}
                           </div>
-                          <div className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                          <div className="text-2xs text-slate-400 flex items-center gap-1 mt-0.5">
                             <Clock className="h-3 w-3" />
                             <span>{new Date(log.createdAt).toLocaleString()}</span>
                           </div>
@@ -579,7 +579,7 @@ export default function CheckinModal({ isOpen, onClose, defaultTab = 'checkin' }
                         >
                           {isPlus ? `+${log.amount.toFixed(1)}` : log.amount.toFixed(1)}
                         </div>
-                        <div className="text-[10px] text-slate-400 font-mono">
+                        <div className="text-2xs text-slate-400 font-mono">
                           余额: {log.balanceAfter.toFixed(1)}
                         </div>
                       </div>
@@ -593,7 +593,7 @@ export default function CheckinModal({ isOpen, onClose, defaultTab = 'checkin' }
 
         {/* Footer */}
         <div className="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 shrink-0">
-          <span className="text-[11px]">积分与卡密全站实时同步生效</span>
+          <span className="text-2xs">积分与卡密全站实时同步生效</span>
           <button
             onClick={onClose}
             className="px-4 py-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold cursor-pointer transition-colors"

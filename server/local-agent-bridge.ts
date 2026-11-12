@@ -442,13 +442,38 @@ export async function* runLocalAgent(options: LocalAgentRunOptions): AsyncGenera
     let stderr = ''
     let emittedSessionId = ''
     let spawnError: Error | null = null
+    let idleTimedOut = false
+    const IDLE_TIMEOUT_MS = 60_000
+    let idleTimer: ReturnType<typeof setTimeout> | null = null
+
+    const clearIdleTimer = () => {
+      if (idleTimer) {
+        clearTimeout(idleTimer)
+        idleTimer = null
+      }
+    }
+    const resetIdleTimer = () => {
+      clearIdleTimer()
+      idleTimer = setTimeout(() => {
+        idleTimedOut = true
+        terminateProcess(child)
+      }, IDLE_TIMEOUT_MS)
+    }
+
     child.once('error', error => {
       spawnError = error
     })
+    child.stdout.on('data', resetIdleTimer)
+    child.stderr.on('data', resetIdleTimer)
+    resetIdleTimer()
+
     const closePromise = new Promise<number | null>(resolve => {
       child.once('close', resolve)
     })
-    const abortHandler = () => terminateProcess(child)
+    const abortHandler = () => {
+      clearIdleTimer()
+      terminateProcess(child)
+    }
     options.signal?.addEventListener('abort', abortHandler, { once: true })
 
     const emitJsonEvent = async function* (value: any): AsyncGenerator<LocalAgentEvent> {
@@ -493,7 +518,17 @@ export async function* runLocalAgent(options: LocalAgentRunOptions): AsyncGenera
     await stderrPromise
 
     const exitCode = await closePromise
+    clearIdleTimer()
     options.signal?.removeEventListener('abort', abortHandler)
+
+    if (idleTimedOut) {
+      yield {
+        type: 'error',
+        provider: options.provider,
+        content: `${providerLabel} 响应超时（60 秒内无任何输出）`,
+      }
+      return
+    }
 
     if (spawnError) {
       let friendlyMessage = (spawnError as any)?.message || '本地 Agent 启动失败'

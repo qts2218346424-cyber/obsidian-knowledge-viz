@@ -19,7 +19,7 @@ import {
 } from '../../services/api'
 import { useExamCountdown } from '../../utils/examDate'
 
-type StudyTabKey = 'graph' | 'topology' | 'mastery' | 'flashcards' | 'handouts' | 'pdfs' | 'coursewares' | 'errors' | 'progress'
+type StudyTabKey = 'graph' | 'topology' | 'mastery' | 'flashcards' | 'handouts' | 'pdfs' | 'coursewares' | 'progress'
 
 interface ProgressDashboardTabProps {
   onSwitchTab: (tab: StudyTabKey) => void
@@ -464,7 +464,7 @@ export default function ProgressDashboardTab({ onSwitchTab }: ProgressDashboardT
         {/* KPI 2: 错题本待攻克与消灭率 */}
         <button
           type="button"
-          onClick={() => onSwitchTab('errors')}
+          onClick={() => navigate('/quiz?tab=errors')}
           className="text-left bg-white border border-neutral-200/80 hover:border-rose-400 rounded-2xl p-4 shadow-2xs transition-all group cursor-pointer"
         >
           <div className="flex items-center justify-between text-xs text-neutral-500">
@@ -987,10 +987,10 @@ export default function ProgressDashboardTab({ onSwitchTab }: ProgressDashboardT
             </div>
             <button
               type="button"
-              onClick={() => onSwitchTab('errors')}
+              onClick={() => navigate('/quiz?tab=errors')}
               className="text-xs font-medium text-rose-600 hover:underline cursor-pointer"
             >
-              进入每日错题复盘 →
+              进入错题攻克中心 →
             </button>
           </div>
 
@@ -1003,7 +1003,7 @@ export default function ProgressDashboardTab({ onSwitchTab }: ProgressDashboardT
               {recentErrors.map(err => (
                 <div
                   key={err.id}
-                  onClick={() => onSwitchTab('errors')}
+                  onClick={() => navigate('/quiz?tab=errors')}
                   className="p-3 rounded-xl border border-neutral-200/70 bg-neutral-50/50 hover:bg-white hover:border-rose-300 transition-colors cursor-pointer space-y-1"
                 >
                   <div className="flex items-center justify-between gap-2">

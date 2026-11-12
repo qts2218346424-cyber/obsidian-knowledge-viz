@@ -60,9 +60,20 @@ export default function PdfCanvasViewer({
 
   const [loading, setLoading] = useState<boolean>(true)
   const [loadingProgress, setLoadingProgress] = useState<number>(0)
+  const [loadedBytes, setLoadedBytes] = useState<number>(0)
+  const [loadingElapsed, setLoadingElapsed] = useState<number>(0)
   const [rendering, setRendering] = useState<boolean>(false)
   const [errorMsg, setErrorMsg] = useState<string>('')
   const [pageInput, setPageInput] = useState<string>(String(initialPage))
+
+  useEffect(() => {
+    if (!loading) {
+      setLoadingElapsed(0)
+      return
+    }
+    const timer = setInterval(() => setLoadingElapsed(s => s + 1), 1000)
+    return () => clearInterval(timer)
+  }, [loading])
 
   // 1. 加载 PDF 文档
   useEffect(() => {
@@ -70,6 +81,8 @@ export default function PdfCanvasViewer({
     setLoading(true)
     setErrorMsg('')
     setLoadingProgress(0)
+    setLoadedBytes(0)
+    setLoadingElapsed(0)
     setPdfDoc(null)
     setOutline([])
 
@@ -84,6 +97,9 @@ export default function PdfCanvasViewer({
     })
 
     loadingTask.onProgress = (progressData: { loaded: number; total: number }) => {
+      if (progressData.loaded > 0) {
+        setLoadedBytes(progressData.loaded)
+      }
       if (progressData.total > 0) {
         const percent = Math.min(100, Math.round((progressData.loaded / progressData.total) * 100))
         setLoadingProgress(percent)
@@ -442,18 +458,48 @@ export default function PdfCanvasViewer({
           ref={containerRef}
           className="flex-1 h-full overflow-auto bg-[#12141a] flex items-start justify-center p-2 sm:p-5 relative"
         >
-          {loading && (
-            <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[#13151c]/92 text-slate-300 gap-3 backdrop-blur-xs">
-              <Loader2 className="w-9 h-9 text-cyan-400 animate-spin" />
-              <div className="text-sm font-semibold tracking-wide text-white">
-                正在通过分片管道装载 PDF 首屏...
+          {loading && (() => {
+            const displayPct = loadingProgress > 0
+              ? loadingProgress
+              : Math.min(92, 12 + loadingElapsed * 3)
+            const loadedMB = (loadedBytes / (1024 * 1024)).toFixed(2)
+            const stepIdx = loadingElapsed < 3 ? 0 : loadingProgress < 80 && loadingElapsed < 15 ? 1 : 2
+            const stepText =
+              stepIdx === 0
+                ? '第 1/3 步：正在连接讲义资料库...'
+                : stepIdx === 1
+                  ? `第 2/3 步：正在按页拉取讲义内容${loadedBytes > 0 ? `（已接收 ${loadedMB} MB）` : ''}...`
+                  : `第 3/3 步：正在解析目录大纲与生成清晰页面（已用时 ${loadingElapsed} 秒）...`
+            return (
+              <div className="absolute inset-0 z-30 flex items-center justify-center bg-[#13151c]/85 p-4 backdrop-blur-xs">
+                <div className="w-full max-w-sm rounded-2xl bg-[#1a1f2e] border border-white/10 p-6 shadow-2xl space-y-4 text-slate-200">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Loader2 className="w-5 h-5 text-cyan-400 animate-spin shrink-0" />
+                      <span className="text-sm font-bold text-white truncate">正在装载 PDF 讲义</span>
+                    </div>
+                    <span className="text-xs font-mono font-bold text-cyan-300 shrink-0">{displayPct}%</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-cyan-400 to-sky-500 rounded-full transition-all duration-300"
+                      style={{ width: `${displayPct}%` }}
+                    />
+                  </div>
+                  <div className="text-xs text-cyan-300 font-medium">{stepText}</div>
+                  <div className="flex items-center justify-between text-[10.5px] text-slate-400 pt-1 border-t border-white/10">
+                    <span className={stepIdx === 0 ? 'text-cyan-300 font-semibold' : 'text-emerald-400'}>① 连接资料库</span>
+                    <span className={stepIdx === 1 ? 'text-cyan-300 font-semibold' : stepIdx > 1 ? 'text-emerald-400' : ''}>② 按页加载</span>
+                    <span className={stepIdx >= 2 ? 'text-cyan-300 font-semibold' : ''}>③ 渲染首屏</span>
+                  </div>
+                  <div className="text-[11px] text-emerald-400 flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-xl">
+                    <Smartphone className="w-3.5 h-3.5 shrink-0" />
+                    <span>已启用按页加载模式，大文件无需下载整本即可先看首屏</span>
+                  </div>
+                </div>
               </div>
-              <div className="text-xs text-emerald-400 flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
-                <Smartphone className="w-3.5 h-3.5" />
-                已开启 Fast Web View 线性化 · 仅拉取当前页，无需下载全书
-              </div>
-            </div>
-          )}
+            )
+          })()}
 
           {errorMsg && (
             <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[#13151c] text-slate-300 p-6 text-center gap-3">

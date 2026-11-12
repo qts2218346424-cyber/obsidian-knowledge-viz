@@ -151,7 +151,7 @@ export default function QuickNoteDrawer({ isOpen, onClose, onNoteCreated }: Quic
       {/* 抽屉卡片主体 */}
       <div
         onClick={e => e.stopPropagation()}
-        className="relative z-10 w-full sm:max-w-xl bg-white rounded-t-2xl sm:rounded-3xl shadow-2xl border border-slate-200/80 flex flex-col max-h-[92dvh] animate-sheet-up overflow-hidden"
+        className="relative z-10 w-full sm:max-w-xl bg-white rounded-t-2xl sm:rounded-3xl shadow-xl border border-slate-200/80 flex flex-col max-h-[92dvh] animate-sheet-up overflow-hidden"
       >
         {/* 顶部手柄（手机端） */}
         <div className="sm:hidden flex justify-center pt-2 pb-0.5">
@@ -169,11 +169,11 @@ export default function QuickNoteDrawer({ isOpen, onClose, onNoteCreated }: Quic
                 <h3 className="text-xs sm:text-sm font-bold text-slate-900 truncate">
                   随手记 · 极速入库
                 </h3>
-                <span className="text-[9px] sm:text-[10px] font-semibold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0">
+                <span className="text-2xs sm:text-2xs font-semibold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 shrink-0">
                   同步 Obsidian
                 </span>
               </div>
-              <p className="text-[10px] sm:text-[11px] text-slate-400 truncate">
+              <p className="text-2xs sm:text-2xs text-slate-400 truncate">
                 开箱即写，自动归纳至本地知识库并点亮知识图谱
               </p>
             </div>
@@ -246,7 +246,7 @@ export default function QuickNoteDrawer({ isOpen, onClose, onNoteCreated }: Quic
                   const time = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`
                   setTitle(`考点随手记_${time}`)
                 }}
-                className="text-[10px] text-indigo-600 hover:text-indigo-800 transition-colors"
+                className="text-2xs text-indigo-600 hover:text-indigo-800 transition-colors"
               >
                 重置为当前时间
               </button>
@@ -287,8 +287,8 @@ export default function QuickNoteDrawer({ isOpen, onClose, onNoteCreated }: Quic
           {/* 正文输入 */}
           <div className="flex flex-col flex-1 min-h-[120px] sm:min-h-[160px]">
             <div className="flex items-center justify-between mb-1">
-              <label className="text-[11px] sm:text-xs font-semibold text-slate-700">核心笔记正文</label>
-              <span className="text-[9.5px] sm:text-[10px] text-slate-400">支持 Markdown 与 LaTeX 公式</span>
+              <label className="text-2xs sm:text-xs font-semibold text-slate-700">核心笔记正文</label>
+              <span className="text-2xs sm:text-2xs text-slate-400">支持 Markdown 与 LaTeX 公式</span>
             </div>
             <textarea
               ref={textareaRef}
@@ -371,7 +371,7 @@ export default function QuickNoteDrawer({ isOpen, onClose, onNoteCreated }: Quic
           )}
 
           {successPath && (
-            <div className="p-3 sm:p-3.5 rounded-lg sm:rounded-xl bg-emerald-50 border border-emerald-200 text-[11px] sm:text-xs text-emerald-900 space-y-2 animate-in fade-in shadow-2xs">
+            <div className="p-3 sm:p-3.5 rounded-lg sm:rounded-xl bg-emerald-50 border border-emerald-200 text-2xs sm:text-xs text-emerald-900 space-y-2 animate-in fade-in shadow-xs">
               <div className="flex items-center gap-1.5 sm:gap-2 font-bold text-emerald-800">
                 <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 text-emerald-600" />
                 <span>🎉 已存入 Obsidian 知识库。</span>
@@ -428,7 +428,7 @@ export default function QuickNoteDrawer({ isOpen, onClose, onNoteCreated }: Quic
             type="button"
             onClick={() => handleSave(false)}
             disabled={saving || !content.trim()}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg sm:rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] sm:text-xs font-bold shadow-md shadow-indigo-600/20 active:scale-95 transition-all disabled:opacity-40 cursor-pointer"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg sm:rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-2xs sm:text-xs font-bold shadow-sm shadow-indigo-600/20 active:scale-95 transition-all disabled:opacity-40 cursor-pointer"
           >
             {saving ? (
               <>

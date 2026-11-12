@@ -34,7 +34,7 @@ function WordNode({ data }: { data: any }) {
     <div className={`px-3 py-2 rounded-lg border ${s.bg} ${s.border} min-w-[130px] cursor-pointer transition-all hover:scale-105`}>
       <Handle type="target" position={Position.Top} className="!bg-cream-300 !w-2 !h-2 !border-0" />
       <div className={`text-sm font-medium ${s.text}`}>{data.word}</div>
-      <div className="text-[11px] text-warm-400 mt-0.5 truncate max-w-[150px]">{data.definition}</div>
+      <div className="text-2xs text-warm-400 mt-0.5 truncate max-w-[150px]">{data.definition}</div>
       <Handle type="source" position={Position.Bottom} className="!bg-cream-300 !w-2 !h-2 !border-0" />
     </div>
   )
@@ -207,10 +207,10 @@ export default function WordRelations() {
                       <span className={`text-sm font-medium ${active ? 'text-accent-orange' : 'text-warm-700'}`}>
                         {r.root}
                       </span>
-                      <span className="text-[10px] text-warm-400">({r.meaning})</span>
+                      <span className="text-2xs text-warm-400">({r.meaning})</span>
                     </div>
                   </div>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full border shrink-0 ${
+                  <span className={`text-2xs px-1.5 py-0.5 rounded-full border shrink-0 ${
                     active
                       ? 'bg-accent-orange/10 text-accent-orange border-accent-orange/30'
                       : 'bg-cream-100 text-warm-400 border-cream-200'

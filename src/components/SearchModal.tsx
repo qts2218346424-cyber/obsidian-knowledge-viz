@@ -84,7 +84,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
 
       {/* Modal */}
       <div
-        className="relative w-full max-w-lg bg-white border border-slate-200/90 rounded-2xl shadow-2xl overflow-hidden animate-fade-in-up"
+        className="relative w-full max-w-lg bg-white border border-slate-200/90 rounded-2xl shadow-xl overflow-hidden animate-fade-in-up"
         onClick={e => e.stopPropagation()}
       >
         {/* Search input */}
@@ -114,7 +114,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
           {results.length === 0 && query.trim() && !loading && (
             <div className="px-4 py-8 text-center text-xs text-slate-500 space-y-3">
               <p className="font-semibold text-slate-700">未在个人笔记中找到匹配「{query}」的篇章</p>
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/90 text-[11px] text-slate-600 inline-block text-left max-w-sm">
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/90 text-2xs text-slate-600 inline-block text-left max-w-sm">
                 <span className="font-bold text-slate-800">🔍 检索范围提示：</span>
                 <p className="mt-1 text-slate-500 leading-relaxed">此处检索您当前绑定的个人 Obsidian 笔记库（不覆盖公共讲义与 408/数学真题库）。</p>
                 <div className="mt-2.5 flex items-center gap-2">
@@ -145,7 +145,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
                     key={kw}
                     type="button"
                     onClick={() => handleInput(kw)}
-                    className="text-[11px] px-2.5 py-1 rounded-full bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 transition-colors cursor-pointer"
+                    className="text-2xs px-2.5 py-1 rounded-full bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 transition-colors cursor-pointer"
                   >
                     {kw}
                   </button>
@@ -169,18 +169,18 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
                   <span className={`text-sm font-semibold truncate ${selected === i ? 'text-slate-900' : 'text-slate-700'}`}>
                     {highlightMatch(file.title, query)}
                   </span>
-                  <span className="text-[10px] text-slate-400 shrink-0">{file.wordCount} 字</span>
+                  <span className="text-2xs text-slate-400 shrink-0">{file.wordCount} 字</span>
                 </div>
-                <div className="text-[11px] text-slate-400 truncate mt-0.5">{file.path}</div>
+                <div className="text-2xs text-slate-400 truncate mt-0.5">{file.path}</div>
                 {file.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-1.5">
                     {file.tags.slice(0, 3).map(tag => (
-                      <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500">#{tag}</span>
+                      <span key={tag} className="text-2xs px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500">#{tag}</span>
                     ))}
                   </div>
                 )}
                 {file.snippet && (
-                  <div className="text-[11px] text-slate-500 mt-1 line-clamp-2 leading-relaxed">
+                  <div className="text-2xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">
                     {highlightMatch(file.snippet, query)}
                   </div>
                 )}
@@ -191,7 +191,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
 
         {/* Footer */}
         {results.length > 0 && (
-          <div className="px-4 py-2 border-t border-slate-100 bg-slate-50/70 flex items-center gap-4 text-[11px] text-slate-400">
+          <div className="px-4 py-2 border-t border-slate-100 bg-slate-50/70 flex items-center gap-4 text-2xs text-slate-400">
             <span className="hidden sm:inline">↑↓ 选择</span>
             <span className="hidden sm:inline">回车打开</span>
             <span>点击条目直达笔记</span>

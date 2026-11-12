@@ -72,7 +72,7 @@ export function MathScratchpadCanvas({
             key={idx}
             type="button"
             onClick={() => insertSymbol(s.code)}
-            className="px-2 py-1 rounded-lg bg-white dark:bg-slate-900 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 border border-slate-200 dark:border-slate-700 text-xs font-mono font-medium transition-colors shadow-2xs cursor-pointer"
+            className="px-2 py-1 rounded-lg bg-white dark:bg-slate-900 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 border border-slate-200 dark:border-slate-700 text-xs font-mono font-medium transition-colors shadow-xs cursor-pointer"
           >
             {s.label}
           </button>
@@ -89,7 +89,7 @@ export function MathScratchpadCanvas({
         className="w-full p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none leading-relaxed placeholder:text-slate-400"
       />
 
-      <div className="flex items-center justify-between text-[11px] text-slate-400">
+      <div className="flex items-center justify-between text-2xs text-slate-400">
         <span>草稿在本次练习中自动保存</span>
         <button
           type="button"

@@ -117,7 +117,7 @@ const TOUR_SCENES: TourScene[] = [
     colorBg: 'bg-emerald-50/80',
     colorBorder: 'border-emerald-200/80',
     description:
-      '在做题或研读讲义时，无需跳转页面，随时点击顶栏随手记胶囊即可滑出抽屉。预设多学科标签，支持 LaTeX 公式与拍照上传，一键直写本地 Obsidian Vault。',
+      '在做题或研读讲义时，无需跳转页面，随时点击顶栏随手记胶囊即可滑出抽屉。预设多学科标签，支持 LaTeX 公式与拍照上传，一键保存到个人笔记库。',
     highlights: [
       '0 中断心流：顶栏一键呼出，做题草稿、考点灵感与闪念随手保存',
       '双链与标签：自动按日期归档至随手记目录，并自动纳入全库双链网络',
@@ -340,25 +340,25 @@ export default function UserGuideModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-5xl rounded-2xl sm:rounded-3xl bg-white border border-neutral-200/90 shadow-[0_24px_50px_-12px_rgba(0,0,0,0.16)] overflow-hidden flex flex-col max-h-[92vh] text-neutral-900"
+        className="relative w-full max-w-5xl rounded-2xl sm:rounded-3xl bg-white border border-slate-200/90 shadow-[0_24px_50px_-12px_rgba(0,0,0,0.16)] overflow-hidden flex flex-col max-h-[92vh] text-slate-900"
       >
         {/* Top Header - 纯净现代玻璃质感 */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-100 px-5 sm:px-6 py-4 bg-white/95 shrink-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 px-5 sm:px-6 py-4 bg-white/95 shrink-0">
           <div className="flex items-center justify-between gap-3 min-w-0">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-900 p-2 text-white shadow-xs">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 p-2 text-white shadow-xs">
                 <Compass className="h-5 w-5" />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm sm:text-base font-bold text-neutral-900 tracking-tight truncate">
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight truncate">
                     CoreForge 研核 · 全功能与小功能完全使用手册
                   </h3>
-                  <span className="hidden md:inline-flex px-2 py-0.5 text-[10.5px] font-semibold rounded-md bg-neutral-100 text-neutral-600 border border-neutral-200/70 shrink-0">
+                  <span className="hidden md:inline-flex px-2 py-0.5 text-2xs font-semibold rounded-md bg-slate-100 text-slate-600 border border-slate-200/70 shrink-0">
                     22 大功能全景
                   </span>
                 </div>
-                <p className="text-xs text-neutral-500 line-clamp-1 mt-0.5">
+                <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">
                   涵盖色谱图、知识图谱、随手记、答题卡调色板、SM-2 闪卡与所有小功能的作用与使用说明
                 </p>
               </div>
@@ -366,7 +366,7 @@ export default function UserGuideModal({
 
             <button
               onClick={handleClose}
-              className="sm:hidden p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer shrink-0"
+              className="sm:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
               aria-label="关闭"
             >
               <X className="h-5 w-5" />
@@ -375,14 +375,14 @@ export default function UserGuideModal({
 
           <div className="flex items-center justify-between sm:justify-end gap-2.5 shrink-0">
             {/* Tab Switch */}
-            <div className="flex w-full sm:w-auto p-1 rounded-xl bg-neutral-100 border border-neutral-200/60 text-xs">
+            <div className="flex w-full sm:w-auto p-1 rounded-xl bg-slate-100 border border-slate-200/60 text-xs">
               <button
                 type="button"
                 onClick={() => setActiveTab('tour')}
                 className={`flex-1 sm:flex-initial whitespace-nowrap px-3.5 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
                   activeTab === 'tour'
-                    ? 'bg-white text-neutral-900 shadow-2xs font-semibold'
-                    : 'text-neutral-500 hover:text-neutral-900'
+                    ? 'bg-white text-slate-900 shadow-xs font-semibold'
+                    : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 功能巡礼导览
@@ -392,8 +392,8 @@ export default function UserGuideModal({
                 onClick={() => setActiveTab('doc')}
                 className={`flex-1 sm:flex-initial whitespace-nowrap px-3.5 py-1.5 rounded-lg font-medium transition-all cursor-pointer ${
                   activeTab === 'doc'
-                    ? 'bg-white text-neutral-900 shadow-2xs font-semibold'
-                    : 'text-neutral-500 hover:text-neutral-900'
+                    ? 'bg-white text-slate-900 shadow-xs font-semibold'
+                    : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 全功能使用手册字典
@@ -402,7 +402,7 @@ export default function UserGuideModal({
 
             <button
               onClick={handleClose}
-              className="hidden sm:inline-flex p-1.5 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 transition-colors cursor-pointer shrink-0"
+              className="hidden sm:inline-flex p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
               aria-label="关闭"
             >
               <X className="h-4 w-4" />
@@ -415,7 +415,7 @@ export default function UserGuideModal({
           {activeTab === 'tour' ? (
             <div className="p-4 sm:p-6 space-y-5">
               {/* Feature Preview Card */}
-              <div className="relative rounded-2xl border border-neutral-200/90 bg-neutral-50/70 p-5 sm:p-7 overflow-hidden transition-all duration-300">
+              <div className="relative rounded-2xl border border-slate-200/90 bg-slate-50/70 p-5 sm:p-7 overflow-hidden transition-all duration-300">
                 {/* 顶部控制栏 */}
                 <div className="flex flex-wrap items-center justify-between gap-2 relative z-10">
                   <span
@@ -429,7 +429,7 @@ export default function UserGuideModal({
 
                   <button
                     onClick={() => setIsPlaying(!isPlaying)}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-neutral-200 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50 text-xs font-medium transition-all cursor-pointer whitespace-nowrap shadow-2xs shrink-0"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 text-xs font-medium transition-all cursor-pointer whitespace-nowrap shadow-xs shrink-0"
                     title={isPlaying ? '暂停自动演播' : '继续自动演播'}
                   >
                     {isPlaying ? (
@@ -450,25 +450,25 @@ export default function UserGuideModal({
                 <div className="my-5 relative z-10 max-w-2xl">
                   <div className="flex items-center gap-2.5">
                     <span
-                      className={`p-1.5 rounded-xl border ${scene.colorBg} ${scene.colorBorder} ${scene.colorText} shadow-2xs`}
+                      className={`p-1.5 rounded-xl border ${scene.colorBg} ${scene.colorBorder} ${scene.colorText} shadow-xs`}
                     >
                       <scene.icon className="h-4 w-4" />
                     </span>
-                    <h4 className="text-lg sm:text-xl font-bold text-neutral-900 tracking-tight">
+                    <h4 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
                       {scene.title}
                     </h4>
                   </div>
-                  <p className="mt-1.5 text-xs sm:text-sm font-semibold text-neutral-600">
+                  <p className="mt-1.5 text-xs sm:text-sm font-semibold text-slate-600">
                     {scene.subtitle}
                   </p>
-                  <p className="mt-2.5 text-xs text-neutral-600 leading-relaxed">
+                  <p className="mt-2.5 text-xs text-slate-600 leading-relaxed">
                     {scene.description}
                   </p>
 
                   {/* Highlights Bullet Points */}
                   <div className="mt-4 space-y-1.5">
                     {scene.highlights.map((h, idx) => (
-                      <div key={idx} className="flex items-start gap-2 text-xs text-neutral-700">
+                      <div key={idx} className="flex items-start gap-2 text-xs text-slate-700">
                         <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" />
                         <span>{h}</span>
                       </div>
@@ -477,7 +477,7 @@ export default function UserGuideModal({
                 </div>
 
                 {/* 底部时间线与直达体验按钮 */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-4 border-t border-neutral-200/80 relative z-10">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-4 border-t border-slate-200/80 relative z-10">
                   {/* 时间线微指示点 */}
                   <div className="flex items-center gap-1.5">
                     {TOUR_SCENES.map((s, idx) => (
@@ -489,8 +489,8 @@ export default function UserGuideModal({
                         }}
                         className={`h-1.5 rounded-full transition-all cursor-pointer ${
                           idx === currentSceneIndex
-                            ? 'w-6 bg-neutral-900'
-                            : 'w-2 bg-neutral-300 hover:bg-neutral-400'
+                            ? 'w-6 bg-slate-900'
+                            : 'w-2 bg-slate-300 hover:bg-slate-400'
                         }`}
                         title={s.title}
                       />
@@ -499,69 +499,69 @@ export default function UserGuideModal({
 
                   <button
                     onClick={() => handleNavigate(scene.route)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-300/80 bg-white hover:bg-neutral-50 px-3.5 py-1.5 text-xs font-semibold text-neutral-800 shadow-2xs transition-all active:scale-95 cursor-pointer"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300/80 bg-white hover:bg-slate-50 px-3.5 py-1.5 text-xs font-semibold text-slate-800 shadow-xs transition-all active:scale-95 cursor-pointer"
                   >
                     <span>{scene.routeText}</span>
-                    <ChevronRight className="h-3.5 w-3.5 text-neutral-500" />
+                    <ChevronRight className="h-3.5 w-3.5 text-slate-500" />
                   </button>
                 </div>
               </div>
 
               {/* 每日研学 4 步通关指南 */}
               <div>
-                <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5 text-neutral-500" />
+                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-slate-500" />
                   <span>每日研学 4 步高分通关指南</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
                   <div
                     onClick={() => handleNavigate('/dashboard')}
-                    className="p-3 rounded-xl bg-white border border-neutral-200/90 hover:border-neutral-300 hover:shadow-xs transition-all cursor-pointer group"
+                    className="p-3 rounded-xl bg-white border border-slate-200/90 hover:border-slate-300 hover:shadow-xs transition-all cursor-pointer group"
                   >
-                    <span className="text-[11px] font-bold text-indigo-600">第一步 · 驾驶舱</span>
-                    <h6 className="mt-1 text-xs font-bold text-neutral-900 group-hover:text-indigo-600 transition-colors">
+                    <span className="text-2xs font-bold text-indigo-600">第一步 · 驾驶舱</span>
+                    <h6 className="mt-1 text-xs font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
                       查看备考倒计时与待办
                     </h6>
-                    <p className="mt-1 text-[11px] text-neutral-500 leading-relaxed">
+                    <p className="mt-1 text-2xs text-slate-500 leading-relaxed">
                       掌握初试剩余天数，快速查看今日艾宾浩斯复习卡与薄弱考点提示。
                     </p>
                   </div>
 
                   <div
                     onClick={() => handleNavigate('/quiz')}
-                    className="p-3 rounded-xl bg-white border border-neutral-200/90 hover:border-neutral-300 hover:shadow-xs transition-all cursor-pointer group"
+                    className="p-3 rounded-xl bg-white border border-slate-200/90 hover:border-slate-300 hover:shadow-xs transition-all cursor-pointer group"
                   >
-                    <span className="text-[11px] font-bold text-amber-600">第二步 · 真题刷题</span>
-                    <h6 className="mt-1 text-xs font-bold text-neutral-900 group-hover:text-amber-600 transition-colors">
+                    <span className="text-2xs font-bold text-amber-600">第二步 · 真题刷题</span>
+                    <h6 className="mt-1 text-xs font-bold text-slate-900 group-hover:text-amber-600 transition-colors">
                       答题卡调色板与草稿演练
                     </h6>
-                    <p className="mt-1 text-[11px] text-neutral-500 leading-relaxed">
+                    <p className="mt-1 text-2xs text-slate-500 leading-relaxed">
                       做 408 与考研数学历年真题，利用调色板快速跳题，手写板即时演练。
                     </p>
                   </div>
 
                   <div
                     onClick={() => handleNavigate('/graph')}
-                    className="p-3 rounded-xl bg-white border border-neutral-200/90 hover:border-neutral-300 hover:shadow-xs transition-all cursor-pointer group"
+                    className="p-3 rounded-xl bg-white border border-slate-200/90 hover:border-slate-300 hover:shadow-xs transition-all cursor-pointer group"
                   >
-                    <span className="text-[11px] font-bold text-rose-600">第三步 · 掌握度色谱</span>
-                    <h6 className="mt-1 text-xs font-bold text-neutral-900 group-hover:text-rose-600 transition-colors">
+                    <span className="text-2xs font-bold text-rose-600">第三步 · 掌握度色谱</span>
+                    <h6 className="mt-1 text-xs font-bold text-slate-900 group-hover:text-rose-600 transition-colors">
                       透视红黄盲区直通急救舱
                     </h6>
-                    <p className="mt-1 text-[11px] text-neutral-500 leading-relaxed">
+                    <p className="mt-1 text-2xs text-slate-500 leading-relaxed">
                       在色谱图中查看红灯高危考点，单击呼出急救舱开展 5 题靶向速测。
                     </p>
                   </div>
 
                   <div
                     onClick={() => handleNavigate('/study')}
-                    className="p-3 rounded-xl bg-white border border-neutral-200/90 hover:border-neutral-300 hover:shadow-xs transition-all cursor-pointer group"
+                    className="p-3 rounded-xl bg-white border border-slate-200/90 hover:border-slate-300 hover:shadow-xs transition-all cursor-pointer group"
                   >
-                    <span className="text-[11px] font-bold text-teal-600">第四步 · 间隔记忆</span>
-                    <h6 className="mt-1 text-xs font-bold text-neutral-900 group-hover:text-teal-600 transition-colors">
+                    <span className="text-2xs font-bold text-teal-600">第四步 · 间隔记忆</span>
+                    <h6 className="mt-1 text-xs font-bold text-slate-900 group-hover:text-teal-600 transition-colors">
                       SM-2 艾宾浩斯闪卡
                     </h6>
-                    <p className="mt-1 text-[11px] text-neutral-500 leading-relaxed">
+                    <p className="mt-1 text-2xs text-slate-500 leading-relaxed">
                       早晚各 15 分钟抗遗忘复盘，强化定理公式与计算机协议细节。
                     </p>
                   </div>
@@ -572,20 +572,20 @@ export default function UserGuideModal({
             /* 全功能与小功能完全使用手册字典 Tab */
             <div className="p-4 sm:p-6 space-y-5">
               {/* 顶部搜索与官方 Markdown 打开条 */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-neutral-50 border border-neutral-200/90">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200/90">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="搜索小功能作用或说明 (如：色谱图、知识图谱、随手记、答题卡、草稿纸、仿真课件...)"
-                    className="w-full pl-9 pr-3 py-1.5 rounded-lg bg-white border border-neutral-200 text-xs text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                    className="w-full pl-9 pr-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900"
                   />
                   {searchQuery && (
                     <button
                       onClick={() => setSearchQuery('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-neutral-400 hover:text-neutral-700"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-700"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -594,7 +594,7 @@ export default function UserGuideModal({
 
                 <button
                   onClick={handleOpenDocInEditor}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-white border border-neutral-200 hover:bg-neutral-100 text-neutral-800 px-3.5 py-1.5 text-xs font-semibold shadow-2xs transition-all shrink-0 cursor-pointer"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-800 px-3.5 py-1.5 text-xs font-semibold shadow-xs transition-all shrink-0 cursor-pointer"
                   title="在 Obsidian 笔记编辑器中查看原始 Markdown 文件"
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
@@ -623,7 +623,7 @@ export default function UserGuideModal({
               {/* 功能卡片列表 */}
               <div className="space-y-4">
                 {filteredManualItems.length === 0 ? (
-                  <div className="text-center py-12 text-neutral-400 text-xs">
+                  <div className="text-center py-12 text-slate-400 text-xs">
                     <HelpCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
                     未找到与「{searchQuery}」匹配的小功能说明。您可以尝试更换关键词或清除搜索。
                   </div>
@@ -638,8 +638,8 @@ export default function UserGuideModal({
                         id={`manual-${item.id}`}
                         className={`rounded-2xl border transition-all duration-200 bg-white ${
                           isExpanded
-                            ? 'border-neutral-900/40 shadow-sm ring-1 ring-neutral-900/10'
-                            : 'border-neutral-200/90 hover:border-neutral-300 hover:shadow-2xs'
+                            ? 'border-slate-900/40 shadow-sm ring-1 ring-slate-900/10'
+                            : 'border-slate-200/90 hover:border-slate-300 hover:shadow-xs'
                         }`}
                       >
                         {/* 卡片头部 */}
@@ -653,24 +653,24 @@ export default function UserGuideModal({
                             </div>
                             <div className="min-w-0">
                               <div className="flex flex-wrap items-center gap-2">
-                                <h4 className="text-sm sm:text-base font-bold text-neutral-900">
+                                <h4 className="text-sm sm:text-base font-bold text-slate-900">
                                   {item.name}
                                 </h4>
                                 <span
-                                  className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${badgeClass}`}
+                                  className={`px-2 py-0.5 rounded-md text-2xs font-bold border ${badgeClass}`}
                                 >
                                   {item.badge}
                                 </span>
                                 {item.shortcuts?.map((sc, i) => (
                                   <span
                                     key={i}
-                                    className="px-1.5 py-0.5 rounded bg-neutral-100 border border-neutral-200 text-[10px] font-mono text-neutral-600"
+                                    className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-2xs font-mono text-slate-600"
                                   >
                                     {sc}
                                   </span>
                                 ))}
                               </div>
-                              <p className="mt-1 text-xs text-neutral-600 line-clamp-2">
+                              <p className="mt-1 text-xs text-slate-600 line-clamp-2">
                                 {item.summary}
                               </p>
                             </div>
@@ -683,7 +683,7 @@ export default function UserGuideModal({
                                   e.stopPropagation()
                                   handleNavigate(item.route!)
                                 }}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-neutral-100 text-neutral-700 hover:bg-neutral-200 transition-colors cursor-pointer"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
                               >
                                 <span>{item.routeText || '前往体验'}</span>
                                 <ArrowRight className="w-3 h-3" />
@@ -691,7 +691,7 @@ export default function UserGuideModal({
                             )}
                             <button
                               type="button"
-                              className="p-1 rounded-md text-neutral-400 hover:text-neutral-700"
+                              className="p-1 rounded-md text-slate-400 hover:text-slate-700"
                             >
                               <ChevronRight
                                 className={`w-4 h-4 transition-transform duration-200 ${
@@ -704,12 +704,12 @@ export default function UserGuideModal({
 
                         {/* 展开的详尽说明内容 */}
                         {isExpanded && (
-                          <div className="px-4 pb-5 sm:px-5 sm:pb-5 border-t border-neutral-100 space-y-4 pt-4 text-xs text-neutral-700">
+                          <div className="px-4 pb-5 sm:px-5 sm:pb-5 border-t border-slate-100 space-y-4 pt-4 text-xs text-slate-700">
                             {/* 解决的核心痛点 */}
                             <div className="p-3 rounded-xl bg-amber-50/60 border border-amber-200/70 text-amber-900 flex items-start gap-2.5">
                               <Lightbulb className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                               <div>
-                                <span className="font-bold text-[11px] block text-amber-800">
+                                <span className="font-bold text-2xs block text-amber-800">
                                   功能作用与解决的备考痛点：
                                 </span>
                                 <p className="mt-0.5 leading-relaxed">{item.problemSolved}</p>
@@ -718,14 +718,14 @@ export default function UserGuideModal({
 
                             {/* 具体使用步骤与操作说明 */}
                             <div>
-                              <div className="font-bold text-neutral-900 mb-2 flex items-center gap-1.5">
+                              <div className="font-bold text-slate-900 mb-2 flex items-center gap-1.5">
                                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                                 <span>具体使用说明与操作步骤：</span>
                               </div>
                               <div className="space-y-1.5 pl-1">
                                 {item.howToUse.map((step, idx) => (
                                   <div key={idx} className="flex items-start gap-2 leading-relaxed">
-                                    <span className="h-4 w-4 rounded-full bg-neutral-100 text-neutral-700 font-bold text-[10px] flex items-center justify-center shrink-0 mt-0.5">
+                                    <span className="h-4 w-4 rounded-full bg-slate-100 text-slate-700 font-bold text-2xs flex items-center justify-center shrink-0 mt-0.5">
                                       {idx + 1}
                                     </span>
                                     <span>{step}</span>
@@ -736,12 +736,12 @@ export default function UserGuideModal({
 
                             {/* 进阶提效与实战技巧 */}
                             {item.proTips.length > 0 && (
-                              <div className="p-3 rounded-xl bg-neutral-50 border border-neutral-200/80">
-                                <div className="font-bold text-neutral-900 mb-1.5 flex items-center gap-1.5 text-[11px]">
+                              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                                <div className="font-bold text-slate-900 mb-1.5 flex items-center gap-1.5 text-2xs">
                                   <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
                                   <span>进阶实战提效技巧 (Pro Tips)：</span>
                                 </div>
-                                <ul className="list-disc list-inside space-y-1 text-neutral-600 leading-relaxed pl-1">
+                                <ul className="list-disc list-inside space-y-1 text-slate-600 leading-relaxed pl-1">
                                   {item.proTips.map((tip, idx) => (
                                     <li key={idx}>{tip}</li>
                                   ))}
@@ -760,13 +760,13 @@ export default function UserGuideModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="border-t border-neutral-100 px-5 sm:px-6 py-3.5 bg-neutral-50/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shrink-0">
-          <label className="flex items-center gap-2 text-neutral-500 cursor-pointer select-none">
+        <div className="border-t border-slate-100 px-5 sm:px-6 py-3.5 bg-slate-50/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shrink-0">
+          <label className="flex items-center gap-2 text-slate-500 cursor-pointer select-none">
             <input
               type="checkbox"
               checked={dontShowAgain}
               onChange={(e) => setDontShowAgain(e.target.checked)}
-              className="rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900 h-3.5 w-3.5"
+              className="rounded border-slate-300 text-slate-900 focus:ring-slate-900 h-3.5 w-3.5"
             />
             <span>不再自动弹出新手巡礼（可在导航栏点击「使用手册」图标随时打开）</span>
           </label>
@@ -774,14 +774,14 @@ export default function UserGuideModal({
           <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
             <button
               onClick={handleSkipTour}
-              className="px-3 py-1.5 rounded-lg border border-neutral-200/80 bg-white hover:bg-neutral-50 text-neutral-600 hover:text-neutral-900 font-medium transition-colors cursor-pointer"
+              className="px-3 py-1.5 rounded-lg border border-slate-200/80 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 font-medium transition-colors cursor-pointer"
             >
               关闭
             </button>
 
             <button
               onClick={handleStartTour}
-              className="px-4 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-white font-semibold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
+              className="px-4 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-95"
             >
               <Compass className="h-3.5 w-3.5" />
               <span>开启实战全景漫游</span>

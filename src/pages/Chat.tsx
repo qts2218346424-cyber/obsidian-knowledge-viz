@@ -3,21 +3,11 @@ import { useAuth } from '../contexts/AuthContext'
 import { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
-  Loader2,
   X,
   ChevronDown,
-  Plus,
-  Trash2,
-  MessageSquare,
   Sparkles,
   RefreshCw,
-  Settings,
-  Users,
   FolderPlus,
-  Folder,
-  Square,
-  Layers,
-  Brain,
   ArrowUp,
 } from 'lucide-react'
 import {
@@ -47,6 +37,8 @@ import ChatStudioHeader, {
   type ChatFontSize,
 } from '../components/chat/ChatStudioHeader'
 import ChatComposerDock from '../components/chat/ChatComposerDock'
+import ChatMobileConfigSheet from '../components/chat/ChatMobileConfigSheet'
+import ChatSessionSidebar from '../components/chat/ChatSessionSidebar'
 
 const QuickPracticeModal = lazy(() => import('../components/QuickPracticeModal'))
 const AIMemoryModal = lazy(() => import('../components/AIMemoryModal'))
@@ -55,58 +47,11 @@ const ModelManagerModal = lazy(() => import('../components/ModelManagerModal'))
 export type StudyTone = 'rigorous' | 'vivid' | 'exam' | 'followup'
 const StepTutorModal = lazy(() => import('../components/study/StepTutorModal'))
 
-interface ToolCallInfo {
-  tool: string
-  input: Record<string, any>
-  output?: string
-  success?: boolean
-}
+import type { ToolCallInfo, AgentMessage, AttachedFile, Conversation } from '../features/ai-chat/types'
+import { processImageFile, formatFileSize } from '../features/ai-chat/utils'
 
-export interface PeerAgentResponse {
-  agentName: string
-  agentIcon: string
-  provider: ProviderType
-  model: string
-  content: string
-  streaming?: boolean
-  error?: string
-}
-
-export interface AttachedFile {
-  name: string
-  size: number
-  content: string
-  ext?: string
-}
-
-export interface AgentMessage {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  images?: string[]
-  files?: AttachedFile[]
-  agentName?: string
-  agentIcon?: string
-  provider?: ProviderType
-  model?: string
-  toolCalls: ToolCallInfo[]
-  citedNotes?: { title: string; path: string; excerpt: string; tags: string[] }[]
-  timestamp: Date
-  streaming?: boolean
-  isDual?: boolean
-  peerResponse?: PeerAgentResponse
-}
-
-interface Conversation {
-  id: string
-  projectId?: string
-  title: string
-  messages: AgentMessage[]
-  createdAt: Date
-  provider?: ProviderType
-  model?: string
-  agentId?: string
-}
+// 向后兼容：保留原有的类型导出入口
+export type { PeerAgentResponse, AttachedFile, AgentMessage } from '../features/ai-chat/types'
 
 function buildWelcomeMessage(agent: StudyAgent, projectName?: string): AgentMessage {
   return {
@@ -247,9 +192,9 @@ export default function Chat() {
   const fontSizeClass = useMemo(() => {
     switch (chatFontSize) {
       case 'sm':
-        return 'text-[11px] sm:text-[11.5px] leading-[1.52]'
+        return 'text-2xs sm:text-2xs leading-[1.52]'
       case 'base':
-        return 'text-[12px] sm:text-[12.5px] leading-[1.56]'
+        return 'text-xs sm:text-[12.5px] leading-[1.56]'
       case 'lg':
         return 'text-[12.5px] sm:text-[13.5px] leading-[1.6]'
     }
@@ -371,59 +316,6 @@ export default function Chat() {
   const [stagedFiles, setStagedFiles] = useState<AttachedFile[]>([])
   const [uploadingFile, setUploadingFile] = useState(false)
 
-  // 极速轻量化图片压缩引擎：长边严格约束 1080px，质量 0.76 JPEG，确保在手机端 4G/WiFi 秒传且 OCR 公式极度清晰
-  const processImageFile = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      if (!file.type.startsWith('image/')) {
-        return reject(new Error('请选择图片格式文件'))
-      }
-      const reader = new FileReader()
-      reader.onload = e => {
-        const dataUrl = e.target?.result as string
-        if (!dataUrl) return reject(new Error('读取图片失败'))
-
-        const img = new Image()
-        img.onload = () => {
-          try {
-            // 移动端视觉模型最佳分辨率：长边 1080px，既能保证数学公式与代码细节，又能将体积从数兆压缩至 60KB~120KB
-            const maxDim = 1080
-            let w = img.width
-            let h = img.height
-            if (w > maxDim || h > maxDim) {
-              if (w > h) {
-                h = Math.round((h * maxDim) / w)
-                w = maxDim
-              } else {
-                w = Math.round((w * maxDim) / h)
-                h = maxDim
-              }
-            }
-            const canvas = document.createElement('canvas')
-            canvas.width = w
-            canvas.height = h
-            const ctx = canvas.getContext('2d')
-            if (!ctx) return resolve(dataUrl)
-            // 填充白色背景防透明 PNG 转黑底
-            ctx.fillStyle = '#FFFFFF'
-            ctx.fillRect(0, 0, w, h)
-            ctx.drawImage(img, 0, 0, w, h)
-            // 统一压缩为高质量紧凑 JPEG，体积缩减 95%+，杜绝手机端 Failed to fetch 超时
-            const compressed = canvas.toDataURL('image/jpeg', 0.76)
-            resolve(compressed)
-          } catch {
-            resolve(dataUrl)
-          }
-        }
-        img.onerror = () => {
-          resolve(dataUrl)
-        }
-        img.src = dataUrl
-      }
-      reader.onerror = () => reject(new Error('读取图片文件失败'))
-      reader.readAsDataURL(file)
-    })
-  }
-
   const handleAddImages = useCallback(async (files: FileList | File[]) => {
     const list = Array.from(files).filter(f => f.type.startsWith('image/'))
     if (list.length === 0) return
@@ -435,11 +327,6 @@ export default function Chat() {
     }
   }, [])
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return `${bytes} B`
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  }
 
   const handleAddGeneralFiles = useCallback(
     async (files: FileList | File[]) => {
@@ -1422,7 +1309,7 @@ export default function Chat() {
       setStagedImages([])
       setStagedFiles([])
 
-      const initStatus = `正在调取【${activeAgent.name}】(${provider}) 进行深度研学推演...`
+      const initStatus = `${activeAgent.name}正在思考…`
       setRunningConvs(prev => ({
         ...prev,
         [convId]: { status: initStatus, streaming: true },
@@ -1540,6 +1427,22 @@ export default function Chat() {
 
           while (attempt < maxAttempts) {
             attempt++
+            const attemptController = new AbortController()
+            let firstEventTimedOut = false
+            let receivedAnyModelEvent = false
+            const syncAbort = () => attemptController.abort()
+            if (convController.signal.aborted) {
+              attemptController.abort()
+            } else {
+              convController.signal.addEventListener('abort', syncAbort, { once: true })
+            }
+            const firstEventTimer = window.setTimeout(() => {
+              if (!receivedAnyModelEvent) {
+                firstEventTimedOut = true
+                attemptController.abort()
+              }
+            }, 30_000)
+
             try {
               const res = await fetch(endpoint, {
                 method: 'POST',
@@ -1548,10 +1451,11 @@ export default function Chat() {
                   ...authService.getAuthHeaders(),
                 },
                 body: JSON.stringify(body),
-                signal: convController.signal,
+                signal: attemptController.signal,
               })
 
               if (!res.ok) {
+                window.clearTimeout(firstEventTimer)
                 if (res.status === 402) {
                   const errData = await res.json().catch(() => ({}))
                   window.dispatchEvent(new CustomEvent('open-checkin-modal'))
@@ -1565,7 +1469,10 @@ export default function Chat() {
               }
 
               const reader = res.body?.getReader()
-              if (!reader) throw new Error('流式传输不可用')
+              if (!reader) {
+                window.clearTimeout(firstEventTimer)
+                throw new Error('流式传输不可用')
+              }
 
               const decoder = new TextDecoder()
               let buffer = ''
@@ -1585,6 +1492,10 @@ export default function Chat() {
 
                   try {
                     const event = JSON.parse(jsonStr)
+                    if (event.type && event.type !== 'points_updated' && !receivedAnyModelEvent) {
+                      receivedAnyModelEvent = true
+                      window.clearTimeout(firstEventTimer)
+                    }
                     if (event.type === 'points_updated' && typeof event.points === 'number') {
                       window.dispatchEvent(new CustomEvent('points-updated', { detail: { points: event.points } }))
                     } else if (event.type === 'text' && event.content) {
@@ -1609,6 +1520,11 @@ export default function Chat() {
               }
               break
             } catch (retryErr: any) {
+              if (firstEventTimedOut) {
+                hasReportedStreamError = true
+                onErrorMsg?.('响应超时')
+                break
+              }
               const isNetworkErr =
                 retryErr?.name !== 'AbortError' &&
                 !hasReportedStreamError &&
@@ -1623,6 +1539,9 @@ export default function Chat() {
                 continue
               }
               throw retryErr
+            } finally {
+              window.clearTimeout(firstEventTimer)
+              convController.signal.removeEventListener('abort', syncAbort)
             }
           }
           flushNow()
@@ -1897,7 +1816,8 @@ export default function Chat() {
               if (idx === -1) return conv
               msgs[idx] = {
                 ...msgs[idx],
-                content: msgs[idx].content + `\n\n❌ **执行异常**: ${err}`,
+                content: err === '响应超时' ? msgs[idx].content : msgs[idx].content + `\n\n❌ **执行异常**: ${err}`,
+                error: err,
                 streaming: false,
               }
               return { ...conv, messages: msgs }
@@ -1910,11 +1830,14 @@ export default function Chat() {
           const idx = msgs.findIndex(m => m.id === assistantMsgId)
           if (idx !== -1) {
             const rawContent = msgs[idx].content?.trim() || accumulatedAssistantText.trim()
+            const hasError = Boolean(msgs[idx].error)
             msgs[idx] = {
               ...msgs[idx],
               content:
                 rawContent ||
-                '⚠️ **智能体已完成推演，但模型服务暂未返回文本内容（系统已自动保留您的伴学积分，本次未扣费）。**\n\n> 💡 建议检查网络连接或直接点击重新生成。',
+                (hasError
+                  ? ''
+                  : '⚠️ **智能体已完成推演，但模型服务暂未返回文本内容（系统已自动保留您的伴学积分，本次未扣费）。**\n\n> 💡 建议检查网络连接或直接点击重新生成。'),
               streaming: false,
             }
           }
@@ -2105,7 +2028,7 @@ export default function Chat() {
       }))
 
       const convId = activeConvId
-      const initStatus = `正在让【${activeAgent.name}】(${provider}) 接续未完内容...`
+      const initStatus = `${activeAgent.name}正在继续作答…`
       setRunningConvs(prev => ({
         ...prev,
         [convId]: { status: initStatus, streaming: true },
@@ -2394,214 +2317,32 @@ export default function Chat() {
 
       {/* 2. 主体三栏弹性工作区：左侧会话栏 + 中间主伴学流 + 右侧知识库伴读分栏 */}
       <div className="flex-1 flex gap-3 min-h-0 overflow-hidden relative z-0">
-        {/* 2.1 左侧：项目与历史会话栏 */}
-        {showSessions && (
-          <div
-            className="fixed inset-0 bg-slate-900/40 z-40 md:hidden backdrop-blur-xs"
-            onClick={() => setShowSessions(false)}
-          />
-        )}
-        <div
-          style={{
-            width: showSessions
-              ? typeof window !== 'undefined' && window.innerWidth >= 768
-                ? `${sidebarWidth}px`
-                : undefined
-              : undefined,
-          }}
-          className={`fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-2xl transition-transform duration-200 md:static md:z-auto md:shadow-2xs md:transition-none ${
-            showSessions ? 'translate-x-0' : '-translate-x-full md:hidden'
-          } overflow-hidden md:border md:border-neutral-200/80 md:rounded-xl shrink-0 shadow-xs complex-panel-contain`}
-        >
-          <div className="h-full flex flex-col bg-white">
-            {/* 项目工作区与快捷操作一体顶栏 */}
-            <div className="p-3 border-b border-slate-100 flex flex-col gap-2 shrink-0">
-              <div className="flex items-center justify-between gap-1">
-                <span className="text-[11px] font-semibold text-slate-500 flex items-center gap-1.5">
-                  <Folder className="w-3.5 h-3.5 text-indigo-500" />
-                  <span>工作区</span>
-                </span>
-                <div className="flex items-center gap-0.5">
-
-                  <button
-                    type="button"
-                    onClick={() => setShowProjectModal(true)}
-                    className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-indigo-600 transition-colors cursor-pointer"
-                    title="新建独立项目工作区"
-                  >
-                    <FolderPlus className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowSessions(false)}
-                    className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
-                    title="收起对话栏"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-
-              <select
-                value={activeProject?.id || DEFAULT_PROJECT_ID}
-                onChange={e => handleSelectProject(e.target.value)}
-                className="w-full text-xs font-semibold bg-slate-50/80 hover:bg-slate-100/80 border border-slate-200/80 rounded-xl px-2.5 py-2 text-slate-800 focus:outline-hidden focus:border-indigo-500 truncate cursor-pointer transition-colors"
-              >
-                {workspace.projects.map(p => (
-                  <option key={p.id} value={p.id}>
-                    📁 {p.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* 会话历史分组标题 */}
-            <div className="flex items-center justify-between px-3.5 pt-3 pb-1.5 shrink-0">
-              <span className="text-[11px] font-semibold text-slate-400 tracking-wide">
-                历史对话 ({projectConversations.length})
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  createConversation(activeAgent)
-                  if (window.innerWidth < 768) setShowSessions(false)
-                }}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
-                title="新建对话"
-              >
-                <Plus className="w-3 h-3" />
-                <span>新建</span>
-              </button>
-            </div>
-
-            {/* 会话列表 */}
-            <div className="flex-1 overflow-y-auto py-1 space-y-1">
-              {!isHistoryLoaded ? (
-                <div className="p-5 text-center text-xs text-slate-400 flex flex-col items-center justify-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
-                  <span>同步云端历史记录...</span>
-                </div>
-              ) : projectConversations.length === 0 ? (
-                <div className="p-5 text-center text-xs text-slate-400">
-                  <p>当前项目暂无对话</p>
-                  <button
-                    type="button"
-                    onClick={() => createConversation(activeAgent)}
-                    className="mt-2.5 px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 text-[11px] font-semibold cursor-pointer"
-                  >
-                    + 开启新对话
-                  </button>
-                </div>
-              ) : (
-                projectConversations.map(conv => {
-                  const isConvRunning = Boolean(runningConvs[conv.id]?.streaming)
-                  const isCurrent = activeConvId === conv.id
-                  return (
-                    <div
-                      key={conv.id}
-                      onClick={() => {
-                        handleSelectConversation(conv.id)
-                        if (window.innerWidth < 768) setShowSessions(false)
-                      }}
-                      className={`group flex items-center gap-2.5 px-3 py-2.5 mx-2 rounded-lg cursor-pointer text-xs transition-all ${
-                        isCurrent
-                          ? 'bg-neutral-900 text-white font-medium shadow-xs'
-                          : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
-                      }`}
-                    >
-                      {isConvRunning ? (
-                        <Loader2 className="w-3.5 h-3.5 shrink-0 text-indigo-600 mt-0.5 animate-spin self-start" />
-                      ) : (
-                        <MessageSquare
-                          className={`w-3.5 h-3.5 shrink-0 mt-0.5 self-start ${
-                            isCurrent ? 'text-white' : 'text-neutral-400'
-                          }`}
-                        />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="truncate flex items-center gap-1">
-                          <span className="truncate">{conv.title}</span>
-                          {isConvRunning && (
-                            <span className="text-[9px] px-1 py-0.2 rounded bg-amber-100 text-amber-700 font-semibold shrink-0">
-                              运行中
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1 mt-0.5 text-[10px] text-slate-400 font-normal">
-                          <span>
-                            {conv.provider === 'antigravity'
-                              ? '✨ 研核官方 (Gemini 3.8 Flash)'
-                              : conv.provider === 'codex'
-                              ? '🤖 Codex'
-                              : conv.provider === 'claude-code'
-                              ? '⚡ Claude'
-                              : '☁️ 云端'}
-                          </span>
-                          {conv.model && (
-                            <>
-                              <span>·</span>
-                              <span className="font-mono truncate max-w-[110px]">
-                                {conv.model.includes('::')
-                                  ? conv.model.split('::')[1]
-                                  : conv.model}
-                              </span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-0.5 shrink-0">
-                        {isConvRunning && (
-                          <button
-                            type="button"
-                            onClick={e => {
-                              e.stopPropagation()
-                              handleStopConversation(conv.id)
-                            }}
-                            className="p-1 rounded hover:bg-red-100 text-red-500 transition-all cursor-pointer"
-                            title="终止该会话"
-                          >
-                            <Square className="w-3 h-3 fill-current" />
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={e => {
-                            e.stopPropagation()
-                            deleteConversation(conv.id)
-                          }}
-                          className="opacity-75 md:opacity-0 md:group-hover:opacity-100 p-1 rounded hover:bg-slate-200 text-slate-400 hover:text-red-500 transition-all cursor-pointer"
-                          title="删除会话"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </div>
-                  )
-                })
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* 左侧会话栏拖拽调整手柄 */}
-        {showSessions && (
-          <div
-            onMouseDown={handleSidebarResizeStart}
-            className="hidden md:flex items-center justify-center w-1.5 hover:w-2 -mx-1.5 hover:mx-0 bg-transparent hover:bg-indigo-500/30 active:bg-indigo-600 cursor-col-resize transition-all shrink-0 rounded-full my-6 z-10 group"
-            title="拖拽调节会话栏宽度"
-          >
-            <div className="w-0.5 h-6 bg-slate-300 group-hover:bg-indigo-600 rounded-full" />
-          </div>
-        )}
+        <ChatSessionSidebar
+          activeConvId={activeConvId}
+          activeProject={activeProject}
+          workspace={workspace}
+          projectConversations={projectConversations}
+          runningConvs={runningConvs}
+          isHistoryLoaded={isHistoryLoaded}
+          showSessions={showSessions}
+          sidebarWidth={sidebarWidth}
+          onCreateConversation={() => createConversation(activeAgent)}
+          deleteConversation={deleteConversation}
+          handleSelectConversation={handleSelectConversation}
+          handleSelectProject={handleSelectProject}
+          handleStopConversation={handleStopConversation}
+          handleSidebarResizeStart={handleSidebarResizeStart}
+          setShowProjectModal={setShowProjectModal}
+          setShowSessions={setShowSessions}
+        />
 
         {/* 2.2 中间：主伴学对话流 + 一体化智能输入舱 */}
-        <div className="flex-1 flex flex-col bg-white sm:border sm:border-neutral-200/80 sm:rounded-xl overflow-hidden min-w-0 shadow-xs complex-panel-contain">
+        <div className="flex-1 flex flex-col bg-white sm:border sm:border-slate-200/80 sm:rounded-xl overflow-hidden min-w-0 shadow-xs complex-panel-contain">
           {/* 消息滚动列表 (手机端内边距紧凑化，释放大屏可视空间) */}
           <div
             ref={messagesContainerRef}
             onScroll={handleMessagesScroll}
-            className="flex-1 overflow-y-auto px-2 sm:px-6 py-2.5 sm:py-6 space-y-3 sm:space-y-5 relative bg-neutral-50/20"
+            className="flex-1 overflow-y-auto px-2 sm:px-6 py-2.5 sm:py-6 space-y-3 sm:space-y-5 relative bg-slate-50/20"
           >
             {isWelcomeState ? (
               <div
@@ -2609,7 +2350,7 @@ export default function Chat() {
               >
                 {/* 清爽通透的居中导师欢迎区 (Clean Studio Hero) */}
                 <div className="flex flex-col items-center text-center max-w-2xl mx-auto mb-7 sm:mb-9">
-                  <div className="w-14 h-14 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center text-2xl shadow-2xs mb-3.5">
+                  <div className="w-14 h-14 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-2xl shadow-xs mb-3.5">
                     {activeAgent.icon}
                   </div>
                   <div className="flex items-center gap-2 flex-wrap justify-center mb-2">
@@ -2617,7 +2358,7 @@ export default function Chat() {
                       你好，我是「{activeAgent.name}」
                     </h2>
                     <span
-                      className={`text-[11px] px-2 py-0.5 rounded-full border font-semibold ${activeAgent.badgeClass}`}
+                      className={`text-2xs px-2 py-0.5 rounded-full border font-semibold ${activeAgent.badgeClass}`}
                     >
                       {activeAgent.title}
                     </span>
@@ -2625,7 +2366,7 @@ export default function Chat() {
                   <p className="text-xs sm:text-sm text-slate-500 leading-relaxed max-w-xl">
                     {activeAgent.description}
                   </p>
-                  <div className="flex items-center justify-center flex-wrap gap-2 mt-3.5 text-[11px] text-slate-400">
+                  <div className="flex items-center justify-center flex-wrap gap-2 mt-3.5 text-2xs text-slate-400">
                     <span className="px-2.5 py-1 rounded-full bg-slate-100/80 text-slate-600">
                       👥 顶栏支持双师同台对比
                     </span>
@@ -2669,9 +2410,9 @@ export default function Chat() {
                           type="button"
                           onClick={() => handleSend(promptText)}
                           disabled={isCurrentRunning}
-                          className="p-4 text-left rounded-xl border border-neutral-200/80 bg-white hover:border-neutral-900 hover:shadow-xs transition-all flex flex-col gap-1.5 group cursor-pointer"
+                          className="p-4 text-left rounded-xl border border-slate-200/80 bg-white hover:border-slate-900 hover:shadow-xs transition-all flex flex-col gap-1.5 group cursor-pointer"
                         >
-                          <span className="text-[11px] font-semibold text-indigo-600/90">
+                          <span className="text-2xs font-semibold text-indigo-600/90">
                             {badges[idx % badges.length]}
                           </span>
                           <span className="text-xs sm:text-[13px] font-medium text-slate-700 group-hover:text-slate-950 line-clamp-2 leading-relaxed">
@@ -2708,6 +2449,7 @@ export default function Chat() {
                     onEditMessage={handleEditMessage}
                     onRecallMessage={handleRecallMessage}
                     onPreviewImage={setPreviewImageModal}
+                    onSwitchModel={() => setShowModelManagerModal(true)}
                   />
                 )
               })
@@ -2720,7 +2462,7 @@ export default function Chat() {
                   <button
                     type="button"
                     onClick={scrollToTop}
-                    className="pointer-events-auto px-2.5 py-1 rounded-full bg-white/95 border border-slate-200/90 shadow-md text-[11px] font-semibold text-slate-600 hover:text-indigo-600 flex items-center gap-1 transition-all cursor-pointer backdrop-blur-xs"
+                    className="pointer-events-auto px-2.5 py-1 rounded-full bg-white/95 border border-slate-200/90 shadow-sm text-2xs font-semibold text-slate-600 hover:text-indigo-600 flex items-center gap-1 transition-all cursor-pointer backdrop-blur-xs"
                     title="回到对话顶部"
                   >
                     <ArrowUp className="w-3 h-3" />
@@ -2735,7 +2477,7 @@ export default function Chat() {
                       setShowScrollBottomBtn(false)
                       scrollToBottom(true)
                     }}
-                    className="pointer-events-auto px-3 py-1 rounded-full bg-slate-900/95 text-white shadow-md text-[11px] font-semibold hover:bg-indigo-600 flex items-center gap-1 transition-all cursor-pointer backdrop-blur-xs"
+                    className="pointer-events-auto px-3 py-1 rounded-full bg-slate-900/95 text-white shadow-sm text-2xs font-semibold hover:bg-indigo-600 flex items-center gap-1 transition-all cursor-pointer backdrop-blur-xs"
                   >
                     <ChevronDown className="w-3.5 h-3.5" />
                     <span>最新回复</span>
@@ -2829,7 +2571,7 @@ export default function Chat() {
                 : undefined
               : undefined,
           }}
-          className={`fixed inset-y-0 right-0 z-50 w-80 bg-white shadow-2xl transition-transform duration-200 md:static md:z-auto md:shadow-none md:transition-none ${
+          className={`fixed inset-y-0 right-0 z-50 w-80 bg-white shadow-xl transition-transform duration-200 md:static md:z-auto md:shadow-none md:transition-none ${
             showFiles ? 'translate-x-0' : 'translate-x-full md:hidden'
           } shrink-0`}
         >
@@ -2848,218 +2590,35 @@ export default function Chat() {
       </div>
 
       {/* 📱 移动端引擎与高级能力控制抽屉 */}
-      {mobileConfigOpen && (
-        <div className="md:hidden fixed inset-0 z-50 flex flex-col justify-end modal-backdrop-contain">
-          <div
-            className="absolute inset-0 bg-slate-950/45 backdrop-blur-xs"
-            onClick={() => setMobileConfigOpen(false)}
-          />
-          <div className="relative bg-white rounded-t-3xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl border-t border-slate-200 max-h-[86dvh] overflow-y-auto modal-scroll-contain space-y-4 animate-sheet-up">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <Settings className="w-4 h-4 text-indigo-600" />
-                <span className="font-bold text-sm text-slate-900">伴学引擎与技能控制台</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setMobileConfigOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-700"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      <ChatMobileConfigSheet
+          mobileConfigOpen={mobileConfigOpen}
+          setMobileConfigOpen={setMobileConfigOpen}
+          studyTone={studyTone}
+          setStudyTone={setStudyTone}
+          provider={provider}
+          handleProviderChange={handleProviderChange}
+          currentAvailableModels={currentAvailableModels}
+          selectedModel={selectedModel}
+          isCustomModel={isCustomModel}
+          handleModelSelect={handleModelSelect}
+          isAdmin={isAdmin}
+          setShowModelManagerModal={setShowModelManagerModal}
+          setShowMemoryModal={setShowMemoryModal}
+          setShowSkillPicker={setShowSkillPicker}
+          chatFontSize={chatFontSize}
+          handleSetFontSize={handleSetFontSize}
+          isDualMode={isDualMode}
+          setIsDualMode={setIsDualMode}
+        />
 
-            {/* 1. 伴学风格 */}
-            <div className="space-y-1.5">
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                伴学风格与语调
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {[
-                  { key: 'rigorous', label: '📐 学术严谨' },
-                  { key: 'vivid', label: '💡 通俗直观' },
-                  { key: 'exam', label: '⚡ 考场冲刺' },
-                  { key: 'followup', label: '🎯 针对追问' },
-                ].map(tone => (
-                  <button
-                    key={tone.key}
-                    type="button"
-                    onClick={() => {
-                      setStudyTone(tone.key as any)
-                      localStorage.setItem('coreforge_study_tone', tone.key)
-                    }}
-                    className={`py-2 px-1 text-center rounded-xl text-xs font-semibold border transition-all ${
-                      studyTone === tone.key
-                        ? tone.key === 'followup'
-                          ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
-                          : 'bg-slate-900 text-white border-slate-900 shadow-xs'
-                        : 'bg-slate-50 text-slate-700 border-slate-200'
-                    }`}
-                  >
-                    {tone.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 2. 双核引擎选择 */}
-            <div className="space-y-1.5">
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                AI 驱动底座
-              </div>
-              <div className="grid grid-cols-2 gap-1.5 bg-slate-100 p-1.5 rounded-2xl">
-                {[
-                  { key: 'antigravity' as const, label: '✨ Antigravity' },
-                  { key: 'codex' as const, label: '🤖 Codex' },
-                  { key: 'claude-code' as const, label: '⚡ Claude' },
-                  { key: 'web' as const, label: '☁️ 云端双核' },
-                ].map(tab => (
-                  <button
-                    key={tab.key}
-                    type="button"
-                    onClick={() => handleProviderChange(tab.key)}
-                    className={`py-2 px-1 text-center rounded-xl text-xs font-semibold transition-all ${
-                      provider === tab.key
-                        ? 'bg-white text-slate-900 shadow-xs font-bold'
-                        : 'text-slate-500'
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 3. 模型管理 */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                  选择模型
-                </span>
-
-              </div>
-              <div className="flex items-center gap-2">
-                <select
-                  value={isCustomModel ? '__custom__' : selectedModel}
-                  onChange={e => handleModelSelect(e.target.value)}
-                  className="flex-1 text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-800 font-medium outline-none"
-                >
-                  {currentAvailableModels.map(m => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
-                  {isAdmin && <option value="__custom__">⚙️ 自定义模型名称...</option>}
-                </select>
-                {isAdmin && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMobileConfigOpen(false)
-                      setShowModelManagerModal(true)
-                    }}
-                    className="p-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-600"
-                  >
-                    <Settings className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* 4. 记忆与技能 */}
-            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileConfigOpen(false)
-                  setShowMemoryModal(true)
-                }}
-                className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl text-xs font-semibold bg-amber-50 border border-amber-200 text-amber-800"
-              >
-                <Brain className="w-3.5 h-3.5 text-amber-600" />
-                <span>AI 记忆仓库</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileConfigOpen(false)
-                  setShowSkillPicker(true)
-                }}
-                className="flex items-center justify-center gap-1.5 p-2.5 rounded-xl text-xs font-semibold bg-purple-50 border border-purple-200 text-purple-800"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-                <span>自带技能库</span>
-              </button>
-            </div>
-
-            {/* 5. 字号与双师同台 */}
-            <div className="space-y-2 pt-2 border-t border-slate-100">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-600">回答正文字号</span>
-                <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-0.5">
-                  {[
-                    { key: 'sm' as const, label: '紧凑 A-' },
-                    { key: 'base' as const, label: '标准 A' },
-                    { key: 'lg' as const, label: '清晰 A+' },
-                  ].map(item => (
-                    <button
-                      key={item.key}
-                      type="button"
-                      onClick={() => handleSetFontSize(item.key)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
-                        chatFontSize === item.key
-                          ? 'bg-slate-900 text-white shadow-2xs'
-                          : 'text-slate-600'
-                      }`}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setIsDualMode(!isDualMode)}
-                className={`w-full flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all ${
-                  isDualMode
-                    ? 'bg-orange-50 border-orange-300 text-orange-800'
-                    : 'bg-slate-50 border-slate-200 text-slate-700'
-                }`}
-              >
-                <span className="flex items-center gap-1.5">
-                  <Users className="w-4 h-4 text-orange-500" />
-                  <span>双智能体同台对比研讨</span>
-                </span>
-                <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] ${
-                    isDualMode ? 'bg-orange-500 text-white' : 'bg-slate-200 text-slate-600'
-                  }`}
-                >
-                  {isDualMode ? '已开启' : '未开启'}
-                </span>
-              </button>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setMobileConfigOpen(false)}
-              className="w-full py-3 rounded-2xl bg-slate-900 text-white text-xs font-bold shadow-md"
-            >
-              完成配置并返回对话
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 📱 移动端伴学智能体选择抽屉 */}
+        {/* 📱 移动端伴学智能体选择抽屉 */}
       {showAgentPicker && (
         <div className="md:hidden fixed inset-0 z-50 flex flex-col justify-end">
           <div
             className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs"
             onClick={() => setShowAgentPicker(false)}
           />
-          <div className="relative bg-white rounded-t-3xl p-5 shadow-2xl border-t border-slate-200 max-h-[75vh] overflow-y-auto space-y-3 animate-sheet-up">
+          <div className="relative bg-white rounded-t-3xl p-5 shadow-xl border-t border-slate-200 max-h-[75vh] overflow-y-auto space-y-3 animate-sheet-up">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <span className="font-bold text-sm text-slate-900">切换伴学导师</span>
               <button
@@ -3087,19 +2646,19 @@ export default function Chat() {
                         : 'border-slate-200 bg-slate-50/50'
                     }`}
                   >
-                    <span className="text-2xl p-2 rounded-xl bg-white shadow-2xs shrink-0">
+                    <span className="text-2xl p-2 rounded-xl bg-white shadow-xs shrink-0">
                       {agent.icon}
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-xs text-slate-900">{agent.name}</span>
                         <span
-                          className={`text-[10px] px-1.5 py-0.2 rounded border ${agent.badgeClass}`}
+                          className={`text-2xs px-1.5 py-0.2 rounded border ${agent.badgeClass}`}
                         >
                           {agent.title}
                         </span>
                       </div>
-                      <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">
+                      <p className="text-2xs text-slate-500 mt-0.5 line-clamp-1">
                         {agent.description}
                       </p>
                     </div>
@@ -3173,7 +2732,7 @@ export default function Chat() {
       {/* 新建项目工作区模态框 */}
       {showProjectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-5 shadow-2xl">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-5 shadow-xl">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
                 <FolderPlus className="w-4 h-4 text-indigo-600" />
@@ -3263,7 +2822,7 @@ export default function Chat() {
             <img
               src={previewImageModal}
               alt="大图预览"
-              className="max-h-[85vh] max-w-full rounded-2xl object-contain shadow-2xl border border-white/10"
+              className="max-h-[85vh] max-w-full rounded-2xl object-contain shadow-xl border border-white/10"
               onClick={e => e.stopPropagation()}
             />
           </div>

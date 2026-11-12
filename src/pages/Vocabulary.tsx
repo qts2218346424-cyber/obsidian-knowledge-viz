@@ -53,28 +53,28 @@ function VocabMasteryPalette() {
     <div className="space-y-6 animate-fade-in-up pb-8">
       {/* 顶部操作条 */}
       <div className="flex flex-wrap items-center justify-between gap-2 py-1">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white shadow-xs border border-zinc-200/80 text-xs font-semibold text-neutral-800">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white shadow-xs border border-slate-200/80 text-xs font-semibold text-slate-800">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           <span>词汇认知深度色谱 · 5 阶梯度模型</span>
-          <span className="text-zinc-300">|</span>
-          <span className="text-zinc-400 font-mono text-[11px]">2026 研考词库</span>
+          <span className="text-slate-300">|</span>
+          <span className="text-slate-400 font-mono text-2xs">2026 研考词库</span>
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="px-3 py-1 rounded-full bg-neutral-100 border border-neutral-200 text-xs text-neutral-600 font-medium">
+          <div className="px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs text-slate-600 font-medium">
             艾宾浩斯 24h 追踪
           </div>
         </div>
       </div>
 
       {/* 阶度卡片网格 */}
-      <div className="bg-white rounded-[16px] border border-black/[0.08] p-5 sm:p-6 shadow-xs space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
+      <div className="bg-white rounded-2xl border border-black/[0.08] p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div>
-            <h3 className="text-sm font-bold text-neutral-900">记忆深度梯度 (Retention Gradient)</h3>
-            <p className="text-xs text-neutral-500 mt-0.5">从初识模糊到长期永久记忆的认知阶跃轨迹</p>
+            <h3 className="text-sm font-bold text-slate-900">记忆深度梯度 (Retention Gradient)</h3>
+            <p className="text-xs text-slate-500 mt-0.5">从初识模糊到长期永久记忆的认知阶跃轨迹</p>
           </div>
-          <span className="text-[11px] font-mono text-neutral-400">LEVEL 50 ~ 950</span>
+          <span className="text-2xs font-mono text-slate-400">LEVEL 50 ~ 950</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
@@ -82,23 +82,23 @@ function VocabMasteryPalette() {
             <div
               key={item.level}
               onClick={() => handleCopy(item.example)}
-              className="group p-3.5 rounded-xl border border-neutral-200/80 hover:border-neutral-900 transition-all cursor-pointer bg-neutral-50/50 hover:bg-white shadow-2xs hover:shadow-xs flex flex-col justify-between"
+              className="group p-3.5 rounded-xl border border-slate-200/80 hover:border-slate-900 transition-all cursor-pointer bg-slate-50/50 hover:bg-white shadow-xs hover:shadow-xs flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between mb-2.5">
-                  <span className="text-[10px] font-mono font-semibold text-neutral-400">{item.level}</span>
+                  <span className="text-2xs font-mono font-semibold text-slate-400">{item.level}</span>
                   <div
                     className="w-5 h-5 rounded-full border border-black/10 shadow-inner group-hover:scale-110 transition-transform"
                     style={{ backgroundColor: item.hex }}
                   />
                 </div>
-                <div className="text-xs font-bold text-neutral-900">{item.name}</div>
-                <p className="text-[11px] text-neutral-500 mt-1 leading-relaxed">{item.desc}</p>
+                <div className="text-xs font-bold text-slate-900">{item.name}</div>
+                <p className="text-2xs text-slate-500 mt-1 leading-relaxed">{item.desc}</p>
               </div>
 
-              <div className="mt-3 pt-2 border-t border-neutral-100 text-[10px] font-mono text-neutral-600 flex items-center justify-between">
+              <div className="mt-3 pt-2 border-t border-slate-100 text-2xs font-mono text-slate-600 flex items-center justify-between">
                 <span className="truncate">{item.example}</span>
-                <Copy className="h-3 w-3 text-neutral-400 group-hover:text-neutral-900 shrink-0" />
+                <Copy className="h-3 w-3 text-slate-400 group-hover:text-slate-900 shrink-0" />
               </div>
             </div>
           ))}
@@ -111,13 +111,13 @@ function VocabMasteryPalette() {
       </div>
 
       {/* 词根词缀高频谱系 */}
-      <div className="bg-white rounded-[16px] border border-black/[0.08] p-5 sm:p-6 shadow-xs space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
+      <div className="bg-white rounded-2xl border border-black/[0.08] p-5 sm:p-6 shadow-xs space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div>
-            <h3 className="text-sm font-bold text-neutral-900">核心高频词根族谱 (Root Family Swatches)</h3>
-            <p className="text-xs text-neutral-500 mt-0.5">考研真题命题率最高的前缀、词根与衍生词群</p>
+            <h3 className="text-sm font-bold text-slate-900">核心高频词根族谱 (Root Family Swatches)</h3>
+            <p className="text-xs text-slate-500 mt-0.5">考研真题命题率最高的前缀、词根与衍生词群</p>
           </div>
-          <span className="text-[11px] font-mono text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+          <span className="text-2xs font-mono text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
             紫罗兰考点系
           </span>
         </div>
@@ -126,15 +126,15 @@ function VocabMasteryPalette() {
           {ROOT_AFFIX_SWATCHES.map(root => (
             <div
               key={root.name}
-              className="p-3 rounded-xl border border-neutral-200/80 bg-neutral-50/40 hover:bg-white hover:border-purple-300 transition-all shadow-2xs space-y-1.5"
+              className="p-3 rounded-xl border border-slate-200/80 bg-slate-50/40 hover:bg-white hover:border-purple-300 transition-all shadow-xs space-y-1.5"
             >
               <div className="flex items-center justify-between">
-                <span className="font-mono text-xs font-bold text-neutral-900">{root.name}</span>
-                <span className="text-[10px] font-medium text-purple-700 bg-purple-100/70 px-1.5 py-0.2 rounded">
+                <span className="font-mono text-xs font-bold text-slate-900">{root.name}</span>
+                <span className="text-2xs font-medium text-purple-700 bg-purple-100/70 px-1.5 py-0.2 rounded">
                   {root.meaning}
                 </span>
               </div>
-              <div className="text-[11px] font-mono text-neutral-500 leading-snug">
+              <div className="text-2xs font-mono text-slate-500 leading-snug">
                 {root.words}
               </div>
             </div>
@@ -168,7 +168,7 @@ class TabErrorBoundary extends Component<{ children: ReactNode; onReset?: () => 
           <p className="text-slate-400 text-xs">{this.state.error}</p>
           <button
             onClick={() => this.setState({ hasError: false, error: '' })}
-            className="mt-3 px-4 py-1.5 bg-neutral-900 rounded-lg text-xs font-semibold text-white hover:bg-neutral-800"
+            className="mt-3 px-4 py-1.5 bg-slate-900 rounded-lg text-xs font-semibold text-white hover:bg-slate-800"
           >
             重试
           </button>
@@ -198,16 +198,16 @@ export default function Vocabulary() {
       {/* 顶部双轨角落胶囊 (Subframe Screen 3 Corner Pills) */}
       <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-neutral-200/80 shadow-xs">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-slate-200/80 shadow-xs">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-xs font-semibold text-neutral-800">考研英语词汇中心</span>
-            <span className="text-neutral-300">|</span>
-            <span className="text-[11px] text-neutral-500 font-mono">2000+ 核心真题词</span>
+            <span className="text-xs font-semibold text-slate-800">考研英语词汇中心</span>
+            <span className="text-slate-300">|</span>
+            <span className="text-2xs text-slate-500 font-mono">2000+ 核心真题词</span>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-100 border border-neutral-200/80 text-xs text-neutral-600 font-medium">
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200/80 text-xs text-slate-600 font-medium">
             <Sparkles className="h-3 w-3 text-amber-500" />
             <span>艾宾浩斯智能间隔</span>
           </div>
@@ -215,25 +215,25 @@ export default function Vocabulary() {
       </div>
 
       {/* 工作区团队头 (Subframe Team Header Bar) */}
-      <div className="bg-white rounded-[16px] border border-black/[0.08] p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white rounded-2xl border border-black/[0.08] p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
               考研英语 · 核心词汇复盘工作区
             </h1>
-            <span className="px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700 text-[10px] font-mono font-medium">
+            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-2xs font-mono font-medium">
               VOCABULARY
             </span>
           </div>
-          <p className="text-xs sm:text-sm text-neutral-500 mt-1">
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
             历年真题真题语境浸润 · 艾宾浩斯动态推迟 · 词根词缀衍生知识图谱
           </p>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
           <div className="text-right">
-            <div className="text-[10px] text-neutral-400 uppercase tracking-wider font-semibold">今日推荐</div>
-            <div className="text-sm font-bold font-mono text-neutral-900">20 词 / 组</div>
+            <div className="text-2xs text-slate-400 uppercase tracking-wider font-semibold">今日推荐</div>
+            <div className="text-sm font-bold font-mono text-slate-900">20 词 / 组</div>
           </div>
         </div>
       </div>
@@ -246,8 +246,8 @@ export default function Vocabulary() {
             onClick={() => setTab(t.key)}
             className={`flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-lg text-xs font-medium shrink-0 transition-all cursor-pointer active:scale-98 shadow-xs ${
               tab === t.key
-                ? 'bg-neutral-900 text-white shadow-xs font-semibold'
-                : 'bg-white border border-neutral-200 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
+                ? 'bg-slate-900 text-white shadow-xs font-semibold'
+                : 'bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50'
             }`}
           >
             <t.icon className="w-3.5 h-3.5 shrink-0" />

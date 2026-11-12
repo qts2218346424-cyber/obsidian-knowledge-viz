@@ -298,14 +298,14 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* 学科专精说明与其它科目直达通道 */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-blue-50/70 via-indigo-50/50 to-pink-50/70 border border-neutral-200/80 shadow-2xs">
-        <div className="flex items-center gap-2 text-xs text-neutral-700">
-          <span className="w-5 h-5 rounded-lg bg-neutral-900 text-white flex items-center justify-center text-[11px] font-bold shrink-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-blue-50/70 via-indigo-50/50 to-pink-50/70 border border-slate-200/80 shadow-xs">
+        <div className="flex items-center gap-2 text-xs text-slate-700">
+          <span className="w-5 h-5 rounded-lg bg-slate-900 text-white flex items-center justify-center text-2xs font-bold shrink-0">
             📑
           </span>
           <div>
-            <span className="font-bold text-neutral-900">真题与模拟整卷库</span>
-            <span className="text-neutral-500 ml-1.5 hidden md:inline">
+            <span className="font-bold text-slate-900">真题与模拟整卷库</span>
+            <span className="text-slate-500 ml-1.5 hidden md:inline">
               专精收录 408 计算机综合与考研数学历年官方真题及李林预测整卷；其他科目题目与套卷已收录于各学科专攻模块中。
             </span>
           </div>
@@ -314,14 +314,14 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
         <div className="flex items-center gap-2 shrink-0">
           <Link
             to="/english"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white text-indigo-700 hover:text-indigo-800 border border-indigo-200/80 hover:border-indigo-300 text-xs font-semibold shadow-2xs transition-all hover:shadow-xs"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white text-indigo-700 hover:text-indigo-800 border border-indigo-200/80 hover:border-indigo-300 text-xs font-semibold shadow-xs transition-all hover:shadow-xs"
           >
             <span>📖 考研英语真题套卷与模考</span>
             <ArrowRight className="w-3 h-3" />
           </Link>
           <Link
             to="/politics"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white text-rose-700 hover:text-rose-800 border border-rose-200/80 hover:border-rose-300 text-xs font-semibold shadow-2xs transition-all hover:shadow-xs"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white text-rose-700 hover:text-rose-800 border border-rose-200/80 hover:border-rose-300 text-xs font-semibold shadow-xs transition-all hover:shadow-xs"
           >
             <span>🏛️ 考研政治 1000 题与刷题</span>
             <ArrowRight className="w-3 h-3" />
@@ -330,11 +330,11 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
       </div>
 
       {/* 卷种、性质（真题/模拟）与年份筛选控制台 */}
-      <div className="bento-card rounded-2xl border border-neutral-200/85 bg-white p-4 sm:p-5 shadow-xs space-y-3.5">
+      <div className="bento-card rounded-2xl border border-slate-200/85 bg-white p-4 sm:p-5 shadow-xs space-y-3.5">
         {/* 第 1 行：考研卷种切换 + 搜索框 */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-            <span className="text-xs font-semibold text-neutral-500 mr-1 flex items-center gap-1">
+            <span className="text-xs font-semibold text-slate-500 mr-1 flex items-center gap-1">
               <Layers className="w-3.5 h-3.5 text-accent-orange" />
               <span>考研卷种：</span>
             </span>
@@ -344,8 +344,8 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
               onClick={() => handleSelectCategory('all')}
               className={`rounded-xl px-3.5 py-1.5 text-xs font-medium transition-all cursor-pointer ${
                 selectedCategory === 'all'
-                  ? 'bg-neutral-900 text-white font-semibold shadow-xs'
-                  : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200/70 hover:text-neutral-900'
+                  ? 'bg-slate-900 text-white font-semibold shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70 hover:text-slate-900'
               }`}
             >
               全部卷种 ({categoryStats.totalCount})
@@ -361,7 +361,7 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
               }`}
             >
               <span>📐 考研数学（二）</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/10">
+              <span className="text-2xs px-1.5 py-0.2 rounded-full bg-black/10">
                 {categoryStats.math2Count}
               </span>
             </button>
@@ -376,7 +376,7 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
               }`}
             >
               <span>📐 考研数学（一）</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/10">
+              <span className="text-2xs px-1.5 py-0.2 rounded-full bg-black/10">
                 {categoryStats.math1Count}
               </span>
             </button>
@@ -391,7 +391,7 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
               }`}
             >
               <span>🖥️ 408 计算机综合</span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/10">
+              <span className="text-2xs px-1.5 py-0.2 rounded-full bg-black/10">
                 {categoryStats.cs408Count}
               </span>
             </button>
@@ -399,21 +399,21 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
 
           {/* 关键字搜索框 */}
           <div className="relative w-full sm:w-64">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
               placeholder="搜索真题/模拟卷、年份或考点..."
-              className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-neutral-200 text-xs text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:border-neutral-900 bg-neutral-50/50"
+              className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-slate-900 bg-slate-50/50"
             />
           </div>
         </div>
 
         {/* 第 2 行：试卷性质分类划分（真题 vs 模拟） */}
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-2.5 border-t border-neutral-100">
-          <span className="text-xs font-semibold text-neutral-500 mr-1 flex items-center gap-1">
-            <BookOpen className="w-3.5 h-3.5 text-neutral-400" />
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-2.5 border-t border-slate-100">
+          <span className="text-xs font-semibold text-slate-500 mr-1 flex items-center gap-1">
+            <BookOpen className="w-3.5 h-3.5 text-slate-400" />
             <span>试卷类型：</span>
           </span>
 
@@ -422,8 +422,8 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
             onClick={() => handleSelectPaperType('all')}
             className={`rounded-xl px-3 py-1.5 text-xs font-medium transition-all cursor-pointer ${
               selectedPaperType === 'all'
-                ? 'bg-neutral-900 text-white font-semibold shadow-2xs'
-                : 'bg-neutral-100/80 text-neutral-600 hover:bg-neutral-200/70 hover:text-neutral-900'
+                ? 'bg-slate-900 text-white font-semibold shadow-xs'
+                : 'bg-slate-100/80 text-slate-600 hover:bg-slate-200/70 hover:text-slate-900'
             }`}
           >
             全部试卷 ({paperTypeStats.allCount})
@@ -434,12 +434,12 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
             onClick={() => handleSelectPaperType('real')}
             className={`rounded-xl px-3 py-1.5 text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
               selectedPaperType === 'real'
-                ? 'bg-emerald-600 text-white font-semibold shadow-2xs'
+                ? 'bg-emerald-600 text-white font-semibold shadow-xs'
                 : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100/80 border border-emerald-200/60'
             }`}
           >
             <span>📜 历年真题</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/10 font-mono">
+            <span className="text-2xs px-1.5 py-0.2 rounded-full bg-black/10 font-mono">
               {paperTypeStats.realCount}
             </span>
           </button>
@@ -449,21 +449,21 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
             onClick={() => handleSelectPaperType('mock')}
             className={`rounded-xl px-3 py-1.5 text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
               selectedPaperType === 'mock'
-                ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold shadow-2xs'
+                ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold shadow-xs'
                 : 'bg-amber-50 text-amber-700 hover:bg-amber-100/80 border border-amber-200/60'
             }`}
           >
             <span>🔥 模拟冲刺卷</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/10 font-mono">
+            <span className="text-2xs px-1.5 py-0.2 rounded-full bg-black/10 font-mono">
               {paperTypeStats.mockCount}
             </span>
           </button>
         </div>
 
         {/* 第 3 行：年份快速切换标签栏 */}
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-2.5 border-t border-neutral-100">
-          <span className="text-xs font-semibold text-neutral-500 mr-1 flex items-center gap-1">
-            <Calendar className="w-3.5 h-3.5 text-neutral-400" />
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-2.5 border-t border-slate-100">
+          <span className="text-xs font-semibold text-slate-500 mr-1 flex items-center gap-1">
+            <Calendar className="w-3.5 h-3.5 text-slate-400" />
             <span>试卷年份：</span>
           </span>
 
@@ -472,8 +472,8 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
             onClick={() => setSelectedYear('all')}
             className={`rounded-lg px-2.5 py-1 text-xs transition-all cursor-pointer ${
               selectedYear === 'all'
-                ? 'bg-neutral-900 text-white font-semibold'
-                : 'text-neutral-600 hover:bg-neutral-100'
+                ? 'bg-slate-900 text-white font-semibold'
+                : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
             历年全部
@@ -486,8 +486,8 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
               onClick={() => setSelectedYear(year)}
               className={`rounded-lg px-2.5 py-1 text-xs transition-all cursor-pointer font-mono ${
                 selectedYear === year
-                  ? 'bg-accent-orange text-white font-bold shadow-2xs'
-                  : 'bg-neutral-100/80 text-neutral-700 hover:bg-neutral-200/70'
+                  ? 'bg-accent-orange text-white font-bold shadow-xs'
+                  : 'bg-slate-100/80 text-slate-700 hover:bg-slate-200/70'
               }`}
             >
               {year} 年
@@ -498,10 +498,10 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
 
       {/* 试卷列表展示 */}
       {filteredPapers.length === 0 ? (
-        <div className="bento-card rounded-2xl border border-dashed border-neutral-300 p-12 text-center bg-white space-y-3">
-          <FileText className="w-10 h-10 mx-auto text-neutral-300" />
-          <h3 className="text-sm font-bold text-neutral-700">暂无符合筛选条件的试卷</h3>
-          <p className="text-xs text-neutral-400 max-w-md mx-auto">
+        <div className="bento-card rounded-2xl border border-dashed border-slate-300 p-12 text-center bg-white space-y-3">
+          <FileText className="w-10 h-10 mx-auto text-slate-300" />
+          <h3 className="text-sm font-bold text-slate-700">暂无符合筛选条件的试卷</h3>
+          <p className="text-xs text-slate-400 max-w-md mx-auto">
             {selectedPaperType === 'mock' && selectedCategory !== '数一' && selectedCategory !== 'all'
               ? `当前「${selectedCategory}」暂未收录模拟冲刺卷，您可以切换为「全部卷种」或「考研数学（一）」查看。`
               : '您可以尝试重置卷种、试卷类型或年份筛选条件，或在搜索框中键入其它考点关键词。'}
@@ -514,7 +514,7 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
               setSelectedYear('all')
               setSearchKeyword('')
             }}
-            className="px-4 py-1.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-xs font-semibold text-neutral-700 transition-colors cursor-pointer"
+            className="px-4 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition-colors cursor-pointer"
           >
             重置所有筛选
           </button>

@@ -67,18 +67,25 @@ export default function KnowledgeGraph() {
   const svgRef = useRef<SVGSVGElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null)
+  const simulationRef = useRef<d3.Simulation<SimNode, any> | null>(null)
   const currentTransformRef = useRef<d3.ZoomTransform>(d3.zoomIdentity)
-  const fitViewRef = useRef<((animate?: boolean) => void) | null>(null)
+  const fitViewRef = useRef<((animate?: boolean, targetIds?: Set<string>) => void) | null>(null)
   const updateLabelsRef = useRef<(() => void) | null>(null)
 
   const navigate = useNavigate()
+  const navigateRef = useRef(navigate)
+  navigateRef.current = navigate
+
   const [hoveredNode, setHoveredNode] = useState<SimNode | null>(null)
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set())
+  const [masteryFilter, setMasteryFilter] = useState<'all' | 'mastered' | 'moderate' | 'critical'>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [showAllLabels, setShowAllLabels] = useState(false)
   const [previewNode, setPreviewNode] = useState<FileDetail | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [dimensions, setDimensions] = useState({ width: 900, height: 600 })
+  const dimensionsRef = useRef(dimensions)
+  dimensionsRef.current = dimensions
 
   // 🚀 核心视图模式：'topology'（双链拓扑）与 'mastery'（考点掌握度热力图）
   const [viewMode, setViewMode] = useState<'topology' | 'mastery'>('mastery')
@@ -158,22 +165,29 @@ export default function KnowledgeGraph() {
     [rawNodes]
   )
 
-  // Active node IDs based on search + group filter
+  // Active node IDs based on search + group filter + mastery filter
   const activeNodeIds = useMemo(() => {
     const q = searchQuery.toLowerCase().trim()
     const hasGroupFilter = selectedGroups.size > 0
+    const hasMasteryFilter = viewMode === 'mastery' && masteryFilter !== 'all'
     return new Set(
       simNodes
         .filter(n => {
           if (hasGroupFilter && !selectedGroups.has(n.group)) return false
+          if (hasMasteryFilter) {
+            const mp = getNodeMastery(n.id, n.label)
+            if (masteryFilter === 'critical' && mp.rate >= 50) return false
+            if (masteryFilter === 'moderate' && (mp.rate < 50 || mp.rate >= 80)) return false
+            if (masteryFilter === 'mastered' && mp.rate < 80) return false
+          }
           if (q && !n.label.toLowerCase().includes(q) && !n.tags.some(t => t.toLowerCase().includes(q))) return false
           return true
         })
         .map(n => n.id)
     )
-  }, [simNodes, searchQuery, selectedGroups])
+  }, [simNodes, searchQuery, selectedGroups, viewMode, masteryFilter])
 
-  const hasFilter = searchQuery.trim().length > 0 || selectedGroups.size > 0
+  const hasFilter = searchQuery.trim().length > 0 || selectedGroups.size > 0 || (viewMode === 'mastery' && masteryFilter !== 'all')
 
   // Keep refs in sync for D3 callbacks without forcing re-simulations
   const activeNodeIdsRef = useRef(activeNodeIds)
@@ -192,18 +206,20 @@ export default function KnowledgeGraph() {
   const scoreColor = overallScore >= 80 ? 'text-accent-sage' : overallScore >= 60 ? 'text-accent-amber' : 'text-accent-rose'
   const orphanNotes = stats?.orphanNotes ?? 0
 
-  // 掌握度统计概况 (基于节点掌握度计算)
+  // 掌握度统计概况 (基于节点掌握度计算，未练习节点单独统计)
   const masterySummary = useMemo(() => {
     let criticalCount = 0
     let moderateCount = 0
     let masteredCount = 0
+    let unpracticedCount = 0
     simNodes.forEach(node => {
       const mp = getNodeMastery(node.id, node.label)
-      if (mp.rate < 50) criticalCount++
+      if (mp.totalAttempts === 0) unpracticedCount++
+      else if (mp.rate < 50) criticalCount++
       else if (mp.rate < 80) moderateCount++
       else masteredCount++
     })
-    return { criticalCount, moderateCount, masteredCount, total: simNodes.length }
+    return { criticalCount, moderateCount, masteredCount, unpracticedCount, total: simNodes.length }
   }, [simNodes])
 
   // Resize observer
@@ -220,23 +236,71 @@ export default function KnowledgeGraph() {
     return () => ro.disconnect()
   }, [])
 
-  // 获取节点填充主色 (支持拓扑色彩与掌握度热力三色动态映射)
-  const getNodeColor = (d: SimNode, currentViewMode: 'topology' | 'mastery') => {
+  // 获取节点视觉样式 (热力模式下：已练习点亮红/黄/绿；未练习保留学科星系色 + 虚线星环，拒绝死灰一团)
+  const getNodeVisualStyle = (d: SimNode, currentViewMode: 'topology' | 'mastery') => {
+    const groupColor = allGroupColors[d.group] || '#6366f1'
     if (currentViewMode === 'mastery') {
       const mp = getNodeMastery(d.id, d.label)
-      if (mp.rate >= 80) return '#10b981' // 翡翠绿 (稳固攻克)
-      if (mp.rate >= 50) return '#f59e0b' // 暖橙黄 (进阶巩固)
-      return '#ef4444' // 正气红 (薄弱高危)
+      if (mp.totalAttempts === 0) {
+        return {
+          color: groupColor,
+          isUnpracticed: true,
+          isCritical: false,
+          coreOpacity: 0.76,
+          glowOpacity: 0.14,
+          strokeColor: '#ffffff',
+          strokeDasharray: '3 2',
+        }
+      }
+      if (mp.rate >= 80) {
+        return {
+          color: '#10b981',
+          isUnpracticed: false,
+          isCritical: false,
+          coreOpacity: 0.96,
+          glowOpacity: 0.28,
+          strokeColor: '#FFFBF5',
+          strokeDasharray: 'none',
+        }
+      }
+      if (mp.rate >= 50) {
+        return {
+          color: '#f59e0b',
+          isUnpracticed: false,
+          isCritical: false,
+          coreOpacity: 0.96,
+          glowOpacity: 0.28,
+          strokeColor: '#FFFBF5',
+          strokeDasharray: 'none',
+        }
+      }
+      return {
+        color: '#ef4444',
+        isUnpracticed: false,
+        isCritical: true,
+        coreOpacity: 0.98,
+        glowOpacity: 0.34,
+        strokeColor: '#FFFBF5',
+        strokeDasharray: 'none',
+      }
     }
-    return allGroupColors[d.group] || '#8B7355'
+    return {
+      color: groupColor,
+      isUnpracticed: false,
+      isCritical: false,
+      coreOpacity: 0.95,
+      glowOpacity: 0.22,
+      strokeColor: '#FFFBF5',
+      strokeDasharray: 'none',
+    }
   }
 
-  // D3 force simulation
+  // D3 force simulation (仅在节点/连线数据变化时重建，切换视图或缩放窗口时平滑过渡不闪烁)
   useEffect(() => {
     if (!svgRef.current) return
     const svg = d3.select(svgRef.current)
     svg.selectAll('*').remove()
-    const { width, height } = dimensions
+    const { width: initW, height: initH } = dimensionsRef.current
 
     const nodes: SimNode[] = simNodes.map(d => ({ ...d }))
     const links = rawLinks.map(d => ({ ...d }))
@@ -252,23 +316,47 @@ export default function KnowledgeGraph() {
       neighborMap.get(t)!.add(s)
     })
 
-    // 考研学科图谱力学优化：增强排斥力与碰撞气囊，彻底消除节点标签互相遮挡
+    // 考研学科图谱力学配置：保持流体弹性与舒适收敛速度，既有灵动物理感又能稳稳停驻点击
     const simulation = d3.forceSimulation<SimNode>(nodes)
+      .alphaDecay(0.025)
+      .velocityDecay(0.35)
       .force('link', d3.forceLink(links).id((d: any) => d.id).distance((d: any) => {
         const linksSum = ((d.source as SimNode).linkCount || 1) + ((d.target as SimNode).linkCount || 1)
-        return Math.max(90, 140 - Math.min(35, linksSum * 3))
-      }).strength(0.48))
+        return Math.max(95, 145 - Math.min(35, linksSum * 3))
+      }).strength(0.45))
       .force('charge', d3.forceManyBody().strength((d: any) => {
         const count = (d as SimNode).linkCount || 1
-        return -220 - Math.min(180, count * 12)
-      }).distanceMax(650))
-      .force('center', d3.forceCenter(width / 2, height / 2).strength(0.06))
-      .force('x', d3.forceX(width / 2).strength(0.025))
-      .force('y', d3.forceY(height / 2).strength(0.025))
+        return -260 - Math.min(200, count * 14)
+      }).distanceMax(700))
+      .force('center', d3.forceCenter(initW / 2, initH / 2).strength(0.05))
+      .force('x', d3.forceX(initW / 2).strength(0.022))
+      .force('y', d3.forceY(initH / 2).strength(0.022))
       .force('collision', d3.forceCollide<SimNode>().radius(d => {
-        const labelLen = d.label ? d.label.length : 4
-        return Math.max(d.r + 24, labelLen * 5.2 + 8)
-      }).strength(0.85))
+        const labelLen = Math.min(16, d.label ? d.label.length : 4)
+        return Math.max(d.r + 26, labelLen * 6.2 + 12)
+      }).strength(0.88))
+
+    simulationRef.current = simulation
+
+    // 精致浅点阵画布底纹
+    const defs = svg.append('defs')
+    const dotPattern = defs.append('pattern')
+      .attr('id', 'graph-dot-grid')
+      .attr('width', 24)
+      .attr('height', 24)
+      .attr('patternUnits', 'userSpaceOnUse')
+    dotPattern.append('circle')
+      .attr('cx', 12)
+      .attr('cy', 12)
+      .attr('r', 1)
+      .attr('fill', '#cbd5e1')
+      .attr('opacity', 0.45)
+
+    svg.append('rect')
+      .attr('width', '100%')
+      .attr('height', '100%')
+      .attr('fill', 'url(#graph-dot-grid)')
+      .style('pointer-events', 'none')
 
     const g = svg.append('g')
 
@@ -289,9 +377,10 @@ export default function KnowledgeGraph() {
       .selectAll('line')
       .data(links)
       .enter().append('line')
-      .attr('stroke', '#D4B896')
-      .attr('stroke-width', 1.4)
-      .attr('stroke-opacity', 0.35)
+      .attr('stroke', '#CBD5E1')
+      .attr('stroke-width', 1.5)
+      .attr('stroke-opacity', 0.45)
+      .attr('stroke-linecap', 'round')
 
     const node = g.append('g')
       .attr('class', 'nodes')
@@ -299,23 +388,37 @@ export default function KnowledgeGraph() {
       .data(nodes)
       .enter().append('g')
       .attr('class', 'node')
-      .style('cursor', 'pointer')
+      .style('cursor', 'grab')
       .call(
-        d3.drag<SVGGElement, SimNode>()
-          .on('start', (event, d) => {
-            if (!event.active) simulation.alphaTarget(0.3).restart()
-            d.fx = d.x
-            d.fy = d.y
-          })
-          .on('drag', (event, d) => {
-            d.fx = event.x
-            d.fy = event.y
-          })
-          .on('end', (event, d) => {
-            if (!event.active) simulation.alphaTarget(0)
-            d.fx = null
-            d.fy = null
-          })
+        (() => {
+          let isDraggingSim = false
+          return d3.drag<SVGGElement, SimNode>()
+            .clickDistance(5)
+            .on('start', function (_event, d) {
+              isDraggingSim = false
+              d3.select(this).style('cursor', 'grabbing')
+              d.fx = d.x
+              d.fy = d.y
+            })
+            .on('drag', (event, d) => {
+              // 注意：d3-drag 在 drag 回调期间 event.active === 1，不能用 !event.active 判断
+              if (!isDraggingSim) {
+                isDraggingSim = true
+                simulation.alphaTarget(0.35).restart()
+              }
+              d.fx = event.x
+              d.fy = event.y
+            })
+            .on('end', function (event, d) {
+              d3.select(this).style('cursor', 'grab')
+              if (isDraggingSim && !event.active) {
+                simulation.alphaTarget(0)
+              }
+              isDraggingSim = false
+              d.fx = null
+              d.fy = null
+            })
+        })()
       )
 
     // 单击节点：若处于【考点掌握度热力图】模式，呼出【考点诊断与提分急救舱】；若在拓扑模式，呼出右侧笔记检查器
@@ -342,30 +445,31 @@ export default function KnowledgeGraph() {
     node.on('dblclick', (event, d) => {
       event.stopPropagation()
       if (d.path) {
-        navigate(`/editor?path=${encodeURIComponent(d.path)}`)
+        navigateRef.current(`/editor?path=${encodeURIComponent(d.path)}`)
       }
     })
 
-    // 🔥 高危薄弱考点呼吸脉冲光晕 (仅在掌握度热力图模式下生效)
+    // 🔥 高危薄弱考点呼吸脉冲光晕 (仅在掌握度热力图模式且已练习薄弱时展示)
     node.each(function (d: SimNode) {
       const el = d3.select(this)
       const mp = getNodeMastery(d.id, d.label)
-      const isCritical = mp.rate < 50
+      const isCritical = mp.totalAttempts > 0 && mp.rate < 50
 
       if (isCritical) {
-        el.append('circle')
+        const pulse = el.append('circle')
           .attr('r', d.r + 10)
           .attr('fill', '#ef4444')
           .attr('opacity', 0.25)
           .attr('class', 'critical-pulse')
-          .append('animate')
+          .style('display', viewModeRef.current === 'mastery' ? 'inline' : 'none')
+
+        pulse.append('animate')
           .attr('attributeName', 'r')
-          .attr('values', `${d.r + 6};${d.r + 15};${d.r + 6}`)
+          .attr('values', `${d.r + 6};${d.r + 16};${d.r + 6}`)
           .attr('dur', '2s')
           .attr('repeatCount', 'indefinite')
 
-        el.select('.critical-pulse')
-          .append('animate')
+        pulse.append('animate')
           .attr('attributeName', 'opacity')
           .attr('values', '0.35;0.08;0.35')
           .attr('dur', '2s')
@@ -375,18 +479,19 @@ export default function KnowledgeGraph() {
 
     // Node outer glow
     node.append('circle')
-      .attr('r', (d: SimNode) => d.r + 4)
-      .attr('fill', (d: SimNode) => getNodeColor(d, viewModeRef.current))
-      .attr('opacity', 0.18)
+      .attr('r', (d: SimNode) => d.r + 5)
+      .attr('fill', (d: SimNode) => getNodeVisualStyle(d, viewModeRef.current).color)
+      .attr('opacity', (d: SimNode) => getNodeVisualStyle(d, viewModeRef.current).glowOpacity)
       .attr('class', 'node-glow')
 
     // Node core circle
     node.append('circle')
       .attr('r', (d: SimNode) => d.r)
-      .attr('fill', (d: SimNode) => getNodeColor(d, viewModeRef.current))
-      .attr('stroke', '#FFFBF5')
+      .attr('fill', (d: SimNode) => getNodeVisualStyle(d, viewModeRef.current).color)
+      .attr('stroke', (d: SimNode) => getNodeVisualStyle(d, viewModeRef.current).strokeColor)
       .attr('stroke-width', 2.2)
-      .attr('opacity', 0.94)
+      .attr('stroke-dasharray', (d: SimNode) => getNodeVisualStyle(d, viewModeRef.current).strokeDasharray)
+      .attr('opacity', (d: SimNode) => getNodeVisualStyle(d, viewModeRef.current).coreOpacity)
       .attr('class', 'node-circle')
 
     // Node label with crisp halo (考研学科高清晰度文字，强化白底描边与层次)
@@ -421,10 +526,10 @@ export default function KnowledgeGraph() {
           if (showAllLabelsRef.current) return 'inline'
 
           // Multi-level zoom LOD
-          if (k >= 1.6) return 'inline'
-          if (k >= 1.1) return (d.linkCount >= 1 || d.r >= 6) ? 'inline' : 'none'
-          if (k >= 0.75) return (d.linkCount >= 2 || d.r >= 7) ? 'inline' : 'none'
-          return (d.linkCount >= 4 || d.r >= 9) ? 'inline' : 'none'
+          if (k >= 1.45) return 'inline'
+          if (k >= 0.95) return (d.linkCount >= 1 || d.r >= 6) ? 'inline' : 'none'
+          if (k >= 0.65) return (d.linkCount >= 2 || d.r >= 7) ? 'inline' : 'none'
+          return (d.linkCount >= 3 || d.r >= 9) ? 'inline' : 'none'
         })
     }
     updateLabelsRef.current = updateLabels
@@ -434,68 +539,79 @@ export default function KnowledgeGraph() {
       setHoveredNode(d)
       hoveredNodeRef.current = d
       const neighbors = neighborMap.get(d.id) || new Set<string>()
+      const style = getNodeVisualStyle(d, viewModeRef.current)
 
       d3.select(this).select('.node-circle')
-        .transition().duration(120)
-        .attr('r', d.r + 3)
+        .transition().duration(140)
+        .attr('r', d.r + 3.5)
         .attr('opacity', 1)
       d3.select(this).select('.node-glow')
-        .transition().duration(120)
-        .attr('r', d.r + 9)
-        .attr('opacity', 0.4)
+        .transition().duration(140)
+        .attr('r', d.r + 11)
+        .attr('opacity', 0.42)
 
       // Highlight active node & neighbors, dim non-neighbors
-      node.transition().duration(120)
-        .style('opacity', n => (n.id === d.id || neighbors.has(n.id) ? 1 : 0.15))
+      node.transition().duration(140)
+        .style('opacity', n => (n.id === d.id || neighbors.has(n.id) ? 1 : 0.16))
 
       // Highlight connected links
-      link.transition().duration(120)
+      link.transition().duration(140)
         .attr('stroke-opacity', (l: any) => {
           const sId = l.source.id || l.source
           const tId = l.target.id || l.target
-          return sId === d.id || tId === d.id ? 0.95 : 0.04
+          return sId === d.id || tId === d.id ? 0.92 : 0.05
         })
         .attr('stroke-width', (l: any) => {
           const sId = l.source.id || l.source
           const tId = l.target.id || l.target
-          return sId === d.id || tId === d.id ? 2.5 : 1
+          return sId === d.id || tId === d.id ? 2.6 : 1.1
         })
         .attr('stroke', (l: any) => {
           const sId = l.source.id || l.source
           const tId = l.target.id || l.target
-          return sId === d.id || tId === d.id ? getNodeColor(d, viewModeRef.current) : '#D4B896'
+          return sId === d.id || tId === d.id ? style.color : '#CBD5E1'
         })
 
       updateLabels()
     }).on('mouseleave', function (_event, d) {
       setHoveredNode(null)
       hoveredNodeRef.current = null
+      const style = getNodeVisualStyle(d, viewModeRef.current)
 
       d3.select(this).select('.node-circle')
-        .transition().duration(120)
+        .transition().duration(140)
         .attr('r', d.r)
-        .attr('opacity', 0.94)
+        .attr('opacity', style.coreOpacity)
       d3.select(this).select('.node-glow')
-        .transition().duration(120)
-        .attr('r', d.r + 4)
-        .attr('opacity', 0.18)
+        .transition().duration(140)
+        .attr('r', d.r + 5)
+        .attr('opacity', style.glowOpacity)
 
-      // Restore opacity based on search/group filter
-      node.transition().duration(120)
+      // Restore opacity based on search/group/mastery filter
+      node.transition().duration(140)
         .style('opacity', n => {
           if (!hasFilterRef.current) return 1
-          return activeNodeIdsRef.current.has(n.id) ? 1 : 0.08
+          return activeNodeIdsRef.current.has(n.id) ? 1 : 0.05
+        })
+        .style('pointer-events', n => {
+          if (!hasFilterRef.current) return 'auto'
+          return activeNodeIdsRef.current.has(n.id) ? 'auto' : 'none'
         })
 
-      link.transition().duration(120)
+      link.transition().duration(140)
         .attr('stroke-opacity', (l: any) => {
-          if (!hasFilterRef.current) return 0.35
+          if (!hasFilterRef.current) return 0.45
           const sActive = activeNodeIdsRef.current.has(l.source.id || l.source)
           const tActive = activeNodeIdsRef.current.has(l.target.id || l.target)
-          return (sActive && tActive) ? 0.6 : 0.03
+          return (sActive && tActive) ? 0.78 : 0.025
         })
-        .attr('stroke-width', 1.4)
-        .attr('stroke', '#D4B896')
+        .attr('stroke-width', (l: any) => {
+          if (!hasFilterRef.current) return 1.5
+          const sActive = activeNodeIdsRef.current.has(l.source.id || l.source)
+          const tActive = activeNodeIdsRef.current.has(l.target.id || l.target)
+          return (sActive && tActive) ? 2 : 1
+        })
+        .attr('stroke', '#CBD5E1')
 
       updateLabels()
     })
@@ -511,37 +627,44 @@ export default function KnowledgeGraph() {
       node.attr('transform', (d: SimNode) => `translate(${d.x ?? 0},${d.y ?? 0})`)
     })
 
-    // True Fit View: calculates bounding box and smooth-centers graph in canvas
-    const fitView = (animate = true) => {
+    // True Fit View: calculates bounding box (full or filtered subset) and smooth-centers graph in canvas
+    const fitView = (animate = true, targetIds?: Set<string>) => {
       if (!svgRef.current || nodes.length === 0) return
+      const targetNodes = targetIds && targetIds.size > 0
+        ? nodes.filter(d => targetIds.has(d.id))
+        : nodes
+      if (targetNodes.length === 0) return
+
+      const { width: curW, height: curH } = dimensionsRef.current
       let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
-      for (const d of nodes) {
+      for (const d of targetNodes) {
         if (d.x == null || d.y == null || !isFinite(d.x) || !isFinite(d.y)) continue
         if (d.x - d.r < minX) minX = d.x - d.r
         if (d.x + d.r > maxX) maxX = d.x + d.r
         if (d.y - d.r < minY) minY = d.y - d.r
         if (d.y + d.r > maxY) maxY = d.y + d.r
       }
-      if (!isFinite(minX) || !isFinite(maxX) || maxX <= minX) return
+      if (!isFinite(minX) || !isFinite(maxX)) return
 
-      const graphWidth = maxX - minX
-      const graphHeight = maxY - minY
+      const graphWidth = Math.max(220, maxX - minX)
+      const graphHeight = Math.max(180, maxY - minY)
       const midX = (minX + maxX) / 2
       const midY = (minY + maxY) / 2
 
-      const pad = 60
-      const availW = Math.max(120, width - pad * 2)
-      const availH = Math.max(120, height - pad * 2)
+      const pad = 64
+      const availW = Math.max(120, curW - pad * 2)
+      const availH = Math.max(120, curH - pad * 2)
 
-      const scale = Math.max(0.12, Math.min(1.2, Math.min(availW / graphWidth, availH / graphHeight)))
-      const tx = width / 2 - scale * midX
-      const ty = height / 2 - scale * midY
+      const maxScale = targetIds && targetIds.size > 0 ? 1.45 : 1.25
+      const scale = Math.max(0.15, Math.min(maxScale, Math.min(availW / graphWidth, availH / graphHeight)))
+      const tx = curW / 2 - scale * midX
+      const ty = curH / 2 - scale * midY
 
       const t = d3.zoomIdentity.translate(tx, ty).scale(scale)
       currentTransformRef.current = t
 
       if (animate) {
-        svg.transition().duration(550).ease(d3.easeCubicOut).call(zoom.transform, t)
+        svg.transition().duration(500).ease(d3.easeCubicOut).call(zoom.transform, t)
       } else {
         svg.call(zoom.transform, t)
       }
@@ -550,51 +673,131 @@ export default function KnowledgeGraph() {
 
     fitViewRef.current = fitView
 
-    // Pre-warm initial ticks so nodes enter with a calm settling motion
+    // 轻度预热 35 步：避免初始团簇重合，同时保留充沛能量让星系动态舒展收敛
     simulation.alpha(1)
-    for (let i = 0; i < 45; ++i) {
+    for (let i = 0; i < 35; ++i) {
       simulation.tick()
     }
+    link
+      .attr('x1', (d: any) => d.source.x)
+      .attr('y1', (d: any) => d.source.y)
+      .attr('x2', (d: any) => d.target.x)
+      .attr('y2', (d: any) => d.target.y)
+    node.attr('transform', (d: SimNode) => `translate(${d.x ?? 0},${d.y ?? 0})`)
     fitView(false)
     updateLabels()
 
-    // Auto-fit smoothly once after layout stabilizes
-    const timer = setTimeout(() => {
+    // 保持力导向引擎活水运转，约 650ms 后平滑居中聚焦
+    simulation.alpha(0.45).restart()
+    const fitTimer = setTimeout(() => {
       fitView(true)
-    }, 600)
+    }, 650)
 
     return () => {
-      clearTimeout(timer)
+      clearTimeout(fitTimer)
       simulation.stop()
+      simulationRef.current = null
       zoomRef.current = null
       fitViewRef.current = null
       updateLabelsRef.current = null
     }
-  }, [dimensions, simNodes, rawLinks, navigate, viewMode])
+  }, [simNodes, rawLinks])
 
-  // Update node/link opacity and refresh labels when search, filter or label visibility changes
+  // 窗口/容器尺寸变化时温和调整力中心并自适应视图，不销毁重算节点坐标
+  useEffect(() => {
+    const sim = simulationRef.current
+    if (!sim) return
+    const { width, height } = dimensions
+    sim.force('center', d3.forceCenter(width / 2, height / 2).strength(0.05))
+    sim.force('x', d3.forceX(width / 2).strength(0.022))
+    sim.force('y', d3.forceY(height / 2).strength(0.022))
+    fitViewRef.current?.(false)
+  }, [dimensions])
+
+  // 切换【热力图 / 拓扑图】时原地平滑过渡配色与脉冲光晕，不破坏当前力学位置与缩放
+  useEffect(() => {
+    if (!svgRef.current) return
+    const svg = d3.select(svgRef.current)
+
+    svg.selectAll<SVGCircleElement, SimNode>('.node-circle')
+      .transition().duration(260)
+      .attr('fill', d => getNodeVisualStyle(d, viewMode).color)
+      .attr('stroke', d => getNodeVisualStyle(d, viewMode).strokeColor)
+      .attr('stroke-dasharray', d => getNodeVisualStyle(d, viewMode).strokeDasharray)
+      .attr('opacity', d => getNodeVisualStyle(d, viewMode).coreOpacity)
+
+    svg.selectAll<SVGCircleElement, SimNode>('.node-glow')
+      .transition().duration(260)
+      .attr('fill', d => getNodeVisualStyle(d, viewMode).color)
+      .attr('opacity', d => getNodeVisualStyle(d, viewMode).glowOpacity)
+
+    svg.selectAll<SVGCircleElement, SimNode>('.critical-pulse')
+      .style('display', d => {
+        if (viewMode !== 'mastery') return 'none'
+        if (hasFilterRef.current && !activeNodeIdsRef.current.has(d.id)) return 'none'
+        return 'inline'
+      })
+  }, [viewMode])
+
+  const hadFilterRef = useRef(false)
+
+  // Update node/link opacity, pointer-events, pulses and camera focus when search/group/mastery filter changes
   useEffect(() => {
     if (!svgRef.current) return
     const svg = d3.select(svgRef.current)
 
     svg.selectAll<SVGGElement, SimNode>('.node')
-      .transition().duration(200)
+      .style('pointer-events', d => {
+        if (!hasFilter) return 'auto'
+        return activeNodeIds.has(d.id) ? 'auto' : 'none'
+      })
+      .transition().duration(220)
       .style('opacity', d => {
         if (!hasFilter) return 1
-        return activeNodeIds.has(d.id) ? 1 : 0.08
+        return activeNodeIds.has(d.id) ? 1 : 0.05
+      })
+
+    svg.selectAll<SVGCircleElement, SimNode>('.node-circle')
+      .transition().duration(220)
+      .attr('r', d => {
+        if (!hasFilter) return d.r
+        return activeNodeIds.has(d.id) ? d.r + 2 : Math.max(4, d.r * 0.85)
+      })
+
+    svg.selectAll<SVGCircleElement, SimNode>('.critical-pulse')
+      .style('display', d => {
+        if (viewMode !== 'mastery') return 'none'
+        if (hasFilter && !activeNodeIds.has(d.id)) return 'none'
+        return 'inline'
       })
 
     svg.selectAll<SVGLineElement, any>('line')
-      .transition().duration(200)
+      .transition().duration(220)
       .attr('stroke-opacity', (l: any) => {
-        if (!hasFilter) return 0.35
+        if (!hasFilter) return 0.45
         const sActive = activeNodeIds.has(l.source.id || l.source)
         const tActive = activeNodeIds.has(l.target.id || l.target)
-        return (sActive && tActive) ? 0.6 : 0.03
+        return (sActive && tActive) ? 0.78 : 0.025
+      })
+      .attr('stroke-width', (l: any) => {
+        if (!hasFilter) return 1.5
+        const sActive = activeNodeIds.has(l.source.id || l.source)
+        const tActive = activeNodeIds.has(l.target.id || l.target)
+        return (sActive && tActive) ? 2 : 1
       })
 
     updateLabelsRef.current?.()
-  }, [activeNodeIds, hasFilter, showAllLabels])
+
+    if (hasFilter) {
+      hadFilterRef.current = true
+      if (activeNodeIds.size > 0 && !searchQuery.trim()) {
+        fitViewRef.current?.(true, activeNodeIds)
+      }
+    } else if (hadFilterRef.current) {
+      hadFilterRef.current = false
+      fitViewRef.current?.(true)
+    }
+  }, [activeNodeIds, hasFilter, showAllLabels, viewMode, searchQuery])
 
   const toggleGroup = (group: string) => {
     setSelectedGroups(prev => {
@@ -605,16 +808,25 @@ export default function KnowledgeGraph() {
     })
   }
 
+  const toggleMasteryFilter = (tier: 'all' | 'mastered' | 'moderate' | 'critical') => {
+    setMasteryFilter(prev => (prev === tier ? 'all' : tier))
+  }
+
   const totalNodes = rawNodes.length
   const isRealData = Boolean(data)
 
   const clearFilters = () => {
     setSearchQuery('')
     setSelectedGroups(new Set())
+    setMasteryFilter('all')
   }
 
   const resetView = () => {
     fitViewRef.current?.(true)
+  }
+
+  const reheatSimulation = () => {
+    simulationRef.current?.alpha(0.65).restart()
   }
 
   // 启动仿真课件处理函数
@@ -641,7 +853,7 @@ export default function KnowledgeGraph() {
         <div className="flex items-center gap-1.5 font-medium text-slate-600">
           <button
             onClick={() => setViewMode(prev => prev === 'mastery' ? 'topology' : 'mastery')}
-            className={`px-2 py-0.5 rounded-full text-[11px] font-bold flex items-center gap-1 ${
+            className={`px-2 py-0.5 rounded-full text-2xs font-bold flex items-center gap-1 ${
               viewMode === 'mastery'
                 ? 'bg-rose-100 text-rose-700 border border-rose-200'
                 : 'bg-slate-100 text-slate-700'
@@ -668,7 +880,7 @@ export default function KnowledgeGraph() {
             <HelpCircle className="h-3.5 w-3.5" />
           </button>
           {hasFilter && (
-            <button onClick={clearFilters} className="px-2 py-1 rounded-lg bg-slate-100 text-slate-600 text-[11px] font-semibold">
+            <button onClick={clearFilters} className="px-2 py-1 rounded-lg bg-slate-100 text-slate-600 text-2xs font-semibold">
               重置
             </button>
           )}
@@ -682,26 +894,26 @@ export default function KnowledgeGraph() {
       <div className="hidden md:flex items-center justify-between gap-3 pt-1">
         <div className="flex items-center gap-2">
           {/* 模式切换双联胶囊 */}
-          <div className="flex items-center p-1 bg-white border border-neutral-200/80 rounded-full shadow-xs">
+          <div className="flex items-center p-1 bg-white border border-slate-200/80 rounded-full shadow-xs">
             <button
               onClick={() => setViewMode('mastery')}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
                 viewMode === 'mastery'
                   ? 'bg-gradient-to-r from-rose-500 via-amber-500 to-orange-500 text-white shadow-xs'
-                  : 'text-neutral-600 hover:text-neutral-900'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <Flame className="w-3.5 h-3.5 fill-current" />
               <span>考点掌握度热力图 (Mastery Graph)</span>
-              <span className="text-[10px] bg-white/20 px-1.5 py-0.2 rounded-full">提分导航仪</span>
+              <span className="text-2xs bg-white/20 px-1.5 py-0.2 rounded-full">提分导航仪</span>
             </button>
 
             <button
               onClick={() => setViewMode('topology')}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
                 viewMode === 'topology'
-                  ? 'bg-neutral-900 text-white shadow-xs'
-                  : 'text-neutral-600 hover:text-neutral-900'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <span>知识双链拓扑图</span>
@@ -723,11 +935,11 @@ export default function KnowledgeGraph() {
         <div className="flex items-center gap-2">
           {viewMode === 'mastery' ? (
             <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-xs text-rose-800 font-medium">
-              <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
               <span>单击红色薄弱考点，立即进入【提分急救舱】</span>
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-neutral-100 border border-neutral-200/80 text-xs text-neutral-600 font-medium">
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200/80 text-xs text-slate-600 font-medium">
               <span>双击节点：右侧属性检查器</span>
             </div>
           )}
@@ -735,10 +947,10 @@ export default function KnowledgeGraph() {
       </div>
 
       {/* 🖥️ 桌面端 Header */}
-      <div className="hidden md:flex flex-col justify-between gap-3 shrink-0 lg:flex-row lg:items-center bg-white rounded-[16px] border border-black/[0.08] p-4 sm:p-5 shadow-xs">
+      <div className="hidden md:flex flex-col justify-between gap-3 shrink-0 lg:flex-row lg:items-center bg-white rounded-2xl border border-black/[0.08] p-4 sm:p-5 shadow-xs">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold tracking-tight text-neutral-900 flex items-center gap-2">
+            <h1 className="text-xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
               {viewMode === 'mastery' ? (
                 <>
                   <span className="text-rose-500">🔥</span>
@@ -749,15 +961,15 @@ export default function KnowledgeGraph() {
               )}
             </h1>
             {viewMode === 'mastery' ? (
-              <span className="rounded-full bg-rose-100 border border-rose-200 px-2.5 py-0.5 text-[11px] font-bold text-rose-800 flex items-center gap-1">
+              <span className="rounded-full bg-rose-100 border border-rose-200 px-2.5 py-0.5 text-2xs font-bold text-rose-800 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
                 提分急救导航模式已激活
               </span>
             ) : isRealData && (
-              <span className="rounded-full bg-neutral-100 border border-neutral-200 px-2 py-0.5 text-[10px] font-mono font-medium text-neutral-700">实时网络</span>
+              <span className="rounded-full bg-slate-100 border border-slate-200 px-2 py-0.5 text-2xs font-mono font-medium text-slate-700">实时网络</span>
             )}
           </div>
-          <p className="mt-0.5 text-xs text-neutral-500">
+          <p className="mt-0.5 text-xs text-slate-500">
             {viewMode === 'mastery'
               ? '实时映射做题中心作答战况：绿色稳固攻克(>80%)、黄色中度掌握(50%~80%)、红色高危薄弱(<50%呼吸闪烁)。点击薄弱考点直通常规仿真课件与真题急救。'
               : '从笔记双向链接构建拓扑知识网络。支持平移缩放、智能标签分级、单击跳至编辑、双击检查器透视。'}
@@ -766,7 +978,7 @@ export default function KnowledgeGraph() {
         <div className="flex flex-wrap gap-2">
           <button
             onClick={resetView}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-700 text-xs font-medium cursor-pointer shadow-xs transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium cursor-pointer shadow-xs transition-colors"
           >
             <Maximize2 className="h-3.5 w-3.5" />
             适配全景
@@ -775,8 +987,8 @@ export default function KnowledgeGraph() {
             onClick={() => setShowAllLabels(prev => !prev)}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors shadow-xs cursor-pointer ${
               showAllLabels
-                ? 'bg-neutral-900 text-white font-semibold'
-                : 'border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50'
+                ? 'bg-slate-900 text-white font-semibold'
+                : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
             }`}
           >
             <Eye className="h-3.5 w-3.5" />
@@ -785,14 +997,14 @@ export default function KnowledgeGraph() {
           <button
             onClick={clearFilters}
             disabled={!hasFilter}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium transition-colors shadow-xs cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium transition-colors shadow-xs cursor-pointer"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             清除筛选
           </button>
           <button
             onClick={reload}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold cursor-pointer shadow-xs transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold cursor-pointer shadow-xs transition-colors"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             重新构建
@@ -800,18 +1012,46 @@ export default function KnowledgeGraph() {
         </div>
       </div>
 
-      {/* 🖥️ 桌面端 Metrics Row (自适应拓扑与掌握度) */}
+      {/* 🖥️ 桌面端 Metrics Row (自适应拓扑与掌握度；点击可直接筛选对应考点等级) */}
       <div className="hidden md:grid grid-cols-4 gap-2.5 shrink-0">
         {viewMode === 'mastery' ? (
           <>
-            <GraphMetric label="收录核心考点" value={totalNodes} color="text-neutral-900" />
-            <GraphMetric label="稳固攻克 (≥80%)" value={masterySummary.masteredCount} color="text-emerald-600" />
-            <GraphMetric label="进阶巩固 (50~80%)" value={masterySummary.moderateCount} color="text-amber-500" />
-            <GraphMetric label="薄弱高危 (<50%)" value={masterySummary.criticalCount} color="text-rose-500" />
+            <GraphMetric
+              label="收录核心考点 (点击查看全部)"
+              value={totalNodes}
+              color="text-slate-900"
+              active={masteryFilter === 'all'}
+              activeRingClass="border-slate-900 ring-1 ring-slate-900/15 bg-slate-50/70"
+              onClick={() => setMasteryFilter('all')}
+            />
+            <GraphMetric
+              label="稳固攻克 (≥80% · 点击筛选)"
+              value={masterySummary.masteredCount}
+              color="text-emerald-600"
+              active={masteryFilter === 'mastered'}
+              activeRingClass="border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/50"
+              onClick={() => toggleMasteryFilter('mastered')}
+            />
+            <GraphMetric
+              label="进阶巩固 (50~80% · 点击筛选)"
+              value={masterySummary.moderateCount}
+              color="text-amber-500"
+              active={masteryFilter === 'moderate'}
+              activeRingClass="border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/50"
+              onClick={() => toggleMasteryFilter('moderate')}
+            />
+            <GraphMetric
+              label="薄弱高危 (<50% · 点击筛选)"
+              value={masterySummary.criticalCount}
+              color="text-rose-500"
+              active={masteryFilter === 'critical'}
+              activeRingClass="border-rose-500 ring-2 ring-rose-500/25 bg-rose-50/60"
+              onClick={() => toggleMasteryFilter('critical')}
+            />
           </>
         ) : (
           <>
-            <GraphMetric label="节点总数" value={totalNodes} color="text-neutral-900" />
+            <GraphMetric label="节点总数" value={totalNodes} color="text-slate-900" />
             <GraphMetric label="双向连接" value={rawLinks.length} color="text-emerald-600" />
             <GraphMetric label="孤立笔记" value={orphanNotes} color="text-rose-500" />
             <GraphMetric label="健康度" value={overallScore || '—'} color={scoreColor} suffix={overallScore ? '/100' : undefined} />
@@ -834,7 +1074,7 @@ export default function KnowledgeGraph() {
             <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-rose-50/90 via-amber-50/80 to-emerald-50/80 border border-rose-200/90 text-xs mb-2">
               <div className="flex items-center gap-2 text-slate-800">
                 <span className="font-extrabold text-rose-900 flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-rose-600 animate-ping" />
+                  <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
                   提分急救舱就绪
                 </span>
                 <span className="text-slate-300 hidden sm:inline">|</span>
@@ -845,14 +1085,14 @@ export default function KnowledgeGraph() {
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={() => handleOpenCourseware('cw-avl-tree')}
-                  className="text-[11px] font-bold text-indigo-700 hover:text-indigo-900 bg-white px-2.5 py-1 rounded-lg border border-indigo-200 shadow-2xs transition-colors flex items-center gap-1"
+                  className="text-2xs font-bold text-indigo-700 hover:text-indigo-900 bg-white px-2.5 py-1 rounded-lg border border-indigo-200 shadow-xs transition-colors flex items-center gap-1"
                 >
                   <Play className="w-3 h-3 fill-current" />
                   <span>AVL树仿真课件</span>
                 </button>
                 <Link
                   to="/quiz"
-                  className="text-[11px] font-bold text-white bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 px-2.5 py-1 rounded-lg shadow-2xs transition-colors"
+                  className="text-2xs font-bold text-white bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 px-2.5 py-1 rounded-lg shadow-xs transition-colors"
                 >
                   前往做题中心 →
                 </Link>
@@ -869,19 +1109,19 @@ export default function KnowledgeGraph() {
                 </span>
                 <span className="text-slate-300 hidden sm:inline">|</span>
                 <span className="text-slate-600 hidden sm:inline">
-                  涵盖 408 计算机与考研数学高频考点。在笔记中使用 <code className="bg-white px-1.5 py-0.5 rounded border border-indigo-200 text-indigo-600 font-mono text-[11px]">[[双链]]</code> 即可点亮个人知识网络。
+                  涵盖 408 计算机与考研数学高频考点。在笔记中使用 <code className="bg-white px-1.5 py-0.5 rounded border border-indigo-200 text-indigo-600 font-mono text-2xs">[[双链]]</code> 即可点亮个人知识网络。
                 </span>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <Link
                   to="/study"
-                  className="text-[11px] font-bold text-indigo-700 hover:text-indigo-900 bg-white px-2.5 py-1 rounded-lg border border-indigo-200 shadow-2xs transition-colors"
+                  className="text-2xs font-bold text-indigo-700 hover:text-indigo-900 bg-white px-2.5 py-1 rounded-lg border border-indigo-200 shadow-xs transition-colors"
                 >
                   浏览考研讲义 →
                 </Link>
                 <Link
                   to="/editor"
-                  className="text-[11px] font-bold text-white bg-indigo-600 hover:bg-indigo-500 px-2.5 py-1 rounded-lg shadow-2xs transition-colors"
+                  className="text-2xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 px-2.5 py-1 rounded-lg shadow-xs transition-colors"
                 >
                   + 新建考研笔记
                 </Link>
@@ -891,12 +1131,12 @@ export default function KnowledgeGraph() {
 
           <div
             ref={containerRef}
-            className="relative flex-1 min-h-0 overflow-hidden sm:rounded-xl sm:border sm:border-neutral-200/80 bg-neutral-50/50 shadow-xs select-none"
+            className="relative flex-1 min-h-[420px] md:min-h-[500px] overflow-hidden sm:rounded-xl sm:border sm:border-slate-200/80 bg-slate-50/50 shadow-xs select-none"
           >
             <svg ref={svgRef} width={dimensions.width} height={dimensions.height} className="block h-full w-full touch-none select-none" style={{ touchAction: 'none' }} />
 
             {/* Floating on-canvas controls (top-left) */}
-            <div className="absolute top-3 left-3 z-10 flex flex-col gap-1 rounded-lg border border-neutral-200/80 bg-white/95 p-1 shadow-xs backdrop-blur-md">
+            <div className="absolute top-3 left-3 z-10 flex flex-col gap-1 rounded-lg border border-slate-200/80 bg-white/95 p-1 shadow-xs backdrop-blur-md">
               <button
                 onClick={() => {
                   if (!svgRef.current || !zoomRef.current) return
@@ -923,6 +1163,13 @@ export default function KnowledgeGraph() {
                 className="flex h-7 w-7 items-center justify-center rounded-lg text-warm-600 hover:bg-cream-100 hover:text-warm-900 transition-colors"
               >
                 <Maximize2 className="h-4 w-4" />
+              </button>
+              <button
+                onClick={reheatSimulation}
+                title="物理散开重排（拨动图谱星系）"
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-warm-600 hover:bg-cream-100 hover:text-indigo-600 transition-colors"
+              >
+                <Sparkles className="h-4 w-4" />
               </button>
               <div className="my-0.5 h-px bg-cream-200" />
               <button
@@ -960,7 +1207,7 @@ export default function KnowledgeGraph() {
 
             {/* Filter Match Badge (top-center) */}
             {hasFilter && (
-              <div className="absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-surface/90 backdrop-blur-md border border-cream-200 text-[11px] text-warm-600 shadow-sm">
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-surface/90 backdrop-blur-md border border-cream-200 text-2xs text-warm-600 shadow-sm">
                 匹配 <span className="font-semibold text-accent-orange">{activeNodeIds.size}</span> / {totalNodes} 考点
               </div>
             )}
@@ -972,19 +1219,24 @@ export default function KnowledgeGraph() {
                 {viewMode === 'mastery' ? (
                   (() => {
                     const mp = getNodeMastery(hoveredNode.id, hoveredNode.label)
-                    const isCritical = mp.rate < 50
+                    const isUnpracticed = mp.totalAttempts === 0
+                    const isCritical = !isUnpracticed && mp.rate < 50
                     return (
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between text-xs font-semibold">
                           <span className="text-slate-500">掌握度：</span>
-                          <span className={isCritical ? 'text-rose-600 font-bold' : mp.rate < 80 ? 'text-amber-600' : 'text-emerald-600'}>
-                            {mp.rate}% ({isCritical ? '薄弱高危' : mp.rate < 80 ? '进阶巩固' : '稳固攻克'})
-                          </span>
+                          {isUnpracticed ? (
+                            <span className="text-indigo-600 font-semibold">待点亮（{allGroupLabels[hoveredNode.group] || hoveredNode.group}）</span>
+                          ) : (
+                            <span className={isCritical ? 'text-rose-600 font-bold' : mp.rate < 80 ? 'text-amber-600' : 'text-emerald-600'}>
+                              {mp.rate}% ({isCritical ? '薄弱高危' : mp.rate < 80 ? '进阶巩固' : '稳固攻克'})
+                            </span>
+                          )}
                         </div>
-                        <div className="text-[11px] text-slate-500">{mp.recentStatus}</div>
-                        <div className="text-[10px] text-rose-600 font-medium pt-1 border-t border-slate-100 flex items-center gap-1">
+                        <div className="text-2xs text-slate-500">{mp.recentStatus}</div>
+                        <div className={`text-2xs font-medium pt-1 border-t border-slate-100 flex items-center gap-1 ${isUnpracticed ? 'text-indigo-600' : 'text-rose-600'}`}>
                           <Flame className="w-3 h-3" />
-                          <span>点击呼出【提分急救舱】</span>
+                          <span>{isUnpracticed ? '点击开启诊断 · 做 3 题点亮掌握度' : '点击呼出【提分急救舱】'}</span>
                         </div>
                       </div>
                     )
@@ -996,54 +1248,102 @@ export default function KnowledgeGraph() {
                       <span className="text-xs text-slate-600">{allGroupLabels[hoveredNode.group] || hoveredNode.group}</span>
                     </div>
                     {hoveredNode.path && (
-                      <div className="text-[10px] text-slate-400 mt-1 font-mono truncate">{hoveredNode.path}</div>
+                      <div className="text-2xs text-slate-400 mt-1 font-mono truncate">{hoveredNode.path}</div>
                     )}
-                    <div className="text-[10px] text-slate-400 mt-1.5">双链拓扑度: {hoveredNode.linkCount}</div>
-                    <div className="text-[10px] text-indigo-600 mt-1 font-medium">单击右侧检查 · 双击沉浸编辑</div>
+                    <div className="text-2xs text-slate-400 mt-1.5">双链拓扑度: {hoveredNode.linkCount}</div>
+                    <div className="text-2xs text-indigo-600 mt-1 font-medium">单击右侧检查 · 双击沉浸编辑</div>
                   </>
                 )}
               </div>
             )}
 
-            {/* Bottom Floating Legend / Filters */}
-            <div className="absolute bottom-3 left-3 right-3 sm:right-auto z-10 flex items-center sm:flex-wrap gap-1.5 sm:max-w-[70%] overflow-x-auto no-scrollbar">
+            {/* Bottom Floating Legend / Interactive Filters */}
+            <div className="absolute bottom-3 left-3 right-3 sm:right-auto z-10 flex items-center sm:flex-wrap gap-1.5 sm:max-w-[76%] overflow-x-auto no-scrollbar">
               {viewMode === 'mastery' ? (
-                // 热力图三色图例
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/95 border border-slate-200/80 shadow-xs backdrop-blur-md text-xs font-medium text-slate-700">
-                  <div className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                    <span>稳固攻克 (≥80%)</span>
-                  </div>
-                  <span className="text-slate-300">·</span>
-                  <div className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                    <span>进阶巩固 (50%~80%)</span>
-                  </div>
-                  <span className="text-slate-300">·</span>
-                  <div className="flex items-center gap-1 text-rose-600 font-bold">
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
-                    <span>薄弱高危 (&lt;50% 呼吸闪烁)</span>
-                  </div>
+                // 热力图可点击分级筛选栏
+                <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-white/95 border border-slate-200/90 shadow-sm backdrop-blur-md text-xs font-medium text-slate-700 whitespace-nowrap">
+                  <button
+                    type="button"
+                    onClick={() => setMasteryFilter('all')}
+                    className={`px-2 py-1 rounded-lg transition-all cursor-pointer ${
+                      masteryFilter === 'all'
+                        ? 'bg-slate-900 text-white font-bold shadow-2xs'
+                        : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    全部 ({totalNodes})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleMasteryFilter('mastered')}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all cursor-pointer ${
+                      masteryFilter === 'mastered'
+                        ? 'bg-emerald-600 text-white font-bold shadow-2xs'
+                        : 'hover:bg-emerald-50 text-slate-700'
+                    }`}
+                  >
+                    <span className={`w-2.5 h-2.5 rounded-full ${masteryFilter === 'mastered' ? 'bg-white' : 'bg-emerald-500'}`} />
+                    <span>稳固攻克 ({masterySummary.masteredCount})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleMasteryFilter('moderate')}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all cursor-pointer ${
+                      masteryFilter === 'moderate'
+                        ? 'bg-amber-500 text-white font-bold shadow-2xs'
+                        : 'hover:bg-amber-50 text-slate-700'
+                    }`}
+                  >
+                    <span className={`w-2.5 h-2.5 rounded-full ${masteryFilter === 'moderate' ? 'bg-white' : 'bg-amber-500'}`} />
+                    <span>进阶普通 ({masterySummary.moderateCount})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleMasteryFilter('critical')}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all cursor-pointer ${
+                      masteryFilter === 'critical'
+                        ? 'bg-rose-600 text-white font-bold shadow-2xs'
+                        : 'hover:bg-rose-50 text-rose-600 font-bold'
+                    }`}
+                  >
+                    <span className={`w-2.5 h-2.5 rounded-full ${masteryFilter === 'critical' ? 'bg-white' : 'bg-rose-500 motion-safe:animate-pulse'}`} />
+                    <span>危机高危 ({masterySummary.criticalCount})</span>
+                  </button>
                 </div>
               ) : (
-                // 传统学科分组
-                groups.map(key => {
-                  const isActive = selectedGroups.size === 0 || selectedGroups.has(key)
-                  return (
+                // 拓扑学科分组可点击筛选栏
+                <div className="flex items-center sm:flex-wrap gap-1.5 px-2 py-1.5 rounded-xl bg-white/95 border border-slate-200/90 shadow-sm backdrop-blur-md">
+                  {selectedGroups.size > 0 && (
                     <button
-                      key={key}
-                      onClick={() => toggleGroup(key)}
-                      className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[11px] transition-all backdrop-blur-sm shadow-sm ${
-                        isActive
-                          ? 'bg-cream-200/90 text-warm-800 font-medium'
-                          : 'bg-cream-100/80 text-warm-400 hover:text-warm-600 opacity-50'
-                      }`}
+                      type="button"
+                      onClick={() => setSelectedGroups(new Set())}
+                      className="px-2 py-0.5 rounded-lg bg-slate-900 text-white text-2xs font-bold shadow-2xs cursor-pointer"
                     >
-                      <div className="w-2 h-2 rounded-full" style={{ background: allGroupColors[key] || '#8B7355' }} />
-                      {allGroupLabels[key] || key}
+                      全部
                     </button>
-                  )
-                })
+                  )}
+                  {groups.map(key => {
+                    const isExplicitSelected = selectedGroups.has(key)
+                    const isActive = selectedGroups.size === 0 || isExplicitSelected
+                    return (
+                      <button
+                        type="button"
+                        key={key}
+                        onClick={() => toggleGroup(key)}
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-2xs transition-all cursor-pointer ${
+                          isExplicitSelected
+                            ? 'bg-slate-900 text-white font-bold shadow-sm ring-1 ring-slate-900/20'
+                            : isActive
+                              ? 'bg-slate-100/90 text-slate-700 hover:bg-slate-200/80 font-medium'
+                              : 'bg-slate-100/60 text-slate-400 hover:text-slate-600 opacity-45'
+                        }`}
+                      >
+                        <div className="w-2 h-2 rounded-full shrink-0" style={{ background: allGroupColors[key] || '#8B7355' }} />
+                        <span>{allGroupLabels[key] || key}</span>
+                      </button>
+                    )
+                  })}
+                </div>
               )}
             </div>
           </div>
@@ -1051,66 +1351,66 @@ export default function KnowledgeGraph() {
 
         {/* Right Node Inspector (拓扑模式下的右侧抽屉) */}
         {viewMode === 'topology' && (previewNode || previewLoading) && (
-          <div className="fixed inset-x-3 bottom-16 top-24 z-40 md:static md:w-80 md:inset-auto md:z-auto shrink-0 h-auto md:h-full flex flex-col rounded-[16px] border border-black/[0.08] bg-white p-4 shadow-xl md:shadow-xs overflow-hidden animate-fade-in">
-            <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-neutral-100">
+          <div className="fixed inset-x-3 bottom-16 top-24 z-40 md:static md:w-80 md:inset-auto md:z-auto shrink-0 h-auto md:h-full flex flex-col rounded-2xl border border-black/[0.08] bg-white p-4 shadow-xl md:shadow-xs overflow-hidden animate-fade-in">
+            <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-100">
               <div className="flex items-center gap-1.5 min-w-0">
                 <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                <span className="text-[11px] font-bold tracking-wider uppercase text-neutral-400 font-mono">NODE INSPECTOR</span>
+                <span className="text-2xs font-bold tracking-wider uppercase text-slate-400 font-mono">NODE INSPECTOR</span>
               </div>
               <button
                 onClick={() => setPreviewNode(null)}
-                className="p-1 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors cursor-pointer"
+                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-900 transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
             {previewLoading && (
               <div className="flex-1 flex items-center justify-center">
-                <Loader2 className="w-5 h-5 text-neutral-900 animate-spin" />
+                <Loader2 className="w-5 h-5 text-slate-900 animate-spin" />
               </div>
             )}
             {previewNode && !previewLoading && (
               <div className="flex-1 flex flex-col min-h-0 space-y-3">
                 <div>
-                  <h3 className="text-sm font-bold text-neutral-900 truncate">
+                  <h3 className="text-sm font-bold text-slate-900 truncate">
                     {previewNode.title}
                   </h3>
-                  <div className="text-[10px] text-neutral-400 font-mono mt-0.5 truncate">{previewNode.path}</div>
+                  <div className="text-2xs text-slate-400 font-mono mt-0.5 truncate">{previewNode.path}</div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="p-2 rounded-xl bg-neutral-50/80 border border-neutral-200/80">
-                    <div className="text-[10px] text-neutral-400 font-medium">双链拓扑度</div>
-                    <div className="font-bold font-mono text-neutral-900 mt-0.5">{previewNode.links.length} Degree</div>
+                  <div className="p-2 rounded-xl bg-slate-50/80 border border-slate-200/80">
+                    <div className="text-2xs text-slate-400 font-medium">双链拓扑度</div>
+                    <div className="font-bold font-mono text-slate-900 mt-0.5">{previewNode.links.length} Degree</div>
                   </div>
-                  <div className="p-2 rounded-xl bg-neutral-50/80 border border-neutral-200/80">
-                    <div className="text-[10px] text-neutral-400 font-medium">总词字数</div>
-                    <div className="font-bold font-mono text-neutral-900 mt-0.5">{previewNode.wordCount} 字</div>
+                  <div className="p-2 rounded-xl bg-slate-50/80 border border-slate-200/80">
+                    <div className="text-2xs text-slate-400 font-medium">总词字数</div>
+                    <div className="font-bold font-mono text-slate-900 mt-0.5">{previewNode.wordCount} 字</div>
                   </div>
                 </div>
 
                 {previewNode.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1">
                     {previewNode.tags.map(tag => (
-                      <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full bg-neutral-100 border border-neutral-200 text-neutral-600 font-medium">#{tag}</span>
+                      <span key={tag} className="text-2xs px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600 font-medium">#{tag}</span>
                     ))}
                   </div>
                 )}
 
-                <div className="flex-1 overflow-y-auto text-xs text-neutral-600 leading-relaxed whitespace-pre-wrap pr-1 border-t border-neutral-100 pt-2 font-mono">
+                <div className="flex-1 overflow-y-auto text-xs text-slate-600 leading-relaxed whitespace-pre-wrap pr-1 border-t border-slate-100 pt-2 font-mono">
                   {previewNode.content.substring(0, 1500)}
                   {previewNode.content.length > 1500 && (
-                    <div className="mt-2 text-neutral-400 italic text-[11px]">... (内容较长，点击下方按钮在完整编辑器中阅读)</div>
+                    <div className="mt-2 text-slate-400 italic text-2xs">... (内容较长，点击下方按钮在完整编辑器中阅读)</div>
                   )}
                 </div>
 
-                <div className="pt-2 border-t border-neutral-100">
+                <div className="pt-2 border-t border-slate-100">
                   <button
                     onClick={() => {
                       navigate(`/editor?path=${encodeURIComponent(previewNode.path)}`)
                       setPreviewNode(null)
                     }}
-                    className="w-full py-2.5 rounded-[10px] bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    className="w-full py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <span>在编辑器中打开沉浸研读</span>
                   </button>
@@ -1287,18 +1587,34 @@ function GraphMetric({
   value,
   color,
   suffix,
+  onClick,
+  active,
+  activeRingClass,
 }: {
   label: string
   value: number | string
   color: string
   suffix?: string
+  onClick?: () => void
+  active?: boolean
+  activeRingClass?: string
 }) {
+  const interactiveCls = onClick
+    ? 'cursor-pointer hover:border-slate-300 hover:shadow-sm active:scale-[0.99] transition-all text-left'
+    : ''
+  const ringCls = active && activeRingClass ? activeRingClass : 'border-black/[0.08] bg-white'
   return (
-    <div className="rounded-[16px] border border-black/[0.08] bg-white p-3.5 sm:p-4 shadow-xs">
-      <div className="text-[11px] font-medium text-neutral-500">{label}</div>
+    <div
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } } : undefined}
+      className={`rounded-2xl border p-3.5 sm:p-4 shadow-xs ${ringCls} ${interactiveCls}`}
+    >
+      <div className="text-2xs font-medium text-slate-500">{label}</div>
       <div className={`mt-1 font-mono text-xl sm:text-2xl font-bold tracking-tight ${color}`}>
         {value}
-        {suffix && <span className="text-xs font-normal text-neutral-400">{suffix}</span>}
+        {suffix && <span className="text-xs font-normal text-slate-400">{suffix}</span>}
       </div>
     </div>
   )

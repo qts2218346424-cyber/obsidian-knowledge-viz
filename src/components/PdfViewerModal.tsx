@@ -40,7 +40,7 @@ export default function PdfViewerModal({
   const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-3 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
       <div
-        className={`bg-[#181b24] border-0 sm:border sm:border-white/10 flex flex-col shadow-2xl overflow-hidden transition-all duration-200 ${
+        className={`bg-[#181b24] border-0 sm:border sm:border-white/10 flex flex-col shadow-xl overflow-hidden transition-all duration-200 ${
           isFullscreen ? 'w-full h-dvh rounded-none' : 'w-full h-dvh sm:w-[95vw] sm:h-[92vh] sm:max-w-7xl sm:rounded-2xl'
         }`}
       >
@@ -52,11 +52,11 @@ export default function PdfViewerModal({
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-semibold bg-red-500/15 text-red-300 border border-red-500/20">
+                <span className="px-2 py-0.5 rounded text-2xs sm:text-2xs font-semibold bg-red-500/15 text-red-300 border border-red-500/20">
                   PDF 考研专著
                 </span>
                 <span
-                  className={`px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-semibold border ${
+                  className={`px-2 py-0.5 rounded text-2xs sm:text-2xs font-semibold border ${
                     book.scope === 'personal'
                       ? 'bg-indigo-500/20 text-indigo-200 border-indigo-400/30'
                       : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25'
@@ -64,7 +64,7 @@ export default function PdfViewerModal({
                 >
                   {book.scope === 'personal' ? '🔒 个人独享' : '🌐 全员共享'}
                 </span>
-                <span className="text-[11px] text-slate-400 hidden sm:inline">
+                <span className="text-2xs text-slate-400 hidden sm:inline">
                   {book.domain === 'cs_408'
                     ? '408 计算机'
                     : book.domain === 'english'
@@ -76,7 +76,7 @@ export default function PdfViewerModal({
                           : '考研数学'}{' '}
                   · {book.category} · {sizeMb} MB
                 </span>
-                <span className="text-[10px] text-emerald-400/90 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.2 rounded hidden md:inline-block">
+                <span className="text-2xs text-emerald-400/90 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.2 rounded hidden md:inline-block">
                   ⚡ Canvas 动态渲染
                 </span>
               </div>
@@ -149,7 +149,7 @@ export default function PdfViewerModal({
         </div>
 
         {/* 手机端便捷操作栏：引导一键独立全屏或下载 */}
-        <div className="sm:hidden px-3 py-1.5 bg-[#121520] border-b border-white/10 flex items-center justify-between gap-2 text-[11px] text-slate-300">
+        <div className="sm:hidden px-3 py-1.5 bg-[#121520] border-b border-white/10 flex items-center justify-between gap-2 text-2xs text-slate-300">
           <span className="flex items-center gap-1 text-emerald-400 truncate">
             <Smartphone className="w-3.5 h-3.5" />
             已开启 Canvas 极速光栅化

@@ -188,7 +188,7 @@ export const BookExtractModal: React.FC<BookExtractModalProps> = ({
         <div className="space-y-3">
           <div className="flex items-center justify-between pb-2 border-b border-cream-100">
             <div>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-700">
+              <span className="text-2xs font-bold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-700">
                 图谱总览笔记
               </span>
               <h5 className="font-bold text-warm-900 text-sm mt-1">
@@ -229,7 +229,7 @@ export const BookExtractModal: React.FC<BookExtractModalProps> = ({
       <div className="space-y-3">
         <div className="flex items-center justify-between pb-2 border-b border-cream-100">
           <div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-700">
+            <span className="text-2xs font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-700">
               章节深度精解
             </span>
             <h5 className="font-bold text-warm-900 text-sm mt-1">
@@ -260,7 +260,7 @@ export const BookExtractModal: React.FC<BookExtractModalProps> = ({
 
   const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-black/60 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-surface border border-cream-200 w-full max-w-4xl rounded-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
+      <div className="bg-surface border border-cream-200 w-full max-w-4xl rounded-2xl shadow-xl flex flex-col max-h-[92vh] overflow-hidden">
         {/* 顶部标题栏 */}
         <div className="px-6 py-4 border-b border-cream-200 flex items-center justify-between bg-cream-50/70">
           <div className="flex items-center gap-3">
@@ -272,7 +272,7 @@ export const BookExtractModal: React.FC<BookExtractModalProps> = ({
                 <h3 className="font-bold text-warm-900 text-base">
                   全书全卷智能深度拆解与成套入库工作台
                 </h3>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 border border-cyan-500/20">
+                <span className="text-2xs font-semibold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 border border-cyan-500/20">
                   {book.domain === 'cs_408'
                     ? '408 计算机统考'
                     : book.domain === 'english'
@@ -284,7 +284,7 @@ export const BookExtractModal: React.FC<BookExtractModalProps> = ({
                           : '全国统考数学'}
                 </span>
                 {outlineData && (
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 border border-blue-500/20">
+                  <span className="text-2xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 border border-blue-500/20">
                     学科：{outlineData.subject}
                   </span>
                 )}
@@ -446,7 +446,7 @@ export const BookExtractModal: React.FC<BookExtractModalProps> = ({
                                 <span className="font-semibold text-xs text-warm-900 block truncate">
                                   {ch.title}
                                 </span>
-                                <div className="text-[11px] text-warm-500 flex flex-wrap items-center gap-1.5 mt-0.5">
+                                <div className="text-2xs text-warm-500 flex flex-wrap items-center gap-1.5 mt-0.5">
                                   {ch.startPage !== undefined && (
                                     <span className="font-mono text-cyan-700 bg-cyan-50 px-1.5 py-0.2 rounded border border-cyan-200">
                                       原书第 {ch.startPage + 1} ~ {(ch.endPage ?? ch.startPage) + 1} 页 ({ch.pageCount || 1} 页)
@@ -468,7 +468,7 @@ export const BookExtractModal: React.FC<BookExtractModalProps> = ({
                                 onClick={() => toggleExpandChapter(ch.id)}
                                 className="text-warm-400 hover:text-warm-700 p-1 rounded-lg text-xs flex items-center gap-0.5"
                               >
-                                <span className="text-[10px]">{isExpanded ? '收起' : '考点'}</span>
+                                <span className="text-2xs">{isExpanded ? '收起' : '考点'}</span>
                                 {isExpanded ? (
                                   <ChevronDown className="w-3.5 h-3.5" />
                                 ) : (
@@ -481,7 +481,7 @@ export const BookExtractModal: React.FC<BookExtractModalProps> = ({
                           {/* 展开查看子章节考点 */}
                           {isExpanded && ch.subSections.length > 0 && (
                             <div className="px-4 pb-3 pt-1 border-t border-cream-100 bg-white/40">
-                              <div className="text-[11px] text-warm-600 space-y-1">
+                              <div className="text-2xs text-warm-600 space-y-1">
                                 {ch.subSections.map((sub, sIdx) => (
                                   <div key={sIdx} className="flex items-start gap-1.5">
                                     <span className="text-cyan-500 font-mono">•</span>
@@ -511,7 +511,7 @@ export const BookExtractModal: React.FC<BookExtractModalProps> = ({
                       <b>{selectedChapterIds.length * (mode === 'dual' ? 3 : mode === 'question' ? 3 : 2)} 道真题</b>
                     </span>
                   </div>
-                  <span className="text-[11px] text-green-700 font-semibold bg-green-500/10 px-2 py-0.5 rounded-full">
+                  <span className="text-2xs text-green-700 font-semibold bg-green-500/10 px-2 py-0.5 rounded-full">
                     全量高保真入库
                   </span>
                 </div>
@@ -609,7 +609,7 @@ export const BookExtractModal: React.FC<BookExtractModalProps> = ({
                         <Network className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                         <div className="min-w-0 flex-1">
                           <div className="truncate">{deepResult.indexNoteTitle}</div>
-                          <div className={`text-[10px] ${selectedNoteIndex === 0 ? 'text-cyan-100' : 'text-warm-400'}`}>
+                          <div className={`text-2xs ${selectedNoteIndex === 0 ? 'text-cyan-100' : 'text-warm-400'}`}>
                             🌟 全书考点知识图谱总览
                           </div>
                         </div>
@@ -633,7 +633,7 @@ export const BookExtractModal: React.FC<BookExtractModalProps> = ({
                             <FileText className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                             <div className="min-w-0 flex-1">
                               <div className="truncate">{n.title}</div>
-                              <div className={`text-[10px] truncate ${isCurrent ? 'text-cyan-100' : 'text-warm-400'}`}>
+                              <div className={`text-2xs truncate ${isCurrent ? 'text-cyan-100' : 'text-warm-400'}`}>
                                 {n.chapterTitle}
                               </div>
                             </div>
@@ -669,14 +669,14 @@ export const BookExtractModal: React.FC<BookExtractModalProps> = ({
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="px-2 py-0.5 rounded font-bold bg-amber-500/10 text-amber-700 text-[10px]">
+                          <span className="px-2 py-0.5 rounded font-bold bg-amber-500/10 text-amber-700 text-2xs">
                             第 {idx + 1} 题 · {q.type === 'choice' ? '单选题' : '综合题'} ({q.difficulty || '中等'})
                           </span>
-                          <span className="text-[10px] font-semibold text-warm-600 bg-cream-100 px-2 py-0.5 rounded">
+                          <span className="text-2xs font-semibold text-warm-600 bg-cream-100 px-2 py-0.5 rounded">
                             {q.chapter || deepResult.subject}
                           </span>
                         </div>
-                        <span className="text-[10px] text-warm-400 font-mono">
+                        <span className="text-2xs text-warm-400 font-mono">
                           来源: {deepResult.bookName}
                         </span>
                       </div>
@@ -684,7 +684,7 @@ export const BookExtractModal: React.FC<BookExtractModalProps> = ({
                         {q.question}
                       </div>
                       {q.options && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pl-2 font-mono text-[11px] text-warm-700">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pl-2 font-mono text-2xs text-warm-700">
                           {Object.entries(q.options).map(([k, v]) => (
                             <div
                               key={k}
@@ -695,7 +695,7 @@ export const BookExtractModal: React.FC<BookExtractModalProps> = ({
                           ))}
                         </div>
                       )}
-                      <div className="p-2.5 rounded-lg bg-green-500/5 border border-green-500/15 text-[11px] text-green-900 leading-relaxed">
+                      <div className="p-2.5 rounded-lg bg-green-500/5 border border-green-500/15 text-2xs text-green-900 leading-relaxed">
                         <b>【标准答案与深度解析】</b>: <span className="font-bold text-green-700">选项 {q.answer}</span>
                         <div className="mt-1 text-green-800">{q.explanation}</div>
                       </div>

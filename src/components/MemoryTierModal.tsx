@@ -38,7 +38,7 @@ export default function MemoryTierModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
-      <div className="bg-surface border border-cream-300 dark:border-slate-700 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
+      <div className="bg-surface border border-cream-300 dark:border-slate-700 rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-xl overflow-hidden animate-in zoom-in-95 duration-150">
         {/* 顶部标题栏 */}
         <div className="px-5 py-4 border-b border-cream-200 dark:border-slate-800 flex items-center justify-between bg-cream-50/70 dark:bg-slate-800/50">
           <div className="flex items-center gap-2.5">
@@ -48,7 +48,7 @@ export default function MemoryTierModal({
             <div>
               <h2 className="text-base font-bold text-warm-900 dark:text-slate-100 flex items-center gap-2">
                 <span>CoreForge 研核 · 三层认知记忆与项目隔离架构</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent-orange/15 text-accent-orange font-semibold">
+                <span className="text-2xs px-2 py-0.5 rounded-full bg-accent-orange/15 text-accent-orange font-semibold">
                   v2.0 物理隔离体系
                 </span>
               </h2>
@@ -76,15 +76,15 @@ export default function MemoryTierModal({
                   <span className="flex items-center gap-1.5 font-bold text-indigo-700 dark:text-indigo-400 text-xs">
                     <Globe className="w-4 h-4" /> 1. 全局记忆层
                   </span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-200/60 dark:bg-indigo-800 text-indigo-800 dark:text-indigo-200 font-medium">
+                  <span className="text-2xs px-1.5 py-0.5 rounded bg-indigo-200/60 dark:bg-indigo-800 text-indigo-800 dark:text-indigo-200 font-medium">
                     跨项目共享
                   </span>
                 </div>
-                <p className="text-[11px] text-warm-600 dark:text-slate-300 leading-relaxed">
+                <p className="text-2xs text-warm-600 dark:text-slate-300 leading-relaxed">
                   跨越全部科目与项目的最顶层先验。包含考生全局画像、408 & 数学统考总大纲规范、系统宪制规则。
                 </p>
               </div>
-              <div className="mt-3 pt-2 border-t border-indigo-200/50 dark:border-indigo-900/50 text-[10px] text-indigo-600 dark:text-indigo-400 font-medium flex items-center gap-1">
+              <div className="mt-3 pt-2 border-t border-indigo-200/50 dark:border-indigo-900/50 text-2xs text-indigo-600 dark:text-indigo-400 font-medium flex items-center gap-1">
                 <Clock className="w-3 h-3 shrink-0" />
                 <span>生效时机：任一模型/引擎调用始终生效</span>
               </div>
@@ -97,15 +97,15 @@ export default function MemoryTierModal({
                   <span className="flex items-center gap-1.5 font-bold text-amber-700 dark:text-amber-400 text-xs">
                     <Folder className="w-4 h-4" /> 2. 项目专属记忆
                   </span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-200/60 dark:bg-amber-800 text-amber-900 dark:text-amber-200 font-medium">
+                  <span className="text-2xs px-1.5 py-0.5 rounded bg-amber-200/60 dark:bg-amber-800 text-amber-900 dark:text-amber-200 font-medium">
                     项目物理隔离
                   </span>
                 </div>
-                <p className="text-[11px] text-warm-600 dark:text-slate-300 leading-relaxed">
+                <p className="text-2xs text-warm-600 dark:text-slate-300 leading-relaxed">
                   限定在当前项目专属领域内。包含当前项目独立工作目录（cwd）、项目研学设定与专属沉淀笔记。
                 </p>
               </div>
-              <div className="mt-3 pt-2 border-t border-amber-300/50 dark:border-amber-900/50 text-[10px] text-amber-700 dark:text-amber-400 font-medium flex items-center gap-1">
+              <div className="mt-3 pt-2 border-t border-amber-300/50 dark:border-amber-900/50 text-2xs text-amber-700 dark:text-amber-400 font-medium flex items-center gap-1">
                 <Clock className="w-3 h-3 shrink-0" />
                 <span>生效时机：仅在该项目所属会话中注入</span>
               </div>
@@ -118,15 +118,15 @@ export default function MemoryTierModal({
                   <span className="flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-400 text-xs">
                     <MessageSquare className="w-4 h-4" /> 3. 会话短期记忆
                   </span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-200/60 dark:bg-emerald-800 text-emerald-900 dark:text-emerald-200 font-medium">
+                  <span className="text-2xs px-1.5 py-0.5 rounded bg-emerald-200/60 dark:bg-emerald-800 text-emerald-900 dark:text-emerald-200 font-medium">
                     单条对话独立
                   </span>
                 </div>
-                <p className="text-[11px] text-warm-600 dark:text-slate-300 leading-relaxed">
+                <p className="text-2xs text-warm-600 dark:text-slate-300 leading-relaxed">
                   当前独立问答线程的工作记忆。包含最近多轮对话滑动窗口、临时引用的单篇笔记与激活的 Skill。
                 </p>
               </div>
-              <div className="mt-3 pt-2 border-t border-emerald-200/50 dark:border-emerald-900/50 text-[10px] text-emerald-700 dark:text-emerald-400 font-medium flex items-center gap-1">
+              <div className="mt-3 pt-2 border-t border-emerald-200/50 dark:border-emerald-900/50 text-2xs text-emerald-700 dark:text-emerald-400 font-medium flex items-center gap-1">
                 <Clock className="w-3 h-3 shrink-0" />
                 <span>生效时机：单次执行，切会话即隔断</span>
               </div>
@@ -140,7 +140,7 @@ export default function MemoryTierModal({
               <span>深度解答：什么是全局记忆？相同项目与不同项目如何划分？</span>
             </h3>
 
-            <div className="space-y-2.5 text-[11px] leading-relaxed">
+            <div className="space-y-2.5 text-2xs leading-relaxed">
               <div className="flex items-start gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 shrink-0" />
                 <div>
@@ -184,16 +184,16 @@ export default function MemoryTierModal({
                   当前活动项目：{activeProject?.name || '默认知识库项目'}
                 </span>
               </div>
-              <span className="text-[10px] text-warm-400 font-mono">
+              <span className="text-2xs text-warm-400 font-mono">
                 ID: {activeProject?.id}
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-2xs">
               <div className="p-2.5 rounded-lg bg-cream-50 dark:bg-slate-800/40 border border-cream-200/80 dark:border-slate-700">
                 <span className="text-warm-400 font-medium block mb-1">📁 独立工作目录 (cwd)</span>
                 <span className="font-mono text-warm-800 dark:text-slate-200 break-all select-all">
-                  {activeProject?.cwd || '（默认 Vault 根目录）'}
+                  {activeProject?.cwd || '（默认个人笔记库）'}
                 </span>
               </div>
               <div className="p-2.5 rounded-lg bg-cream-50 dark:bg-slate-800/40 border border-cream-200/80 dark:border-slate-700">
@@ -206,10 +206,10 @@ export default function MemoryTierModal({
 
             {/* 可编辑的项目专属领域记忆 */}
             <div>
-              <label className="text-[11px] font-bold text-warm-700 dark:text-slate-300 block mb-1.5 flex items-center justify-between">
+              <label className="text-2xs font-bold text-warm-700 dark:text-slate-300 block mb-1.5 flex items-center justify-between">
                 <span>📌 项目专属领域记忆与要求 (Project Description / System Memory)</span>
                 {descSaved && (
-                  <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
+                  <span className="text-2xs text-emerald-600 font-semibold flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3" /> 已保存生效
                   </span>
                 )}
@@ -235,7 +235,7 @@ export default function MemoryTierModal({
 
         {/* 底部关闭栏 */}
         <div className="px-5 py-3 border-t border-cream-200 dark:border-slate-800 bg-cream-50/70 dark:bg-slate-800/50 flex items-center justify-between text-xs">
-          <span className="text-[11px] text-warm-500 dark:text-slate-400">
+          <span className="text-2xs text-warm-500 dark:text-slate-400">
             ✅ 会话隔离引擎与三层记忆已自动联动后端与本地智能体环境
           </span>
           <button

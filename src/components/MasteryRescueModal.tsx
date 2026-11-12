@@ -27,7 +27,7 @@ export default function MasteryRescueModal({
 
   const statusBadge = isCritical ? (
     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 text-xs font-bold border border-rose-200 animate-pulse">
-      <span className="w-2 h-2 rounded-full bg-rose-600 animate-ping" />
+      <span className="w-2 h-2 rounded-full bg-rose-600 animate-pulse" />
       高危薄弱考点 (极易失分)
     </span>
   ) : isModerate ? (
@@ -50,7 +50,7 @@ export default function MasteryRescueModal({
 
   const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className={`relative w-full max-w-xl rounded-2xl bg-white border ${themeGradient} shadow-2xl overflow-hidden flex flex-col max-h-[88dvh]`}>
+      <div className={`relative w-full max-w-xl rounded-2xl bg-white border ${themeGradient} shadow-xl overflow-hidden flex flex-col max-h-[88dvh]`}>
         {/* 顶部 Banner 状态条 */}
         <div className={`px-5 py-4 border-b flex items-center justify-between ${
           isCritical ? 'bg-gradient-to-r from-rose-50 via-white to-rose-50/30 border-rose-100' :
@@ -67,7 +67,7 @@ export default function MasteryRescueModal({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-mono font-bold tracking-wider uppercase text-slate-400">
+                <span className="text-2xs font-mono font-bold tracking-wider uppercase text-slate-400">
                   MASTERY DIAGNOSIS
                 </span>
                 <span className="text-slate-300">·</span>
@@ -119,7 +119,7 @@ export default function MasteryRescueModal({
                   style={{ width: `${Math.max(8, point.rate)}%` }}
                 />
               </div>
-              <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+              <div className="flex justify-between text-2xs text-slate-400 font-mono">
                 <span>薄弱 (0%)</span>
                 <span>稳固 (100%)</span>
               </div>
@@ -149,7 +149,7 @@ export default function MasteryRescueModal({
               <div className="rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50/70 to-white p-3.5 flex flex-col justify-between hover:border-indigo-300 transition-all shadow-xs">
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-bold text-indigo-700 bg-indigo-100/80 px-2 py-0.5 rounded-md">
+                    <span className="text-2xs font-bold text-indigo-700 bg-indigo-100/80 px-2 py-0.5 rounded-md">
                       动作一 · 算法/原理具象化
                     </span>
                     <Play className="w-3.5 h-3.5 text-indigo-600" />
@@ -157,7 +157,7 @@ export default function MasteryRescueModal({
                   <h4 className="text-xs font-bold text-slate-900 mt-1">
                     {point.coursewareId ? '动态仿真实验室单步推演' : '知识拓扑交互推演'}
                   </h4>
-                  <p className="text-[11px] text-slate-500 mt-1 line-clamp-2">
+                  <p className="text-2xs text-slate-500 mt-1 line-clamp-2">
                     通过交互式仿真视窗单步运行，实时观测指针跳变、状态机迁移与内存结构。
                   </p>
                 </div>
@@ -180,7 +180,7 @@ export default function MasteryRescueModal({
               <div className="rounded-xl border border-rose-200 bg-gradient-to-br from-rose-50/70 to-white p-3.5 flex flex-col justify-between hover:border-rose-300 transition-all shadow-xs">
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-bold text-rose-700 bg-rose-100/80 px-2 py-0.5 rounded-md">
+                    <span className="text-2xs font-bold text-rose-700 bg-rose-100/80 px-2 py-0.5 rounded-md">
                       动作二 · 真实考场踩分实战
                     </span>
                     <ArrowRight className="w-3.5 h-3.5 text-rose-600" />
@@ -188,7 +188,7 @@ export default function MasteryRescueModal({
                   <h4 className="text-xs font-bold text-slate-900 mt-1">
                     锁定该考点 3 道经典真题
                   </h4>
-                  <p className="text-[11px] text-slate-500 mt-1 line-clamp-2">
+                  <p className="text-2xs text-slate-500 mt-1 line-clamp-2">
                     直通做题中心，自动聚焦【{point.practiceKeyword}】真题靶向特训，做完即刻消除薄弱标红。
                   </p>
                 </div>
@@ -206,7 +206,7 @@ export default function MasteryRescueModal({
 
         {/* 底部辅助操作条 */}
         <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs">
-          <span className="text-[11px] text-slate-500">
+          <span className="text-2xs text-slate-500">
             提示：完成专项刷题并答对后，图谱节点将自动由红转黄、由黄变绿。
           </span>
           <button

@@ -26,7 +26,7 @@ const initialDefuddleSteps: PipelineStep[] = [
   { id: '2', label: '抓取内容', desc: '获取并清理网页文本', icon: 'Download', status: 'pending' },
   { id: '3', label: 'AI 整理', desc: '提取知识点生成结构化笔记', icon: 'Sparkles', status: 'pending' },
   { id: '4', label: '生成元数据', desc: '自动标签和摘要', icon: 'Tag', status: 'pending' },
-  { id: '5', label: '写入 Vault', desc: '保存为 Markdown 笔记', icon: 'Save', status: 'pending' },
+  { id: '5', label: '存入笔记库', desc: '保存为标准排版笔记', icon: 'Save', status: 'pending' },
 ]
 
 export function DefuddlePanel() {
@@ -86,7 +86,7 @@ export function DefuddlePanel() {
       <div className="px-5 py-4 border-b border-cream-200 flex items-center gap-3 flex-wrap">
         <div className="flex-1 min-w-[200px]">
           <div className="text-sm font-semibold text-warm-700">Defuddle 网页抓取</div>
-          <div className="text-[11px] text-warm-400 mt-0.5">粘贴 URL → 抓取 → AI 整理 → 写入 Vault</div>
+          <div className="text-2xs text-warm-400 mt-0.5">粘贴 URL → 抓取 → AI 整理 → 保存至笔记库</div>
         </div>
         <button
           onClick={handleDefuddle}
@@ -122,7 +122,7 @@ export function DefuddlePanel() {
             placeholder="保存目录"
             className="bg-cream-200 border border-cream-300 rounded-lg px-3 py-1.5 text-xs text-warm-700 outline-none focus:border-accent-orange w-48"
           />
-          <span className="text-[10px] text-warm-400">默认: Web-Clippings</span>
+          <span className="text-2xs text-warm-400">默认: Web-Clippings</span>
         </div>
       </div>
 
@@ -150,7 +150,7 @@ export function DefuddlePanel() {
             <Check className="w-4 h-4" />
             抓取完成: {result.title}
           </div>
-          <div className="text-[11px] text-warm-500 space-x-4 mb-2">
+          <div className="text-2xs text-warm-500 space-x-4 mb-2">
             <span>{result.wordCount} words</span>
             <span>{result.tags.length} tags</span>
             <span className="text-warm-400">{result.filePath}</span>
@@ -158,11 +158,11 @@ export function DefuddlePanel() {
           {result.tags.length > 0 && (
             <div className="flex gap-1 mb-2 flex-wrap">
               {result.tags.map(t => (
-                <span key={t} className="px-1.5 py-0.5 rounded text-[10px] bg-accent-sage/10 text-accent-sage border border-accent-sage/20">{t}</span>
+                <span key={t} className="px-1.5 py-0.5 rounded text-2xs bg-accent-sage/10 text-accent-sage border border-accent-sage/20">{t}</span>
               ))}
             </div>
           )}
-          <div className="text-[10px] text-warm-400 bg-cream-200 rounded p-2 max-h-24 overflow-auto">{result.preview}</div>
+          <div className="text-2xs text-warm-400 bg-cream-200 rounded p-2 max-h-24 overflow-auto">{result.preview}</div>
         </div>
       )}
 
@@ -180,7 +180,7 @@ export function DefuddlePanel() {
 
 const initialQuerySteps: PipelineStep[] = [
   { id: '1', label: '输入查询', desc: '描述你要查找的内容', icon: 'MessageSquare', status: 'pending' },
-  { id: '2', label: '搜索 Vault', desc: '多字段加权搜索', icon: 'Search', status: 'pending' },
+  { id: '2', label: '搜索笔记库', desc: '多字段加权搜索', icon: 'Search', status: 'pending' },
   { id: '3', label: 'AI 分析', desc: '综合笔记内容生成洞察', icon: 'Brain', status: 'pending' },
   { id: '4', label: '生成结果', desc: '返回排序后的笔记列表', icon: 'FileText', status: 'pending' },
 ]
@@ -235,7 +235,7 @@ export function QueryPanel() {
       <div className="px-5 py-4 border-b border-cream-200 flex items-center gap-3">
         <div className="flex-1">
           <div className="text-sm font-semibold text-warm-700">智能查询</div>
-          <div className="text-[11px] text-warm-400 mt-0.5">输入问题 → 搜索 → AI 分析 → 知识洞察</div>
+          <div className="text-2xs text-warm-400 mt-0.5">输入问题 → 搜索 → AI 分析 → 知识洞察</div>
         </div>
         <button
           onClick={handleQuery}
@@ -291,7 +291,7 @@ export function QueryPanel() {
                 <div className="flex items-center gap-1.5 text-xs font-medium text-warm-600 mb-1.5">
                   <Brain className="w-3.5 h-3.5" /> AI 洞察
                 </div>
-                <div className="text-[11px] text-warm-500 leading-relaxed">{result.insights}</div>
+                <div className="text-2xs text-warm-500 leading-relaxed">{result.insights}</div>
               </div>
             )}
 
@@ -306,7 +306,7 @@ export function QueryPanel() {
                     <button
                       key={t}
                       onClick={() => { setQuery(t); setResult(null) }}
-                      className="px-2 py-0.5 rounded text-[10px] bg-accent-amber/10 text-accent-amber border border-accent-amber/20 hover:bg-accent-amber/20 transition-colors"
+                      className="px-2 py-0.5 rounded text-2xs bg-accent-amber/10 text-accent-amber border border-accent-amber/20 hover:bg-accent-amber/20 transition-colors"
                     >
                       {t}
                     </button>
@@ -317,16 +317,16 @@ export function QueryPanel() {
 
             {/* Results list */}
             <div className="p-2 space-y-1.5">
-              <div className="text-[10px] text-warm-400 px-1">匹配笔记 ({result.results.length})</div>
+              <div className="text-2xs text-warm-400 px-1">匹配笔记 ({result.results.length})</div>
               {result.results.map(r => (
                 <div key={r.path} className="bg-surface border border-cream-200 rounded-lg p-2.5 hover:border-cream-300 transition-colors">
-                  <div className="text-[11px] font-medium text-warm-700 mb-0.5">{r.title}</div>
-                  <div className="text-[10px] text-warm-400 mb-1">{r.path}</div>
-                  <div className="text-[10px] text-warm-500 line-clamp-2">{r.snippet.slice(0, 100)}...</div>
+                  <div className="text-2xs font-medium text-warm-700 mb-0.5">{r.title}</div>
+                  <div className="text-2xs text-warm-400 mb-1">{r.path}</div>
+                  <div className="text-2xs text-warm-500 line-clamp-2">{r.snippet.slice(0, 100)}...</div>
                   {r.tags.length > 0 && (
                     <div className="flex gap-1 mt-1 flex-wrap">
                       {r.tags.slice(0, 3).map(t => (
-                        <span key={t} className="px-1 py-0 rounded text-[9px] bg-cream-200 text-warm-400">{t}</span>
+                        <span key={t} className="px-1 py-0 rounded text-2xs bg-cream-200 text-warm-400">{t}</span>
                       ))}
                     </div>
                   )}
@@ -350,7 +350,7 @@ export function QueryPanel() {
 // ─── Fold Panel (笔记整理) ───────────────────────────────────────────────────
 
 const initialFoldSteps: PipelineStep[] = [
-  { id: '1', label: '扫描笔记', desc: '遍历 Vault 中的笔记和目录', icon: 'FolderTree', status: 'pending' },
+  { id: '1', label: '扫描笔记', desc: '梳理个人笔记库中的笔记和目录', icon: 'FolderTree', status: 'pending' },
   { id: '2', label: '结构分析', desc: 'AI 分析目录结构和笔记关系', icon: 'Network', status: 'pending' },
   { id: '3', label: '生成建议', desc: '移动/合并/标签/链接等建议', icon: 'Sparkles', status: 'pending' },
   { id: '4', label: '新结构预览', desc: '展示建议的目录结构', icon: 'GitMerge', status: 'pending' },
@@ -478,7 +478,7 @@ export function FoldPanel() {
       <div className="px-5 py-4 border-b border-cream-200 flex items-center gap-3 flex-wrap">
         <div className="flex-1 min-w-[200px]">
           <div className="text-sm font-semibold text-warm-700">笔记整理 (Fold)</div>
-          <div className="text-[11px] text-warm-400 mt-0.5">AI 分析笔记结构 → 整理建议 → 优化分类</div>
+          <div className="text-2xs text-warm-400 mt-0.5">AI 分析笔记结构 → 整理建议 → 优化分类</div>
         </div>
         <button
           onClick={handleAnalyze}
@@ -505,7 +505,7 @@ export function FoldPanel() {
           type="text"
           value={folder}
           onChange={e => setFolder(e.target.value)}
-          placeholder="指定目录（留空分析整个 Vault）"
+          placeholder="指定目录（留空分析整个笔记库）"
           className="bg-cream-200 border border-cream-300 rounded-lg px-3 py-1.5 text-xs text-warm-700 outline-none focus:border-accent-orange flex-1"
         />
       </div>
@@ -539,8 +539,8 @@ export function FoldPanel() {
                 <div className="flex items-center gap-1.5 text-xs font-medium text-warm-600 mb-1.5">
                   <Brain className="w-3.5 h-3.5" /> 结构分析
                 </div>
-                <div className="text-[11px] text-warm-500 leading-relaxed">{result.analysis}</div>
-                <div className="text-[10px] text-warm-400 mt-1.5">
+                <div className="text-2xs text-warm-500 leading-relaxed">{result.analysis}</div>
+                <div className="text-2xs text-warm-400 mt-1.5">
                   {result.totalNotes} 篇笔记 · {result.totalFolders} 个目录
                 </div>
               </div>
@@ -549,12 +549,12 @@ export function FoldPanel() {
             {/* Suggestions */}
             <div className="p-2 space-y-1.5">
               <div className="flex items-center justify-between px-1">
-                <span className="text-[10px] text-warm-400">整理建议 ({result.suggestions.length})</span>
+                <span className="text-2xs text-warm-400">整理建议 ({result.suggestions.length})</span>
                 {result.suggestions.length > 0 && (
                   <button
                     onClick={handleApplyAll}
                     disabled={applyingAll}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded text-[10px] bg-accent-orange text-white hover:bg-accent-orange/90 disabled:opacity-40 transition-colors"
+                    className="flex items-center gap-1 px-2.5 py-1 rounded text-2xs bg-accent-orange text-white hover:bg-accent-orange/90 disabled:opacity-40 transition-colors"
                   >
                     {applyingAll ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Check className="w-2.5 h-2.5" />}
                     全部执行
@@ -568,12 +568,12 @@ export function FoldPanel() {
                   <div key={i} className="bg-surface border border-cream-200 rounded-lg p-2.5 hover:border-cream-300 transition-colors">
                     <div className="flex items-center gap-1.5 mb-1">
                       <Icon className="w-3 h-3 text-accent-orange" />
-                      <span className="text-[10px] font-medium text-accent-orange bg-accent-orange/10 px-1.5 py-0.5 rounded">{suggestionLabels[s.type] || s.type}</span>
-                      <span className="text-[11px] font-medium text-warm-700">{s.description}</span>
+                      <span className="text-2xs font-medium text-accent-orange bg-accent-orange/10 px-1.5 py-0.5 rounded">{suggestionLabels[s.type] || s.type}</span>
+                      <span className="text-2xs font-medium text-warm-700">{s.description}</span>
                     </div>
-                    <div className="text-[10px] text-warm-500">{s.reason}</div>
+                    <div className="text-2xs text-warm-500">{s.reason}</div>
                     {s.from && (
-                      <div className="text-[10px] text-warm-400 mt-1 flex items-center gap-1">
+                      <div className="text-2xs text-warm-400 mt-1 flex items-center gap-1">
                         <FileText className="w-2.5 h-2.5" /> {s.from}
                         {s.to && <><ArrowRightLeft className="w-2.5 h-2.5 mx-1" /> {s.to}</>}
                       </div>
@@ -582,7 +582,7 @@ export function FoldPanel() {
                       <button
                         onClick={() => handleApplyOne(i)}
                         disabled={applyingIndex === i || !!applied}
-                        className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] transition-colors ${
+                        className={`flex items-center gap-1 px-2 py-0.5 rounded text-2xs transition-colors ${
                           applied?.success
                             ? 'bg-accent-sage/10 text-accent-sage'
                             : 'bg-cream-200 text-warm-600 hover:bg-cream-300'
@@ -593,7 +593,7 @@ export function FoldPanel() {
                           : <Play className="w-2.5 h-2.5" />}
                         {applied?.success ? '已执行' : '执行'}
                       </button>
-                      {applied?.error && <span className="text-[9px] text-rose-400">{applied.error}</span>}
+                      {applied?.error && <span className="text-2xs text-rose-400">{applied.error}</span>}
                     </div>
                   </div>
                 )
@@ -608,7 +608,7 @@ export function FoldPanel() {
                 </div>
                 <div className="space-y-0.5">
                   {result.proposedStructure.map((dir, i) => (
-                    <div key={i} className="text-[10px] text-warm-500 pl-2 border-l border-cream-300">{dir}</div>
+                    <div key={i} className="text-2xs text-warm-500 pl-2 border-l border-cream-300">{dir}</div>
                   ))}
                 </div>
               </div>
@@ -624,7 +624,7 @@ export function FoldPanel() {
                   <button
                     onClick={() => handleReorganize('execute')}
                     disabled={reorganizing}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded text-[10px] bg-accent-orange text-white hover:bg-accent-orange/90 disabled:opacity-40 transition-colors"
+                    className="flex items-center gap-1 px-2.5 py-1 rounded text-2xs bg-accent-orange text-white hover:bg-accent-orange/90 disabled:opacity-40 transition-colors"
                   >
                     {reorganizing ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <Check className="w-2.5 h-2.5" />}
                     执行移动
@@ -632,7 +632,7 @@ export function FoldPanel() {
                 </div>
                 <div className="space-y-1 max-h-32 overflow-auto">
                   {reorgMoves.map((m, i) => (
-                    <div key={i} className="text-[10px] text-warm-500 bg-cream-100 rounded p-1.5">
+                    <div key={i} className="text-2xs text-warm-500 bg-cream-100 rounded p-1.5">
                       <div className="font-medium text-warm-600">{m.file.split('/').pop()}</div>
                       <div>{m.currentFolder} → <span className="text-accent-sage">{m.proposedFolder}</span></div>
                       <div className="text-warm-400">{m.reason}</div>
@@ -640,7 +640,7 @@ export function FoldPanel() {
                   ))}
                 </div>
                 {reorgResult && (
-                  <div className="text-[10px] text-accent-sage mt-1.5">{reorgResult}</div>
+                  <div className="text-2xs text-accent-sage mt-1.5">{reorgResult}</div>
                 )}
               </div>
             )}
@@ -662,7 +662,7 @@ export function FoldPanel() {
 
 const initialThinkSteps: PipelineStep[] = [
   { id: '1', label: '输入主题', desc: '描述你要探索的主题', icon: 'MessageSquare', status: 'pending' },
-  { id: '2', label: '知识检索', desc: '从 Vault 查找相关笔记', icon: 'Search', status: 'pending' },
+  { id: '2', label: '知识检索', desc: '从个人笔记库查找相关笔记', icon: 'Search', status: 'pending' },
   { id: '3', label: 'AI 生成', desc: '构建思维导图结构', icon: 'Brain', status: 'pending' },
   { id: '4', label: '画布渲染', desc: '可视化交互式思维导图', icon: 'Network', status: 'pending' },
 ]
@@ -735,7 +735,7 @@ export function ThinkPanel() {
       <div className="px-5 py-4 border-b border-cream-200 flex items-center gap-3 flex-wrap">
         <div className="flex-1 min-w-[200px]">
           <div className="text-sm font-semibold text-warm-700">思维画布 (Think)</div>
-          <div className="text-[11px] text-warm-400 mt-0.5">输入主题 → AI 生成思维导图 → 可视化探索</div>
+          <div className="text-2xs text-warm-400 mt-0.5">输入主题 → AI 生成思维导图 → 可视化探索</div>
         </div>
         <div className="flex items-center gap-2">
           <select
@@ -797,7 +797,7 @@ export function ThinkPanel() {
               <div className="flex flex-col items-center gap-4">
                 {/* Summary */}
                 {result.summary && (
-                  <div className="text-[11px] text-warm-500 bg-surface border border-cream-200 rounded-lg px-3 py-1.5 max-w-md text-center">
+                  <div className="text-2xs text-warm-500 bg-surface border border-cream-200 rounded-lg px-3 py-1.5 max-w-md text-center">
                     {result.summary}
                   </div>
                 )}
@@ -842,7 +842,7 @@ export function ThinkPanel() {
                               <button
                                 key={child.id}
                                 onClick={() => setSelectedNode(child.id)}
-                                className={`px-2.5 py-1 rounded-md border text-[10px] transition-all ${
+                                className={`px-2.5 py-1 rounded-md border text-2xs transition-all ${
                                   selectedNode === child.id
                                     ? 'border-warm-500 bg-warm-50 text-warm-700 scale-105'
                                     : 'border-cream-300 bg-cream-200/50 text-warm-500 hover:border-warm-400'
@@ -861,10 +861,10 @@ export function ThinkPanel() {
                 {/* Connections */}
                 {result.connections?.length > 0 && (
                   <div className="mt-4 w-full max-w-lg">
-                    <div className="text-[10px] text-warm-400 mb-2 text-center">跨分支关联</div>
+                    <div className="text-2xs text-warm-400 mb-2 text-center">跨分支关联</div>
                     <div className="flex flex-wrap justify-center gap-2">
                       {result.connections.map((c, i) => (
-                        <div key={i} className="flex items-center gap-1 px-2 py-1 rounded-md bg-accent-amber/5 border border-accent-amber/15 text-[10px] text-warm-500">
+                        <div key={i} className="flex items-center gap-1 px-2 py-1 rounded-md bg-accent-amber/5 border border-accent-amber/15 text-2xs text-warm-500">
                           <span className="text-accent-amber">{c.from}</span>
                           <Link2 className="w-2.5 h-2.5" />
                           <span className="text-accent-amber">{c.to}</span>
@@ -877,11 +877,11 @@ export function ThinkPanel() {
 
                 {/* Stats & Save */}
                 <div className="mt-4 flex items-center gap-4">
-                  <span className="text-[10px] text-warm-400">{totalNodes} 个节点 · {result.branches?.length || 0} 个分支 · {result.connections?.length || 0} 个关联</span>
+                  <span className="text-2xs text-warm-400">{totalNodes} 个节点 · {result.branches?.length || 0} 个分支 · {result.connections?.length || 0} 个关联</span>
                   {result.canvas && (
                     <button
                       onClick={handleSaveCanvas}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] bg-accent-sage/10 text-accent-sage border border-accent-sage/20 hover:bg-accent-sage/20 transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-2xs bg-accent-sage/10 text-accent-sage border border-accent-sage/20 hover:bg-accent-sage/20 transition-colors"
                     >
                       <Save className="w-3 h-3" /> 保存为 Canvas
                     </button>
@@ -901,8 +901,8 @@ export function ThinkPanel() {
             {selectedNode === 'root' && (
               <div>
                 <div className="text-sm font-bold text-warm-700 mb-1">{result.center?.label}</div>
-                <div className="text-[11px] text-warm-500">中心主题，共 {result.branches?.length || 0} 个分支</div>
-                {result.summary && <div className="text-[11px] text-warm-500 mt-2">{result.summary}</div>}
+                <div className="text-2xs text-warm-500">中心主题，共 {result.branches?.length || 0} 个分支</div>
+                {result.summary && <div className="text-2xs text-warm-500 mt-2">{result.summary}</div>}
               </div>
             )}
             {result.branches?.map(b => {
@@ -910,11 +910,11 @@ export function ThinkPanel() {
                 return (
                   <div key={b.id}>
                     <div className="text-sm font-bold text-warm-700 mb-1">{b.label}</div>
-                    <div className="text-[11px] text-warm-500">{b.children?.length || 0} 个子节点</div>
+                    <div className="text-2xs text-warm-500">{b.children?.length || 0} 个子节点</div>
                     {(b.children?.length || 0) > 0 && (
                       <div className="mt-2 space-y-1">
                         {(b.children || []).map(c => (
-                          <div key={c.id} className="text-[10px] text-warm-500 pl-2 border-l border-cream-300">
+                          <div key={c.id} className="text-2xs text-warm-500 pl-2 border-l border-cream-300">
                             {c.label}
                             {c.note && <span className="text-warm-400"> → {c.note}</span>}
                           </div>
@@ -931,7 +931,7 @@ export function ThinkPanel() {
                 return (
                   <div key={c.id}>
                     <div className="text-sm font-bold text-warm-700 mb-1">{c.label}</div>
-                    {c.note && <div className="text-[11px] text-warm-500">关联笔记: {c.note}</div>}
+                    {c.note && <div className="text-2xs text-warm-500">关联笔记: {c.note}</div>}
                   </div>
                 )
               }

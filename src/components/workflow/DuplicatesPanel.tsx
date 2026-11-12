@@ -102,7 +102,7 @@ export default function DuplicatesPanel() {
       <div className="px-5 py-4 border-b border-cream-200 flex items-center gap-3 flex-wrap">
         <div className="flex-1 min-w-[200px]">
           <div className="text-sm font-semibold text-warm-700">重复内容检测</div>
-          <div className="text-[11px] text-warm-400 mt-0.5">扫描重复笔记并智能合并</div>
+          <div className="text-2xs text-warm-400 mt-0.5">扫描重复笔记并智能合并</div>
         </div>
         <div className="flex items-center gap-2">
           <select
@@ -137,7 +137,7 @@ export default function DuplicatesPanel() {
             <div className="flex items-center gap-2 mb-2">
               <button
                 onClick={selectAll}
-                className="text-[10px] text-warm-500 hover:text-warm-700 transition-colors"
+                className="text-2xs text-warm-500 hover:text-warm-700 transition-colors"
               >
                 {selectedPairs.size === pairs.length ? '取消全选' : '全选'}
               </button>
@@ -145,13 +145,13 @@ export default function DuplicatesPanel() {
                 <button
                   onClick={handleMergeSelected}
                   disabled={merging}
-                  className="flex items-center gap-1 px-3 py-1 rounded text-[10px] bg-accent-orange text-white hover:bg-accent-orange/90 disabled:opacity-40 transition-colors"
+                  className="flex items-center gap-1 px-3 py-1 rounded text-2xs bg-accent-orange text-white hover:bg-accent-orange/90 disabled:opacity-40 transition-colors"
                 >
                   {merging ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <GitMerge className="w-2.5 h-2.5" />}
                   合并选中 ({selectedPairs.size})
                 </button>
               )}
-              <span className="text-[10px] text-warm-400 ml-auto">
+              <span className="text-2xs text-warm-400 ml-auto">
                 发现 {pairs.length} 对重复
               </span>
             </div>
@@ -168,33 +168,33 @@ export default function DuplicatesPanel() {
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                      <span className="text-[11px] font-medium text-warm-700 truncate">
+                      <span className="text-2xs font-medium text-warm-700 truncate">
                         {pair.fileA.split('/').pop()?.replace('.md', '')}
                       </span>
                       <RefreshCw className="w-2.5 h-2.5 text-warm-400 shrink-0" />
-                      <span className="text-[11px] font-medium text-warm-700 truncate">
+                      <span className="text-2xs font-medium text-warm-700 truncate">
                         {pair.fileB.split('/').pop()?.replace('.md', '')}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[10px] bg-accent-orange/10 text-accent-orange px-1.5 py-0.5 rounded">
+                      <span className="text-2xs bg-accent-orange/10 text-accent-orange px-1.5 py-0.5 rounded">
                         {Math.round(pair.similarity * 100)}% 相似
                       </span>
-                      <span className="text-[10px] bg-cream-200 text-warm-500 px-1.5 py-0.5 rounded">
+                      <span className="text-2xs bg-cream-200 text-warm-500 px-1.5 py-0.5 rounded">
                         {matchLabels[pair.matchType] || pair.matchType}
                       </span>
-                      <span className="text-[10px] text-accent-sage">
+                      <span className="text-2xs text-accent-sage">
                         保留: {pair.longerFile.split('/').pop()?.replace('.md', '')}
                       </span>
                     </div>
-                    <div className="text-[10px] text-warm-400 mt-1 flex items-center gap-1">
+                    <div className="text-2xs text-warm-400 mt-1 flex items-center gap-1">
                       {pair.fileA} / {pair.fileB}
                     </div>
                   </div>
                   <button
                     onClick={() => handleMergeOne(i)}
                     disabled={merging}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded text-[10px] bg-accent-sage/80 text-white hover:bg-accent-sage disabled:opacity-40 transition-colors shrink-0"
+                    className="flex items-center gap-1 px-2.5 py-1 rounded text-2xs bg-accent-sage/80 text-white hover:bg-accent-sage disabled:opacity-40 transition-colors shrink-0"
                   >
                     {merging ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : <GitMerge className="w-2.5 h-2.5" />}
                     合并
@@ -208,14 +208,14 @@ export default function DuplicatesPanel() {
         {/* Results */}
         {results.length > 0 && (
           <div className="mt-3 pt-3 border-t border-cream-200">
-            <div className="text-[11px] font-medium text-warm-600 mb-1.5 flex items-center gap-1.5">
+            <div className="text-2xs font-medium text-warm-600 mb-1.5 flex items-center gap-1.5">
               {successCount > 0 && <Check className="w-3 h-3 text-accent-sage" />}
               {failCount > 0 && <AlertTriangle className="w-3 h-3 text-rose-400" />}
               合并结果: {successCount} 成功, {failCount} 失败
             </div>
             <div className="space-y-0.5">
               {results.map((r, i) => (
-                <div key={i} className={`text-[10px] flex items-center gap-1 ${r.success ? 'text-accent-sage' : 'text-rose-400'}`}>
+                <div key={i} className={`text-2xs flex items-center gap-1 ${r.success ? 'text-accent-sage' : 'text-rose-400'}`}>
                   {r.success ? <Check className="w-2.5 h-2.5" /> : <AlertTriangle className="w-2.5 h-2.5" />}
                   {r.mergedFile}
                   {r.success && ` (+${r.appendedChars} 字符)`}

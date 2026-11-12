@@ -229,10 +229,10 @@ export default function HandoutReaderModal({
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className={`px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-semibold border ${domainColor} truncate max-w-[130px] sm:max-w-none`}>
+                <span className={`px-1.5 sm:px-2 py-0.5 rounded text-2xs sm:text-2xs font-semibold border ${domainColor} truncate max-w-[130px] sm:max-w-none`}>
                   {handout.domain === 'cs_408' ? '408' : handout.domain === 'politics' ? '政治' : handout.domain === 'english' ? '英语' : handout.domain === 'general' ? '专业课' : '数学'} · {handout.subject}
                 </span>
-                <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[11px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                <span className="hidden sm:inline-block px-2 py-0.5 rounded text-2xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
                   {handout.difficulty}
                 </span>
               </div>
@@ -299,9 +299,9 @@ export default function HandoutReaderModal({
                 className="fixed inset-0 bg-black/60 z-20 md:hidden backdrop-blur-xs"
                 onClick={() => setShowToc(false)}
               />
-              <div className="fixed inset-y-0 left-0 z-30 w-72 bg-[#121622] border-r border-white/10 p-4 overflow-y-auto md:static md:w-64 md:z-auto shrink-0 space-y-1 shadow-2xl md:shadow-none animate-in slide-in-from-left duration-200">
+              <div className="fixed inset-y-0 left-0 z-30 w-72 bg-[#121622] border-r border-white/10 p-4 overflow-y-auto md:static md:w-64 md:z-auto shrink-0 space-y-1 shadow-xl md:shadow-none animate-in slide-in-from-left duration-200">
                 <div className="flex items-center justify-between mb-2.5 px-2">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="text-2xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                     <List className="w-3.5 h-3.5 text-orange-400" />
                     讲义大纲索引
                   </span>
@@ -357,7 +357,7 @@ export default function HandoutReaderModal({
               {handout.keyTheorems && handout.keyTheorems.length > 0 && (
                 <div className="pt-2 border-t border-white/5 grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
                   {handout.keyTheorems.map((th, i) => (
-                    <div key={i} className="text-[11px] text-slate-400 flex items-start gap-1.5">
+                    <div key={i} className="text-2xs text-slate-400 flex items-start gap-1.5">
                       <span className="text-orange-400 font-bold">•</span>
                       <span>{th}</span>
                     </div>
@@ -390,7 +390,7 @@ export default function HandoutReaderModal({
               <CheckCircle2 className="w-3.5 h-3.5" />
               {isMastered ? '已标记为掌握' : '标记已掌握'}
             </button>
-            <span className="text-[11px] text-slate-500">
+            <span className="text-2xs text-slate-500">
               支持 KaTeX 数学公式与 GFM 代码高亮渲染
             </span>
           </div>

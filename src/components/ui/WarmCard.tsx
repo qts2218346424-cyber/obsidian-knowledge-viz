@@ -35,7 +35,7 @@ export default function WarmCard({
       }
       className={`rounded-2xl bg-surface border border-cream-200/90 p-4 transition-all duration-200 ${
         hover || isClickable
-          ? 'hover:shadow-md hover:border-cream-300 hover:-translate-y-0.5 cursor-pointer active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-orange/70 focus-visible:ring-offset-2'
+          ? 'hover:shadow-sm hover:border-cream-300 hover:-translate-y-0.5 cursor-pointer active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-orange/70 focus-visible:ring-offset-2'
           : ''
       } ${className}`}
     >

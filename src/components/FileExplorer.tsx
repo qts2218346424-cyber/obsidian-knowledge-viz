@@ -42,7 +42,7 @@ export default function FileExplorer({ tree, onFileClick, selectedPath }: FileEx
       <div className="h-full bg-surface border border-cream-200 rounded-xl p-4 flex flex-col items-center justify-center text-center space-y-2 select-none">
         <FolderOpen className="w-7 h-7 text-warm-400/50" />
         <div className="text-xs font-bold text-warm-700">暂无个人考研笔记</div>
-        <p className="text-[11px] text-warm-400 leading-relaxed max-w-[150px]">
+        <p className="text-2xs text-warm-400 leading-relaxed max-w-[150px]">
           点击上方「+ 新建笔记」或从考研讲义一键摘录，即可开始构建专属笔记库
         </p>
       </div>
@@ -155,10 +155,10 @@ function TreeNodeItem({
         )}
         <span className="truncate">{node.name}</span>
         {isPdf && (
-          <span className="ml-auto text-[9px] px-1 rounded bg-red-100 text-red-600 font-mono scale-90">PDF</span>
+          <span className="ml-auto text-2xs px-1 rounded bg-red-100 text-red-600 font-mono scale-90">PDF</span>
         )}
         {isHtml && (
-          <span className="ml-auto text-[9px] px-1 rounded bg-sky-100 text-sky-600 font-mono scale-90">课件</span>
+          <span className="ml-auto text-2xs px-1 rounded bg-sky-100 text-sky-600 font-mono scale-90">课件</span>
         )}
       </button>
     )
