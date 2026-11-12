@@ -1,0 +1,10 @@
+# 资料导入转换依赖（python3 -m pip install -r server/scripts/requirements.txt）
+markitdown[all]
+pypdf
+# PDF 逐页版面提取：双栏排序、混合扫描页逐页 OCR。未安装时自动退回 MarkItDown
+pymupdf>=1.24
+# 扫描件 OCR
+rapidocr_onnxruntime
+python-docx
+python-pptx
+openpyxl

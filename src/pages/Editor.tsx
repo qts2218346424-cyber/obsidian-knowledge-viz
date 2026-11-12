@@ -364,6 +364,7 @@ export default function Editor() {
   // Drag & drop
   const [dragOver, setDragOver] = useState(false)
   const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null)
+  const [importStage, setImportStage] = useState('')
 
   // Preview
   const [showPreview, setShowPreview] = useState(false)
@@ -578,7 +579,9 @@ export default function Editor() {
 
     const results = await Promise.allSettled(
       fileArray.map(async (file) => {
-        const result = await api.uploadFile(file)
+        const result = await api.uploadFile(file, p => {
+          if (fileArray.length === 1) setImportStage(p.message)
+        })
         setBatchProgress(prev => prev ? { ...prev, done: prev.done + 1 } : null)
         return result
       })
@@ -590,13 +593,19 @@ export default function Editor() {
     if (succeeded.length > 0) {
       setImportResult(succeeded[0])
       await loadFile(succeeded[0].markdownPath)
-      setSaveMsg(`导入完成：${succeeded.length} 个成功${failed > 0 ? `，${failed} 个失败` : ''}`)
+      const saved = succeeded.reduce((n, r) => n + (r.questionReport?.saved || 0), 0)
+      const review = succeeded.reduce((n, r) => n + (r.questionReport?.needsReview || 0), 0)
+      setSaveMsg(
+        `导入完成：${succeeded.length} 个成功${failed > 0 ? `，${failed} 个失败` : ''}` +
+          (saved > 0 ? `，提取 ${saved} 道题${review > 0 ? `（${review} 道待校对）` : ''}` : '')
+      )
     } else {
       setImportError('导入失败，请检查文件格式或服务状态')
     }
 
     setImporting(false)
     setBatchProgress(null)
+    setImportStage('')
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
@@ -997,7 +1006,11 @@ export default function Editor() {
             <button onClick={() => fileInputRef.current?.click()} disabled={importing}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-white border border-slate-200 text-slate-800 hover:bg-slate-50 disabled:opacity-40 transition-all cursor-pointer shadow-xs">
               {importing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-              导入{importing && batchProgress ? ` (${batchProgress.done}/${batchProgress.total})` : ''}
+              {importing && importStage ? (
+                <span className="max-w-[12rem] truncate">{importStage}</span>
+              ) : (
+                <>导入{importing && batchProgress ? ` (${batchProgress.done}/${batchProgress.total})` : ''}</>
+              )}
             </button>
           </div>
 

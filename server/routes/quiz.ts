@@ -10,6 +10,7 @@ import { database } from '../db/database.js'
 import { matchSyllabusNode } from '../data/syllabus.js'
 import { MasteryEngine } from '../algorithms/mastery.js'
 import { calculateSM2 } from '../algorithms/sm2.js'
+import { extractQuestions, segmentQuestions, aiAvailable } from '../services/question-extractor.js'
 
 
 export const quizRouter = Router()
@@ -151,11 +152,6 @@ quizRouter.delete('/quiz/custom/:id', (req, res) => {
 
 quizRouter.post('/quiz/parse-text', async (req, res) => {
   try {
-    if (!anthropic) {
-      res.status(503).json({ error: 'AI 服务未配置' })
-      return
-    }
-
     const { text, domain, subject } = req.body as {
       text: string
       domain?: 'cs_408' | 'math'
@@ -166,57 +162,39 @@ quizRouter.post('/quiz/parse-text', async (req, res) => {
       res.status(400).json({ error: '文本内容过短' })
       return
     }
-
-    const prompt = `请将以下考研学生粘贴的文本或题目，解析提炼为标准化的考研题库 JSON 数组。
-学科领域：${domain === 'cs_408' ? '408 计算机综合' : '考研数学'}（${subject || '综合'}）
-
-【原始输入文本】：
-"""
-${text.slice(0, 5000)}
-"""
-
-【输出规则】：
-1. 识别并提取题目、选项（如果是单选题）、正确答案和详细解析。
-2. 数学公式必须规范格式化为 KaTeX LaTeX（如 $\\lim_{x \\to 0} \\frac{\\sin x}{x} = 1$）。
-3. 如果原文没有解析，请根据题干和答案补充严密规范的分步考研解析。
-4. 如果有多道题目，解析为多个数组元素。
-5. 必须只输出纯 JSON 数组，严禁任何额外解释或 Markdown 格式以外的文本：
-[
-  {
-    "id": "parsed-${Date.now()}-1",
-    "domain": "${domain || 'math'}",
-    "subject": "${subject || (domain === 'cs_408' ? '数据结构' : '高等数学')}",
-    "chapter": "对应章节",
-    "type": "choice",
-    "difficulty": "中等",
-    "question": "题干内容（支持LaTeX）",
-    "options": {
-      "A": "选项A",
-      "B": "选项B",
-      "C": "选项C",
-      "D": "选项D"
-    },
-    "answer": "A",
-    "explanation": "详细解析与考研解题通法",
-    "tags": ["自定义导入", "${subject || '核心题型'}"]
-  }
-]`
-
-    const aiRes = await createAiQuizCompletion({
-      model: config.ai?.model || 'deepseek-v4-pro',
-      max_tokens: 4096,
-      system: '你是一个严格输出纯 JSON 格式题库的考研命题与解析专家。只输出纯 JSON 数组，严禁任何前后缀闲聊。',
-      messages: [{ role: 'user', content: prompt }]
-    })
-
-    const raw = extractTextFromAiContent(aiRes.content)
-    const parsed = safeParseJsonArray(raw)
-    if (!parsed || parsed.length === 0) {
-      res.status(500).json({ error: 'AI 输出未能成功解析为合法题目数组', raw })
+    if (!aiAvailable() && segmentQuestions(text).blocks.length === 0) {
+      res.status(503).json({ error: 'AI 服务未配置，且未从文本中识别到题号' })
       return
     }
 
-    res.json({ questions: parsed })
+    // 全文分块提取 + 对账补漏（旧实现只取前 5000 字、单次输出，题多会被截断）
+    const report = await extractQuestions(text, {
+      domain: domain || 'math',
+      subject: subject || (domain === 'cs_408' ? '数据结构' : '高等数学'),
+      chapter: '自定义导入',
+      existing: loadCustomQuestions(req),
+    })
+    const questions = report.questions.map(q => ({
+      ...q,
+      tags: [...new Set([...(q.tags || []), '自定义导入'])],
+    }))
+    if (questions.length === 0) {
+      res.status(422).json({ error: '没有从文本中识别到题目，或这些题已在题库中' })
+      return
+    }
+
+    res.json({
+      questions,
+      report: {
+        expected: report.expected,
+        extracted: report.extracted,
+        repairedByRule: report.repairedByRule,
+        missing: report.missing,
+        coverage: report.coverage,
+        segmented: report.segmented,
+        needsReview: questions.filter(q => q.needsReview).length,
+      },
+    })
   } catch (err: any) {
     console.error('Quiz parse-text error:', err.message)
     res.status(500).json({ error: err.message })

@@ -1,7 +1,9 @@
 import fs from 'fs'
 import path from 'path'
-import { config, anthropic, getNotes, invalidateCache, getAiClientForModel } from '../context.js'
+import { config, getNotes, invalidateCache } from '../context.js'
 import { createFile } from '../vault-parser.js'
+import { digestDocument, renderDigest, type DocDigest } from './doc-digest.js'
+import { extractQuestions, looksLikeQuestionSet } from './question-extractor.js'
 
 export interface OrganizedWikiResult {
   title: string
@@ -16,6 +18,16 @@ export interface OrganizedWikiResult {
   wikilinks: string[]
   mocPath?: string
   questionsCount: number
+  questionReport?: {
+    expected: number
+    extracted: number
+    saved: number
+    repairedByRule: number
+    missing: string[]
+    coverage: number
+    needsReview: number
+  }
+  analyzedRatio?: number
   preview: string
   method: string
 }
@@ -35,143 +47,52 @@ export interface QuizQuestionItem {
 }
 
 /**
- * 稳健解析 AI 返回的 JSON 字符串（容错思考链、截断、代码块包裹）
- */
-function robustParseAiJson(rawText: string): any {
-  if (!rawText || typeof rawText !== 'string') return null
-
-  // 1. 去除首尾空白与 markdown 代码块标记
-  let clean = rawText.trim()
-  if (clean.startsWith('```json')) clean = clean.slice(7)
-  else if (clean.startsWith('```')) clean = clean.slice(3)
-  if (clean.endsWith('```')) clean = clean.slice(0, -3)
-  clean = clean.trim()
-
-  // 2. 尝试直接解析
-  try {
-    return JSON.parse(clean)
-  } catch {}
-
-  // 3. 正则查找第一个 { 到最后一个 }
-  const firstBrace = clean.indexOf('{')
-  const lastBrace = clean.lastIndexOf('}')
-  if (firstBrace !== -1 && lastBrace > firstBrace) {
-    try {
-      return JSON.parse(clean.substring(firstBrace, lastBrace + 1))
-    } catch {}
-  }
-
-  // 4. 尝试智能修复被截断的 JSON
-  if (firstBrace !== -1) {
-    let truncated = clean.substring(firstBrace)
-    const quoteCount = (truncated.match(/(?<!\\)"/g) || []).length
-    if (quoteCount % 2 !== 0) truncated += '"'
-
-    const openCurlies = (truncated.match(/\{/g) || []).length
-    const closeCurlies = (truncated.match(/\}/g) || []).length
-    const openBrackets = (truncated.match(/\[/g) || []).length
-    const closeBrackets = (truncated.match(/\]/g) || []).length
-
-    for (let i = 0; i < openBrackets - closeBrackets; i++) truncated += ']'
-    for (let i = 0; i < openCurlies - closeCurlies; i++) truncated += '}'
-
-    try {
-      return JSON.parse(truncated)
-    } catch {}
-  }
-
-  return null
-}
-
-/**
  * 核心整理器：结合 Karpathy LLM-Wiki 与 AgriciDaniel/claude-obsidian 范式
  * 自动完成：知识提炼、双链图谱织网、MOC 自动挂载与做题库联动
  */
+export interface OrganizeOptions {
+  preferredDomain?: 'cs_408' | 'math' | 'general'
+  /** 写入哪个用户的知识库；不传则为全局库（仅管理员场景） */
+  vaultPath?: string
+  onProgress?: (p: { stage: string; done: number; total: number; message: string }) => void
+  signal?: { aborted: boolean }
+}
+
 export async function organizeDocumentIntoWiki(
   markdownContent: string,
   originalFilename: string,
-  preferredDomain?: 'cs_408' | 'math' | 'general'
+  options: OrganizeOptions = {}
 ): Promise<OrganizedWikiResult> {
-  const vaultPath = config.vaultPath
-  const notes = getNotes()
+  const { preferredDomain, onProgress, signal } = options
+  const vaultPath = options.vaultPath || config.vaultPath
+  const notes = getNotes(vaultPath)
   const baseName = path.basename(originalFilename, path.extname(originalFilename))
 
   // 1. 整理现有笔记标题用于双向链接匹配
   const existingTitles = notes.map(n => n.title.trim()).filter(Boolean)
   const titleSet = new Set(existingTitles.map(t => t.toLowerCase()))
 
-  // 2. 调用大模型进行深度自组织分析
-  let aiData: any = null
-  const aiTarget = getAiClientForModel()
-  const client: any = aiTarget?.client || anthropic
-  const modelName = aiTarget?.model || config.ai?.model || 'deepseek-v4-pro'
-
-  if (client) {
-    try {
-      const excerpt = markdownContent.slice(0, 10000)
-      const prompt = `你是一个顶级知识库架构师与考研计算机408/考研数学教研专家（参考 AgriciDaniel/claude-obsidian 的自组织第二大脑架构）。
-请研读以下从资料转换得到的 Markdown 内容，完成高质量的知识自组织提炼与题库沉淀。
-
-【任务要求】：
-1. 分析归类：
-   - domain: "cs_408" | "math" | "general"
-   - subject: 具体学科名称（如 "操作系统", "数据结构", "计算机组成原理", "计算机网络", "高等数学", "线性代数", "概率论与数理统计" 等）
-   - title: 规范且富有概括性的笔记名称（不用加扩展名）
-   - tags: 3-5 个层次化标签（如 ["408/操作系统", "核心考点", "第二大脑整理"]）
-   - entities: 提炼 5-10 个关键技术实体/定理/概念（用于 Obsidian [[双链]] 织网）
-2. 深度重构规范笔记正文 (structuredNote)：
-   - 必须是一篇条理清晰的高质量 Markdown 笔记
-   - 包含：考点综述、核心原理与定理机制、图表/公式推导、典型考法避坑指南
-3. 命制 2-3 道配套考研真题或自测题 (questions 数组)：
-   - 每题包含: type ("choice" | "blank"), difficulty ("简单"|"中等"|"困难"), question (题干), options (选择题有 A,B,C,D), answer, explanation (解析), tags
-
-【必须严格返回合法 JSON，格式如下】：
-{
-  "domain": "cs_408",
-  "subject": "操作系统",
-  "title": "...",
-  "summary": "...",
-  "tags": ["..."],
-  "entities": ["..."],
-  "questions": [
-    {
-      "type": "choice",
-      "difficulty": "中等",
-      "question": "...",
-      "options": {"A":"...", "B":"...", "C":"...", "D":"..."},
-      "answer": "A",
-      "explanation": "...",
-      "tags": ["..."]
-    }
-  ],
-  "structuredNote": "..."
-}
-
-【原始文档内容】：
-${excerpt}`
-
-      const aiRes: any = await client.messages.create({
-        model: modelName,
-        max_tokens: 3000,
-        system: '你是一个专业的知识库自组织管理系统，只输出纯 JSON，不要包含额外的闲聊或说明。',
-        messages: [{ role: 'user', content: prompt }],
-      })
-
-      // 提取纯文本内容（兼容 DeepSeek Thinking 块）
-      let rawText = ''
-      if (Array.isArray(aiRes.content)) {
-        const textBlock = aiRes.content.find((c: any) => c.type === 'text')
-        if (textBlock && textBlock.text) rawText = textBlock.text
-        else if (aiRes.content[0]?.text) rawText = aiRes.content[0].text
-      } else if (typeof aiRes.content === 'string') {
-        rawText = aiRes.content
-      }
-
-      aiData = robustParseAiJson(rawText)
-    } catch (err: any) {
-      console.warn('[Wiki Organizer AI Error]:', err.message)
-    }
+  // 2. 全文分块分析（map-reduce），不再只看前 1 万字
+  onProgress?.({ stage: 'analyze', done: 0, total: 1, message: '正在分析全文' })
+  let digest: DocDigest | null = null
+  try {
+    digest = await digestDocument(markdownContent, baseName, {
+      onProgress: (done, total) =>
+        onProgress?.({ stage: 'analyze', done, total, message: `分析全文 ${done}/${total} 段` }),
+    })
+  } catch (err: any) {
+    console.warn('[Wiki Organizer digest error]:', err.message)
   }
+  const aiData: any = digest
+    ? {
+        domain: digest.domain,
+        subject: digest.subject,
+        title: digest.title,
+        summary: digest.summary,
+        tags: digest.tags,
+        entities: digest.entities,
+      }
+    : null
 
   // 3. 智能领域/学科识别与保底数据填充
   let detectedDomain: 'cs_408' | 'math' | 'general' = aiData?.domain || preferredDomain
@@ -296,7 +217,8 @@ ${excerpt}`
     organizer: 'claude_obsidian_engine',
   }
 
-  let noteBody = aiData?.structuredNote || markdownContent
+  // 原文完整保留，导读放在开头
+  let noteBody = digest ? `${renderDigest(digest)}\n\n${markdownContent}` : markdownContent
   if (allWikilinks.length > 0) {
     noteBody += `\n\n---\n## 🔗 知识图谱关联网络 (Self-Organizing Links)\n`
     noteBody += `*本笔记已由自动化整理引擎自动建立双向链接*\n\n`
@@ -337,43 +259,56 @@ ${excerpt}`
     console.warn('[MOC hook error]:', mocErr.message)
   }
 
-  // 9. 做题题库联动沉淀（写入 custom-questions.json）
+  // 9. 做题题库联动沉淀：资料本身是试卷/题集时，全量提取原题（不再只命制 2-3 道新题）
   let questionsCount = 0
-  if (Array.isArray(aiData?.questions) && aiData.questions.length > 0) {
+  let questionReport: OrganizedWikiResult['questionReport']
+  if (!signal?.aborted && looksLikeQuestionSet(markdownContent)) {
     try {
       const questionsFile = path.resolve(vaultPath, '做题记录', 'custom-questions.json')
-      let customQuestions: QuizQuestionItem[] = []
+      let customQuestions: any[] = []
       if (fs.existsSync(questionsFile)) {
         try {
-          const raw = fs.readFileSync(questionsFile, 'utf-8')
-          customQuestions = JSON.parse(raw)
+          customQuestions = JSON.parse(fs.readFileSync(questionsFile, 'utf-8'))
+          if (!Array.isArray(customQuestions)) customQuestions = []
         } catch {
           customQuestions = []
         }
       }
 
-      for (const q of aiData.questions) {
-        if (!q.question) continue
-        const item: QuizQuestionItem = {
-          id: `quiz-ai-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      const report = await extractQuestions(markdownContent, {
+        domain: detectedDomain === 'general' ? undefined : detectedDomain,
+        subject: detectedSubject,
+        chapter: finalTitle,
+        sourceName: finalTitle,
+        existing: customQuestions,
+        signal,
+        onProgress: p => onProgress?.({ stage: `questions:${p.stage}`, done: p.done, total: p.total, message: p.message }),
+      })
+
+      for (const q of report.questions) {
+        customQuestions.push({
+          ...q,
           domain: detectedDomain === 'math' ? 'math' : 'cs_408',
-          subject: detectedSubject,
-          chapter: finalTitle,
-          type: q.type || 'choice',
-          difficulty: q.difficulty || '中等',
-          question: q.question,
-          options: q.options || { A: '选项 A', B: '选项 B', C: '选项 C', D: '选项 D' },
-          answer: q.answer || 'A',
-          explanation: q.explanation || '自动命制题目精析',
-          tags: Array.isArray(q.tags) ? q.tags : [detectedSubject, 'AI命题']
-        }
-        customQuestions.push(item)
-        questionsCount++
+          subject: q.subject || detectedSubject,
+          tags: [...new Set([...(q.tags || []), '资料导入'])],
+          sourceFile: finalRelPath,
+        })
       }
+      questionsCount = report.questions.length
 
       const qDir = path.dirname(questionsFile)
       if (!fs.existsSync(qDir)) fs.mkdirSync(qDir, { recursive: true })
       fs.writeFileSync(questionsFile, JSON.stringify(customQuestions, null, 2), 'utf-8')
+
+      questionReport = {
+        expected: report.expected,
+        extracted: report.extracted,
+        saved: report.questions.length,
+        repairedByRule: report.repairedByRule,
+        missing: report.missing,
+        coverage: report.coverage,
+        needsReview: report.questions.filter(q => q.needsReview).length,
+      }
     } catch (qErr: any) {
       console.warn('[Save custom questions error]:', qErr.message)
     }
@@ -395,6 +330,8 @@ ${excerpt}`
     wikilinks: allWikilinks,
     mocPath: matchedMocPath || undefined,
     questionsCount,
+    questionReport,
+    analyzedRatio: digest ? Math.round((digest.analyzedChars / Math.max(1, digest.totalChars)) * 100) : undefined,
     preview: noteBody.slice(0, 500),
     method: 'microsoft_markitdown + claude_obsidian_engine'
   }

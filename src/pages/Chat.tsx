@@ -348,13 +348,8 @@ export default function Chat() {
 
           if (isPdfOrDoc) {
             try {
-              const formData = new FormData()
-              formData.append('file', file)
-              const res = await fetch('/api/ingest/upload', {
-                method: 'POST',
-                body: formData,
-              })
-              const data = await res.json()
+              // 走 api.uploadFile：带登录态写入自己的知识库，后台任务不再阻塞服务
+              const data = await api.uploadFile(file)
               if (data.markdownPath) {
                 processed.push({
                   name: file.name,

@@ -185,8 +185,28 @@ export interface IngestResult {
   wikilinks: number
   mocPath?: string
   questionsCount?: number
+  /** 试卷/题集类资料的提题对账结果 */
+  questionReport?: IngestQuestionReport
+  /** 全文参与分析的比例（%） */
+  analyzedRatio?: number
   preview: string
   method?: string
+}
+
+export interface IngestQuestionReport {
+  expected: number
+  extracted: number
+  saved: number
+  repairedByRule: number
+  missing: string[]
+  coverage: number
+  needsReview: number
+}
+
+export interface IngestProgress {
+  status: 'queued' | 'converting' | 'analyzing' | 'extracting' | 'done' | 'error'
+  message: string
+  progress: { done: number; total: number }
 }
 
 export interface IngestStatus {
@@ -653,15 +673,38 @@ export const api = {
   // Document Ingest
   getIngestStatus: () => fetchJSON<IngestStatus>('/ingest/status'),
 
-  uploadFile: async (file: File): Promise<IngestResult> => {
+  /**
+   * 上传资料并在后台转换、分析、提题。返回最终结果；onProgress 每秒回报一次进度。
+   */
+  uploadFile: async (file: File, onProgress?: (p: IngestProgress) => void): Promise<IngestResult> => {
     const formData = new FormData()
     formData.append('file', file)
-    const res = await fetch(`${BASE}/ingest/upload`, { method: 'POST', body: formData })
+    const token = getStoredToken()
+    const authHeader: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {}
+    const res = await fetch(`${BASE}/ingest/upload?async=1`, { method: 'POST', body: formData, headers: authHeader })
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: res.statusText }))
-      throw new Error(err.error || `Upload failed: ${res.status}`)
+      throw new Error(await extractErrorMessage(res))
     }
-    return res.json()
+    const { jobId } = (await res.json()) as { jobId: string }
+    // 轮询任务状态；单次请求失败（网络抖动）不中断，连续失败 5 次才报错
+    let failures = 0
+    for (;;) {
+      await new Promise(r => setTimeout(r, 1000))
+      let job: (IngestProgress & { result?: IngestResult; error?: string }) | null = null
+      try {
+        job = await fetchJSON(`/ingest/jobs/${encodeURIComponent(jobId)}`)
+        failures = 0
+      } catch (err) {
+        if (++failures >= 5) throw err
+        continue
+      }
+      if (!job) continue
+      onProgress?.({ status: job.status, message: job.message, progress: job.progress })
+      if (job.status === 'done' && job.result) {
+        return job.result
+      }
+      if (job.status === 'error') throw new Error(job.error || job.message || '导入失败')
+    }
   },
 
   // Auto-Research
