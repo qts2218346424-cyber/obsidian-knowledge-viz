@@ -227,6 +227,7 @@ export default function EnglishFullPaperView({
     setTimerSeconds((currentPaper?.durationMinutes || 180) * 60)
     setActiveModularSection('cloze')
     setRawQuestionIndex(0)
+    setRawShowExplanations({})
     setRawIsSubmitted(false)
   }
 
@@ -887,19 +888,28 @@ export default function EnglishFullPaperView({
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
-                          onClick={() =>
+                          disabled={!rawIsSubmitted}
+                          onClick={() => {
+                            if (!rawIsSubmitted) return
                             setRawShowExplanations((prev) => ({
                               ...prev,
-                              [currentRawQ.id]: !prev[currentRawQ.id],
+                              [currentRawQ.id]: prev[currentRawQ.id] === false ? true : !(prev[currentRawQ.id] ?? true),
                             }))
-                          }
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
+                          }}
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                            rawIsSubmitted
+                              ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer'
+                              : 'bg-slate-100/70 text-slate-400 cursor-not-allowed opacity-75'
+                          }`}
+                          title={rawIsSubmitted ? '切换查看或隐藏考点精解' : '全真模考期间已锁定解析，交卷后自动开放'}
                         >
                           <HelpCircle className="w-3.5 h-3.5 text-amber-500" />
                           <span>
-                            {rawShowExplanations[currentRawQ.id] || rawIsSubmitted
-                              ? '隐藏考点精解'
-                              : '查看考点精解'}
+                            {!rawIsSubmitted
+                              ? '交卷后开放精解'
+                              : rawShowExplanations[currentRawQ.id] === false
+                              ? '查看考点精解'
+                              : '隐藏考点精解'}
                           </span>
                         </button>
                       </div>
@@ -992,8 +1002,8 @@ export default function EnglishFullPaperView({
                       </div>
                     )}
 
-                    {/* 官方详解与长难句剖析 */}
-                    {(rawShowExplanations[currentRawQ.id] || rawIsSubmitted) && (
+                    {/* 官方详解与长难句剖析（仅模考交卷后开放，严防考前/考中泄题） */}
+                    {rawIsSubmitted && rawShowExplanations[currentRawQ.id] !== false && (
                       <div className="mt-4 p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-xs space-y-2 animate-in fade-in">
                         <div className="flex items-center gap-2 font-bold text-amber-900 text-xs">
                           <CheckCircle2 className="w-4 h-4 text-emerald-600" />

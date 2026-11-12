@@ -90,6 +90,20 @@ function formatMathInline(raw?: string): string {
   return s
 }
 
+/** 统一校验客观题与自评掌握度的作答正误 */
+function isQuestionAnswerCorrect(q: ActiveQuizQuestion, rawAns?: string): boolean {
+  const userAns = typeof rawAns === 'string' ? rawAns.trim() : ''
+  if (!userAns) return false
+  if (userAns === 'mastered') return true
+  if (userAns === 'unmastered' || userAns === 'partial' || userAns === 'completed') return false
+  const std = (q.answer || '').trim()
+  if (!std) return false
+  return (
+    userAns.toUpperCase() === std.toUpperCase() ||
+    userAns === std.replace(/[\$\s]/g, '')
+  )
+}
+
 export interface QuizProgressRecord {
   id: string
   title: string
@@ -718,6 +732,9 @@ export default function Quiz() {
       ? paper.totalScore
       : mapped.reduce((acc, cur) => acc + (cur.score || 0), 0)
 
+    const targetMode: QuizMode = section === 'all' ? 'exam' : 'practice'
+    setMode(targetMode)
+
     setActivePaperContext({
       paperId: paper.id,
       title: paper.title,
@@ -822,6 +839,7 @@ export default function Quiz() {
     title: string = '📕 错题攻克专属重练卷'
   ) => {
     if (!retestQuestions || retestQuestions.length === 0) return
+    setMode('practice')
     setActivePaperContext(null)
     setActiveTopicLabel(title)
     setQuestions(retestQuestions)
@@ -871,11 +889,14 @@ export default function Quiz() {
   }, [view, questions, currentIndex, mode, showFeedback, answers])
 
   const handleBlankSubmit = () => {
-    if (!blankInput.trim()) return
+    const trimmed = blankInput.trim()
+    if (!trimmed) return
     const q = questions[currentIndex]
-    setSelectedOption(blankInput.trim())
-    setShowFeedback(true)
-    setAnswers({ ...answers, [q.id]: blankInput.trim() })
+    setSelectedOption(trimmed)
+    setAnswers(prev => ({ ...prev, [q.id]: trimmed }))
+    if (mode === 'practice') {
+      setShowFeedback(true)
+    }
   }
 
   const toggleBookmark = (id: string) => {
@@ -1011,8 +1032,8 @@ export default function Quiz() {
         e.preventDefault()
         advanceQuestion()
       }
-      // 5. Enter 展开 / 收起解析 (仅练习模式有效)
-      else if (e.key === 'Enter' && mode === 'practice') {
+      // 5. Enter 展开 / 收起解析 (仅练习模式且当前题已作答后有效，严防未作答泄题)
+      else if (e.key === 'Enter' && mode === 'practice' && Boolean(answers[curQ.id] && String(answers[curQ.id]).trim())) {
         e.preventDefault()
         setShowFeedback(prev => !prev)
       }
@@ -1020,7 +1041,7 @@ export default function Quiz() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [view, mode, currentIndex, questions, handleOptionSelect, advanceQuestion, goToQuestion, handleAskAI])
+  }, [view, mode, currentIndex, questions, answers, handleOptionSelect, advanceQuestion, goToQuestion, handleAskAI])
 
 
   const handleExitWithOption = useCallback((option: 'save' | 'clear') => {
@@ -1057,7 +1078,10 @@ export default function Quiz() {
     setBookmarkedIds(new Set(savedProgress.bookmarkedIds || []))
     setErrorReasons(savedProgress.errorReasons || {})
     setScratchpads(savedProgress.scratchpads || {})
-    setMode(savedProgress.mode || 'practice')
+    const resolvedMode: QuizMode = savedProgress.activePaperContext?.section === 'all'
+      ? 'exam'
+      : (savedProgress.mode || 'practice')
+    setMode(resolvedMode)
     setActivePaperContext(savedProgress.activePaperContext || null)
     setActiveTopicLabel(savedProgress.activeTopicLabel || null)
 
@@ -1066,7 +1090,7 @@ export default function Quiz() {
       const curAns = savedProgress.answers?.[curQ.id]
       setSelectedOption(curAns || null)
       setBlankInput(curAns || '')
-      setShowFeedback(savedProgress.mode === 'practice' && Boolean(curAns))
+      setShowFeedback(resolvedMode === 'practice' && Boolean(curAns && String(curAns).trim()))
     } else {
       setSelectedOption(null)
       setBlankInput('')
@@ -1095,6 +1119,8 @@ export default function Quiz() {
     setIsSubmitModalOpen(false)
     setIsExitModalOpen(false)
     setMobileDrawerOpen(false)
+    setShowFeedback(false)
+    setShowSteps(false)
     const finalAnswers = overrideAnswers || answers
     setView('results')
     try {
@@ -1125,16 +1151,12 @@ export default function Quiz() {
       answeredCount++
       subjectBreakdown[q.subject].answered++
 
-      let isCorrect = false
-      if (userAns === 'mastered') {
-        isCorrect = true
-      } else if (userAns === 'unmastered') {
-        isCorrect = false
-      } else {
-        isCorrect =
-          userAns.toUpperCase() === q.answer.trim().toUpperCase() ||
-          userAns === q.answer.replace(/[\$\\s]/g, '')
+      // 模考中主观解答大题标记已作答但未自评时，交卷后由考生对照官方评分细则自核，不自动计入错题
+      if (q.type === 'analysis' && userAns === 'completed') {
+        continue
       }
+
+      const isCorrect = isQuestionAnswerCorrect(q, userAns)
 
       // 联动考点掌握度热力图（仅针对已作答题目）
       const masteryKey = (q.tags && q.tags.length > 0) ? q.tags[q.tags.length - 1] : q.subject
@@ -1153,7 +1175,12 @@ export default function Quiz() {
         subjectBreakdown[q.subject].wrong++
         wrongQuestions.push({
           question: q,
-          userAnswer: userAns === 'unmastered' ? '自评未掌握' : userAns,
+          userAnswer:
+            userAns === 'unmastered'
+              ? '自评未掌握'
+              : userAns === 'partial'
+              ? '自评部分掌握'
+              : userAns,
           errorReason: errorReasons[q.id],
         })
       }
@@ -2345,9 +2372,14 @@ export default function Quiz() {
     const optionKeys = ['A', 'B', 'C', 'D'] as const
     const hasOptions = Boolean(currentQ.options && currentQ.options.A)
     const isBookmarked = bookmarkedIds.has(currentQ.id)
-    const answeredCount = Object.keys(answers).length
+    const isCurrentAnswered = Boolean(answers[currentQ.id] && String(answers[currentQ.id]).trim())
+    const isExamMode = mode !== 'practice'
+    const answeredCount = Object.values(answers).filter(v => Boolean(v && String(v).trim())).length
     const progressPct = ((currentIndex + 1) / questions.length) * 100
-    const currentScratchpad = scratchpads[currentQ.id] || ''
+    const currentScratchpad =
+      scratchpads[currentQ.id] && !scratchpads[currentQ.id].startsWith('data:image/')
+        ? scratchpads[currentQ.id]
+        : ''
 
     return (
       <div className="mx-auto max-w-[1560px] w-full min-w-0 space-y-3 sm:space-y-4 pb-28 lg:pb-0 animate-fade-in-up">
@@ -2363,6 +2395,11 @@ export default function Quiz() {
               <span>退出</span>
             </button>
             <span className="text-slate-300 text-xs shrink-0">|</span>
+            {isExamMode && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200 shrink-0">
+                模考
+              </span>
+            )}
             <span className="text-xs font-bold text-slate-800 truncate">
               {activeTopicLabel || activePaperContext?.title || currentQ.subject}
             </span>
@@ -2401,12 +2438,19 @@ export default function Quiz() {
               <span>退出做题</span>
             </button>
             <div className="h-3.5 w-px bg-slate-200 shrink-0" />
+            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
+              isExamMode
+                ? 'bg-amber-50 text-amber-800 border-amber-200/90'
+                : 'bg-indigo-50 text-indigo-700 border-indigo-200/80'
+            }`}>
+              {isExamMode ? '📝 全真模考 · 交卷后公布答案' : '📖 练习模式'}
+            </span>
             <span className="text-xs font-bold text-slate-800 truncate">
               {currentQ.subject}
             </span>
-            {(activeTopicLabel || currentQ.chapter) && (
+            {(activeTopicLabel || activePaperContext?.title || currentQ.chapter) && (
               <span className="text-2xs text-slate-500 hidden sm:inline truncate max-w-[260px]">
-                · {activeTopicLabel || currentQ.chapter}
+                · {activeTopicLabel || activePaperContext?.title || currentQ.chapter}
               </span>
             )}
           </div>
@@ -2443,8 +2487,9 @@ export default function Quiz() {
                   ? 'bg-[#f2f2f4] text-[#18181b] font-semibold shadow-xs'
                   : 'text-[#52525b] hover:text-[#18181b]'
               }`}
+              title={isExamMode ? '模考期间已锁定定理提示' : '查看本题核心定理与公式'}
             >
-              <span>📐 核心公式</span>
+              <span>{isExamMode ? '🔒 核心公式' : '📐 核心公式'}</span>
             </button>
           </div>
 
@@ -2498,12 +2543,17 @@ export default function Quiz() {
               <div className="absolute right-4 top-4 z-10 hidden sm:inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-50/90 border border-slate-200/80 text-slate-600 text-2xs shadow-xs">
                 <button
                   type="button"
-                  onClick={() => setActiveSideTab('hints')}
-                  className="hover:text-black font-mono font-medium flex items-center gap-1 cursor-pointer"
-                  title="速查本题定理与公式 (⌘)"
+                  disabled={isExamMode}
+                  onClick={() => {
+                    if (!isExamMode) setActiveSideTab('hints')
+                  }}
+                  className={`font-mono font-medium flex items-center gap-1 ${
+                    isExamMode ? 'opacity-45 cursor-not-allowed' : 'hover:text-black cursor-pointer'
+                  }`}
+                  title={isExamMode ? '模考期间禁用定理提示，交卷后开放' : '速查本题定理与公式 (⌘)'}
                 >
                   <kbd className="px-1 py-0.2 bg-white rounded border border-slate-200 text-2xs">⌘</kbd>
-                  <span>定理</span>
+                  <span>{isExamMode ? '定理已锁' : '定理'}</span>
                 </button>
                 <span className="text-slate-300">·</span>
                 <button
@@ -2554,13 +2604,22 @@ export default function Quiz() {
                 <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     type="button"
-                    onClick={() => handleAskAI(currentQ)}
-                    title="唤起双核 AI 伴学抽屉追问此题（快捷键 ⌘J / Ctrl+J）"
-                    className="p-1.5 px-2.5 rounded-xl text-indigo-700 bg-indigo-50/90 border border-indigo-200/90 hover:bg-indigo-100 hover:border-indigo-300 transition-all text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95 whitespace-nowrap"
+                    disabled={isExamMode}
+                    onClick={() => {
+                      if (!isExamMode) handleAskAI(currentQ)
+                    }}
+                    title={isExamMode ? '全真模考期间暂不支持追问 AI，交卷后可查看解析并追问' : '唤起双核 AI 伴学抽屉追问此题（快捷键 ⌘J / Ctrl+J）'}
+                    className={`p-1.5 px-2.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs whitespace-nowrap ${
+                      isExamMode
+                        ? 'text-slate-400 bg-slate-100 border-slate-200 cursor-not-allowed opacity-70'
+                        : 'text-indigo-700 bg-indigo-50/90 border-indigo-200/90 hover:bg-indigo-100 hover:border-indigo-300 cursor-pointer active:scale-95'
+                    }`}
                   >
-                    <Sparkles size={13} className="text-indigo-600 shrink-0" />
-                    <span>追问 AI</span>
-                    <kbd className="hidden sm:inline-block text-2xs font-mono text-indigo-500 bg-white/90 border border-indigo-200 rounded px-1 py-0.2">⌘J</kbd>
+                    <Sparkles size={13} className={isExamMode ? 'text-slate-400 shrink-0' : 'text-indigo-600 shrink-0'} />
+                    <span>{isExamMode ? '交卷后可问 AI' : '追问 AI'}</span>
+                    {!isExamMode && (
+                      <kbd className="hidden sm:inline-block text-2xs font-mono text-indigo-500 bg-white/90 border border-indigo-200 rounded px-1 py-0.2">⌘J</kbd>
+                    )}
                   </button>
 
                   <button
@@ -2679,10 +2738,22 @@ export default function Quiz() {
 
                       <button
                         type="button"
-                        onClick={() => setShowSteps(!showSteps)}
-                        className="px-3 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-medium hover:border-slate-900 transition-colors cursor-pointer shadow-xs"
+                        disabled={isExamMode}
+                        onClick={() => {
+                          if (!isExamMode) setShowSteps(!showSteps)
+                        }}
+                        title={isExamMode ? '模考期间禁用官方评分细则，交卷后统一核对' : undefined}
+                        className={`px-3 py-1 rounded-lg border text-xs font-medium transition-colors shadow-xs ${
+                          isExamMode
+                            ? 'bg-slate-100 border-slate-200/80 text-slate-400 cursor-not-allowed opacity-75'
+                            : 'bg-white border-slate-200 text-slate-700 hover:border-slate-900 cursor-pointer'
+                        }`}
                       >
-                        {showSteps ? '收起官方评分细则' : '📋 对照考研官方踩分点与评分细则'}
+                        {isExamMode
+                          ? '🔒 交卷后对照评分细则'
+                          : showSteps
+                          ? '收起官方评分细则'
+                          : '📋 对照考研官方踩分点与评分细则'}
                       </button>
                     </div>
                   </div>
@@ -2694,18 +2765,29 @@ export default function Quiz() {
                     </label>
                     <textarea
                       rows={5}
-                      value={scratchpads[currentQ.id] || ''}
+                      value={currentScratchpad}
                       onChange={(e) => {
                         const val = e.target.value
                         setScratchpads(prev => ({ ...prev, [currentQ.id]: val }))
+                        if (isExamMode) {
+                          setAnswers(prev => {
+                            const next = { ...prev }
+                            if (val.trim()) {
+                              if (!next[currentQ.id]) next[currentQ.id] = 'completed'
+                            } else if (next[currentQ.id] === 'completed') {
+                              delete next[currentQ.id]
+                            }
+                            return next
+                          })
+                        }
                       }}
                       placeholder="在此记录推导的关键步骤、辅助线、特征方程、定理依据或算法核心逻辑..."
                       className="w-full min-w-0 bg-white border border-slate-300 rounded-xl p-3 text-xs text-slate-900 outline-none focus:border-slate-900 font-mono leading-relaxed resize-y"
                     />
                   </div>
 
-                  {/* 分步踩分点展示 */}
-                  {showSteps && currentQ.steps && currentQ.steps.length > 0 && (
+                  {/* 分步踩分点展示（仅练习模式允许在作答过程中对照） */}
+                  {!isExamMode && showSteps && currentQ.steps && currentQ.steps.length > 0 && (
                     <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-emerald-200/80 space-y-2.5 shadow-xs animate-fade-in-up min-w-0 max-w-full overflow-hidden">
                       <div className="flex flex-wrap items-center justify-between gap-1.5">
                         <span className="text-xs font-bold text-emerald-800 flex items-center gap-1">
@@ -2724,80 +2806,129 @@ export default function Quiz() {
                     </div>
                   )}
 
-                  {/* 自我掌握度判定按钮 */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-200/50 min-w-0">
-                    <span className="text-2xs text-slate-500">根据步骤核对判定掌握程度：</span>
-                    <div className="flex flex-wrap items-center gap-2 min-w-0">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAnswers(prev => ({ ...prev, [currentQ.id]: 'mastered' }))
-                          setShowFeedback(true)
-                        }}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                          answers[currentQ.id] === 'mastered'
-                            ? 'bg-emerald-600 text-white shadow-xs'
-                            : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/70'
-                        }`}
-                      >
-                        ✓ 已完全掌握 (记满分)
-                      </button>
+                  {/* 练习模式：自我掌握度判定；模考模式：仅记录已完成状态，绝不提前揭晓解析 */}
+                  {!isExamMode ? (
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-200/50 min-w-0">
+                      <span className="text-2xs text-slate-500">根据步骤核对判定掌握程度：</span>
+                      <div className="flex flex-wrap items-center gap-2 min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAnswers(prev => ({ ...prev, [currentQ.id]: 'mastered' }))
+                            setShowFeedback(true)
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                            answers[currentQ.id] === 'mastered'
+                              ? 'bg-emerald-600 text-white shadow-xs'
+                              : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/70'
+                          }`}
+                        >
+                          ✓ 已完全掌握 (记满分)
+                        </button>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAnswers(prev => ({ ...prev, [currentQ.id]: 'partial' }))
-                          setShowFeedback(true)
-                        }}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                          answers[currentQ.id] === 'partial'
-                            ? 'bg-amber-600 text-white shadow-xs'
-                            : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200/70'
-                        }`}
-                      >
-                        ⚠️ 部分掌握 / 步骤遗漏
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAnswers(prev => ({ ...prev, [currentQ.id]: 'partial' }))
+                            setShowFeedback(true)
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                            answers[currentQ.id] === 'partial'
+                              ? 'bg-amber-600 text-white shadow-xs'
+                              : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200/70'
+                          }`}
+                        >
+                          ⚠️ 部分掌握 / 步骤遗漏
+                        </button>
 
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAnswers(prev => ({ ...prev, [currentQ.id]: 'unmastered' }))
+                            setShowFeedback(true)
+                            setBookmarkedIds(prev => new Set([...prev, currentQ.id]))
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                            answers[currentQ.id] === 'unmastered'
+                              ? 'bg-rose-600 text-white shadow-xs'
+                              : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200/70'
+                          }`}
+                        >
+                          ✕ 未掌握 (自动加入错题本)
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-slate-200/50 min-w-0">
+                      <span className="text-2xs text-slate-500">
+                        模考期间请先完成推导，交卷后将开放官方评分细则与分步解析对照。
+                      </span>
                       <button
                         type="button"
                         onClick={() => {
-                          setAnswers(prev => ({ ...prev, [currentQ.id]: 'unmastered' }))
-                          setShowFeedback(true)
-                          setBookmarkedIds(prev => new Set([...prev, currentQ.id]))
+                          setAnswers(prev => {
+                            const next = { ...prev }
+                            if (next[currentQ.id] === 'completed') {
+                              delete next[currentQ.id]
+                            } else {
+                              next[currentQ.id] = 'completed'
+                            }
+                            return next
+                          })
                         }}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                          answers[currentQ.id] === 'unmastered'
-                            ? 'bg-rose-600 text-white shadow-xs'
-                            : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200/70'
+                        className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer shrink-0 ${
+                          answers[currentQ.id]
+                            ? 'bg-slate-900 text-white shadow-xs'
+                            : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
                         }`}
                       >
-                        ✕ 未掌握 (自动加入错题本)
+                        {answers[currentQ.id] ? '✓ 已标记完成作答' : '标记本题已作答'}
                       </button>
                     </div>
-                  </div>
+                  )}
                 </div>
               ) : (
                 /* Blank / Fill-in Answer Area (填空题输入区) */
                 <div className="p-3.5 sm:p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-3 min-w-0 max-w-full overflow-hidden">
-                  <div className="text-xs font-semibold text-slate-600 flex flex-wrap items-center gap-1.5">
-                    <span>✍️ 填空题作答</span>
-                    <span className="text-2xs text-slate-400 font-normal">（支持直接输入数值或数学表达式）</span>
+                  <div className="text-xs font-semibold text-slate-600 flex flex-wrap items-center justify-between gap-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span>✍️ 填空题作答</span>
+                      <span className="text-2xs text-slate-400 font-normal">（支持直接输入数值或数学表达式）</span>
+                    </div>
+                    {isExamMode && isCurrentAnswered && (
+                      <span className="text-2xs font-medium text-slate-600 bg-white px-2 py-0.5 rounded-md border border-slate-200">
+                        已暂存，交卷前可修改
+                      </span>
+                    )}
                   </div>
                   <div className="flex flex-wrap sm:flex-nowrap gap-2 min-w-0">
                     <input
                       type="text"
                       value={blankInput}
-                      onChange={(e) => setBlankInput(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        setBlankInput(val)
+                        if (isExamMode) {
+                          const trimmed = val.trim()
+                          setSelectedOption(trimmed || null)
+                          setAnswers(prev => {
+                            const next = { ...prev }
+                            if (trimmed) next[currentQ.id] = trimmed
+                            else delete next[currentQ.id]
+                            return next
+                          })
+                        }
+                      }}
                       placeholder="在此键入你的计算结果..."
-                      disabled={mode === 'practice' && showFeedback && Boolean(answers[currentQ.id])}
+                      disabled={!isExamMode && showFeedback && isCurrentAnswered}
                       className="flex-1 min-w-0 w-full bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-accent-orange font-mono"
                     />
                     <button
                       onClick={handleBlankSubmit}
-                      disabled={(mode === 'practice' && showFeedback && Boolean(answers[currentQ.id])) || !blankInput.trim()}
+                      disabled={(!isExamMode && showFeedback && isCurrentAnswered) || !blankInput.trim()}
                       className="w-full sm:w-auto shrink-0 rounded-xl bg-accent-orange text-white px-5 py-2.5 text-xs font-semibold hover:bg-accent-orange/90 disabled:opacity-40 transition-all whitespace-nowrap cursor-pointer"
                     >
-                      提交验证
+                      {isExamMode ? '暂存答案' : '提交验证'}
                     </button>
                   </div>
                 </div>
@@ -2821,24 +2952,34 @@ export default function Quiz() {
                 <div className="flex flex-wrap items-center justify-center gap-2 min-w-0">
                   <button
                     type="button"
-                    disabled={mode !== 'practice'}
+                    disabled={isExamMode || !isCurrentAnswered}
                     onClick={() => {
-                      if (mode === 'practice') setShowFeedback(prev => !prev)
+                      if (!isExamMode && isCurrentAnswered) setShowFeedback(prev => !prev)
                     }}
                     className={`px-3.5 py-2 sm:py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-colors whitespace-nowrap ${
-                      mode === 'practice'
+                      !isExamMode && isCurrentAnswered
                         ? 'border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer'
                         : 'border-slate-200/70 bg-slate-100/80 text-slate-400 cursor-not-allowed opacity-70'
                     }`}
-                    title={mode === 'practice' ? '按 Enter 键展开/收起解析' : '交卷后可查看解析'}
+                    title={
+                      isExamMode
+                        ? '全卷模考模式下，交卷后可查看答案与解析'
+                        : !isCurrentAnswered
+                        ? '请先作答本题后，再展开参考答案与解析'
+                        : '按 Enter 键展开/收起解析'
+                    }
                   >
-                    <BookOpen size={13} className={mode === 'practice' ? 'text-indigo-600 shrink-0' : 'text-slate-400 shrink-0'} />
+                    <BookOpen size={13} className={!isExamMode && isCurrentAnswered ? 'text-indigo-600 shrink-0' : 'text-slate-400 shrink-0'} />
                     <span>
-                      {mode === 'practice'
-                        ? (showFeedback ? '收起解析' : '展开解析')
-                        : '交卷后可查看解析'}
+                      {isExamMode
+                        ? '交卷后可查看解析'
+                        : !isCurrentAnswered
+                        ? '作答后可查看解析'
+                        : showFeedback
+                        ? '收起解析'
+                        : '展开解析'}
                     </span>
-                    {mode === 'practice' && (
+                    {!isExamMode && isCurrentAnswered && (
                       <kbd className="hidden sm:inline-block text-2xs font-mono px-1 py-0.2 rounded border border-slate-200 bg-slate-100 text-slate-400">
                         Enter
                       </kbd>
@@ -2847,15 +2988,24 @@ export default function Quiz() {
 
                   <button
                     type="button"
-                    onClick={() => handleAskAI(currentQ)}
-                    className="px-3.5 py-2 sm:py-1.5 rounded-xl border border-indigo-200/90 bg-indigo-50/80 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all shadow-xs active:scale-95 whitespace-nowrap"
-                    title="唤起双核 AI 伴学舱追问（快捷键 ⌘J / Ctrl+J）"
+                    disabled={isExamMode}
+                    onClick={() => {
+                      if (!isExamMode) handleAskAI(currentQ)
+                    }}
+                    className={`px-3.5 py-2 sm:py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs whitespace-nowrap ${
+                      isExamMode
+                        ? 'border-slate-200/70 bg-slate-100/80 text-slate-400 cursor-not-allowed opacity-70'
+                        : 'border-indigo-200/90 bg-indigo-50/80 hover:bg-indigo-100 text-indigo-700 cursor-pointer active:scale-95'
+                    }`}
+                    title={isExamMode ? '全真模考期间暂不支持追问 AI，交卷后开放' : '唤起双核 AI 伴学舱追问（快捷键 ⌘J / Ctrl+J）'}
                   >
-                    <Sparkles size={13} className="text-indigo-600 shrink-0" />
-                    <span>追问 AI</span>
-                    <kbd className="hidden sm:inline-block text-2xs font-mono px-1 py-0.2 rounded border border-indigo-200 bg-white/80 text-indigo-500">
-                      ⌘J
-                    </kbd>
+                    <Sparkles size={13} className={isExamMode ? 'text-slate-400 shrink-0' : 'text-indigo-600 shrink-0'} />
+                    <span>{isExamMode ? '交卷后可问 AI' : '追问 AI'}</span>
+                    {!isExamMode && (
+                      <kbd className="hidden sm:inline-block text-2xs font-mono px-1 py-0.2 rounded border border-indigo-200 bg-white/80 text-indigo-500">
+                        ⌘J
+                      </kbd>
+                    )}
                   </button>
                 </div>
 
@@ -2866,7 +3016,7 @@ export default function Quiz() {
                 >
                   <span>
                     {currentIndex < questions.length - 1
-                      ? (Boolean(answers[currentQ.id]) || showFeedback || mode !== 'practice' ? '下一题' : '跳过')
+                      ? (isCurrentAnswered || (!isExamMode && showFeedback) || isExamMode ? '下一题' : '跳过')
                       : '交卷结算'}
                   </span>
                   <kbd className="hidden sm:inline-block text-2xs font-mono px-1.5 py-0.2 rounded border border-white/30 bg-black/20 text-white">
@@ -2876,20 +3026,16 @@ export default function Quiz() {
               </div>
             </div>
 
-            {/* Explanation & Step-by-Step Derivation (Notion / Brilliant Style) */}
-            {mode === 'practice' && showFeedback && (
+            {/* Explanation & Step-by-Step Derivation (仅练习模式且当前题已作答后才允许展示，严防泄题) */}
+            {!isExamMode && isCurrentAnswered && showFeedback && (
               <div className="rounded-2xl sm:rounded-3xl border border-slate-200/60 bg-white shadow-xs p-3.5 sm:p-7 space-y-3 sm:space-y-4 animate-fade-in-up leading-[1.75] min-w-0 max-w-full overflow-hidden">
                 <div className="flex flex-wrap items-start justify-between gap-2 min-w-0">
                   <div className="flex items-center gap-2 text-sm font-bold text-slate-900">
                     <span className="text-base">💡</span>
                     <span>真题全解与定理依据</span>
                   </div>
-                  <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border flex items-center gap-1 max-w-full overflow-x-auto ${
-                    answers[currentQ.id]
-                      ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
-                      : 'text-slate-700 bg-slate-100 border-slate-200'
-                  }`}>
-                    <span className="shrink-0">{answers[currentQ.id] ? '正确答案:' : '尚未作答 · 参考答案:'}</span>
+                  <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full border flex items-center gap-1 max-w-full overflow-x-auto text-emerald-700 bg-emerald-50 border-emerald-200">
+                    <span className="shrink-0">正确答案:</span>
                     <MarkdownRenderer
                       content={formatMathInline(currentQ.answer)}
                       inline
@@ -3065,17 +3211,15 @@ export default function Quiz() {
                 <div className="grid grid-cols-7 sm:grid-cols-8 md:grid-cols-10 gap-1.5 pt-1">
                   {questions.map((q, idx) => {
                     const isCurrent = idx === currentIndex
-                    const isAnswered = Boolean(answers[q.id])
-                    const isCorrect = isAnswered && (
-                      answers[q.id].trim().toUpperCase() === q.answer.trim().toUpperCase() ||
-                      answers[q.id].trim() === q.answer.replace(/[\$\\s]/g, '')
-                    )
+                    const rawAns = answers[q.id]
+                    const isAnswered = Boolean(rawAns && String(rawAns).trim())
+                    const isCorrect = isAnswered && isQuestionAnswerCorrect(q, rawAns)
                     const isStarred = bookmarkedIds.has(q.id)
 
                     let chipStyle = 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                     if (isCurrent) {
                       chipStyle = 'border-accent-orange bg-accent-orange text-white font-bold ring-2 ring-accent-orange/40 shadow-sm'
-                    } else if (mode === 'practice' && isAnswered) {
+                    } else if (!isExamMode && isAnswered) {
                       chipStyle = isCorrect
                         ? 'border-emerald-300 bg-emerald-100 text-emerald-800 font-semibold'
                         : 'border-rose-300 bg-rose-100 text-rose-800 font-semibold'
@@ -3104,12 +3248,25 @@ export default function Quiz() {
                   <span className="flex items-center gap-1">
                     <span className="w-2.5 h-2.5 rounded-full bg-accent-orange" /> 当前题
                   </span>
-                  <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> 已正确
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-400" /> 需复盘
-                  </span>
+                  {!isExamMode ? (
+                    <>
+                      <span className="flex items-center gap-1">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> 已正确
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-2.5 h-2.5 rounded-full bg-rose-400" /> 需复盘
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="flex items-center gap-1">
+                        <span className="w-2.5 h-2.5 rounded-full bg-slate-800" /> 已作答（交卷后批改）
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="w-2.5 h-2.5 rounded-full border border-slate-300 bg-white" /> 未作答
+                      </span>
+                    </>
+                  )}
                 </div>
 
                 <WarmButton
@@ -3150,27 +3307,38 @@ export default function Quiz() {
                   <span>本题核心定理与公式提示</span>
                 </div>
 
-                {currentQ.keyPoints && currentQ.keyPoints.length > 0 ? (
-                  <div className="space-y-2">
-                    {currentQ.keyPoints.map((kp, idx) => (
-                      <div key={idx} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700">
-                        <span className="font-bold text-accent-orange mr-1">✦</span>
-                        {kp}
-                      </div>
-                    ))}
+                {isExamMode ? (
+                  <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200/80 text-xs text-amber-900 leading-relaxed space-y-1">
+                    <div className="font-bold">🔒 全真模考期间已锁定提示</div>
+                    <p className="text-[11px] text-amber-800/90">
+                      为保障全真模拟考场体验，做题过程中暂不展示考点标签与核心定理提示；交卷结算后将开放完整标准答案与解析。
+                    </p>
                   </div>
                 ) : (
-                  <p className="text-xs text-slate-400 py-3">本题考查基础定义与综合逻辑。</p>
-                )}
+                  <>
+                    {currentQ.keyPoints && currentQ.keyPoints.length > 0 ? (
+                      <div className="space-y-2">
+                        {currentQ.keyPoints.map((kp, idx) => (
+                          <div key={idx} className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700">
+                            <span className="font-bold text-accent-orange mr-1">✦</span>
+                            {kp}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-400 py-3">本题考查基础定义与综合逻辑。</p>
+                    )}
 
-                {currentQ.tags && currentQ.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 pt-2">
-                    {currentQ.tags.map(tag => (
-                      <span key={tag} className="text-2xs px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
-                        #{tag}
-                      </span>
-                    ))}
-                  </div>
+                    {currentQ.tags && currentQ.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-2">
+                        {currentQ.tags.map(tag => (
+                          <span key={tag} className="text-2xs px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}
@@ -3229,7 +3397,7 @@ export default function Quiz() {
           >
             <span>
               {currentIndex < questions.length - 1
-                ? (Boolean(answers[currentQ.id]) || showFeedback || mode !== 'practice' ? '下一题' : '跳过')
+                ? (isCurrentAnswered || isExamMode ? '下一题' : '跳过')
                 : '交卷'}
             </span>
             <ArrowRight size={12} className="shrink-0" />
@@ -3295,18 +3463,24 @@ export default function Quiz() {
                   <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 pt-1">
                     {questions.map((q, idx) => {
                       const isCurrent = idx === currentIndex
-                      const isAnswered = Boolean(answers[q.id])
+                      const rawAns = answers[q.id]
+                      const isAnswered = Boolean(rawAns && String(rawAns).trim())
+                      const isCorrect = isAnswered && isQuestionAnswerCorrect(q, rawAns)
+                      let mobileChipStyle = 'border-slate-200 bg-white text-slate-600'
+                      if (isCurrent) {
+                        mobileChipStyle = 'border-accent-orange bg-accent-orange text-white shadow-sm scale-105'
+                      } else if (!isExamMode && isAnswered) {
+                        mobileChipStyle = isCorrect
+                          ? 'border-emerald-400 bg-emerald-50 text-emerald-800'
+                          : 'border-rose-400 bg-rose-50 text-rose-800'
+                      } else if (isAnswered) {
+                        mobileChipStyle = 'border-slate-700 bg-slate-800 text-white'
+                      }
                       return (
                         <button
                           key={q.id}
                           onClick={() => goToQuestion(idx)}
-                          className={`h-10 rounded-xl text-xs font-bold transition-all flex items-center justify-center border-2 ${
-                            isCurrent
-                              ? 'border-accent-orange bg-accent-orange text-white shadow-sm scale-105'
-                              : isAnswered
-                              ? 'border-emerald-400 bg-emerald-50 text-emerald-800'
-                              : 'border-slate-200 bg-white text-slate-600'
-                          }`}
+                          className={`h-10 rounded-xl text-xs font-bold transition-all flex items-center justify-center border-2 ${mobileChipStyle}`}
                         >
                           {idx + 1}
                         </button>
@@ -3333,7 +3507,12 @@ export default function Quiz() {
               {activeSideTab === 'hints' && (
                 <div className="space-y-3 text-xs text-slate-600">
                   <div className="font-semibold text-slate-800">当前知识点定理：</div>
-                  {currentQ.keyPoints && currentQ.keyPoints.length > 0 ? (
+                  {isExamMode ? (
+                    <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-200/80 text-amber-900 space-y-1">
+                      <div className="font-bold">🔒 全真模考期间已锁定提示</div>
+                      <p className="text-[11px] text-amber-800">交卷结算后将展示本题完整标准答案与考点解析。</p>
+                    </div>
+                  ) : currentQ.keyPoints && currentQ.keyPoints.length > 0 ? (
                     <div className="space-y-1.5">
                       {currentQ.keyPoints.map((kp, idx) => (
                         <div key={idx} className="p-2 rounded-lg bg-amber-50/70 border border-amber-200/60 text-slate-800">
@@ -3773,10 +3952,23 @@ export default function Quiz() {
 
             <div className="space-y-2.5">
               {questions.map((q, idx) => {
-                const userAns = answers[q.id]
+                const userAns = answers[q.id]?.trim() || ''
                 const isAnswered = Boolean(userAns)
-                const isCorrect = isAnswered && userAns.trim().toLowerCase() === q.answer.trim().toLowerCase()
+                const isSubjectivePendingReview = q.type === 'analysis' && userAns === 'completed'
+                const isCorrect = isAnswered && !isSubjectivePendingReview && isQuestionAnswerCorrect(q, userAns)
                 const isExpanded = expandedResultIds.has(q.id)
+                const rawDraft = scratchpads[q.id] || ''
+                const textDraft = rawDraft && !rawDraft.startsWith('data:image/') ? rawDraft : ''
+                const formattedUserAns =
+                  userAns === 'mastered'
+                    ? '自评已掌握'
+                    : userAns === 'partial'
+                    ? '自评部分掌握'
+                    : userAns === 'unmastered'
+                    ? '自评未掌握'
+                    : userAns === 'completed'
+                    ? '已完成思路演算'
+                    : userAns
 
                 return (
                   <div
@@ -3793,18 +3985,26 @@ export default function Quiz() {
                           className={`px-2 py-0.5 rounded-md font-bold ${
                             !isAnswered
                               ? 'bg-slate-100 text-slate-500'
-                              : isCorrect
-                                ? 'bg-emerald-50 text-emerald-700'
-                                : 'bg-rose-50 text-rose-600'
+                              : isSubjectivePendingReview
+                                ? 'bg-amber-50 text-amber-700'
+                                : isCorrect
+                                  ? 'bg-emerald-50 text-emerald-700'
+                                  : 'bg-rose-50 text-rose-600'
                           }`}
                         >
-                          {!isAnswered ? '未作答' : isCorrect ? '✓ 正确' : '✗ 错误'}
+                          {!isAnswered
+                            ? '未作答'
+                            : isSubjectivePendingReview
+                            ? '主观大题 · 请对照评分细则核对'
+                            : isCorrect
+                            ? '✓ 正确'
+                            : '✗ 错误'}
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-2 text-xs">
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
                         {isAnswered && (
-                          <span className="font-mono text-slate-500">你的答案: {userAns}</span>
+                          <span className="font-mono text-slate-500">你的作答: {formattedUserAns}</span>
                         )}
                         <span className="font-mono font-semibold text-emerald-700 inline-flex items-center gap-1">
                           <span>标准答案:</span>
@@ -3832,12 +4032,18 @@ export default function Quiz() {
                     </div>
 
                     {isExpanded && (
-                      <div className="bg-white rounded-xl p-3 border border-slate-200 text-xs text-slate-700 leading-relaxed space-y-2 animate-fade-in">
+                      <div className="bg-white rounded-xl p-3 border border-slate-200 text-xs text-slate-700 leading-relaxed space-y-2.5 animate-fade-in">
+                        {textDraft && (
+                          <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-700">
+                            <div className="font-semibold text-slate-600 mb-1">你的作答草稿：</div>
+                            <pre className="whitespace-pre-wrap font-mono text-[11px] leading-relaxed">{textDraft}</pre>
+                          </div>
+                        )}
                         <div className="font-bold text-slate-800">真题解析：</div>
                         <MarkdownRenderer content={q.explanation} />
                         {q.steps && q.steps.length > 0 && (
                           <div className="pt-2 border-t border-slate-100 space-y-1.5">
-                            <div className="font-semibold text-slate-700">分步推导：</div>
+                            <div className="font-semibold text-slate-700">分步推导与评分细则：</div>
                             {q.steps.map((step, sIdx) => (
                               <div key={sIdx} className="pl-2 border-l-2 border-indigo-200">
                                 <MarkdownRenderer content={step} />

@@ -252,6 +252,7 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
           <button
             type="button"
             onClick={() => onStartPaper(paper, 'all')}
+            title="全真模拟考场：作答过程隐藏正确答案与官方解析，交卷结算后统一公布"
             className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-white text-xs font-bold transition-all shadow-xs hover:shadow cursor-pointer"
           >
             <Flame className="w-3.5 h-3.5 text-amber-400" />
