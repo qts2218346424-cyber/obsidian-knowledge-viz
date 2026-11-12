@@ -21,7 +21,7 @@ import MarkdownRenderer from '../MarkdownRenderer'
 import ToolCallCard from '../ToolCallCard'
 import LuluAvatar from '../Pet/LuluAvatar'
 import { STUDY_AGENTS, type StudyAgent } from '../../data/studyAgents'
-import type { AgentMessage } from '../../pages/Chat'
+import type { AgentMessage } from '../../features/ai-chat/types'
 
 interface ChatMessageItemProps {
   msg: AgentMessage

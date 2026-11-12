@@ -53,58 +53,10 @@ const LocalSkillPickerModal = lazy(() => import('../components/LocalSkillPickerM
 const ModelManagerModal = lazy(() => import('../components/ModelManagerModal'))
 const StepTutorModal = lazy(() => import('../components/study/StepTutorModal'))
 
-interface ToolCallInfo {
-  tool: string
-  input: Record<string, any>
-  output?: string
-  success?: boolean
-}
+import type { ToolCallInfo, AgentMessage, AttachedFile, Conversation } from '../features/ai-chat/types'
 
-export interface PeerAgentResponse {
-  agentName: string
-  agentIcon: string
-  provider: ProviderType
-  model: string
-  content: string
-  streaming?: boolean
-  error?: string
-}
-
-export interface AttachedFile {
-  name: string
-  size: number
-  content: string
-  ext?: string
-}
-
-export interface AgentMessage {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  images?: string[]
-  files?: AttachedFile[]
-  agentName?: string
-  agentIcon?: string
-  provider?: ProviderType
-  model?: string
-  toolCalls: ToolCallInfo[]
-  citedNotes?: { title: string; path: string; excerpt: string; tags: string[] }[]
-  timestamp: Date
-  streaming?: boolean
-  isDual?: boolean
-  peerResponse?: PeerAgentResponse
-}
-
-interface Conversation {
-  id: string
-  projectId?: string
-  title: string
-  messages: AgentMessage[]
-  createdAt: Date
-  provider?: ProviderType
-  model?: string
-  agentId?: string
-}
+// 向后兼容：保留原有的类型导出入口
+export type { PeerAgentResponse, AttachedFile, AgentMessage } from '../features/ai-chat/types'
 
 function buildWelcomeMessage(agent: StudyAgent, projectName?: string): AgentMessage {
   return {

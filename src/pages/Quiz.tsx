@@ -50,147 +50,20 @@ const ExamPaperHubView = lazy(() => import('../features/quiz/components/ExamPape
 // 内存级题库缓存，切页秒开不闪烁
 let cachedCustomQuestionsList: ActiveQuizQuestion[] | null = null
 
-// ── Types ──────────────────────────────────────────────────────────────────────
+import type {
+  AllSubject,
+  ViewMode,
+  QuizMode,
+  QuestionType,
+  ActiveQuizQuestion,
+  SubjectInfo,
+  QuizResult,
+} from '../features/quiz/types'
+import { ALL_SUBJECTS, ERROR_REASONS, SCRATCHPAD_MATH_SYMBOLS } from '../features/quiz/constants'
+import { convertCsQuestion, convertMathQuestion, shuffleArray, formatTime } from '../features/quiz/utils'
 
-export type AllSubject = CsSubject | MathSubject
-type ViewMode = 'start' | 'quiz' | 'results'
-type QuizMode = 'practice' | 'exam'
-type QuestionType = 'choice' | 'blank' | 'analysis'
-
-export interface ActiveQuizQuestion {
-  id: string
-  domain: 'cs_408' | 'math'
-  subject: AllSubject
-  scope?: MathCategory[]
-  chapter?: string
-  type: QuestionType
-  difficulty: '简单' | '中等' | '困难'
-  question: string
-  options?: { A: string; B: string; C: string; D: string }
-  answer: string
-  explanation: string
-  steps?: string[]
-  keyPoints?: string[]
-  tags: string[]
-  paperTitle?: string
-  paperQuestionNumber?: number
-  score?: number
-  sectionName?: string
-}
-
-interface SubjectInfo {
-  key: AllSubject
-  domain: 'cs_408' | 'math'
-  emoji: string
-  color: string
-  bgColor: string
-  categories?: MathCategory[]
-}
-
-interface QuizResult {
-  total: number
-  correct: number
-  wrong: number
-  timeTaken: number
-  subjectBreakdown: Record<string, { total: number; correct: number }>
-  wrongQuestions: Array<{
-    question: ActiveQuizQuestion
-    userAnswer: string
-    errorReason?: string
-  }>
-  summaryPath: string
-}
-
-// ── Constants ──────────────────────────────────────────────────────────────────
-
-const ALL_SUBJECTS: SubjectInfo[] = [
-  // 408 科目
-  { key: '数据结构', domain: 'cs_408', emoji: '🧮', color: 'text-orange-600', bgColor: 'bg-orange-50 border-orange-200' },
-  { key: '计算机组成原理', domain: 'cs_408', emoji: '🖥️', color: 'text-blue-600', bgColor: 'bg-blue-50 border-blue-200' },
-  { key: '操作系统', domain: 'cs_408', emoji: '⚙️', color: 'text-green-600', bgColor: 'bg-green-50 border-green-200' },
-  { key: '计算机网络', domain: 'cs_408', emoji: '🌐', color: 'text-purple-600', bgColor: 'bg-purple-50 border-purple-200' },
-  // 考研数学科目
-  { key: '高等数学', domain: 'math', emoji: '📐', color: 'text-pink-600', bgColor: 'bg-pink-50 border-pink-200', categories: ['数一', '数二', '数三'] },
-  { key: '线性代数', domain: 'math', emoji: '🔢', color: 'text-indigo-600', bgColor: 'bg-indigo-50 border-indigo-200', categories: ['数一', '数二', '数三'] },
-  { key: '概率论与数理统计', domain: 'math', emoji: '🎲', color: 'text-teal-600', bgColor: 'bg-teal-50 border-teal-200', categories: ['数一', '数三'] },
-]
-
-const ERROR_REASONS = ['概念不清', '公式记错', '计算失误', '忽略定理前提', '思路阻塞', '审题遗漏']
-
-const SCRATCHPAD_MATH_SYMBOLS = [
-  { label: '∫ dx', code: '\\int_{a}^{b} f(x)\\,dx' },
-  { label: 'lim', code: '\\lim_{x \\to 0}' },
-  { label: '∑', code: '\\sum_{i=1}^{n}' },
-  { label: '√x', code: '\\sqrt{x}' },
-  { label: 'a/b', code: '\\frac{a}{b}' },
-  { label: '∂f/∂x', code: '\\frac{\\partial f}{\\partial x}' },
-  { label: 'A⁻¹', code: 'A^{-1}' },
-  { label: 'λ', code: '\\lambda' },
-  { label: '±', code: '\\pm' },
-  { label: '∞', code: '\\infty' },
-]
-
-function convertCsQuestion(q: QuizQuestion): ActiveQuizQuestion {
-  return {
-    id: q.id,
-    domain: 'cs_408',
-    subject: q.subject,
-    type: 'choice',
-    difficulty: q.difficulty,
-    question: q.question,
-    options: q.options,
-    answer: q.answer,
-    explanation: q.explanation,
-    tags: q.tags,
-  }
-}
-
-function convertMathQuestion(q: UnifiedQuestion): ActiveQuizQuestion {
-  const optArr = q.options || []
-  const cleanOption = (text?: string) => text ? text.replace(/^[A-D][.、\s]+/, '').trim() : ''
-
-  let optionsObj: { A: string; B: string; C: string; D: string } | undefined = undefined
-  if (optArr.length >= 2) {
-    optionsObj = {
-      A: cleanOption(optArr[0]),
-      B: cleanOption(optArr[1]),
-      C: cleanOption(optArr[2] || ''),
-      D: cleanOption(optArr[3] || ''),
-    }
-  }
-
-  return {
-    id: q.id,
-    domain: 'math',
-    subject: q.subject as MathSubject,
-    scope: q.scope,
-    chapter: q.chapter,
-    type: q.type || (optionsObj ? 'choice' : 'blank'),
-    difficulty: q.difficulty,
-    question: q.question,
-    options: optionsObj,
-    answer: q.correctAnswer || 'A',
-    explanation: q.explanation,
-    steps: q.steps,
-    keyPoints: q.keyPoints,
-    tags: q.tags,
-  }
-}
-
-function shuffleArray<T>(arr: T[]): T[] {
-  const shuffled = [...arr]
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-  }
-  return shuffled
-}
-
-function formatTime(seconds: number): string {
-  const m = Math.floor(seconds / 60)
-  const s = seconds % 60
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-}
+// 向后兼容：保留原有的类型导出入口
+export type { AllSubject, ActiveQuizQuestion } from '../features/quiz/types'
 
 // ── Main Component ──────────────────────────────────────────────────────────
 
