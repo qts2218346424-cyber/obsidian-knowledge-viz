@@ -67,11 +67,15 @@ export default function KnowledgeGraph() {
   const svgRef = useRef<SVGSVGElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null)
+  const simulationRef = useRef<d3.Simulation<SimNode, any> | null>(null)
   const currentTransformRef = useRef<d3.ZoomTransform>(d3.zoomIdentity)
   const fitViewRef = useRef<((animate?: boolean) => void) | null>(null)
   const updateLabelsRef = useRef<(() => void) | null>(null)
 
   const navigate = useNavigate()
+  const navigateRef = useRef(navigate)
+  navigateRef.current = navigate
+
   const [hoveredNode, setHoveredNode] = useState<SimNode | null>(null)
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set())
   const [searchQuery, setSearchQuery] = useState('')
@@ -79,6 +83,8 @@ export default function KnowledgeGraph() {
   const [previewNode, setPreviewNode] = useState<FileDetail | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [dimensions, setDimensions] = useState({ width: 900, height: 600 })
+  const dimensionsRef = useRef(dimensions)
+  dimensionsRef.current = dimensions
 
   // 🚀 核心视图模式：'topology'（双链拓扑）与 'mastery'（考点掌握度热力图）
   const [viewMode, setViewMode] = useState<'topology' | 'mastery'>('mastery')
@@ -222,24 +228,71 @@ export default function KnowledgeGraph() {
     return () => ro.disconnect()
   }, [])
 
-  // 获取节点填充主色 (支持拓扑色彩与掌握度热力动态映射；未练习显示中性灰)
-  const getNodeColor = (d: SimNode, currentViewMode: 'topology' | 'mastery') => {
+  // 获取节点视觉样式 (热力模式下：已练习点亮红/黄/绿；未练习保留学科星系色 + 虚线星环，拒绝死灰一团)
+  const getNodeVisualStyle = (d: SimNode, currentViewMode: 'topology' | 'mastery') => {
+    const groupColor = allGroupColors[d.group] || '#6366f1'
     if (currentViewMode === 'mastery') {
       const mp = getNodeMastery(d.id, d.label)
-      if (mp.totalAttempts === 0) return '#94a3b8' // 中性灰 (未练习)
-      if (mp.rate >= 80) return '#10b981' // 翡翠绿 (稳固攻克)
-      if (mp.rate >= 50) return '#f59e0b' // 暖橙黄 (进阶巩固)
-      return '#ef4444' // 正气红 (薄弱高危)
+      if (mp.totalAttempts === 0) {
+        return {
+          color: groupColor,
+          isUnpracticed: true,
+          isCritical: false,
+          coreOpacity: 0.76,
+          glowOpacity: 0.14,
+          strokeColor: '#ffffff',
+          strokeDasharray: '3 2',
+        }
+      }
+      if (mp.rate >= 80) {
+        return {
+          color: '#10b981',
+          isUnpracticed: false,
+          isCritical: false,
+          coreOpacity: 0.96,
+          glowOpacity: 0.28,
+          strokeColor: '#FFFBF5',
+          strokeDasharray: 'none',
+        }
+      }
+      if (mp.rate >= 50) {
+        return {
+          color: '#f59e0b',
+          isUnpracticed: false,
+          isCritical: false,
+          coreOpacity: 0.96,
+          glowOpacity: 0.28,
+          strokeColor: '#FFFBF5',
+          strokeDasharray: 'none',
+        }
+      }
+      return {
+        color: '#ef4444',
+        isUnpracticed: false,
+        isCritical: true,
+        coreOpacity: 0.98,
+        glowOpacity: 0.34,
+        strokeColor: '#FFFBF5',
+        strokeDasharray: 'none',
+      }
     }
-    return allGroupColors[d.group] || '#8B7355'
+    return {
+      color: groupColor,
+      isUnpracticed: false,
+      isCritical: false,
+      coreOpacity: 0.95,
+      glowOpacity: 0.22,
+      strokeColor: '#FFFBF5',
+      strokeDasharray: 'none',
+    }
   }
 
-  // D3 force simulation
+  // D3 force simulation (仅在节点/连线数据变化时重建，切换视图或缩放窗口时平滑过渡不闪烁)
   useEffect(() => {
     if (!svgRef.current) return
     const svg = d3.select(svgRef.current)
     svg.selectAll('*').remove()
-    const { width, height } = dimensions
+    const { width: initW, height: initH } = dimensionsRef.current
 
     const nodes: SimNode[] = simNodes.map(d => ({ ...d }))
     const links = rawLinks.map(d => ({ ...d }))
@@ -255,24 +308,47 @@ export default function KnowledgeGraph() {
       neighborMap.get(t)!.add(s)
     })
 
-    // 考研学科图谱力学优化：调高 alphaDecay 并配合离屏预计算，让节点尽快停稳不漂移
+    // 考研学科图谱力学配置：保持流体弹性与舒适收敛速度，既有灵动物理感又能稳稳停驻点击
     const simulation = d3.forceSimulation<SimNode>(nodes)
-      .alphaDecay(0.055)
+      .alphaDecay(0.025)
+      .velocityDecay(0.35)
       .force('link', d3.forceLink(links).id((d: any) => d.id).distance((d: any) => {
         const linksSum = ((d.source as SimNode).linkCount || 1) + ((d.target as SimNode).linkCount || 1)
-        return Math.max(90, 140 - Math.min(35, linksSum * 3))
-      }).strength(0.48))
+        return Math.max(95, 145 - Math.min(35, linksSum * 3))
+      }).strength(0.45))
       .force('charge', d3.forceManyBody().strength((d: any) => {
         const count = (d as SimNode).linkCount || 1
-        return -220 - Math.min(180, count * 12)
-      }).distanceMax(650))
-      .force('center', d3.forceCenter(width / 2, height / 2).strength(0.06))
-      .force('x', d3.forceX(width / 2).strength(0.025))
-      .force('y', d3.forceY(height / 2).strength(0.025))
+        return -260 - Math.min(200, count * 14)
+      }).distanceMax(700))
+      .force('center', d3.forceCenter(initW / 2, initH / 2).strength(0.05))
+      .force('x', d3.forceX(initW / 2).strength(0.022))
+      .force('y', d3.forceY(initH / 2).strength(0.022))
       .force('collision', d3.forceCollide<SimNode>().radius(d => {
-        const labelLen = d.label ? d.label.length : 4
-        return Math.max(d.r + 24, labelLen * 5.2 + 8)
-      }).strength(0.85))
+        const labelLen = Math.min(16, d.label ? d.label.length : 4)
+        return Math.max(d.r + 26, labelLen * 6.2 + 12)
+      }).strength(0.88))
+
+    simulationRef.current = simulation
+
+    // 精致浅点阵画布底纹
+    const defs = svg.append('defs')
+    const dotPattern = defs.append('pattern')
+      .attr('id', 'graph-dot-grid')
+      .attr('width', 24)
+      .attr('height', 24)
+      .attr('patternUnits', 'userSpaceOnUse')
+    dotPattern.append('circle')
+      .attr('cx', 12)
+      .attr('cy', 12)
+      .attr('r', 1)
+      .attr('fill', '#cbd5e1')
+      .attr('opacity', 0.45)
+
+    svg.append('rect')
+      .attr('width', '100%')
+      .attr('height', '100%')
+      .attr('fill', 'url(#graph-dot-grid)')
+      .style('pointer-events', 'none')
 
     const g = svg.append('g')
 
@@ -293,9 +369,10 @@ export default function KnowledgeGraph() {
       .selectAll('line')
       .data(links)
       .enter().append('line')
-      .attr('stroke', '#D4B896')
-      .attr('stroke-width', 1.4)
-      .attr('stroke-opacity', 0.35)
+      .attr('stroke', '#CBD5E1')
+      .attr('stroke-width', 1.5)
+      .attr('stroke-opacity', 0.45)
+      .attr('stroke-linecap', 'round')
 
     const node = g.append('g')
       .attr('class', 'nodes')
@@ -303,28 +380,33 @@ export default function KnowledgeGraph() {
       .data(nodes)
       .enter().append('g')
       .attr('class', 'node')
-      .style('cursor', 'pointer')
+      .style('cursor', 'grab')
       .call(
         (() => {
-          let dragMoved = false
+          let isDraggingSim = false
           return d3.drag<SVGGElement, SimNode>()
-            .clickDistance(4)
-            .on('start', (_event, d) => {
-              dragMoved = false
+            .clickDistance(5)
+            .on('start', function (_event, d) {
+              isDraggingSim = false
+              d3.select(this).style('cursor', 'grabbing')
               d.fx = d.x
               d.fy = d.y
             })
             .on('drag', (event, d) => {
-              if (!dragMoved) {
-                dragMoved = true
-                if (!event.active) simulation.alphaTarget(0.3).restart()
+              // 注意：d3-drag 在 drag 回调期间 event.active === 1，不能用 !event.active 判断
+              if (!isDraggingSim) {
+                isDraggingSim = true
+                simulation.alphaTarget(0.35).restart()
               }
               d.fx = event.x
               d.fy = event.y
             })
-            .on('end', (event, d) => {
-              if (dragMoved && !event.active) simulation.alphaTarget(0)
-              dragMoved = false
+            .on('end', function (event, d) {
+              d3.select(this).style('cursor', 'grab')
+              if (isDraggingSim && !event.active) {
+                simulation.alphaTarget(0)
+              }
+              isDraggingSim = false
               d.fx = null
               d.fy = null
             })
@@ -355,30 +437,31 @@ export default function KnowledgeGraph() {
     node.on('dblclick', (event, d) => {
       event.stopPropagation()
       if (d.path) {
-        navigate(`/editor?path=${encodeURIComponent(d.path)}`)
+        navigateRef.current(`/editor?path=${encodeURIComponent(d.path)}`)
       }
     })
 
-    // 🔥 高危薄弱考点呼吸脉冲光晕 (仅在掌握度热力图模式且已练习薄弱时生效)
+    // 🔥 高危薄弱考点呼吸脉冲光晕 (仅在掌握度热力图模式且已练习薄弱时展示)
     node.each(function (d: SimNode) {
       const el = d3.select(this)
       const mp = getNodeMastery(d.id, d.label)
       const isCritical = mp.totalAttempts > 0 && mp.rate < 50
 
       if (isCritical) {
-        el.append('circle')
+        const pulse = el.append('circle')
           .attr('r', d.r + 10)
           .attr('fill', '#ef4444')
           .attr('opacity', 0.25)
           .attr('class', 'critical-pulse')
-          .append('animate')
+          .style('display', viewModeRef.current === 'mastery' ? 'inline' : 'none')
+
+        pulse.append('animate')
           .attr('attributeName', 'r')
-          .attr('values', `${d.r + 6};${d.r + 15};${d.r + 6}`)
+          .attr('values', `${d.r + 6};${d.r + 16};${d.r + 6}`)
           .attr('dur', '2s')
           .attr('repeatCount', 'indefinite')
 
-        el.select('.critical-pulse')
-          .append('animate')
+        pulse.append('animate')
           .attr('attributeName', 'opacity')
           .attr('values', '0.35;0.08;0.35')
           .attr('dur', '2s')
@@ -388,18 +471,19 @@ export default function KnowledgeGraph() {
 
     // Node outer glow
     node.append('circle')
-      .attr('r', (d: SimNode) => d.r + 4)
-      .attr('fill', (d: SimNode) => getNodeColor(d, viewModeRef.current))
-      .attr('opacity', 0.18)
+      .attr('r', (d: SimNode) => d.r + 5)
+      .attr('fill', (d: SimNode) => getNodeVisualStyle(d, viewModeRef.current).color)
+      .attr('opacity', (d: SimNode) => getNodeVisualStyle(d, viewModeRef.current).glowOpacity)
       .attr('class', 'node-glow')
 
     // Node core circle
     node.append('circle')
       .attr('r', (d: SimNode) => d.r)
-      .attr('fill', (d: SimNode) => getNodeColor(d, viewModeRef.current))
-      .attr('stroke', '#FFFBF5')
+      .attr('fill', (d: SimNode) => getNodeVisualStyle(d, viewModeRef.current).color)
+      .attr('stroke', (d: SimNode) => getNodeVisualStyle(d, viewModeRef.current).strokeColor)
       .attr('stroke-width', 2.2)
-      .attr('opacity', 0.94)
+      .attr('stroke-dasharray', (d: SimNode) => getNodeVisualStyle(d, viewModeRef.current).strokeDasharray)
+      .attr('opacity', (d: SimNode) => getNodeVisualStyle(d, viewModeRef.current).coreOpacity)
       .attr('class', 'node-circle')
 
     // Node label with crisp halo (考研学科高清晰度文字，强化白底描边与层次)
@@ -434,10 +518,10 @@ export default function KnowledgeGraph() {
           if (showAllLabelsRef.current) return 'inline'
 
           // Multi-level zoom LOD
-          if (k >= 1.6) return 'inline'
-          if (k >= 1.1) return (d.linkCount >= 1 || d.r >= 6) ? 'inline' : 'none'
-          if (k >= 0.75) return (d.linkCount >= 2 || d.r >= 7) ? 'inline' : 'none'
-          return (d.linkCount >= 4 || d.r >= 9) ? 'inline' : 'none'
+          if (k >= 1.45) return 'inline'
+          if (k >= 0.95) return (d.linkCount >= 1 || d.r >= 6) ? 'inline' : 'none'
+          if (k >= 0.65) return (d.linkCount >= 2 || d.r >= 7) ? 'inline' : 'none'
+          return (d.linkCount >= 3 || d.r >= 9) ? 'inline' : 'none'
         })
     }
     updateLabelsRef.current = updateLabels
@@ -447,68 +531,70 @@ export default function KnowledgeGraph() {
       setHoveredNode(d)
       hoveredNodeRef.current = d
       const neighbors = neighborMap.get(d.id) || new Set<string>()
+      const style = getNodeVisualStyle(d, viewModeRef.current)
 
       d3.select(this).select('.node-circle')
-        .transition().duration(120)
-        .attr('r', d.r + 3)
+        .transition().duration(140)
+        .attr('r', d.r + 3.5)
         .attr('opacity', 1)
       d3.select(this).select('.node-glow')
-        .transition().duration(120)
-        .attr('r', d.r + 9)
-        .attr('opacity', 0.4)
+        .transition().duration(140)
+        .attr('r', d.r + 11)
+        .attr('opacity', 0.42)
 
       // Highlight active node & neighbors, dim non-neighbors
-      node.transition().duration(120)
-        .style('opacity', n => (n.id === d.id || neighbors.has(n.id) ? 1 : 0.15))
+      node.transition().duration(140)
+        .style('opacity', n => (n.id === d.id || neighbors.has(n.id) ? 1 : 0.16))
 
       // Highlight connected links
-      link.transition().duration(120)
+      link.transition().duration(140)
         .attr('stroke-opacity', (l: any) => {
           const sId = l.source.id || l.source
           const tId = l.target.id || l.target
-          return sId === d.id || tId === d.id ? 0.95 : 0.04
+          return sId === d.id || tId === d.id ? 0.92 : 0.05
         })
         .attr('stroke-width', (l: any) => {
           const sId = l.source.id || l.source
           const tId = l.target.id || l.target
-          return sId === d.id || tId === d.id ? 2.5 : 1
+          return sId === d.id || tId === d.id ? 2.6 : 1.1
         })
         .attr('stroke', (l: any) => {
           const sId = l.source.id || l.source
           const tId = l.target.id || l.target
-          return sId === d.id || tId === d.id ? getNodeColor(d, viewModeRef.current) : '#D4B896'
+          return sId === d.id || tId === d.id ? style.color : '#CBD5E1'
         })
 
       updateLabels()
     }).on('mouseleave', function (_event, d) {
       setHoveredNode(null)
       hoveredNodeRef.current = null
+      const style = getNodeVisualStyle(d, viewModeRef.current)
 
       d3.select(this).select('.node-circle')
-        .transition().duration(120)
+        .transition().duration(140)
         .attr('r', d.r)
-        .attr('opacity', 0.94)
+        .attr('opacity', style.coreOpacity)
       d3.select(this).select('.node-glow')
-        .transition().duration(120)
-        .attr('r', d.r + 4)
-        .attr('opacity', 0.18)
+        .transition().duration(140)
+        .attr('r', d.r + 5)
+        .attr('opacity', style.glowOpacity)
 
       // Restore opacity based on search/group filter
-      node.transition().duration(120)
+      node.transition().duration(140)
         .style('opacity', n => {
           if (!hasFilterRef.current) return 1
           return activeNodeIdsRef.current.has(n.id) ? 1 : 0.08
         })
 
-      link.transition().duration(120)
+      link.transition().duration(140)
         .attr('stroke-opacity', (l: any) => {
-          if (!hasFilterRef.current) return 0.35
+          if (!hasFilterRef.current) return 0.45
           const sActive = activeNodeIdsRef.current.has(l.source.id || l.source)
           const tActive = activeNodeIdsRef.current.has(l.target.id || l.target)
-          return (sActive && tActive) ? 0.6 : 0.03
+          return (sActive && tActive) ? 0.65 : 0.04
         })
-        .attr('stroke-width', 1.4)
-        .attr('stroke', '#D4B896')
+        .attr('stroke-width', 1.5)
+        .attr('stroke', '#CBD5E1')
 
       updateLabels()
     })
@@ -527,6 +613,7 @@ export default function KnowledgeGraph() {
     // True Fit View: calculates bounding box and smooth-centers graph in canvas
     const fitView = (animate = true) => {
       if (!svgRef.current || nodes.length === 0) return
+      const { width: curW, height: curH } = dimensionsRef.current
       let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
       for (const d of nodes) {
         if (d.x == null || d.y == null || !isFinite(d.x) || !isFinite(d.y)) continue
@@ -542,13 +629,13 @@ export default function KnowledgeGraph() {
       const midX = (minX + maxX) / 2
       const midY = (minY + maxY) / 2
 
-      const pad = 60
-      const availW = Math.max(120, width - pad * 2)
-      const availH = Math.max(120, height - pad * 2)
+      const pad = 64
+      const availW = Math.max(120, curW - pad * 2)
+      const availH = Math.max(120, curH - pad * 2)
 
-      const scale = Math.max(0.12, Math.min(1.2, Math.min(availW / graphWidth, availH / graphHeight)))
-      const tx = width / 2 - scale * midX
-      const ty = height / 2 - scale * midY
+      const scale = Math.max(0.15, Math.min(1.25, Math.min(availW / graphWidth, availH / graphHeight)))
+      const tx = curW / 2 - scale * midX
+      const ty = curH / 2 - scale * midY
 
       const t = d3.zoomIdentity.translate(tx, ty).scale(scale)
       currentTransformRef.current = t
@@ -563,13 +650,11 @@ export default function KnowledgeGraph() {
 
     fitViewRef.current = fitView
 
-    // 离屏预计算 300 步，确保初始渲染即停稳，避免节点飘动影响点击
-    simulation.stop()
+    // 轻度预热 35 步：避免初始团簇重合，同时保留充沛能量让星系动态舒展收敛
     simulation.alpha(1)
-    for (let i = 0; i < 300; ++i) {
+    for (let i = 0; i < 35; ++i) {
       simulation.tick()
     }
-    simulation.alpha(0)
     link
       .attr('x1', (d: any) => d.source.x)
       .attr('y1', (d: any) => d.source.y)
@@ -579,13 +664,53 @@ export default function KnowledgeGraph() {
     fitView(false)
     updateLabels()
 
+    // 保持力导向引擎活水运转，约 650ms 后平滑居中聚焦
+    simulation.alpha(0.45).restart()
+    const fitTimer = setTimeout(() => {
+      fitView(true)
+    }, 650)
+
     return () => {
+      clearTimeout(fitTimer)
       simulation.stop()
+      simulationRef.current = null
       zoomRef.current = null
       fitViewRef.current = null
       updateLabelsRef.current = null
     }
-  }, [dimensions, simNodes, rawLinks, navigate, viewMode])
+  }, [simNodes, rawLinks])
+
+  // 窗口/容器尺寸变化时温和调整力中心并自适应视图，不销毁重算节点坐标
+  useEffect(() => {
+    const sim = simulationRef.current
+    if (!sim) return
+    const { width, height } = dimensions
+    sim.force('center', d3.forceCenter(width / 2, height / 2).strength(0.05))
+    sim.force('x', d3.forceX(width / 2).strength(0.022))
+    sim.force('y', d3.forceY(height / 2).strength(0.022))
+    fitViewRef.current?.(false)
+  }, [dimensions])
+
+  // 切换【热力图 / 拓扑图】时原地平滑过渡配色与脉冲光晕，不破坏当前力学位置与缩放
+  useEffect(() => {
+    if (!svgRef.current) return
+    const svg = d3.select(svgRef.current)
+
+    svg.selectAll<SVGCircleElement, SimNode>('.node-circle')
+      .transition().duration(260)
+      .attr('fill', d => getNodeVisualStyle(d, viewMode).color)
+      .attr('stroke', d => getNodeVisualStyle(d, viewMode).strokeColor)
+      .attr('stroke-dasharray', d => getNodeVisualStyle(d, viewMode).strokeDasharray)
+      .attr('opacity', d => getNodeVisualStyle(d, viewMode).coreOpacity)
+
+    svg.selectAll<SVGCircleElement, SimNode>('.node-glow')
+      .transition().duration(260)
+      .attr('fill', d => getNodeVisualStyle(d, viewMode).color)
+      .attr('opacity', d => getNodeVisualStyle(d, viewMode).glowOpacity)
+
+    svg.selectAll<SVGCircleElement, SimNode>('.critical-pulse')
+      .style('display', viewMode === 'mastery' ? 'inline' : 'none')
+  }, [viewMode])
 
   // Update node/link opacity and refresh labels when search, filter or label visibility changes
   useEffect(() => {
@@ -602,10 +727,10 @@ export default function KnowledgeGraph() {
     svg.selectAll<SVGLineElement, any>('line')
       .transition().duration(200)
       .attr('stroke-opacity', (l: any) => {
-        if (!hasFilter) return 0.35
+        if (!hasFilter) return 0.45
         const sActive = activeNodeIds.has(l.source.id || l.source)
         const tActive = activeNodeIds.has(l.target.id || l.target)
-        return (sActive && tActive) ? 0.6 : 0.03
+        return (sActive && tActive) ? 0.65 : 0.04
       })
 
     updateLabelsRef.current?.()
@@ -630,6 +755,10 @@ export default function KnowledgeGraph() {
 
   const resetView = () => {
     fitViewRef.current?.(true)
+  }
+
+  const reheatSimulation = () => {
+    simulationRef.current?.alpha(0.65).restart()
   }
 
   // 启动仿真课件处理函数
@@ -819,7 +948,12 @@ export default function KnowledgeGraph() {
       <div className="hidden md:grid grid-cols-4 gap-2.5 shrink-0">
         {viewMode === 'mastery' ? (
           <>
-            <GraphMetric label="收录核心考点" value={totalNodes} color="text-neutral-900" />
+            <GraphMetric
+              label="收录核心考点"
+              value={totalNodes}
+              color="text-neutral-900"
+              suffix={masterySummary.unpracticedCount > 0 ? ` (${masterySummary.unpracticedCount} 待点亮)` : undefined}
+            />
             <GraphMetric label="稳固攻克 (≥80%)" value={masterySummary.masteredCount} color="text-emerald-600" />
             <GraphMetric label="进阶巩固 (50~80%)" value={masterySummary.moderateCount} color="text-amber-500" />
             <GraphMetric label="薄弱高危 (<50%)" value={masterySummary.criticalCount} color="text-rose-500" />
@@ -906,7 +1040,7 @@ export default function KnowledgeGraph() {
 
           <div
             ref={containerRef}
-            className="relative flex-1 min-h-0 overflow-hidden sm:rounded-xl sm:border sm:border-neutral-200/80 bg-neutral-50/50 shadow-xs select-none"
+            className="relative flex-1 min-h-[420px] md:min-h-[500px] overflow-hidden sm:rounded-xl sm:border sm:border-neutral-200/80 bg-neutral-50/50 shadow-xs select-none"
           >
             <svg ref={svgRef} width={dimensions.width} height={dimensions.height} className="block h-full w-full touch-none select-none" style={{ touchAction: 'none' }} />
 
@@ -938,6 +1072,13 @@ export default function KnowledgeGraph() {
                 className="flex h-7 w-7 items-center justify-center rounded-lg text-warm-600 hover:bg-cream-100 hover:text-warm-900 transition-colors"
               >
                 <Maximize2 className="h-4 w-4" />
+              </button>
+              <button
+                onClick={reheatSimulation}
+                title="物理散开重排（拨动图谱星系）"
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-warm-600 hover:bg-cream-100 hover:text-indigo-600 transition-colors"
+              >
+                <Sparkles className="h-4 w-4" />
               </button>
               <div className="my-0.5 h-px bg-cream-200" />
               <button
@@ -994,7 +1135,7 @@ export default function KnowledgeGraph() {
                         <div className="flex items-center justify-between text-xs font-semibold">
                           <span className="text-slate-500">掌握度：</span>
                           {isUnpracticed ? (
-                            <span className="text-slate-500 font-semibold">未练习</span>
+                            <span className="text-indigo-600 font-semibold">待点亮（{allGroupLabels[hoveredNode.group] || hoveredNode.group}）</span>
                           ) : (
                             <span className={isCritical ? 'text-rose-600 font-bold' : mp.rate < 80 ? 'text-amber-600' : 'text-emerald-600'}>
                               {mp.rate}% ({isCritical ? '薄弱高危' : mp.rate < 80 ? '进阶巩固' : '稳固攻克'})
@@ -1002,9 +1143,9 @@ export default function KnowledgeGraph() {
                           )}
                         </div>
                         <div className="text-[11px] text-slate-500">{mp.recentStatus}</div>
-                        <div className="text-[10px] text-rose-600 font-medium pt-1 border-t border-slate-100 flex items-center gap-1">
+                        <div className={`text-[10px] font-medium pt-1 border-t border-slate-100 flex items-center gap-1 ${isUnpracticed ? 'text-indigo-600' : 'text-rose-600'}`}>
                           <Flame className="w-3 h-3" />
-                          <span>点击呼出【提分急救舱】</span>
+                          <span>{isUnpracticed ? '点击开启诊断 · 做 3 题点亮掌握度' : '点击呼出【提分急救舱】'}</span>
                         </div>
                       </div>
                     )
@@ -1028,8 +1169,8 @@ export default function KnowledgeGraph() {
             {/* Bottom Floating Legend / Filters */}
             <div className="absolute bottom-3 left-3 right-3 sm:right-auto z-10 flex items-center sm:flex-wrap gap-1.5 sm:max-w-[70%] overflow-x-auto no-scrollbar">
               {viewMode === 'mastery' ? (
-                // 热力图三色图例
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/95 border border-slate-200/80 shadow-xs backdrop-blur-md text-xs font-medium text-slate-700">
+                // 热力图四态图例
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/95 border border-slate-200/80 shadow-xs backdrop-blur-md text-xs font-medium text-slate-700 whitespace-nowrap">
                   <div className="flex items-center gap-1">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                     <span>稳固攻克 (≥80%)</span>
@@ -1043,6 +1184,11 @@ export default function KnowledgeGraph() {
                   <div className="flex items-center gap-1 text-rose-600 font-bold">
                     <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
                     <span>薄弱高危 (&lt;50% 呼吸闪烁)</span>
+                  </div>
+                  <span className="text-slate-300">·</span>
+                  <div className="flex items-center gap-1 text-slate-600">
+                    <span className="w-2.5 h-2.5 rounded-full border border-dashed border-indigo-500 bg-indigo-400/75" />
+                    <span>待点亮 (学科着色)</span>
                   </div>
                 </div>
               ) : (

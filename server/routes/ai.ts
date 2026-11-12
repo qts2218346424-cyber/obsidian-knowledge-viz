@@ -17,6 +17,7 @@ import {
   getRequestAgentMemoryPath,
   getRequestChatConversationsPath,
   getRequestVaultPath,
+  resolveSafeUserVaultPath,
 } from '../services/user-sandbox.js'
 import { getUserNotes } from '../context.js'
 import { createFile, type VaultNote } from '../vault-parser.js'

@@ -481,10 +481,11 @@ studyRouter.post('/study/error-log', async (req, res) => {
       nextReview: tomorrow,
     }
 
+    // 修复：vaultPath 此前声明在 try 块内，后续写文件时引用会抛 ReferenceError，导致错题无法保存
+    const vaultPath = getRequestVaultPath(req)
     let questions: any[] = []
     try {
-      const vaultPath = getRequestVaultPath(req)
-    const existing = getFile(vaultPath, logPath)
+      const existing = getFile(vaultPath, logPath)
       if (existing) {
         const parsed = parseErrorLog(existing.content)
         questions = parsed.questions

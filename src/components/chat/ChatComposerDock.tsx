@@ -19,7 +19,7 @@ import {
 import type { StudyAgent } from '../../data/studyAgents'
 import type { StudySkill } from '../../data/studySkills'
 import type { FileDetail, LocalSkill } from '../../services/api'
-import type { AttachedFile } from '../../pages/Chat'
+import type { AttachedFile } from '../../features/ai-chat/types'
 
 interface ChatComposerDockProps {
   input: string

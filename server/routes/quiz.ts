@@ -154,6 +154,7 @@ quizRouter.post('/quiz/custom', (req, res) => {
     // 规整入库题目的 LaTeX 公式定界符并补齐唯一 ID
     const formatted = toAdd.map((q, idx) => normalizeQuestionMathFields({
       ...q,
+      // 修复：避免未定义变量自减，确保导入缺少 id 的题目时安全生成唯一 ID
       id: q.id || `custom-${Date.now()}-${idx}`,
       isCustom: true,
       importedAt: new Date().toISOString()

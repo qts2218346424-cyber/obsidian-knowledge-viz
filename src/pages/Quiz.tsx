@@ -68,6 +68,15 @@ import type { ErrorNotebookStats } from '../services/api'
 // 内存级题库缓存，切页秒开不闪烁
 let cachedCustomQuestionsList: ActiveQuizQuestion[] | null = null
 
+import type {
+  ViewMode,
+  QuizMode,
+  SubjectInfo,
+  QuizResult,
+} from '../features/quiz/types'
+import { ALL_SUBJECTS, ERROR_REASONS, SCRATCHPAD_MATH_SYMBOLS } from '../features/quiz/constants'
+import { shuffleArray, formatTime } from '../features/quiz/utils'
+
 /** 若纯数学答案串含 LaTeX 命令但缺失定界符，自动补齐 $...$ 以免渲染成源码 */
 function formatMathInline(raw?: string): string {
   const s = (raw || '').trim()
@@ -77,38 +86,6 @@ function formatMathInline(raw?: string): string {
     return `$${s}$`
   }
   return s
-}
-
-// ── Types ──────────────────────────────────────────────────────────────────────
-
-type ViewMode = 'start' | 'quiz' | 'results'
-type QuizMode = 'practice' | 'exam'
-
-interface SubjectInfo {
-  key: AllSubject
-  domain: ResourceDomain
-  emoji: string
-  color: string
-  bgColor: string
-  categories?: MathCategory[]
-}
-
-interface QuizResult {
-  total: number
-  answered?: number
-  unanswered?: number
-  correct: number
-  wrong: number
-  timeTaken: number
-  mode?: QuizMode
-  createdAt?: string
-  subjectBreakdown: Record<string, { total: number; correct: number; answered?: number; wrong?: number; unanswered?: number }>
-  wrongQuestions: Array<{
-    question: ActiveQuizQuestion
-    userAnswer: string
-    errorReason?: string
-  }>
-  summaryPath: string
 }
 
 export interface QuizProgressRecord {
@@ -134,54 +111,6 @@ export interface QuizProgressRecord {
   } | null
   activeTopicLabel: string | null
   updatedAt: number
-}
-
-// ── Constants ──────────────────────────────────────────────────────────────────
-
-const ALL_SUBJECTS: SubjectInfo[] = [
-  // 408 科目
-  { key: '数据结构', domain: 'cs_408', emoji: '🧮', color: 'text-orange-600', bgColor: 'bg-orange-50 border-orange-200' },
-  { key: '计算机组成原理', domain: 'cs_408', emoji: '🖥️', color: 'text-blue-600', bgColor: 'bg-blue-50 border-blue-200' },
-  { key: '操作系统', domain: 'cs_408', emoji: '⚙️', color: 'text-green-600', bgColor: 'bg-green-50 border-green-200' },
-  { key: '计算机网络', domain: 'cs_408', emoji: '🌐', color: 'text-purple-600', bgColor: 'bg-purple-50 border-purple-200' },
-  // 考研数学科目
-  { key: '高等数学', domain: 'math', emoji: '📐', color: 'text-pink-600', bgColor: 'bg-pink-50 border-pink-200', categories: ['数一', '数二', '数三'] },
-  { key: '线性代数', domain: 'math', emoji: '🔢', color: 'text-indigo-600', bgColor: 'bg-indigo-50 border-indigo-200', categories: ['数一', '数二', '数三'] },
-  { key: '概率论与数理统计', domain: 'math', emoji: '🎲', color: 'text-teal-600', bgColor: 'bg-teal-50 border-teal-200', categories: ['数一', '数三'] },
-  // 其他专业课 / 综合
-  { key: '专业课综合', domain: 'general', emoji: '📚', color: 'text-slate-700', bgColor: 'bg-slate-50 border-slate-200' },
-  { key: '复试面试', domain: 'general', emoji: '🎤', color: 'text-slate-700', bgColor: 'bg-slate-50 border-slate-200' },
-  { key: '其他通用', domain: 'general', emoji: '🗂️', color: 'text-slate-700', bgColor: 'bg-slate-50 border-slate-200' },
-]
-
-const ERROR_REASONS = ['概念不清', '公式记错', '计算失误', '忽略定理前提', '思路阻塞', '审题遗漏']
-
-const SCRATCHPAD_MATH_SYMBOLS = [
-  { label: '∫ dx', code: '\\int_{a}^{b} f(x)\\,dx' },
-  { label: 'lim', code: '\\lim_{x \\to 0}' },
-  { label: '∑', code: '\\sum_{i=1}^{n}' },
-  { label: '√x', code: '\\sqrt{x}' },
-  { label: 'a/b', code: '\\frac{a}{b}' },
-  { label: '∂f/∂x', code: '\\frac{\\partial f}{\\partial x}' },
-  { label: 'A⁻¹', code: 'A^{-1}' },
-  { label: 'λ', code: '\\lambda' },
-  { label: '±', code: '\\pm' },
-  { label: '∞', code: '\\infty' },
-]
-
-function shuffleArray<T>(arr: T[]): T[] {
-  const shuffled = [...arr]
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
-  }
-  return shuffled
-}
-
-function formatTime(seconds: number): string {
-  const m = Math.floor(seconds / 60)
-  const s = seconds % 60
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
 function formatRelativeTime(ts: number): string {

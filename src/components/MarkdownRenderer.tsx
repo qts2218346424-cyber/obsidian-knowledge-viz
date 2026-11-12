@@ -4,6 +4,9 @@ import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeHighlight from 'rehype-highlight'
 import rehypeKatex from 'rehype-katex'
+// 公式与代码高亮样式随渲染器按需加载，不再阻塞首屏
+import 'katex/dist/katex.min.css'
+import 'highlight.js/styles/github-dark.css'
 import { Copy, Check, ChevronDown, Sparkles } from 'lucide-react'
 
 const LATEX_CMD_DOUBLE_BS_RE = /\\\\(?=(?:frac|dfrac|tfrac|cfrac|int|iint|iiint|oint|lim|sum|prod|sqrt|sin|cos|tan|cot|sec|csc|arcsin|arccos|arctan|ln|log|exp|alpha|beta|gamma|delta|epsilon|varepsilon|zeta|eta|theta|vartheta|iota|kappa|lambda|mu|nu|xi|pi|rho|sigma|tau|upsilon|phi|varphi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega|infty|partial|nabla|cdot|cdots|ldots|vdots|ddots|times|div|pm|mp|le|ge|leq|geq|ne|neq|approx|equiv|sim|simeq|cong|propto|to|rightarrow|leftarrow|Rightarrow|Leftarrow|leftrightarrow|Leftrightarrow|mapsto|in|notin|subset|subseteq|cup|cap|setminus|emptyset|forall|exists|neg|land|lor|left|right|big|Big|bigg|Bigg|text|textrm|textbf|mathrm|mathbf|boldsymbol|mathit|mathcal|mathbb|vec|hat|bar|tilde|overline|underline|overbrace|underbrace|begin|end|binom|choose|det|dim|gcd|hom|ker|max|min|sup|inf|arg|deg|mod|pmod|operatorname|quad|qquad|,)\b)/g

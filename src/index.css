@@ -1,3 +1,5 @@
+/* 移除 Google Fonts 远程 @import：该请求在国内网络下会阻塞首屏渲染（白屏数秒）。
+   字体栈保留 IBM Plex Sans / JetBrains Mono 作为本机已安装时的优先项，其余回退到系统字体。 */
 @import "tailwindcss";
 @import "./styles/tokens.css";
 @import "./styles/animations.css";
@@ -67,8 +69,8 @@ body {
 
 @theme {
   /* UI/UX Pro Max · CoreForge Design System Tokens */
-  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
 
   /* Master Dark & Code Accent */
   --color-brand-midnight: #0F172A;
@@ -1923,4 +1925,32 @@ code, pre, kbd, samp, .font-mono {
 .cv-auto-large {
   content-visibility: auto;
   contain-intrinsic-size: 0 320px;
+}
+
+/* ==========================================================================
+   无障碍与质感细节
+   ========================================================================== */
+/* 尊重系统「减少动态效果」设置：关闭持续动画与平滑滚动，避免低端设备卡顿与眩晕 */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* 统一键盘焦点环：仅在键盘导航时出现，鼠标点击不再出现突兀的默认描边 */
+:where(button, a, [role="button"], input, textarea, select):focus-visible {
+  outline: 2px solid rgb(99 102 241 / 0.65);
+  outline-offset: 2px;
+}
+
+/* 中文排版：标题避免孤字换行 */
+h1, h2, h3 {
+  text-wrap: balance;
 }

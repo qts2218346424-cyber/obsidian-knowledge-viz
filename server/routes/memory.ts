@@ -208,7 +208,7 @@ memoryRouter.delete('/memory/directive/:id', (req, res) => {
 /**
  * Reset agent.md to standard preset
  */
-memoryRouter.post('/memory/reset-default', (_req, res) => {
+memoryRouter.post('/memory/reset-default', (req, res) => {
   try {
     const filePath = path.join(config.vaultPath || '.', 'agent.md')
     if (fs.existsSync(filePath)) {
