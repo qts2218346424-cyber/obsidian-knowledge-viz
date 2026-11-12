@@ -34,6 +34,7 @@ import {
   Minimize2,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { MathTrialDemo, AgentTrialDemo } from './landing/TrialDemos'
 import { getSecurityQuestion, resetPassword } from '../services/auth'
 
 interface DownloadInfo {
@@ -61,6 +62,8 @@ interface DownloadInfo {
 }
 
 type ModeType = '408' | 'math' | 'politics' | 'english' | 'ai'
+
+const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent)
 
 export default function LandingPage() {
   const { isAuthenticated, login, register, initAdmin, initialized } = useAuth()
@@ -105,6 +108,7 @@ export default function LandingPage() {
   const [modalTab, setModalTab] = useState<'login' | 'register' | 'forgot'>('login')
   const [modalUsername, setModalUsername] = useState('')
   const [modalPassword, setModalPassword] = useState('')
+  const [modalConfirmPassword, setModalConfirmPassword] = useState('')
   const [modalError, setModalError] = useState<string | null>(null)
   const [modalLoading, setModalLoading] = useState(false)
 
@@ -144,9 +148,7 @@ export default function LandingPage() {
         setDownloadInfo({
           desktop: {
             available: true,
-            filename: 'Knowledge-Viz-Setup-1.2.0.exe',
-            version: '1.2.0',
-            size: '109.5 MB',
+            // 接口不可用时不再展示硬编码的过期版本号与安装包体积
             downloadUrl: '/api/downloads/desktop',
             platform: 'Windows 64位',
           },
@@ -191,6 +193,17 @@ export default function LandingPage() {
     if (!modalUsername.trim() || !modalPassword) {
       setModalError('请填写完整账号与密码')
       return
+    }
+
+    if (modalTab === 'register' || !initialized) {
+      if (modalPassword.length < 6) {
+        setModalError('密码至少需要 6 位')
+        return
+      }
+      if (modalTab === 'register' && modalPassword !== modalConfirmPassword) {
+        setModalError('两次输入的密码不一致')
+        return
+      }
     }
 
     setModalLoading(true)
@@ -498,8 +511,10 @@ export default function LandingPage() {
           <a
             href="#preview"
             onClick={(e) => {
+              // 修复：此前误弹出注册弹窗，现改为滚动到实景视窗并切换到「三栏工作台实景」
               e.preventDefault()
-              setAuthModalOpen(true)
+              setPreviewTab('workbench')
+              document.getElementById('preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
             }}
             className="px-3.5 py-1 rounded-lg text-[13px] font-medium text-[#6e7178] hover:text-[#171719] hover:bg-white/50 transition-colors"
           >
@@ -672,7 +687,7 @@ export default function LandingPage() {
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-medium transition-all"
             >
               <Download className="w-3 h-3" />
-              <span>电脑客户端 ({downloadInfo?.desktop?.size || '109 MB'})</span>
+              <span>电脑客户端{downloadInfo?.desktop?.size ? ` (${downloadInfo.desktop.size})` : ''}</span>
             </button>
             <a
               href="#download"
@@ -711,9 +726,9 @@ export default function LandingPage() {
           >
             <Download className="w-4 h-4 text-zinc-700" />
             <span>{downloading ? '正在拉取安装包...' : '下载 Windows 电脑客户端'}</span>
-            <span className="text-[11px] bg-black/10 px-2 py-0.5 rounded font-mono">
-              {downloadInfo?.desktop?.size || '109 MB'}
-            </span>
+            {downloadInfo?.desktop?.size && (
+              <span className="text-[11px] bg-black/10 px-2 py-0.5 rounded font-mono">{downloadInfo.desktop.size}</span>
+            )}
           </button>
 
           <a
@@ -949,8 +964,12 @@ export default function LandingPage() {
                       </button>
                     </div>
                   </div>
+                ) : activeMode === 'math' ? (
+                  <MathTrialDemo onEnter={() => (isAuthenticated ? navigate('/quiz') : setAuthModalOpen(true))} />
+                ) : activeMode === 'ai' ? (
+                  <AgentTrialDemo onEnter={() => (isAuthenticated ? navigate('/chat') : setAuthModalOpen(true))} />
                 ) : (
-                  /* 英语与其他模块试玩 */
+                  /* 英语模块试玩 */
                   <div className="flex flex-col h-[520px] bg-slate-900 p-6 text-white justify-between">
                     <div className="space-y-4">
                       <div className="flex items-center justify-between pb-3 border-b border-indigo-500/20">
@@ -1004,7 +1023,7 @@ export default function LandingPage() {
                       <Search className="w-3 h-3 text-zinc-400" />
                       <span className="text-[11px]">搜索考点与真题...</span>
                     </div>
-                    <span className="text-zinc-400 text-xs">⌘K</span>
+                    <span className="text-zinc-400 text-xs">{IS_MAC ? '⌘K' : 'Ctrl K'}</span>
                   </div>
 
                   <div className="text-[10px] text-zinc-400 font-semibold tracking-wider uppercase mt-1 flex items-center justify-between">
@@ -1121,9 +1140,9 @@ export default function LandingPage() {
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                   <span>100% 本地优先与数据自主权承诺</span>
                 </div>
-                <h3 className="text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
+                <h2 className="text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
                   拒绝格式锁定，你的备考笔记永远属于你自己
-                </h3>
+                </h2>
                 <p className="text-xs sm:text-sm text-zinc-500 leading-relaxed">
                   通过现代化 Web File System Access API 授权，网页端可直接挂载并双向同步您本地磁盘的 Obsidian 知识库目录；更支持一键将全部考研讲义、真题笔记与手写草稿打包导出为通用 .zip 知识库，终身离线可用。
                 </p>
@@ -1172,7 +1191,7 @@ export default function LandingPage() {
                     <Laptop className="w-6 h-6" />
                   </div>
                   <span className="text-xs font-mono text-zinc-700 bg-zinc-100 px-2.5 py-1 rounded-md">
-                    v{downloadInfo?.desktop?.version || '1.2.0'}
+                    {downloadInfo?.desktop?.version ? `桌面版 v${downloadInfo.desktop.version}` : '桌面版'}
                   </span>
                 </div>
 
@@ -1208,7 +1227,7 @@ export default function LandingPage() {
                   <span>
                     {downloading
                       ? '正在启动下载...'
-                      : `一键下载 Windows 安装包 (${downloadInfo?.desktop?.size || '109 MB'})`}
+                      : `一键下载 Windows 安装包${downloadInfo?.desktop?.size ? ` (${downloadInfo.desktop.size})` : ''}`}
                   </span>
                 </button>
                 <div className="mt-2 text-center text-[11px] text-zinc-400">
@@ -1352,16 +1371,16 @@ export default function LandingPage() {
               真题分项刷透并自动归因。AVL树/红黑树/B+树、流水线冒险与 Cache 映射、PV 原语与死锁检测、OSI 与 TCP 协议栈，全方位打通。
             </p>
             <div className="grid grid-cols-2 gap-1.5 sm:gap-2 text-[10.5px] sm:text-xs">
-              <div className="p-2 sm:p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 font-medium text-zinc-800">
+              <div className="p-2 sm:p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 font-medium text-zinc-800 whitespace-nowrap overflow-hidden text-ellipsis">
                 🌲 算法与数据结构
               </div>
-              <div className="p-2 sm:p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 font-medium text-zinc-800">
+              <div className="p-2 sm:p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 font-medium text-zinc-800 whitespace-nowrap overflow-hidden text-ellipsis">
                 ⚙️ 计算机组成原理
               </div>
-              <div className="p-2 sm:p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 font-medium text-zinc-800">
+              <div className="p-2 sm:p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 font-medium text-zinc-800 whitespace-nowrap overflow-hidden text-ellipsis">
                 🖥️ 操作系统原理
               </div>
-              <div className="p-2 sm:p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 font-medium text-zinc-800">
+              <div className="p-2 sm:p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 font-medium text-zinc-800 whitespace-nowrap overflow-hidden text-ellipsis">
                 🌐 计算机网络通信
               </div>
             </div>
@@ -1381,16 +1400,16 @@ export default function LandingPage() {
               严格遵循 KaTeX 数学公式渲染标准。高等数学泰勒公式与微分方程、线性代数矩阵特征值与二次型、概率论多维随机变量，AI 拆解思路启发式点拨。
             </p>
             <div className="grid grid-cols-2 gap-1.5 sm:gap-2 text-[10.5px] sm:text-xs">
-              <div className="p-2 sm:p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 font-medium text-zinc-800">
+              <div className="p-2 sm:p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 font-medium text-zinc-800 whitespace-nowrap overflow-hidden text-ellipsis">
                 📐 微积分与高等数学
               </div>
-              <div className="p-2 sm:p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 font-medium text-zinc-800">
+              <div className="p-2 sm:p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 font-medium text-zinc-800 whitespace-nowrap overflow-hidden text-ellipsis">
                 📊 线性代数矩阵空间
               </div>
-              <div className="p-2 sm:p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 font-medium text-zinc-800">
+              <div className="p-2 sm:p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 font-medium text-zinc-800 whitespace-nowrap overflow-hidden text-ellipsis">
                 🎲 概率论与数理统计
               </div>
-              <div className="p-2 sm:p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 font-medium text-zinc-800">
+              <div className="p-2 sm:p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 font-medium text-zinc-800 whitespace-nowrap overflow-hidden text-ellipsis">
                 ✍️ 步骤启发式证明推导
               </div>
             </div>
@@ -1543,7 +1562,7 @@ export default function LandingPage() {
 
                 {/* 模式一：登录表单 (紧凑输入与按钮) */}
                 {modalTab === 'login' && (
-                  <form onSubmit={handleModalAuthSubmit} className="space-y-2">
+                  <form noValidate onSubmit={handleModalAuthSubmit} className="space-y-2">
                     <div>
                       <input
                         type="text"
@@ -1593,7 +1612,7 @@ export default function LandingPage() {
 
                 {/* 模式二：注册表单 (紧凑输入与按钮) */}
                 {modalTab === 'register' && (
-                  <form onSubmit={handleModalAuthSubmit} className="space-y-2">
+                  <form noValidate onSubmit={handleModalAuthSubmit} className="space-y-2">
                     <div>
                       <input
                         type="text"
@@ -1612,6 +1631,17 @@ export default function LandingPage() {
                         value={modalPassword}
                         onChange={(e) => setModalPassword(e.target.value)}
                         placeholder="设置登录密码 (至少 6 位)"
+                        className="w-full py-1.5 sm:py-2 px-2.5 sm:px-3 rounded-[8px] bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-[12px] sm:text-[13px] focus:outline-none focus:ring-2 focus:ring-zinc-400 transition-all"
+                      />
+                    </div>
+
+                    <div>
+                      <input
+                        type="password"
+                        value={modalConfirmPassword}
+                        onChange={(e) => setModalConfirmPassword(e.target.value)}
+                        placeholder="再次输入密码"
+                        autoComplete="new-password"
                         className="w-full py-1.5 sm:py-2 px-2.5 sm:px-3 rounded-[8px] bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-[12px] sm:text-[13px] focus:outline-none focus:ring-2 focus:ring-zinc-400 transition-all"
                       />
                     </div>
@@ -1830,7 +1860,7 @@ export default function LandingPage() {
 
                 <div className="mt-4 pt-2.5 border-t border-zinc-100 flex items-center justify-between text-[10px] text-zinc-400">
                   <span>支持一键下载本地客户端离线使用</span>
-                  <span className="font-mono text-zinc-600">v1.4.0-stable</span>
+                  <span className="font-mono text-zinc-600">{downloadInfo?.web?.version ? `网页版 v${downloadInfo.web.version}` : '网页版'}</span>
                 </div>
               </div>
             </div>
@@ -1860,7 +1890,6 @@ export default function LandingPage() {
             >
               登录研学空间
             </button>
-            <span className="text-zinc-300">|</span>
             <span className="text-zinc-400 font-mono">Local-First & Multi-Agent Architecture</span>
           </div>
         </div>
@@ -1868,7 +1897,7 @@ export default function LandingPage() {
       {/* ── 📱 全屏沉浸式试玩视窗模态框 (document.body Portal) ── */}
       {fullScreenSandbox && createPortal(
         <div 
-          className="fixed inset-0 z-[100] bg-slate-950 flex flex-col w-screen h-dvh overflow-hidden select-none animate-in fade-in zoom-in-95 duration-200"
+          className="fixed inset-0 z-[100] bg-slate-950 flex flex-col w-screen h-dvh overflow-hidden select-none animate-fade-in"
           role="dialog"
           aria-modal="true"
         >
@@ -1910,12 +1939,30 @@ export default function LandingPage() {
               </button>
               <button
                 type="button"
+                onClick={() => setActiveMode('math')}
+                className={`px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  activeMode === 'math' ? 'bg-pink-500 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                数学推导
+              </button>
+              <button
+                type="button"
                 onClick={() => setActiveMode('english')}
                 className={`px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-lg font-bold transition-all cursor-pointer ${
                   activeMode === 'english' ? 'bg-sky-500 text-white shadow-xs' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 英语批改
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveMode('ai')}
+                className={`hidden sm:inline-block px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-lg font-bold transition-all cursor-pointer ${
+                  activeMode === 'ai' ? 'bg-violet-500 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                双核 Agent
               </button>
             </div>
 
@@ -1949,8 +1996,8 @@ export default function LandingPage() {
                 />
               </div>
             ) : activeMode === 'politics' ? (
-              <div className="w-full h-full overflow-y-auto p-4 sm:p-6 bg-[#070b14] text-slate-100 flex flex-col justify-between">
-                <div>
+              <div className="w-full h-full overflow-y-auto p-4 sm:p-6 bg-[#070b14] text-slate-100 flex flex-col">
+                <div className="w-full max-w-5xl mx-auto mt-auto">
                   <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-amber-500/20">
                     <div className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
@@ -2026,8 +2073,8 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400 mt-4">
-                  <span>已载入 3D 矢量中国地图高精度时空坐标</span>
+                <div className="w-full max-w-5xl mx-auto mb-auto pt-4 border-t border-slate-800 flex items-center justify-between gap-3 text-xs text-slate-400 mt-4">
+                  <span>试玩版收录 3 个核心节点 · 中国地图时空大屏需进入完整工作台</span>
                   <button
                     type="button"
                     onClick={() => {
@@ -2041,9 +2088,31 @@ export default function LandingPage() {
                   </button>
                 </div>
               </div>
+            ) : activeMode === 'math' ? (
+              <div className="w-full h-full overflow-y-auto flex bg-[#0b1020]">
+                <MathTrialDemo
+                  fullscreen
+                  onEnter={() => {
+                    setFullScreenSandbox(false)
+                    if (isAuthenticated) navigate('/quiz')
+                    else setAuthModalOpen(true)
+                  }}
+                />
+              </div>
+            ) : activeMode === 'ai' ? (
+              <div className="w-full h-full overflow-y-auto flex bg-[#0a0f1c]">
+                <AgentTrialDemo
+                  fullscreen
+                  onEnter={() => {
+                    setFullScreenSandbox(false)
+                    if (isAuthenticated) navigate('/chat')
+                    else setAuthModalOpen(true)
+                  }}
+                />
+              </div>
             ) : (
-              <div className="w-full h-full overflow-y-auto p-4 sm:p-6 bg-slate-900 text-white flex flex-col justify-between">
-                <div className="space-y-4">
+              <div className="w-full h-full overflow-y-auto p-4 sm:p-6 bg-slate-900 text-white flex flex-col">
+                <div className="w-full max-w-5xl mx-auto mt-auto space-y-4">
                   <div className="flex items-center justify-between pb-3 border-b border-indigo-500/20">
                     <span className="font-bold text-indigo-300 text-base">考研英语 · 20 分制 AI 智能批改示范 (全屏版)</span>
                     <span className="text-xs text-indigo-400 bg-indigo-500/20 px-2 py-0.5 rounded-lg">~1.2s 极速精批</span>
@@ -2069,7 +2138,7 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400 mt-4">
+                <div className="w-full max-w-5xl mx-auto mb-auto pt-4 border-t border-slate-800 flex items-center justify-between gap-3 text-xs text-slate-400 mt-4">
                   <span>支持拍照 OCR 录入、历年图画/图表真题模板对比</span>
                   <button
                     type="button"

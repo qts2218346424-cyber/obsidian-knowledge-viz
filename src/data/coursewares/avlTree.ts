@@ -94,6 +94,8 @@ export const avlTreeCourseware: InteractiveCoursewareItem = {
   }
   input[type="number"]:focus { border-color: var(--accent); }
   button {
+    white-space: nowrap;
+    flex-shrink: 0;
     background: #1e293b;
     border: 1px solid var(--border-color);
     color: var(--text-primary);
