@@ -68,9 +68,12 @@ function IngestionPanel() {
       // Step 2: MarkItDown parsing
       updateStep('2', { status: 'active' })
 
-      const res = await api.uploadFile(file)
+      const res = await api.uploadFile(file, p => {
+        const stepId = p.status === 'converting' || p.status === 'queued' ? '2' : p.status === 'extracting' ? '6' : '3'
+        updateStep(stepId, { status: 'active', detail: p.message })
+      })
 
-      updateStep('2', { status: 'done', detail: res.method === 'microsoft_markitdown' ? 'MarkItDown 解析成功' : 'MarkItDown + 多级保底' })
+      updateStep('2', { status: 'done', detail: res.method?.startsWith('pymupdf') ? '逐页版面解析完成' : res.method === 'microsoft_markitdown' ? 'MarkItDown 解析成功' : 'MarkItDown + 多级保底' })
       await delay(250)
 
       updateStep('3', { status: 'done', detail: `${res.subject || '知识提炼完成'} · 提炼 ${res.entities.length} 个实体` })
@@ -82,7 +85,13 @@ function IngestionPanel() {
       updateStep('5', { status: 'done', detail: res.mocPath ? `已挂载 MOC: ${res.mocPath}` : '已完成目录分类归档' })
       await delay(250)
 
-      updateStep('6', { status: 'done', detail: `${res.markdownPath} · 沉淀 ${res.questionsCount || 0} 道真题` })
+      const qr = res.questionReport
+      updateStep('6', {
+        status: 'done',
+        detail: qr
+          ? `识别 ${qr.expected} 题，入库 ${qr.saved} 题${qr.needsReview ? `，${qr.needsReview} 题待校对` : ''}`
+          : `${res.markdownPath} · 非试卷资料，未提题`,
+      })
 
       setResult(res)
     } catch (err: any) {

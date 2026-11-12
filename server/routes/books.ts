@@ -22,6 +22,18 @@ import {
   resolveMaterialFullPath,
   runBookContentExtractor,
 } from '../services/book-outline.js'
+import { extractQuestions, looksLikeQuestionSet } from '../services/question-extractor.js'
+
+function loadUserCustomQuestions(req: any): Array<{ question: string }> {
+  try {
+    const p = getCustomQuestionsPath(req)
+    if (!fs.existsSync(p)) return []
+    const list = JSON.parse(fs.readFileSync(p, 'utf8'))
+    return Array.isArray(list) ? list : []
+  } catch {
+    return []
+  }
+}
 
 
 export const booksRouter = Router()
@@ -942,80 +954,46 @@ ${text}
       }
     }
 
-    // 修复：directExtractedQuestions 此前未定义，运行时会抛出 ReferenceError 导致整个自动抽取接口 500。
-    // 这里从原文直接解析真实题目（解析失败时返回空数组，回退到 AI 生成题目）。
-    let directExtractedQuestions: any[] = []
-    try {
-      directExtractedQuestions = text
-        ? extractQuizQuestionsFromRawText(text, bookName, domain === 'math' ? 'math' : 'cs_408', subject)
-        : []
-    } catch {
-      directExtractedQuestions = []
-    }
-
-    // 若原文成功提取了真实题目，优先全量使用真实题目！
-    if (directExtractedQuestions && directExtractedQuestions.length > 0) {
-      parsed.questions = directExtractedQuestions
-    } else if (!Array.isArray(parsed.questions) || parsed.questions.length === 0) {
-      // 动态依据推断出的学科生成契合该学科的真题考点，杜绝盲目硬编码数据结构
-      let subjectQText = `关于《${bookName}》涉及的【${subject}】核心机制，下列说法中正确的是（ ）`
-      let subjectOpts = {
-        A: '系统处于核心态时，可以执行特权指令且能访问全部内存空间',
-        B: '在单CPU多线程环境下，所有线程均能真正实现指令级并行执行',
-        C: '请求分页存储管理中，发生缺页中断后CPU立即转入就绪态等待调度',
-        D: '死锁的发生意味着系统中所有进程均处于阻塞状态且资源利用率为零'
-      }
-      let subjectAns = 'A'
-      let subjectExp = '【考研深度解析】：在操作系统运行状态中，核心态（管态）拥有最高权限，可执行所有特权指令并访问所有内存资源；用户态向核心态的转换由硬件中断/异常机构实现，故 A 正确。'
-
-      if (subject.includes('组成') || subject.includes('计组')) {
-        subjectQText = `关于【${subject}】指令系统与存储层次，下列叙述正确的是（ ）`
-        subjectOpts = {
-          A: 'Cache采用组相联映射时，主存块只能映射到指定Cache组内的任意块',
-          B: '所有RISC指令系统均采用不等长指令字且寻址方式极其繁杂',
-          C: '指令译码阶段硬件无需通过总线读取操作数',
-          D: '浮点数阶码的位数决定了运算的有效数字精度'
-        }
-        subjectAns = 'A'
-        subjectExp = '【考研解析】：组相联映射是全相联与直接映射的折中，主存块号模组数决定目标组，但在组内可放入任意行，故 A 正确。'
-      } else if (subject.includes('网络') || subject.includes('计网')) {
-        subjectQText = `关于【${subject}】传输层与网络层协议，下列说法正确的是（ ）`
-        subjectOpts = {
-          A: 'TCP通过滑动窗口协议实现端到端的流量控制与可靠传输',
-          B: '路由器在转发IP数据报时会修改源IP地址与目的IP地址',
-          C: 'UDP首部包含拥塞窗口字段以实现网络自适应降速',
-          D: '同一局域网内的不同主机必须配置不同的默认网关'
-        }
-        subjectAns = 'A'
-        subjectExp = '【考研解析】：TCP报文段首部包含确认号和接收窗口字段，通过滑动窗口机制实现面向字节流的可靠传输与流量控制，故 A 正确。'
-      } else if (subject.includes('数学') || domain === 'math') {
-        subjectQText = `关于【${subject}】重要极限定理与连续性，下列结论正确的是（ ）`
-        subjectOpts = {
-          A: '若函数在闭区间连续，则其在该区间上必有一致连续性',
-          B: '所有导函数连续的函数必存在拐点',
-          C: '任意阶方阵均存在正交相似对角矩阵',
-          D: '互斥事件与相互独立事件概念完全等价'
-        }
-        subjectAns = 'A'
-        subjectExp = '【考研解析】：根据康托尔一致连续性定理，闭区间上的连续函数必然在该闭区间上一致连续，故 A 正确。'
-      }
-
-      parsed.questions = [
-        {
-          id: `gen-${Date.now()}-1`,
-          domain,
+    // 资料本身是试卷/题集时，全文分块提取原题并对账补漏；
+    // 否则沿用 AI 命制的配套题。旧实现只看前 5000 字，且提取为空时会塞入一道与资料无关的固定示例题。
+    let extractionReport: any = null
+    if (mode !== 'concept' && text && looksLikeQuestionSet(text)) {
+      try {
+        const report = await extractQuestions(text, {
+          domain: domain === 'math' ? 'math' : 'cs_408',
           subject,
-          chapter: `${subject}核心真题精析`,
-          type: 'choice',
-          difficulty: '中等',
-          question: subjectQText,
-          options: subjectOpts,
-          answer: subjectAns,
-          explanation: subjectExp,
-          tags: ['考研真题', subject, '核心考点']
+          chapter: bookName.replace(/\.[^.]+$/, ''),
+          sourceName: bookName,
+          existing: loadUserCustomQuestions(req),
+        })
+        if (report.questions.length > 0) {
+          parsed.questions = report.questions.map(q => ({ ...q, tags: [...new Set([...(q.tags || []), '资料导入'])] }))
         }
-      ]
+        extractionReport = {
+          expected: report.expected,
+          extracted: report.extracted,
+          saved: report.questions.length,
+          repairedByRule: report.repairedByRule,
+          missing: report.missing,
+          coverage: report.coverage,
+          needsReview: report.questions.filter(q => q.needsReview).length,
+        }
+      } catch (exErr: any) {
+        console.warn('[auto-extract] question extraction failed:', exErr.message)
+      }
     }
+    if (!extractionReport) {
+      // 规则解析兜底（不依赖 AI）
+      try {
+        const direct = text
+          ? extractQuizQuestionsFromRawText(text, bookName, domain === 'math' ? 'math' : 'cs_408', subject)
+          : []
+        if (direct.length > 0) parsed.questions = direct
+      } catch {
+        /* 保留 AI 命制的题 */
+      }
+    }
+    if (!Array.isArray(parsed.questions)) parsed.questions = []
 
     // 1. 自动写入当前用户专属沙箱知识库笔记
     let savedNotePath = ''
@@ -1067,6 +1045,7 @@ ${text}
       questions: newQuestions,
       savedNotePath,
       questionsCount: newQuestions.length,
+      questionReport: extractionReport,
       domain,
       subject
     })

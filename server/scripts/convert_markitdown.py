@@ -28,6 +28,104 @@ if sys.platform == "win32":
         pass
 
 
+def _progress(msg: str) -> None:
+    """向 Node 端上报进度（stderr，以 [progress] 开头）"""
+    try:
+        sys.stderr.write(f"[progress] {msg}\n")
+        sys.stderr.flush()
+    except Exception:
+        pass
+
+
+def _sort_blocks_by_columns(blocks, page_width: float):
+    """双栏排版：先左栏自上而下，再右栏；跨栏的标题按纵坐标插入"""
+    mid = page_width / 2
+    left = [b for b in blocks if b[2] <= mid + page_width * 0.05]
+    right = [b for b in blocks if b[0] >= mid - page_width * 0.05 and b not in left]
+    two_col = len(left) >= 3 and len(right) >= 3
+    if not two_col:
+        return sorted(blocks, key=lambda b: (round(b[1], 1), b[0]))
+    spanning = [b for b in blocks if b not in left and b not in right]
+    ordered = []
+    # 以跨栏块为分隔，分段输出左栏、右栏
+    cuts = sorted(spanning, key=lambda b: b[1])
+    top = -1.0
+    for cut in cuts + [None]:
+        bottom = cut[1] if cut else float("inf")
+        ordered += sorted([b for b in left if top <= b[1] < bottom], key=lambda b: b[1])
+        ordered += sorted([b for b in right if top <= b[1] < bottom], key=lambda b: b[1])
+        if cut:
+            ordered.append(cut)
+            top = cut[3]
+    return ordered
+
+
+def pdf_extract_pymupdf(file_path: str) -> tuple[str, str]:
+    """
+    PyMuPDF 逐页提取：
+    - 有文字层的页按文字块坐标排序（处理双栏试卷，避免题号与选项错位）；
+    - 没有文字层的页（扫描页）单独渲染成图片做 OCR，混合 PDF 也不丢页；
+    - 每页加 <!-- page N --> 标记，方便定位漏题。
+    未安装 PyMuPDF 时返回空，交给原有流程。
+    """
+    try:
+        try:
+            import pymupdf as fitz  # PyMuPDF >= 1.24
+        except ImportError:
+            import fitz  # 旧版 PyMuPDF
+    except Exception:
+        return "", ""
+
+    ocr = None
+    ocr_tried = False
+    pages_out = []
+    ocr_pages = 0
+    try:
+        doc = fitz.open(file_path)
+    except Exception as e:
+        sys.stderr.write(f"[pymupdf open error]: {e}\n")
+        return "", ""
+
+    total = len(doc)
+    for i, page in enumerate(doc):
+        if i % 5 == 0:
+            _progress(f"第 {i + 1}/{total} 页")
+        text = ""
+        try:
+            blocks = [b for b in page.get_text("blocks") if len(b) >= 5 and str(b[4]).strip()]
+            ordered = _sort_blocks_by_columns(blocks, page.rect.width)
+            text = "\n".join(str(b[4]).strip() for b in ordered)
+        except Exception as e:
+            sys.stderr.write(f"[pymupdf page {i + 1} error]: {e}\n")
+
+        if len(text.strip()) < 30:
+            if not ocr_tried:
+                ocr_tried = True
+                try:
+                    from rapidocr_onnxruntime import RapidOCR
+                    ocr = RapidOCR()
+                except Exception as e:
+                    sys.stderr.write(f"[ocr unavailable]: {e}\n")
+            if ocr is not None:
+                try:
+                    pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+                    result, _ = ocr(pix.tobytes("png"))
+                    if result:
+                        # 按行的纵坐标、横坐标排序
+                        result.sort(key=lambda r: (round(r[0][0][1] / 12), r[0][0][0]))
+                        text = "\n".join(r[1] for r in result if len(r) >= 2 and r[1])
+                        ocr_pages += 1
+                except Exception as e:
+                    sys.stderr.write(f"[ocr page {i + 1} error]: {e}\n")
+
+        if text.strip():
+            pages_out.append(f"<!-- page {i + 1} -->\n{text.strip()}")
+
+    doc.close()
+    method = "pymupdf_layout" + (f"+ocr({ocr_pages}p)" if ocr_pages else "")
+    return "\n\n".join(pages_out), method
+
+
 def fallback_pdf_extract(file_path: str) -> tuple[str, str]:
     """PDF 专用多级回退：pypdf 提取 -> 本地 RapidOCR 识别"""
     extracted_text = []
@@ -55,9 +153,11 @@ def fallback_pdf_extract(file_path: str) -> tuple[str, str]:
         ocr_text_blocks = []
         reader = PdfReader(file_path)
         
-        # 扫描前 10 页避免过大文件卡死
-        scan_pages = min(len(reader.pages), 10)
+        # 逐页 OCR（不再只扫前 10 页），并上报进度
+        scan_pages = len(reader.pages)
         for i in range(scan_pages):
+            if i % 5 == 0:
+                _progress(f"OCR 第 {i + 1}/{scan_pages} 页")
             page = reader.pages[i]
             page_text = []
             for img in page.images:
@@ -173,14 +273,25 @@ def convert_document(input_path: str, original_filename: str = "") -> dict:
     markdown_content = ""
     used_method = "none"
 
+    # 0. PDF 优先走 PyMuPDF 逐页版面提取（双栏、混合扫描页）
+    if ext == ".pdf":
+        pdf_text, pdf_method = pdf_extract_pymupdf(input_path)
+        if pdf_text and len(pdf_text.strip()) >= 40:
+            markdown_content, used_method = pdf_text.strip(), pdf_method
+
     # 1. 首选：Microsoft MarkItDown 官方转换引擎
     try:
+        if markdown_content:
+            raise StopIteration  # 已由 PyMuPDF 处理
+
         from markitdown import MarkItDown
         md = MarkItDown()
         res = md.convert(file_to_convert)
         if res and res.text_content and res.text_content.strip():
             markdown_content = res.text_content.strip()
             used_method = "microsoft_markitdown"
+    except StopIteration:
+        pass
     except Exception as e:
         sys.stderr.write(f"[MarkItDown primary conversion failed]: {e}\n")
 

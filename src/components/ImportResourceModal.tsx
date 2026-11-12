@@ -452,6 +452,13 @@ export default function ImportResourceModal({
       const data = await res.json()
       if (data.questions && Array.isArray(data.questions)) {
         setParsedPreviewQuestions(data.questions)
+        const r = data.report
+        if (r) {
+          setImportFeedback(
+            (r.segmented ? `识别到 ${r.expected} 道题，提取 ${data.questions.length} 道` : `提取 ${data.questions.length} 道题`) +
+              (r.needsReview > 0 ? `，其中 ${r.needsReview} 道缺答案或由规则识别，请校对后保存。` : '。')
+          )
+        }
       } else {
         alert(data.error || '解析失败，请检查文本格式')
       }

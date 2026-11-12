@@ -24,7 +24,7 @@ import {
 } from '../vault-parser.js'
 import { buildGraph } from '../graph-builder.js'
 import { checkHealth } from '../health-checker.js'
-import { organizeDocumentIntoWiki } from '../services/wiki-organizer.js'
+import { createIngestJob, getIngestJob, publicJob, waitForJob } from '../services/ingest-jobs.js'
 import { getRequestVaultPath, resolveSafeUserVaultPath, virtualizeVaultPath, createSandboxExportZip } from '../services/user-sandbox.js'
 import { getUserNotes } from '../context.js'
 
@@ -563,64 +563,41 @@ vaultRouter.post('/ingest/upload', upload.single('file'), async (req, res) => {
       return
     }
 
-    // 1. 调用基于 Microsoft MarkItDown 的多格式转换引擎（包含多级 OCR / 办公文档保底）
-    const { execSync } = await import('child_process')
-    const possibleScriptPaths = [
-      path.resolve(__dirname, 'scripts', 'convert_markitdown.py'),
-      path.resolve(__dirname, '..', 'server', 'scripts', 'convert_markitdown.py'),
-      path.resolve(process.cwd(), 'server', 'scripts', 'convert_markitdown.py')
-    ]
-    const scriptPath = possibleScriptPaths.find(p => fs.existsSync(p)) || possibleScriptPaths[0]
-
-    let markdown = ''
-    let conversionMethod = 'microsoft_markitdown'
-
-    try {
-      const pythonCmd = process.platform === 'win32' ? 'python' : 'python3'
-      const cmd = `"${pythonCmd}" "${scriptPath}" --file "${req.file.path}" --original-name "${originalName.replace(/"/g, '\\"')}" --json`
-      const stdout = execSync(cmd, { encoding: 'utf-8', timeout: 120000, maxBuffer: 50 * 1024 * 1024 })
-      const parsed = JSON.parse(stdout.trim())
-      if (parsed.success && parsed.markdown) {
-        markdown = parsed.markdown
-        conversionMethod = parsed.method || 'microsoft_markitdown'
-      }
-    } catch (convErr: any) {
-      console.warn('[MarkItDown script execution error]:', convErr.message)
-      // 若执行异常，进行就地纯文本保底读取
-      try {
-        markdown = fs.readFileSync(req.file.path, 'utf-8')
-        conversionMethod = 'raw_fallback'
-      } catch {
-        markdown = `# ${path.basename(originalName, ext)}\n\n> 资料已安全接收并导入系统，格式: ${ext}`
-        conversionMethod = 'stub_fallback'
-      }
-    } finally {
-      try { fs.unlinkSync(req.file.path) } catch { /* ok */ }
-    }
-
-    if (!markdown || !markdown.trim()) {
-      markdown = `# ${path.basename(originalName, ext)}\n\n> 资料导入完成，原文件名: ${originalName}`
-    }
-
-    // 2. 调用参考 AgriciDaniel/claude-obsidian 的自组织第二大脑整理引擎
-    const organized = await organizeDocumentIntoWiki(markdown, originalName)
-
-    res.json({
+    // 写入当前用户自己的知识库（旧实现写入全局库，普通用户看不到自己导入的内容）
+    const vaultPath = getRequestVaultPath(req)
+    const job = createIngestJob({
+      ownerId: req.user?.id ? String(req.user.id) : 'guest',
+      filePath: req.file.path,
       originalName,
-      markdownPath: organized.savedPath,
-      wordCount: organized.wordCount,
-      domain: organized.domain,
-      subject: organized.subject,
-      tags: organized.tags,
-      entities: organized.entities,
-      wikilinks: organized.wikilinksCount,
-      mocPath: organized.mocPath,
-      questionsCount: organized.questionsCount,
-      preview: organized.preview,
-      method: conversionMethod
+      sizeBytes: req.file.size,
+      vaultPath,
     })
+
+    // ?async=1：立即返回任务 id，前端轮询 /ingest/jobs/:id 显示进度
+    if (req.query.async === '1') {
+      res.status(202).json({ jobId: job.id, status: job.status })
+      return
+    }
+
+    // 兼容旧调用方：等待完成后返回结果（转换已改为异步，不再阻塞事件循环）
+    const finished = await waitForJob(job)
+    if (finished.status === 'error' || !finished.result) {
+      res.status(500).json({ error: finished.error || '文档摄取处理失败' })
+      return
+    }
+    res.json(finished.result)
   } catch (err: any) {
     console.error('Ingest upload error:', err.message)
     res.status(500).json({ error: err.message || '文档摄取处理失败' })
   }
+})
+
+vaultRouter.get('/ingest/jobs/:id', (req, res) => {
+  const job = getIngestJob(req.params.id)
+  const owner = req.user?.id ? String(req.user.id) : 'guest'
+  if (!job || job.ownerId !== owner) {
+    res.status(404).json({ error: '导入任务不存在或已过期' })
+    return
+  }
+  res.json(publicJob(job))
 })
