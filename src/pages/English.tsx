@@ -28,8 +28,7 @@ import {
   BarChart2,
   Camera,
   Image as ImageIcon,
-  X,
-} from 'lucide-react'
+  X, BookOpen as IcBookOpen, Image as IcImage, Lightbulb as IcLightbulb, PartyPopper as IcPartyPopper, Search as IcSearch, Sparkles as IcSparkles, TriangleAlert as IcTriangleAlert } from 'lucide-react'
 import {
   ESSAY_TEMPLATES,
   ESSAY_GOLDEN_SENTENCES,
@@ -658,7 +657,7 @@ ${essayInput.trim()}
                       </div>
 
                       <div className="text-2xs text-slate-500 leading-relaxed bg-amber-50/60 border border-amber-200/50 rounded-xl p-3">
-                        <div className="font-semibold text-amber-900 mb-0.5">💡 译文与逻辑解析:</div>
+                        <div className="font-semibold text-amber-900 mb-0.5"><IcLightbulb className="emoji-icon" aria-hidden="true" />译文与逻辑解析:</div>
                         <p>{sec.translation}</p>
                         {sec.placeholderHints.length > 0 && (
                           <div className="mt-2 pt-2 border-t border-amber-200/40 text-2xs text-amber-800">
@@ -841,11 +840,11 @@ ${essayInput.trim()}
 
               <div className="grid grid-cols-1 md:grid-cols-12 gap-2 pt-1 text-xs">
                 <div className="md:col-span-7 text-2xs text-slate-600">
-                  <strong className="text-slate-800">🖼️ 图画/图表核心要点：</strong>
+                  <strong className="text-slate-800"><IcImage className="emoji-icon" aria-hidden="true" />图画/图表核心要点：</strong>
                   <span>{activePrompt.visualDescription}</span>
                 </div>
                 <div className="md:col-span-5 text-2xs flex flex-wrap items-center gap-1">
-                  <strong className="text-indigo-900 shrink-0">✨ 推荐闪光词：</strong>
+                  <strong className="text-indigo-900 shrink-0"><IcSparkles className="emoji-icon" aria-hidden="true" />推荐闪光词：</strong>
                   {activePrompt.recommendedKeywords.slice(0, 3).map((kw, kwIdx) => (
                     <span key={kwIdx} className="px-1.5 py-0.2 rounded bg-white border border-indigo-200 text-indigo-700 font-mono text-2xs">
                       {kw.split(' ')[0]}
@@ -1057,7 +1056,7 @@ ${essayInput.trim()}
                 {/* 状态与扣费兜底安全提示 */}
                 {mojuanStatusNotice && (
                   <div className="p-2.5 rounded-xl bg-indigo-50/80 border border-indigo-200/80 text-2xs text-indigo-800 flex items-center justify-between">
-                    <span>💡 {mojuanStatusNotice}</span>
+                    <span><IcLightbulb className="emoji-icon" aria-hidden="true" />{mojuanStatusNotice}</span>
                     <button
                       type="button"
                       onClick={() => setMojuanStatusNotice(null)}
@@ -1069,7 +1068,7 @@ ${essayInput.trim()}
                 )}
                 {mojuanError && (
                   <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-2xs text-rose-700 flex items-center justify-between">
-                    <span>⚠️ {mojuanError}</span>
+                    <span><IcTriangleAlert className="emoji-icon" aria-hidden="true" />{mojuanError}</span>
                     <button
                       type="button"
                       onClick={() => setMojuanError(null)}
@@ -1124,7 +1123,7 @@ ${essayInput.trim()}
                     </div>
                   ) : (
                     <p className="text-xs text-slate-400 text-center py-4">
-                      🎉 暂未检测到初级平庸词，选用表现良好！
+                      <IcPartyPopper className="emoji-icon" aria-hidden="true" />暂未检测到初级平庸词，选用表现良好！
                     </p>
                   )}
                 </div>
@@ -1281,7 +1280,7 @@ ${essayInput.trim()}
 
                       {aiEssayEvaluation.flashcardsVocab && aiEssayEvaluation.flashcardsVocab.length > 0 && (
                         <div className="pt-2 border-t border-slate-100">
-                          <span className="text-2xs font-bold text-slate-700 block mb-1.5">📚 本文核心高频闪光词卡：</span>
+                          <span className="text-2xs font-bold text-slate-700 block mb-1.5"><IcBookOpen className="emoji-icon" aria-hidden="true" />本文核心高频闪光词卡：</span>
                           <div className="flex flex-wrap gap-1.5">
                             {aiEssayEvaluation.flashcardsVocab.map((v: any, vIdx: number) => (
                               <span key={vIdx} className="px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 text-2xs font-mono">
@@ -1335,7 +1334,7 @@ ${essayInput.trim()}
                   </div>
 
                   <div className="pt-2 border-t border-white/10 flex items-center justify-between text-2xs text-indigo-300">
-                    <span>💡 批改标准：严格对标考研英语大纲 4 大阅卷维度</span>
+                    <span><IcLightbulb className="emoji-icon" aria-hidden="true" />批改标准：严格对标考研英语大纲 4 大阅卷维度</span>
                     <button
                       type="button"
                       disabled={isMojuanGrading}
@@ -1559,7 +1558,7 @@ ${essayInput.trim()}
                                 {sen.isHardSentence && sen.hardAnalysis && (
                                   <div className="mt-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-2xs text-slate-700 leading-relaxed space-y-1">
                                     <div className="font-bold text-indigo-700 flex items-center gap-1">
-                                      <span>🔍 语法主干与从句剖析:</span>
+                                      <span><IcSearch className="emoji-icon" aria-hidden="true" />语法主干与从句剖析:</span>
                                     </div>
                                     <p>{sen.hardAnalysis}</p>
                                     {sen.keyWords && sen.keyWords.length > 0 && (

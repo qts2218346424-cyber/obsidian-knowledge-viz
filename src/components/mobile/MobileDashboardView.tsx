@@ -111,7 +111,7 @@ export default function MobileDashboardView({
                 title={isVibrant ? '当前为鲜艳活力风，点击切换为极简黑白风' : '当前为经典极简风，点击切换为鲜艳活力风'}
               >
                 <Palette className={`w-3.5 h-3.5 ${isVibrant ? 'text-pink-400 animate-pulse' : 'text-slate-300'}`} />
-                <span>{isVibrant ? '🎨 鲜艳风' : '极简风'}</span>
+                <span>{isVibrant ? '鲜艳风' : '极简风'}</span>
               </button>
 
               <button

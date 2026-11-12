@@ -18,8 +18,7 @@ import {
   Network,
   ListTree,
   BookmarkCheck,
-  Check
-} from 'lucide-react'
+  Check, Lightbulb as IcLightbulb, Link as IcLink, PartyPopper as IcPartyPopper, Target as IcTarget } from 'lucide-react'
 import {
   api,
   type BookItem,
@@ -207,7 +206,7 @@ export const BookExtractModal: React.FC<BookExtractModalProps> = ({
               <b>{deepResult.chaptersCount} 个独立章节笔记</b> 的 <code>[[双向链接]]</code>。
             </p>
             <div className="p-3 rounded-lg bg-cyan-50 border border-cyan-100 text-cyan-900 text-xs">
-              <div className="font-bold mb-1">🔗 双向链接星图导航预览：</div>
+              <div className="font-bold mb-1"><IcLink className="emoji-icon" aria-hidden="true" />双向链接星图导航预览：</div>
               <ul className="list-disc pl-4 space-y-1">
                 {deepResult.notes.map(n => (
                   <li key={n.title}>
@@ -250,7 +249,7 @@ export const BookExtractModal: React.FC<BookExtractModalProps> = ({
             笔记内容包含：本章知识架构大纲、核心概念物理机理、考研高频大题模型解法套路、以及考场避坑指南。
           </p>
           <div className="p-2.5 rounded-lg bg-cream-50 border border-cream-200 text-warm-600 text-xs">
-            💡 可直接在系统的 <b>Obsidian 知识图谱视图</b> 与 <b>卡片复习中心</b> 中打开此笔记并加入艾宾浩斯复习循环。
+            <IcLightbulb className="emoji-icon" aria-hidden="true" />可直接在系统的 <b>Obsidian 知识图谱视图</b> 与 <b>卡片复习中心</b> 中打开此笔记并加入艾宾浩斯复习循环。
           </div>
         </div>
       </div>
@@ -446,7 +445,7 @@ export const BookExtractModal: React.FC<BookExtractModalProps> = ({
                                   <span>{ch.subSections.length} 个考点脉络</span>
                                   {ch.exercisePagesCount !== undefined && ch.exercisePagesCount > 0 && (
                                     <span className="text-amber-700 font-semibold bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
-                                      🎯 检测到 {ch.exercisePagesCount} 处课后习题/做题页
+                                      <IcTarget className="emoji-icon" aria-hidden="true" />检测到 {ch.exercisePagesCount} 处课后习题/做题页
                                     </span>
                                   )}
                                 </div>
@@ -523,7 +522,7 @@ export const BookExtractModal: React.FC<BookExtractModalProps> = ({
                   <CheckCircle2 className="w-6 h-6 text-green-600 shrink-0" />
                   <div>
                     <h4 className="text-sm font-bold text-green-900">
-                      🎉 全卷深度拆解与规模化题库整合已全部成功完成！
+                      <IcPartyPopper className="emoji-icon" aria-hidden="true" />全卷深度拆解与规模化题库整合已全部成功完成！
                     </h4>
                     <p className="text-xs text-green-700 mt-0.5">
                       已按章节精细生成 <b>{deepResult.notes.length + 1} 篇 Markdown 笔记</b>（含双向链接全景导航），并录入{' '}

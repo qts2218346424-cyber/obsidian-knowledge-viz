@@ -27,8 +27,7 @@ import {
   Sparkles,
   Coins,
   Palette,
-  Bot,
-} from 'lucide-react'
+  Bot, Zap as IcZap } from 'lucide-react'
 import { useVaultStats, useApiHealth } from '../hooks/useVaultData'
 import { useThemeStyle } from '../hooks/useThemeStyle'
 import { useIsMobile } from '../hooks/useIsMobile'
@@ -506,7 +505,7 @@ export default function Layout({ children }: LayoutProps) {
               title={isVibrant ? '当前风格：鲜艳活力风（点击切换为黑白极简风）' : '当前风格：经典极简风（点击切换为鲜艳活力风）'}
             >
               <Palette className={`h-3.5 w-3.5 ${isVibrant ? 'text-indigo-600 animate-pulse' : 'text-slate-400'}`} />
-              <span className="hidden lg:inline">{isVibrant ? '🎨 鲜艳风' : '极简风'}</span>
+              <span className="hidden lg:inline">{isVibrant ? '鲜艳风' : '极简风'}</span>
             </button>
 
             {/* 1. 全局快捷搜索框 ⌘K */}
@@ -721,7 +720,7 @@ export default function Layout({ children }: LayoutProps) {
                           <span className="inline-flex items-center gap-1 text-2xs font-semibold px-2 py-0.5 rounded-full bg-white text-indigo-700 border border-slate-200/80 shadow-xs">
                             {user.role === 'admin' ? '👑 超级管理员' : '🎓 考研研学者'}
                           </span>
-                          <span className="text-2xs font-mono text-amber-700">⚡ {points.toFixed(1)}分</span>
+                          <span className="text-2xs font-mono text-amber-700"><IcZap className="emoji-icon" aria-hidden="true" />{points.toFixed(1)}分</span>
                         </div>
                       </div>
 

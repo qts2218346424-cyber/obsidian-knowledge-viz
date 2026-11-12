@@ -10,8 +10,7 @@ import {
   AlertCircle,
   ShieldCheck,
   ArrowRight,
-  Sparkles,
-} from 'lucide-react'
+  Sparkles, Lightbulb as IcLightbulb } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import * as authService from '../services/auth'
 
@@ -298,7 +297,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
 
               <div className="pt-2 text-center border-t border-slate-100 mt-2">
                 <span className="text-2xs text-slate-400">
-                  💡 忘记当前旧密码？可在退出后于登录界面点击「忘记密码」，通过安全密保或专属救援码直接重置。
+                  <IcLightbulb className="emoji-icon" aria-hidden="true" />忘记当前旧密码？可在退出后于登录界面点击「忘记密码」，通过安全密保或专属救援码直接重置。
                 </span>
               </div>
             </form>

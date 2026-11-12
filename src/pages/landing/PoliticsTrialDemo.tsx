@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { MapPin as IcMapPin, ScrollText as IcScrollText } from 'lucide-react'
 
 /**
  * 落地页「免登录试玩」中的考研政治 · 史纲时空演示。
@@ -158,7 +159,7 @@ export function PoliticsTrialDemo({ fullscreen, onEnter }: PoliticsTrialDemoProp
           >
             <div className="text-xs font-bold text-white truncate">{n.title}</div>
             <div className="text-2xs text-slate-300 mt-1 flex items-center justify-between gap-1">
-              <span className="truncate">📍 {n.city}</span>
+              <span className="truncate"><IcMapPin className="emoji-icon" aria-hidden="true" />{n.city}</span>
               <span className="hidden sm:inline text-2xs px-1.5 rounded bg-white/10 text-amber-200 shrink-0">{n.tag}</span>
             </div>
           </button>
@@ -167,7 +168,7 @@ export function PoliticsTrialDemo({ fullscreen, onEnter }: PoliticsTrialDemoProp
 
       <div className="rounded-2xl border border-amber-500/30 bg-slate-900/80 p-4 sm:p-5 space-y-2.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-xs sm:text-sm font-bold text-amber-300">📜 核心命题点</span>
+          <span className="text-xs sm:text-sm font-bold text-amber-300"><IcScrollText className="emoji-icon" aria-hidden="true" />核心命题点</span>
           <span className="text-2xs sm:text-xs text-amber-200 bg-amber-400/10 px-2 py-0.5 rounded-lg border border-amber-500/20">
             {node.focus}
           </span>

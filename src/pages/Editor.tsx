@@ -7,8 +7,7 @@ import {
   FolderTree, Eye, Bold, Italic, Heading, List, Code,
   Link, Table, Hash, Sparkles, Wand2,
   Undo2, Copy, Check, Quote, Strikethrough, Minus, ListOrdered,
-  Sigma, Target, Image as ImageIcon, PenTool, MoreHorizontal, FileText,
-} from 'lucide-react'
+  Sigma, Target, Image as ImageIcon, PenTool, MoreHorizontal, FileText, Lightbulb as IcLightbulb, Sparkles as IcSparkles } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
@@ -918,7 +917,7 @@ export default function Editor() {
 
       {/* File Explorer Sidebar: 移动端为侧滑抽屉，桌面端保持经典侧边栏 */}
       <div className={`
-        fixed inset-y-0 left-0 z-50 w-72 bg-[#fbfbfc] shadow-xl transition-transform duration-200
+        fixed inset-y-0 left-0 z-50 w-72 bg-slate-50 shadow-xl transition-transform duration-200
         lg:static lg:z-auto lg:shadow-none lg:transition-all
         ${showFiles ? 'translate-x-0 lg:w-56' : '-translate-x-full lg:w-0'}
         overflow-hidden border-r border-cream-200 flex flex-col shrink-0
@@ -1178,7 +1177,7 @@ export default function Editor() {
               <div className="fixed inset-0 z-40" onClick={() => setShowAiMenu(false)} />
               <div className="absolute right-3 top-full mt-1 w-60 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden animate-fade-in-up">
                 <div className="px-3 py-2 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between">
-                  <span className="text-2xs font-bold text-slate-700">✨ AI 智能编辑助手</span>
+                  <span className="text-2xs font-bold text-slate-700"><IcSparkles className="emoji-icon" aria-hidden="true" />AI 智能编辑助手</span>
                 </div>
                 {aiActions.map(action => (
                   <button
@@ -1228,7 +1227,7 @@ export default function Editor() {
                   className="col-span-2 flex items-center justify-center gap-2 p-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold shadow-sm disabled:opacity-40 active:scale-[0.99]"
                 >
                   <Target className="w-4 h-4" />
-                  <span>🎯 即学即练（根据当前笔记现场出 3 道真题）</span>
+                  <span>即学即练（根据当前笔记现场出 3 道真题）</span>
                 </button>
 
                 <button
@@ -1628,7 +1627,7 @@ export default function Editor() {
               </div>
 
               <p className="text-2xs text-warm-400 text-center">
-                💡 提示：输入名称后直接按 Enter 回车键即可极速创建并开始写作
+                <IcLightbulb className="emoji-icon" aria-hidden="true" />提示：输入名称后直接按 Enter 回车键即可极速创建并开始写作
               </p>
             </div>
           </div>
@@ -1791,7 +1790,7 @@ function ToolBtn({ icon: Icon, label, onClick, className, suffix }: {
     <button onClick={onClick} title={label}
       className={`p-1.5 rounded text-warm-500 hover:text-warm-700 hover:bg-cream-200 transition-colors relative shrink-0 ${className || ''}`}>
       <Icon className="w-3.5 h-3.5" />
-      {suffix && <span className="absolute -bottom-0.5 -right-0.5 text-[8px] text-warm-400 font-bold">{suffix}</span>}
+      {suffix && <span className="absolute -bottom-0.5 -right-0.5 text-2xs text-warm-400 font-bold">{suffix}</span>}
     </button>
   )
 }

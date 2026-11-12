@@ -18,8 +18,7 @@ import {
   Compass,
   ListFilter,
   RotateCcw,
-  Star,
-} from 'lucide-react'
+  Star, Calendar as IcCalendar, ClipboardList as IcClipboardList, KeyRound as IcKeyRound, Landmark as IcLandmark, Pin as IcPin, Star as IcStar, Target as IcTarget } from 'lucide-react'
 import {
   HISTORY_ERAS,
   CATEGORY_META,
@@ -289,7 +288,7 @@ export default function HistoryOutline() {
             </div>
 
             <h1 className="fluid-section-title font-extrabold text-slate-900 mt-2 flex items-center gap-2">
-              <span>🏛️ 中国近现代史纲要 · 交互编年时空轴</span>
+              <span><IcLandmark className="emoji-icon" aria-hidden="true" />中国近现代史纲要 · 交互编年时空轴</span>
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
               拖动进度条或按键盘 <kbd className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 font-mono text-2xs text-slate-700">←</kbd>{' '}
@@ -580,7 +579,7 @@ export default function HistoryOutline() {
                     }`}
                     title="拖动时精准吸附在有重要考点的年份节点上，零空白年份"
                   >
-                    🎯 考点吸附 ({availableYears.length}年)
+                    <IcTarget className="emoji-icon" aria-hidden="true" />考点吸附 ({availableYears.length}年)
                   </button>
                   <button
                     type="button"
@@ -592,7 +591,7 @@ export default function HistoryOutline() {
                     }`}
                     title="按 1840–2024 真实历史时间比例逐年连续拖动"
                   >
-                    📅 全编年连续
+                    <IcCalendar className="emoji-icon" aria-hidden="true" />全编年连续
                   </button>
                 </div>
 
@@ -741,11 +740,11 @@ export default function HistoryOutline() {
             {showEraDetail && (
               <div className="mt-2.5 grid md:grid-cols-2 gap-3 p-3.5 rounded-2xl bg-white/90 border border-slate-200/80 text-xs leading-relaxed animate-fade-in-up">
                 <div>
-                  <div className="font-extrabold text-slate-900 mb-1">📌 本时期社会主要矛盾</div>
+                  <div className="font-extrabold text-slate-900 mb-1"><IcPin className="emoji-icon" aria-hidden="true" />本时期社会主要矛盾</div>
                   <p className="text-slate-600">{currentEra.coreContradiction}</p>
                 </div>
                 <div>
-                  <div className="font-extrabold text-slate-900 mb-1">🎯 本时期核心历史任务</div>
+                  <div className="font-extrabold text-slate-900 mb-1"><IcTarget className="emoji-icon" aria-hidden="true" />本时期核心历史任务</div>
                   <p className="text-slate-600">{currentEra.historicalTask}</p>
                 </div>
               </div>
@@ -864,7 +863,7 @@ export default function HistoryOutline() {
                       <div className="mt-4 space-y-3.5 animate-fade-in-up">
                         {/* 一字千金定性横幅 */}
                         <div className="inline-flex flex-wrap items-center gap-2 px-3.5 py-2 rounded-2xl bg-slate-900 text-white text-xs sm:text-sm font-bold shadow-xs">
-                          <span className="text-amber-400">🔑 核心定性：</span>
+                          <span className="text-amber-400"><IcKeyRound className="emoji-icon" aria-hidden="true" />核心定性：</span>
                           <span>{item.keyTag}</span>
                         </div>
 
@@ -872,18 +871,18 @@ export default function HistoryOutline() {
                         <div className="grid md:grid-cols-2 gap-3">
                           <div className="rounded-2xl bg-slate-50/90 border border-slate-200/80 p-3.5 sm:p-4">
                             <div className="text-xs font-extrabold text-slate-800 mb-1.5 flex items-center gap-1.5">
-                              <span>📋 核心内容 / 会议决议</span>
+                              <span><IcClipboardList className="emoji-icon" aria-hidden="true" />核心内容 / 会议决议</span>
                             </div>
-                            <p className="text-xs sm:text-[13.5px] text-slate-700 leading-relaxed">
+                            <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">
                               {item.content}
                             </p>
                           </div>
 
                           <div className="rounded-2xl bg-indigo-50/45 border border-indigo-200/70 p-3.5 sm:p-4">
                             <div className="text-xs font-extrabold text-indigo-950 mb-1.5 flex items-center gap-1.5">
-                              <span>🌟 考研标准历史意义与地位</span>
+                              <span><IcStar className="emoji-icon" aria-hidden="true" />考研标准历史意义与地位</span>
                             </div>
-                            <p className="text-xs sm:text-[13.5px] text-slate-700 leading-relaxed">
+                            <p className="text-xs sm:text-sm text-slate-700 leading-relaxed">
                               {item.significance}
                             </p>
                           </div>
@@ -938,7 +937,7 @@ export default function HistoryOutline() {
                     onClick={() => setSliderMode('snap')}
                     className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-indigo-600 cursor-pointer"
                   >
-                    <span>🎯 开启考点吸附模式</span>
+                    <span><IcTarget className="emoji-icon" aria-hidden="true" />开启考点吸附模式</span>
                   </button>
                   {nextKeyYear !== null && (
                     <button
@@ -1086,7 +1085,7 @@ export default function HistoryOutline() {
                       </span>
                     </div>
                     <h3 className="text-sm font-extrabold text-slate-900">{item.title}</h3>
-                    <p className="text-xs font-bold text-indigo-700 mt-1">🔑 {item.keyTag}</p>
+                    <p className="text-xs font-bold text-indigo-700 mt-1"><IcKeyRound className="emoji-icon" aria-hidden="true" />{item.keyTag}</p>
                   </div>
                   <div className="flex items-center justify-between text-2xs text-slate-400 pt-2 border-t border-slate-100">
                     <span>{item.location ? `📍 ${item.location}` : item.date}</span>

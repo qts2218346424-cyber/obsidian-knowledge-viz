@@ -31,8 +31,7 @@ import {
   HelpCircle,
   ShieldAlert,
   Maximize2,
-  Minimize2,
-} from 'lucide-react'
+  Minimize2, ChartColumn as IcChartColumn, FileText as IcFileText, Globe as IcGlobe, Lightbulb as IcLightbulb, Lock as IcLock, Map as IcMap, Monitor as IcMonitor, Network as IcNetwork, Package as IcPackage, PenLine as IcPenLine, Ruler as IcRuler, ScrollText as IcScrollText, Settings as IcSettings, Smartphone as IcSmartphone, Sparkles as IcSparkles, Zap as IcZap } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { MathTrialDemo, AgentTrialDemo } from './landing/TrialDemos'
 import { PoliticsTrialDemo } from './landing/PoliticsTrialDemo'
@@ -460,10 +459,10 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen subframe-landing-bg text-[#171719] font-sans flex flex-col selection:bg-slate-900 selection:text-white relative overflow-x-hidden w-full max-w-full">
+    <div className="min-h-screen subframe-landing-bg text-slate-900 font-sans flex flex-col selection:bg-slate-900 selection:text-white relative overflow-x-hidden w-full max-w-full">
       {/* 浮动吐司通知 */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 bg-[#18181b] text-white text-xs font-medium px-4 py-2.5 rounded-xl shadow-xl border border-white/15 animate-fade-in-up">
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 bg-slate-900 text-white text-xs font-medium px-4 py-2.5 rounded-xl shadow-xl border border-white/15 animate-fade-in-up">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           <span>{toastMessage}</span>
         </div>
@@ -473,7 +472,7 @@ export default function LandingPage() {
       <header className="relative z-30 w-full max-w-[1280px] mx-auto px-5 sm:px-8 pt-4 pb-3 flex items-center justify-between">
         {/* 左侧 Logo 标识 */}
         <Link to="/" className="group flex items-center gap-2.5 focus:outline-none">
-          <div className="w-7 h-7 rounded-lg bg-[#18181b] text-white flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+          <div className="w-7 h-7 rounded-lg bg-slate-900 text-white flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
             <svg className="w-4 h-4 text-white" viewBox="0 0 28 28" fill="none">
               <rect x="4" y="4" width="17" height="5.5" rx="1" fill="currentColor" />
               <path d="M4 12.2H14.5L4 22.5V12.2Z" fill="currentColor" />
@@ -481,7 +480,7 @@ export default function LandingPage() {
             </svg>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="font-bold text-[15px] tracking-tight text-[#171719]">CoreForge</span>
+            <span className="font-bold text-[15px] tracking-tight text-slate-900">CoreForge</span>
             <span className="text-2xs font-semibold text-slate-500 bg-black/[0.04] px-1.5 py-0.5 rounded border border-black/[0.05]">
               研核
             </span>
@@ -492,19 +491,19 @@ export default function LandingPage() {
         <nav className="hidden md:flex items-center gap-1 px-3 py-1.5 rounded-xl bg-white/35 backdrop-blur-md border border-white/50 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
           <a
             href="#features"
-            className="px-3.5 py-1 rounded-lg text-[13px] font-medium text-[#6e7178] hover:text-[#171719] hover:bg-white/50 transition-colors"
+            className="px-3.5 py-1 rounded-lg text-[13px] font-medium text-slate-500 hover:text-slate-900 hover:bg-white/50 transition-colors"
           >
             研学特性
           </a>
           <a
             href="#subjects"
-            className="px-3.5 py-1 rounded-lg text-[13px] font-medium text-[#6e7178] hover:text-[#171719] hover:bg-white/50 transition-colors"
+            className="px-3.5 py-1 rounded-lg text-[13px] font-medium text-slate-500 hover:text-slate-900 hover:bg-white/50 transition-colors"
           >
             考研四核
           </a>
           <a
             href="#download"
-            className="px-3.5 py-1 rounded-lg text-[13px] font-medium text-[#6e7178] hover:text-[#171719] hover:bg-white/50 transition-colors"
+            className="px-3.5 py-1 rounded-lg text-[13px] font-medium text-slate-500 hover:text-slate-900 hover:bg-white/50 transition-colors"
           >
             多端下载
           </a>
@@ -516,7 +515,7 @@ export default function LandingPage() {
               setPreviewTab('workbench')
               document.getElementById('preview')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
             }}
-            className="px-3.5 py-1 rounded-lg text-[13px] font-medium text-[#6e7178] hover:text-[#171719] hover:bg-white/50 transition-colors"
+            className="px-3.5 py-1 rounded-lg text-[13px] font-medium text-slate-500 hover:text-slate-900 hover:bg-white/50 transition-colors"
           >
             工作台实景
           </a>
@@ -527,7 +526,7 @@ export default function LandingPage() {
           {isAuthenticated ? (
             <button
               onClick={() => navigate('/dashboard')}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] font-medium bg-[#18181b] text-white hover:bg-[#27272a] transition-all shadow-sm cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] font-medium bg-slate-900 text-white hover:bg-slate-800 transition-all shadow-sm cursor-pointer"
             >
               <span>进入研学空间</span>
               <ArrowRight className="h-3.5 w-3.5" />
@@ -540,7 +539,7 @@ export default function LandingPage() {
                   setModalTab('login')
                   setAuthModalOpen(true)
                 }}
-                className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-[13px] font-medium text-[#18181b] hover:bg-black/5 transition-colors cursor-pointer"
+                className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-[13px] font-medium text-slate-900 hover:bg-black/5 transition-colors cursor-pointer"
               >
                 登录账号
               </button>
@@ -550,7 +549,7 @@ export default function LandingPage() {
                   setModalTab('register')
                   setAuthModalOpen(true)
                 }}
-                className="px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-lg text-xs sm:text-[13px] font-medium bg-[#18181b] text-white hover:bg-[#27272a] transition-all shadow-sm cursor-pointer"
+                className="px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-lg text-xs sm:text-[13px] font-medium bg-slate-900 text-white hover:bg-slate-800 transition-all shadow-sm cursor-pointer"
               >
                 免费体验
               </button>
@@ -646,17 +645,17 @@ export default function LandingPage() {
         </div>
 
         {/* Subframe 标志性主标题 (移动端紧凑精致 21px，桌面端澎湃大字) */}
-        <h1 className="text-[21px] sm:text-[56px] md:text-[76px] font-bold tracking-[-0.04em] leading-[1.12] sm:leading-[1.04] text-[#171719] mb-2.5 sm:mb-4 max-w-4xl mx-auto">
+        <h1 className="text-[21px] sm:text-[56px] md:text-[76px] font-bold tracking-[-0.04em] leading-[1.12] sm:leading-[1.04] text-slate-900 mb-2.5 sm:mb-4 max-w-4xl mx-auto">
           {modeConfigs[activeMode].title}
         </h1>
 
         {/* 细腻质感副标题 (移动端适度紧凑 12px，留白适度) */}
-        <p className="text-xs sm:text-[24px] md:text-[30px] font-normal tracking-[-0.015em] leading-[1.38] sm:leading-[1.25] text-[#8d9096] max-w-[720px] mb-3 sm:mb-8 px-2 sm:px-0">
+        <p className="text-xs sm:text-[24px] md:text-[30px] font-normal tracking-[-0.015em] leading-[1.38] sm:leading-[1.25] text-slate-400 max-w-[720px] mb-3 sm:mb-8 px-2 sm:px-0">
           {modeConfigs[activeMode].subtitle}
         </p>
 
         {/* Subframe 动态模式状态胶囊 (mode-live-pill) */}
-        <div className="mb-4 sm:mb-9 inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full bg-black/[0.04] border border-black/[0.06] text-2xs sm:text-xs text-[#52525b] max-w-2xl backdrop-blur-xs">
+        <div className="mb-4 sm:mb-9 inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full bg-black/[0.04] border border-black/[0.06] text-2xs sm:text-xs text-slate-600 max-w-full sm:max-w-2xl backdrop-blur-xs">
           <span className="w-1.5 h-1.5 rounded-full bg-slate-800 shrink-0" />
           <span className="truncate">{modeConfigs[activeMode].badge}</span>
         </div>
@@ -672,7 +671,7 @@ export default function LandingPage() {
                 setAuthModalOpen(true)
               }
             }}
-            className="w-full py-2.5 px-4 rounded-xl bg-[#1c1c1f] hover:bg-black text-white text-[13px] font-bold flex items-center justify-center gap-2 shadow-sm shadow-black/15 active:scale-[0.98] transition-all cursor-pointer"
+            className="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-black text-white text-[13px] font-bold flex items-center justify-center gap-2 shadow-sm shadow-black/15 active:scale-[0.98] transition-all cursor-pointer"
           >
             <Globe className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
             <span>立即开启研学 (免安装网页版)</span>
@@ -711,7 +710,7 @@ export default function LandingPage() {
                 setAuthModalOpen(true)
               }
             }}
-            className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-xl bg-[#1c1c1f] hover:bg-black text-white text-[15px] font-bold shadow-[0_4px_16px_rgba(0,0,0,0.22)] ring-1 ring-white/20 transition-all active:scale-[0.98] cursor-pointer"
+            className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-xl bg-slate-900 hover:bg-black text-white text-[15px] font-bold shadow-[0_4px_16px_rgba(0,0,0,0.22)] ring-1 ring-white/20 transition-all active:scale-[0.98] cursor-pointer"
           >
             <Globe className="w-4 h-4 text-emerald-400 shrink-0" />
             <span>立即开启研学 (免安装网页版)</span>
@@ -722,7 +721,7 @@ export default function LandingPage() {
             type="button"
             onClick={handleDownloadDesktop}
             disabled={downloading}
-            className="inline-flex items-center gap-2 px-5 py-3.5 rounded-xl bg-[#e3e4e7] hover:bg-[#d8d9dd] text-[#18181b] text-sm font-medium border border-black/[0.05] transition-all active:scale-[0.98] cursor-pointer"
+            className="inline-flex items-center gap-2 px-5 py-3.5 rounded-xl bg-[#e3e4e7] hover:bg-[#d8d9dd] text-slate-900 text-sm font-medium border border-black/[0.05] transition-all active:scale-[0.98] cursor-pointer"
           >
             <Download className="w-4 h-4 text-slate-700" />
             <span>{downloading ? '正在拉取安装包...' : '下载 Windows 电脑客户端'}</span>
@@ -733,7 +732,7 @@ export default function LandingPage() {
 
           <a
             href="#download"
-            className="inline-flex items-center gap-2 px-5 py-3.5 rounded-xl bg-white/80 hover:bg-white text-[#18181b] text-sm font-medium border border-slate-200/90 shadow-xs transition-all active:scale-[0.98]"
+            className="inline-flex items-center gap-2 px-5 py-3.5 rounded-xl bg-white/80 hover:bg-white text-slate-900 text-sm font-medium border border-slate-200/90 shadow-xs transition-all active:scale-[0.98]"
           >
             <Smartphone className="w-4 h-4 text-slate-600" />
             <span>移动端扫码</span>
@@ -742,7 +741,7 @@ export default function LandingPage() {
       </section>
 
       {/*  */}
-      <section id="preview" className="max-w-[1280px] mx-auto px-4 sm:px-8 pb-20">
+      <section id="preview" className="w-full min-w-0 max-w-[1280px] mx-auto px-4 sm:px-8 pb-20">
         {/* 📱 手机端专属沉浸全屏试玩推荐横幅 (紧凑精致) */}
         <div className="sm:hidden mb-2.5 p-2.5 rounded-xl bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 text-white border border-indigo-400/40 flex items-center justify-between gap-2 shadow-xs">
           <div className="flex items-center gap-2 min-w-0">
@@ -750,7 +749,7 @@ export default function LandingPage() {
             <div className="min-w-0">
               <div className="text-2xs font-bold text-white flex items-center gap-1 truncate">
                 <span>手机端沉浸全屏试玩</span>
-                <span className="text-[8.5px] px-1 py-0.2 rounded-full bg-amber-400 text-amber-950 font-extrabold">推荐</span>
+                <span className="text-2xs px-1 py-0.2 rounded-full bg-amber-400 text-amber-950 font-extrabold">推荐</span>
               </div>
               <div className="text-2xs text-indigo-200/90 truncate">画布宽广 · 无黑边截断 · 顺畅滑动</div>
             </div>
@@ -809,10 +808,10 @@ export default function LandingPage() {
         </div>
 
         {/* 视窗外壳 */}
-        <div className="rounded-2xl bg-[#e3e3e6] p-2.5 sm:p-3 shadow-[0_24px_64px_rgba(0,0,0,0.12)] border border-white/60">
+        <div className="rounded-2xl bg-slate-200 p-2.5 sm:p-3 shadow-[0_24px_64px_rgba(0,0,0,0.12)] border border-white/60">
           <div className="w-full bg-white rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.06)] border border-black/[0.08] overflow-hidden text-left select-none">
             {/* 工作台顶部仿 Chrome 导航条 */}
-            <div className="h-9 px-3 sm:px-4 bg-[#fafafa] border-b border-slate-200/80 flex items-center justify-between text-2xs text-slate-500 overflow-hidden">
+            <div className="h-9 px-3 sm:px-4 bg-slate-50 border-b border-slate-200/80 flex items-center justify-between text-2xs text-slate-500 overflow-hidden">
               <div className="flex items-center gap-2 sm:gap-3.5 truncate">
                 <span className="font-semibold text-slate-900 truncate">CoreForge 考研研核 · 沉浸实景视窗</span>
                 <span className="text-slate-400 hidden sm:inline">·</span>
@@ -861,7 +860,7 @@ export default function LandingPage() {
                           408 数据结构真题实验室
                         </span>
                         <span className="text-slate-300 font-semibold truncate">
-                          🌳 AVL 平衡二叉树四种自平衡旋转 (LL/RR/LR/RL)
+                          <IcNetwork className="emoji-icon" aria-hidden="true" />AVL 平衡二叉树四种自平衡旋转 (LL/RR/LR/RL)
                         </span>
                       </div>
                       <span className="text-2xs text-slate-400">
@@ -930,7 +929,7 @@ export default function LandingPage() {
               /* ── 视窗模式 B: 三栏式实景编辑器视窗 ── */
               <div className="grid grid-cols-12 min-h-[360px] bg-white text-2xs transition-all duration-300">
                 {/* 左栏：组件库 / 学科章节树 */}
-                <div className="col-span-12 md:col-span-3 border-r border-slate-200/80 p-3 bg-[#fbfbfc] flex flex-col gap-2.5">
+                <div className="col-span-12 md:col-span-3 border-r border-slate-200/80 p-3 bg-slate-50 flex flex-col gap-2.5">
                   <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700">
                     <div className="flex items-center gap-1.5">
                       <Search className="w-3 h-3 text-slate-400" />
@@ -999,7 +998,7 @@ export default function LandingPage() {
                 </div>
 
                 {/* 右栏：属性检查器 */}
-                <div className="col-span-12 md:col-span-3 border-l border-slate-200/80 p-3 bg-[#fbfbfc] flex flex-col gap-3">
+                <div className="col-span-12 md:col-span-3 border-l border-slate-200/80 p-3 bg-slate-50 flex flex-col gap-3">
                   <div className="font-semibold text-slate-900 pb-1.5 border-b border-slate-200 flex items-center justify-between">
                     <span>知识点属性检查器</span>
                     <span className="text-2xs text-slate-400 font-normal">示意图</span>
@@ -1070,7 +1069,7 @@ export default function LandingPage() {
                 </div>
                 <div className="p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
                   <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                    <span>📦 一键导出 .zip 全量包</span>
+                    <span><IcPackage className="emoji-icon" aria-hidden="true" />一键导出 .zip 全量包</span>
                   </div>
                   <div className="text-2xs text-slate-600 mt-1">随时离线迁移，数据零丢失</div>
                 </div>
@@ -1080,13 +1079,13 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="download" className="py-20 border-t border-slate-200/80 bg-[#f4f4f6]/80 relative">
+      <section id="download" className="py-20 border-t border-slate-200/80 bg-slate-100/80 relative">
         <div className="max-w-[1280px] mx-auto px-4 sm:px-8">
           <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-14">
-            <h2 className="text-2xl sm:text-4xl font-bold text-[#18181b] tracking-[-0.03em]">
+            <h2 className="text-2xl sm:text-4xl font-bold text-slate-900 tracking-[-0.03em]">
               全平台多端覆盖 · 随时随地进入心流
             </h2>
-            <p className="mt-2 sm:mt-3 text-xs sm:text-base text-[#71717a]">
+            <p className="mt-2 sm:mt-3 text-xs sm:text-base text-slate-500">
               无论主力电脑深度刷题，还是手机随时背闪卡，同一套知识库全场景自由切换。
             </p>
           </div>
@@ -1094,7 +1093,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 items-stretch">
             {/* 1. Windows 桌面旗舰端 */}
             <div className="rounded-2xl bg-white border-2 border-slate-900/10 p-4 sm:p-7 shadow-[0_2px_14px_rgba(0,0,0,0.05)] flex flex-col justify-between relative">
-              <div className="absolute -top-3 left-6 px-3 py-0.5 rounded-full bg-[#18181b] text-white text-2xs font-bold tracking-wide shadow-sm">
+              <div className="absolute -top-3 left-6 px-3 py-0.5 rounded-full bg-slate-900 text-white text-2xs font-bold tracking-wide shadow-sm">
                 主力备考推荐
               </div>
 
@@ -1134,7 +1133,7 @@ export default function LandingPage() {
                   type="button"
                   onClick={handleDownloadDesktop}
                   disabled={downloading}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#1c1c1f] hover:bg-[#2a2a2e] active:scale-[0.98] py-3 px-4 text-sm font-semibold text-white shadow-sm transition-all cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-slate-900 hover:bg-slate-800 active:scale-[0.98] py-3 px-4 text-sm font-semibold text-white shadow-sm transition-all cursor-pointer"
                 >
                   <Download className="w-4 h-4" />
                   <span>
@@ -1178,13 +1177,13 @@ export default function LandingPage() {
                     )}
                   </div>
                   <div className="text-left text-xs space-y-1">
-                    <p className="font-semibold text-slate-900">📱 扫码即刻体验：</p>
+                    <p className="font-semibold text-slate-900"><IcSmartphone className="emoji-icon" aria-hidden="true" />扫码即刻体验：</p>
                     <p className="text-slate-500 text-2xs">1. 手机微信或自带浏览器扫描二维码</p>
                     <p className="text-slate-500 text-2xs">
                       2. 点击菜单 <strong className="text-slate-900">「添加到主屏幕」</strong>
                     </p>
                     <p className="text-emerald-600 text-2xs font-semibold">
-                      ✨ 3 秒秒变手机 App，沉浸全屏！
+                      <IcSparkles className="emoji-icon" aria-hidden="true" />3 秒秒变手机 App，沉浸全屏！
                     </p>
                   </div>
                 </div>
@@ -1241,7 +1240,7 @@ export default function LandingPage() {
                 <button
                   type="button"
                   onClick={() => setAuthModalOpen(true)}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#1c1c1f] hover:bg-[#2a2a2e] active:scale-[0.98] py-3 px-4 text-sm font-semibold text-white shadow-sm transition-all cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-slate-900 hover:bg-slate-800 active:scale-[0.98] py-3 px-4 text-sm font-semibold text-white shadow-sm transition-all cursor-pointer"
                 >
                   <ArrowRight className="w-4 h-4" />
                   <span>{isAuthenticated ? '直接进入研学空间' : '前往登录 / 注册空间'}</span>
@@ -1261,10 +1260,10 @@ export default function LandingPage() {
           <span className="text-2xs sm:text-2xs font-bold text-slate-400 uppercase tracking-widest">
             QUAD-CORE ECOSYSTEM
           </span>
-          <h2 className="mt-1 text-2xl sm:text-4xl font-bold text-[#18181b] tracking-[-0.03em]">
+          <h2 className="mt-1 text-2xl sm:text-4xl font-bold text-slate-900 tracking-[-0.03em]">
             全面覆盖考研四大主力科目
           </h2>
-          <p className="mt-2 sm:mt-3 text-xs sm:text-sm text-[#71717a]">
+          <p className="mt-2 sm:mt-3 text-xs sm:text-sm text-slate-500">
             拒绝泛泛的通用笔记本，CoreForge 为 408 计算机、考研数学、考研政治与考研英语量身定制四核研学生态。
           </p>
         </div>
@@ -1288,13 +1287,13 @@ export default function LandingPage() {
                 🌲 算法与数据结构
               </div>
               <div className="p-2 sm:p-2.5 rounded-lg bg-slate-50 border border-slate-200 font-medium text-slate-800 whitespace-nowrap overflow-hidden text-ellipsis">
-                ⚙️ 计算机组成原理
+                <IcSettings className="emoji-icon" aria-hidden="true" />计算机组成原理
               </div>
               <div className="p-2 sm:p-2.5 rounded-lg bg-slate-50 border border-slate-200 font-medium text-slate-800 whitespace-nowrap overflow-hidden text-ellipsis">
-                🖥️ 操作系统原理
+                <IcMonitor className="emoji-icon" aria-hidden="true" />操作系统原理
               </div>
               <div className="p-2 sm:p-2.5 rounded-lg bg-slate-50 border border-slate-200 font-medium text-slate-800 whitespace-nowrap overflow-hidden text-ellipsis">
-                🌐 计算机网络通信
+                <IcGlobe className="emoji-icon" aria-hidden="true" />计算机网络通信
               </div>
             </div>
           </div>
@@ -1314,16 +1313,16 @@ export default function LandingPage() {
             </p>
             <div className="grid grid-cols-2 gap-1.5 sm:gap-2 text-2xs sm:text-xs">
               <div className="p-2 sm:p-2.5 rounded-lg bg-slate-50 border border-slate-200 font-medium text-slate-800 whitespace-nowrap overflow-hidden text-ellipsis">
-                📐 微积分与高等数学
+                <IcRuler className="emoji-icon" aria-hidden="true" />微积分与高等数学
               </div>
               <div className="p-2 sm:p-2.5 rounded-lg bg-slate-50 border border-slate-200 font-medium text-slate-800 whitespace-nowrap overflow-hidden text-ellipsis">
-                📊 线性代数矩阵空间
+                <IcChartColumn className="emoji-icon" aria-hidden="true" />线性代数矩阵空间
               </div>
               <div className="p-2 sm:p-2.5 rounded-lg bg-slate-50 border border-slate-200 font-medium text-slate-800 whitespace-nowrap overflow-hidden text-ellipsis">
                 🎲 概率论与数理统计
               </div>
               <div className="p-2 sm:p-2.5 rounded-lg bg-slate-50 border border-slate-200 font-medium text-slate-800 whitespace-nowrap overflow-hidden text-ellipsis">
-                ✍️ 步骤启发式证明推导
+                <IcPenLine className="emoji-icon" aria-hidden="true" />步骤启发式证明推导
               </div>
             </div>
           </div>
@@ -1346,16 +1345,16 @@ export default function LandingPage() {
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 font-medium text-slate-800">
-                🗺️ 高精矢量中国地图
+                <IcMap className="emoji-icon" aria-hidden="true" />高精矢量中国地图
               </div>
               <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 font-medium text-slate-800">
                 ⏱️ 1840~2024 时空大屏
               </div>
               <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 font-medium text-slate-800">
-                📝 肖秀荣 1000 题精粹
+                <IcFileText className="emoji-icon" aria-hidden="true" />肖秀荣 1000 题精粹
               </div>
               <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 font-medium text-slate-800">
-                🔒 核心考点遮罩自测
+                <IcLock className="emoji-icon" aria-hidden="true" />核心考点遮罩自测
               </div>
             </div>
           </div>
@@ -1378,13 +1377,13 @@ export default function LandingPage() {
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 font-medium text-slate-800">
-                📜 大小作文高分模板
+                <IcScrollText className="emoji-icon" aria-hidden="true" />大小作文高分模板
               </div>
               <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 font-medium text-slate-800">
-                ⚡ 考研标准分 AI 批改
+                <IcZap className="emoji-icon" aria-hidden="true" />考研标准分 AI 批改
               </div>
               <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 font-medium text-slate-800">
-                🌳 长难句树状语法拆解
+                <IcNetwork className="emoji-icon" aria-hidden="true" />长难句树状语法拆解
               </div>
               <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 font-medium text-slate-800">
                 📈 2000+ 词汇艾宾浩斯
@@ -1405,7 +1404,7 @@ export default function LandingPage() {
           role="dialog"
           aria-modal="true"
         >
-          <div className="relative w-full max-w-[940px] max-h-[calc(100dvh-1.5rem)] sm:max-h-[min(90dvh,720px)] rounded-3xl bg-[#e3e3e6] p-2.5 sm:p-3 shadow-[0_28px_70px_rgba(0,0,0,0.5)] border border-white/60 grid grid-cols-1 lg:grid-cols-12 gap-3 overflow-hidden my-auto animate-in zoom-in-95 duration-200">
+          <div className="relative w-full max-w-[940px] max-h-[calc(100dvh-1.5rem)] sm:max-h-[min(90dvh,720px)] rounded-3xl bg-slate-200 p-2.5 sm:p-3 shadow-[0_28px_70px_rgba(0,0,0,0.5)] border border-white/60 grid grid-cols-1 lg:grid-cols-12 gap-3 overflow-hidden my-auto animate-in zoom-in-95 duration-200">
             {/* 固定的关闭按钮（右上角常驻、大点击热区） */}
             <button
               type="button"
@@ -1418,9 +1417,9 @@ export default function LandingPage() {
             </button>
 
             {/* 左栏：身份认证、注册与找回密码 (手机端独立纵向滚动，高度自适应，紧凑排版) */}
-            <div className="lg:col-span-5 bg-[#efefef] rounded-xl p-3.5 sm:p-7 flex flex-col justify-between text-left border border-white/70 overflow-y-auto max-h-[calc(100dvh-3rem)] lg:max-h-none modal-scroll-contain overscroll-contain">
+            <div className="lg:col-span-5 bg-slate-100 rounded-xl p-3.5 sm:p-7 flex flex-col justify-between text-left border border-white/70 overflow-y-auto max-h-[calc(100dvh-3rem)] lg:max-h-none modal-scroll-contain overscroll-contain">
               <div>
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#18181b] text-white flex items-center justify-center shadow-sm mb-3 sm:mb-5">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center shadow-sm mb-3 sm:mb-5">
                   <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" viewBox="0 0 28 28" fill="none">
                     <rect x="4" y="4" width="17" height="5.5" rx="1" fill="currentColor" />
                     <path d="M4 12.2H14.5L4 22.5V12.2Z" fill="currentColor" />
@@ -1428,14 +1427,14 @@ export default function LandingPage() {
                   </svg>
                 </div>
 
-                <h2 className="text-[16.5px] sm:text-[25px] leading-[1.2] tracking-tight font-bold text-[#18181b] mb-2 sm:mb-4">
+                <h2 className="text-[16.5px] sm:text-[25px] leading-[1.2] tracking-tight font-bold text-slate-900 mb-2 sm:mb-4">
                   {modalTab === 'forgot'
                     ? '找回研学密码'
                     : modalTab === 'register'
                     ? '注册研学空间'
                     : '进入研核空间'}
                   <br />
-                  <span className="text-2xs sm:text-[13px] text-[#8d9096] font-normal">
+                  <span className="text-2xs sm:text-[13px] text-slate-400 font-normal">
                     {modalTab === 'forgot'
                       ? 'Account Security Recovery'
                       : 'CoreForge Workspace'}
@@ -1443,7 +1442,7 @@ export default function LandingPage() {
                 </h2>
 
                 {modalTab !== 'forgot' && (
-                  <ul className="space-y-1 sm:space-y-2 mb-3 sm:mb-6 text-2xs sm:text-xs text-[#27272a] font-medium">
+                  <ul className="space-y-1 sm:space-y-2 mb-3 sm:mb-6 text-2xs sm:text-xs text-slate-800 font-medium">
                     <li className="flex items-center gap-1.5 sm:gap-2">
                       <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-600 shrink-0" />
                       <span>本地优先，支持 Obsidian 知识库</span>
@@ -1483,7 +1482,7 @@ export default function LandingPage() {
                         value={modalUsername}
                         onChange={(e) => setModalUsername(e.target.value)}
                         placeholder="用户名 / 账号 (如 admin)"
-                        className="w-full py-1.5 sm:py-2 px-2.5 sm:px-3 rounded-lg bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-xs sm:text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
+                        className="w-full py-1.5 sm:py-2 px-2.5 sm:px-3 rounded-lg bg-slate-200 text-slate-900 placeholder-slate-400 text-xs sm:text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
                       />
                     </div>
 
@@ -1494,7 +1493,7 @@ export default function LandingPage() {
                         value={modalPassword}
                         onChange={(e) => setModalPassword(e.target.value)}
                         placeholder="登录密码 (至少 6 位)"
-                        className="w-full py-1.5 sm:py-2 px-2.5 sm:px-3 rounded-lg bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-xs sm:text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
+                        className="w-full py-1.5 sm:py-2 px-2.5 sm:px-3 rounded-lg bg-slate-200 text-slate-900 placeholder-slate-400 text-xs sm:text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
                       />
                     </div>
 
@@ -1516,7 +1515,7 @@ export default function LandingPage() {
                     <button
                       type="submit"
                       disabled={modalLoading}
-                      className="w-full py-2 sm:py-2.5 px-3.5 sm:px-4 rounded-lg bg-[#1c1c1f] hover:bg-[#2a2a2e] text-white text-xs sm:text-[13px] font-semibold transition-all cursor-pointer shadow-sm disabled:opacity-60"
+                      className="w-full py-2 sm:py-2.5 px-3.5 sm:px-4 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-[13px] font-semibold transition-all cursor-pointer shadow-sm disabled:opacity-60"
                     >
                       {modalLoading ? '正在验证...' : '登入研学空间'}
                     </button>
@@ -1533,7 +1532,7 @@ export default function LandingPage() {
                         value={modalUsername}
                         onChange={(e) => setModalUsername(e.target.value)}
                         placeholder="设置账号用户名 (如 kaoyan2026)"
-                        className="w-full py-1.5 sm:py-2 px-2.5 sm:px-3 rounded-lg bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-xs sm:text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
+                        className="w-full py-1.5 sm:py-2 px-2.5 sm:px-3 rounded-lg bg-slate-200 text-slate-900 placeholder-slate-400 text-xs sm:text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
                       />
                     </div>
 
@@ -1544,7 +1543,7 @@ export default function LandingPage() {
                         value={modalPassword}
                         onChange={(e) => setModalPassword(e.target.value)}
                         placeholder="设置登录密码 (至少 6 位)"
-                        className="w-full py-1.5 sm:py-2 px-2.5 sm:px-3 rounded-lg bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-xs sm:text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
+                        className="w-full py-1.5 sm:py-2 px-2.5 sm:px-3 rounded-lg bg-slate-200 text-slate-900 placeholder-slate-400 text-xs sm:text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
                       />
                     </div>
 
@@ -1555,18 +1554,18 @@ export default function LandingPage() {
                         onChange={(e) => setModalConfirmPassword(e.target.value)}
                         placeholder="再次输入密码"
                         autoComplete="new-password"
-                        className="w-full py-1.5 sm:py-2 px-2.5 sm:px-3 rounded-lg bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-xs sm:text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
+                        className="w-full py-1.5 sm:py-2 px-2.5 sm:px-3 rounded-lg bg-slate-200 text-slate-900 placeholder-slate-400 text-xs sm:text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
                       />
                     </div>
 
                     <div className="p-2 sm:p-2.5 rounded-lg bg-slate-200/60 border border-slate-300/60 text-2xs sm:text-2xs text-slate-600">
-                      💡 注册成功后将为您自动颁发专属救援码，支持在遗忘密码时自助找回！
+                      <IcLightbulb className="emoji-icon" aria-hidden="true" />注册成功后将为您自动颁发专属救援码，支持在遗忘密码时自助找回！
                     </div>
 
                     <button
                       type="submit"
                       disabled={modalLoading}
-                      className="w-full py-2 sm:py-2.5 px-3.5 sm:px-4 rounded-lg bg-[#1c1c1f] hover:bg-[#2a2a2e] text-white text-xs sm:text-[13px] font-semibold transition-all cursor-pointer shadow-sm disabled:opacity-60"
+                      className="w-full py-2 sm:py-2.5 px-3.5 sm:px-4 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-[13px] font-semibold transition-all cursor-pointer shadow-sm disabled:opacity-60"
                     >
                       {modalLoading ? '正在创建...' : '注册账号并登入'}
                     </button>
@@ -1588,14 +1587,14 @@ export default function LandingPage() {
                             value={forgotUsername}
                             onChange={(e) => setForgotUsername(e.target.value)}
                             placeholder="请输入用户名 / 账号"
-                            className="w-full py-2 px-3 rounded-lg bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
+                            className="w-full py-2 px-3 rounded-lg bg-slate-200 text-slate-900 placeholder-slate-400 text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
                           />
                         </div>
 
                         <button
                           type="submit"
                           disabled={modalLoading}
-                          className="w-full py-2.5 px-4 rounded-lg bg-[#1c1c1f] hover:bg-[#2a2a2e] text-white text-[13px] font-semibold transition-all cursor-pointer shadow-sm disabled:opacity-60"
+                          className="w-full py-2.5 px-4 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-[13px] font-semibold transition-all cursor-pointer shadow-sm disabled:opacity-60"
                         >
                           {modalLoading ? '正在检索密保...' : '下一步：验证身份'}
                         </button>
@@ -1629,7 +1628,7 @@ export default function LandingPage() {
                               value={securityAnswer}
                               onChange={(e) => setSecurityAnswer(e.target.value)}
                               placeholder="请输入您的密保答案"
-                              className="w-full py-2 px-3 rounded-lg bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
+                              className="w-full py-2 px-3 rounded-lg bg-slate-200 text-slate-900 placeholder-slate-400 text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
                             />
                             <div className="text-right">
                               <button
@@ -1656,7 +1655,7 @@ export default function LandingPage() {
                               value={recoveryCodeInput}
                               onChange={(e) => setRecoveryCodeInput(e.target.value)}
                               placeholder="请输入救援码 (如 CF-78A9-2B4C)"
-                              className="w-full py-2 px-3 rounded-lg bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-[13px] font-mono focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all uppercase"
+                              className="w-full py-2 px-3 rounded-lg bg-slate-200 text-slate-900 placeholder-slate-400 text-[13px] font-mono focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all uppercase"
                             />
                             {hasSecurityQuestion && (
                               <div className="text-right">
@@ -1680,7 +1679,7 @@ export default function LandingPage() {
                             value={newPasswordInput}
                             onChange={(e) => setNewPasswordInput(e.target.value)}
                             placeholder="设置新密码 (至少 6 位)"
-                            className="w-full py-2 px-3 rounded-lg bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
+                            className="w-full py-2 px-3 rounded-lg bg-slate-200 text-slate-900 placeholder-slate-400 text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
                           />
                         </div>
 
@@ -1691,7 +1690,7 @@ export default function LandingPage() {
                             value={confirmPasswordInput}
                             onChange={(e) => setConfirmPasswordInput(e.target.value)}
                             placeholder="再次确认新密码"
-                            className="w-full py-2 px-3 rounded-lg bg-[#e2e2e5] text-[#18181b] placeholder-[#8e9196] text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
+                            className="w-full py-2 px-3 rounded-lg bg-slate-200 text-slate-900 placeholder-slate-400 text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all"
                           />
                         </div>
 
@@ -1786,7 +1785,7 @@ export default function LandingPage() {
       <footer className="border-t border-slate-200/90 bg-white py-10 text-slate-500 text-xs">
         <div className="max-w-[1280px] mx-auto px-4 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded bg-[#18181b] text-white flex items-center justify-center text-2xs font-bold">
+            <div className="w-5 h-5 rounded bg-slate-900 text-white flex items-center justify-center text-2xs font-bold">
               C
             </div>
             <span className="font-semibold text-slate-800">CoreForge 研核</span>
@@ -1882,7 +1881,7 @@ export default function LandingPage() {
             {/* 右侧：横屏提示 + 退出全屏按钮 */}
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               <span className="text-2xs text-slate-400 hidden lg:inline">
-                💡 手机横屏操作更自如 · 支持双指缩放与拖动
+                <IcLightbulb className="emoji-icon" aria-hidden="true" />手机横屏操作更自如 · 支持双指缩放与拖动
               </span>
               <button
                 type="button"

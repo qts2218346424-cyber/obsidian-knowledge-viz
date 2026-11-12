@@ -14,8 +14,7 @@ import {
   Award,
   ChevronRight,
   ArrowLeft,
-  Check,
-} from 'lucide-react'
+  Check } from 'lucide-react'
 import MarkdownRenderer from './MarkdownRenderer'
 
 interface QuickPracticeModalProps {
@@ -516,7 +515,7 @@ export default function QuickPracticeModal({
                           ) : (
                             <RefreshCw className="w-3.5 h-3.5" />
                           )}
-                          <span>🔄 举一反三变式题</span>
+                          <span>举一反三变式题</span>
                         </button>
                       </div>
                     </div>

@@ -94,7 +94,7 @@ export default function PdfShelfTab({ books, filteredPdfs, batchExtracting, batc
 
                       <Sparkles className="w-3.5 h-3.5" />
 
-                      <span>⚡ 一键批量自动解析全部资料</span>
+                      <span>一键批量自动解析全部资料</span>
 
                     </>
 

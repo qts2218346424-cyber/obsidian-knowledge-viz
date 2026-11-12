@@ -5,8 +5,7 @@ import {
 import '@xyflow/react/dist/style.css'
 import {
   Search, Wrench,
-  Upload, Play, Loader2, AlertTriangle, Check
-} from 'lucide-react'
+  Upload, Play, Loader2, AlertTriangle, Check, Link as IcLink, Map as IcMap, Target as IcTarget } from 'lucide-react'
 import { api, type IngestResult, type ResearchGap, type LintFixResult } from '../services/api'
 import { useVaultHealth } from '../hooks/useVaultData'
 import { DefuddlePanel, QueryPanel, FoldPanel, ThinkPanel } from '../components/workflow/SkillPanels'
@@ -169,12 +168,12 @@ function IngestionPanel() {
             </div>
             {result.mocPath && (
               <div className="text-2xs text-slate-500">
-                🗺️ 已自动挂载学科 MOC: <span className="font-mono text-slate-700">{result.mocPath}</span>
+                <IcMap className="emoji-icon" aria-hidden="true" />已自动挂载学科 MOC: <span className="font-mono text-slate-700">{result.mocPath}</span>
               </div>
             )}
             <div className="flex flex-wrap items-center gap-2 pt-1 text-2xs text-warm-500">
-              <span className="px-1.5 py-0.5 rounded bg-cream-200 text-warm-700">🔗 {result.wikilinks} 条 [[双向链接]]</span>
-              <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">🎯 沉淀 {result.questionsCount || 0} 道做题库题目</span>
+              <span className="px-1.5 py-0.5 rounded bg-cream-200 text-warm-700"><IcLink className="emoji-icon" aria-hidden="true" />{result.wikilinks} 条 [[双向链接]]</span>
+              <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800"><IcTarget className="emoji-icon" aria-hidden="true" />沉淀 {result.questionsCount || 0} 道做题库题目</span>
               <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">🏷️ {result.tags.join(', ')}</span>
             </div>
           </div>

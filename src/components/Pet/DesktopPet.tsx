@@ -894,7 +894,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
               isNearTop ? 'top-20 sm:top-24' : 'bottom-full mb-2.5 sm:mb-3'
             } ${
               isRightSide ? 'right-0' : 'left-0'
-            } w-[min(240px,calc(100vw-2rem))] sm:w-72 p-2.5 sm:p-3.5 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-amber-200/90 dark:border-amber-800/60 shadow-xl shadow-amber-500/10 text-xs text-slate-800 dark:text-slate-100 animate-in fade-in zoom-in-95 pointer-events-auto z-20`}
+            } w-60 max-w-[calc(100vw_-_2rem)] sm:w-72 p-2.5 sm:p-3.5 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-amber-200/90 dark:border-amber-800/60 shadow-xl shadow-amber-500/10 text-xs text-slate-800 dark:text-slate-100 animate-in fade-in zoom-in-95 pointer-events-auto z-20`}
           >
             <div className="flex items-start justify-between gap-1.5 sm:gap-2">
               <div className="flex flex-col min-w-0">
@@ -1207,7 +1207,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                 showBubbleWithVoice(line.text, line.audio, 4800)
               }
             }}
-            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-full bg-white/95 dark:bg-slate-900/95 text-amber-900 dark:text-amber-300 text-2xs sm:text-xs font-bold shadow-xl border border-amber-300 dark:border-amber-700/60 hover:scale-105 active:scale-95 transition-all cursor-grab active:cursor-grabbing whitespace-nowrap select-none backdrop-blur-md max-w-[min(200px,calc(100vw-3rem))] touch-none"
+            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-full bg-white/95 dark:bg-slate-900/95 text-amber-900 dark:text-amber-300 text-2xs sm:text-xs font-bold shadow-xl border border-amber-300 dark:border-amber-700/60 hover:scale-105 active:scale-95 transition-all cursor-grab active:cursor-grabbing whitespace-nowrap select-none backdrop-blur-md max-w-[200px] touch-none"
             title="按住自由拖拽位置，轻点展开伴学奶龙"
           >
             <GripVertical className="w-3 h-3 text-amber-500/70 shrink-0" />

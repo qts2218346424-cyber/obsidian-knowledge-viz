@@ -19,8 +19,7 @@ import {
   ArrowRight,
   Database,
   Camera,
-  Image as ImageIcon
-} from 'lucide-react'
+  Image as ImageIcon, BookOpen as IcBookOpen, Camera as IcCamera, Check as IcCheck, Eraser as IcEraser, FolderOpen as IcFolderOpen, Package as IcPackage, Target as IcTarget } from 'lucide-react'
 import MarkdownRenderer from './MarkdownRenderer'
 import { api } from '../services/api'
 
@@ -621,7 +620,7 @@ export default function ImportResourceModal({
             }`}
           >
             <BookOpen className="h-4 w-4" />
-            <span>📚 参考书与教材书架 ({books.length})</span>
+            <span>参考书与教材书架 ({books.length})</span>
           </button>
 
           <button
@@ -633,7 +632,7 @@ export default function ImportResourceModal({
             }`}
           >
             <Layers className="h-4 w-4" />
-            <span>📥 智能导入题库 ({customQuestions.length} 道已导入)</span>
+            <span>智能导入题库 ({customQuestions.length} 道已导入)</span>
           </button>
 
           <button
@@ -645,7 +644,7 @@ export default function ImportResourceModal({
             }`}
           >
             <BarChart3 className="h-4 w-4" />
-            <span>📊 学情画像与薄弱点诊断</span>
+            <span>学情画像与薄弱点诊断</span>
           </button>
         </div>
 
@@ -899,8 +898,8 @@ export default function ImportResourceModal({
                       {autoExtractResult.savedNotePath && (
                         <div className="mb-3 p-3 rounded-lg bg-white border border-emerald-100 text-xs">
                           <div className="flex items-center justify-between">
-                            <span className="font-semibold text-indigo-700">📚 知识库笔记：{autoExtractResult.note?.title}</span>
-                            <span className="text-2xs text-emerald-600 font-medium">✓ 已写入 Obsidian</span>
+                            <span className="font-semibold text-indigo-700"><IcBookOpen className="emoji-icon" aria-hidden="true" />知识库笔记：{autoExtractResult.note?.title}</span>
+                            <span className="text-2xs text-emerald-600 font-medium"><IcCheck className="emoji-icon" aria-hidden="true" />已写入 Obsidian</span>
                           </div>
                           <div className="mt-1 font-mono text-2xs text-slate-600 bg-slate-50 p-1.5 rounded">
                             {autoExtractResult.savedNotePath}
@@ -911,7 +910,7 @@ export default function ImportResourceModal({
                       {autoExtractResult.questions && autoExtractResult.questions.length > 0 && (
                         <div className="space-y-2">
                           <div className="flex items-center justify-between text-2xs font-semibold text-slate-700">
-                            <span>🎯 自动命制并归入题库真题：</span>
+                            <span><IcTarget className="emoji-icon" aria-hidden="true" />自动命制并归入题库真题：</span>
                             <span className="text-indigo-600 font-normal">做题中心随时可刷</span>
                           </div>
                           {autoExtractResult.questions.map((q, idx) => (
@@ -1037,7 +1036,7 @@ export default function ImportResourceModal({
                   }`}
                 >
                   <Camera className="w-3.5 h-3.5" />
-                  <span>📸 截图/拍照 OCR 导题 & 文本录入</span>
+                  <span>截图/拍照 OCR 导题 & 文本录入</span>
                 </button>
                 <button
                   onClick={() => setImportSubTab('json')}
@@ -1047,7 +1046,7 @@ export default function ImportResourceModal({
                       : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
                   }`}
                 >
-                  📦 JSON 批量导入
+                  <IcPackage className="emoji-icon" aria-hidden="true" />JSON 批量导入
                 </button>
                 <button
                   onClick={() => setImportSubTab('manage')}
@@ -1057,7 +1056,7 @@ export default function ImportResourceModal({
                       : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
                   }`}
                 >
-                  🗂️ 已导入题库管理 ({customQuestions.length})
+                  <IcFolderOpen className="emoji-icon" aria-hidden="true" />已导入题库管理 ({customQuestions.length})
                 </button>
               </div>
 
@@ -1137,7 +1136,7 @@ export default function ImportResourceModal({
                               <X className="w-4 h-4" />
                             </button>
                             <span className="absolute bottom-2 left-2 text-2xs px-2 py-0.5 rounded-md bg-black/60 text-white backdrop-blur-xs font-mono">
-                              📸 已捕获考研真题/公式截图
+                              <IcCamera className="emoji-icon" aria-hidden="true" />已捕获考研真题/公式截图
                             </span>
                           </div>
 
@@ -1571,7 +1570,7 @@ D. 5
                       className="text-2xs text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 px-2 py-0.5 rounded-md transition-colors cursor-pointer border border-amber-200/60"
                       title="快速去除随机长哈希与时间戳后缀"
                     >
-                      🧹 一键去杂乱后缀
+                      <IcEraser className="emoji-icon" aria-hidden="true" />一键去杂乱后缀
                     </button>
                     <button
                       type="button"

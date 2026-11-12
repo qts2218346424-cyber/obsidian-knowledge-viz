@@ -277,7 +277,7 @@ export default function Pomodoro() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* 左侧：Subframe Screen 1 工业级 3D 金属镀铬外框硬件核心 */}
         <div className="lg:col-span-7 flex flex-col items-center">
-          <div className="w-full bg-[#f4f4f6] rounded-[28px] p-2 sm:p-3 border border-slate-300/80 shadow-[0_16px_40px_rgba(0,0,0,0.08),inset_0_1px_1px_rgba(255,255,255,0.9)]">
+          <div className="w-full bg-slate-100 rounded-[28px] p-2 sm:p-3 border border-slate-300/80 shadow-[0_16px_40px_rgba(0,0,0,0.08),inset_0_1px_1px_rgba(255,255,255,0.9)]">
             {/* 3D 金属拨档外框 (Metallic Housing) */}
             <div className="metallic-housing w-full mb-3">
               <div className="metallic-bezel flex items-center justify-between gap-1">
@@ -571,7 +571,7 @@ export default function Pomodoro() {
           </div>
 
           {/* 声学白噪音伴学舱快捷卡片 */}
-          <div className="bg-[#fafafa] rounded-2xl border border-slate-200/80 p-4 shadow-xs flex items-center justify-between">
+          <div className="bg-slate-50 rounded-2xl border border-slate-200/80 p-4 shadow-xs flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-xl bg-slate-900 text-white flex items-center justify-center font-semibold text-xs shadow-xs">
                 🎵

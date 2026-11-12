@@ -17,8 +17,7 @@ import {
   RotateCw,
   Laptop,
   Cloud,
-  Server,
-} from 'lucide-react'
+  Server, Lightbulb as IcLightbulb } from 'lucide-react'
 
 interface NetworkInfo {
   port: number
@@ -536,7 +535,7 @@ export default function MobileDeviceModal({ isOpen, onClose }: MobileDeviceModal
                     </div>
                     {envMode === 'cloud' && selectedUrl.startsWith('http://') && (
                       <p className="mt-1.5 text-2xs text-amber-400/90">
-                        💡 提示：若已绑定域名并配置 HTTPS，建议输入{' '}
+                        <IcLightbulb className="emoji-icon" aria-hidden="true" />提示：若已绑定域名并配置 HTTPS，建议输入{' '}
                         <code className="font-mono">https://</code> 地址，可解锁移动端浏览器原生 PWA
                         一键安装弹窗。
                       </p>
@@ -750,7 +749,7 @@ $env:CAP_SERVER_URL="${selectedUrl || 'https://你的服务器域名'}"; npx cap
                   </div>
                 </div>
                 <p className="text-slate-400 text-2xs pt-2 border-t border-slate-800">
-                  💡 在打开的 Android Studio 中点击 <b>Build &gt; Build Bundle(s) / APK(s) &gt; Build APK(s)</b> 即可导出安装包发到手机安装。其实在大多数场景下，直接使用第二个标签页的<b>「云端 PWA 添加到主屏幕」</b>就已经能获得几乎一致的全屏体验，且完全免编译！
+                  <IcLightbulb className="emoji-icon" aria-hidden="true" />在打开的 Android Studio 中点击 <b>Build &gt; Build Bundle(s) / APK(s) &gt; Build APK(s)</b> 即可导出安装包发到手机安装。其实在大多数场景下，直接使用第二个标签页的<b>「云端 PWA 添加到主屏幕」</b>就已经能获得几乎一致的全屏体验，且完全免编译！
                 </p>
               </div>
             </div>

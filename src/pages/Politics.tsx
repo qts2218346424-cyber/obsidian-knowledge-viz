@@ -31,8 +31,7 @@ import {
   Compass,
   FileCheck2,
   HelpCircle,
-  TrendingUp,
-} from 'lucide-react'
+  TrendingUp, Calendar as IcCalendar, FileText as IcFileText, KeyRound as IcKeyRound, Landmark as IcLandmark, MapPin as IcMapPin } from 'lucide-react'
 import {
   HISTORY_ERAS,
   CATEGORY_META,
@@ -424,7 +423,7 @@ export default function Politics() {
             </div>
 
             <h1 className="text-lg sm:text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-              <span>🏛️ 考研政治研学大本营</span>
+              <span><IcLandmark className="emoji-icon" aria-hidden="true" />考研政治研学大本营</span>
               <span className="hidden sm:inline text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
                 大纲必背 + 强化精练
               </span>
@@ -589,7 +588,7 @@ export default function Politics() {
                   className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                     onlyAnniversary
                       ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.4)]'
-                      : 'bg-[#0f172a] text-amber-400 border-amber-500/30 hover:border-amber-400'
+                      : 'bg-slate-900 text-amber-400 border-amber-500/30 hover:border-amber-400'
                   }`}
                 >
                   <Flame className="w-3.5 h-3.5" />
@@ -601,7 +600,7 @@ export default function Politics() {
                   className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                     onlyPitfall
                       ? 'bg-rose-600 text-white border-rose-500 shadow-[0_0_12px_rgba(225,29,72,0.4)]'
-                      : 'bg-[#0f172a] text-rose-400 border-rose-500/30 hover:border-rose-400'
+                      : 'bg-slate-900 text-rose-400 border-rose-500/30 hover:border-rose-400'
                   }`}
                 >
                   <AlertTriangle className="w-3.5 h-3.5" />
@@ -613,7 +612,7 @@ export default function Politics() {
                   className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                     maskMode
                       ? 'bg-indigo-600 text-white border-indigo-400 shadow-[0_0_12px_rgba(99,102,241,0.4)]'
-                      : 'bg-[#0f172a] text-indigo-400 border-indigo-500/30 hover:border-indigo-400'
+                      : 'bg-slate-900 text-indigo-400 border-indigo-500/30 hover:border-indigo-400'
                   }`}
                 >
                   {maskMode ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
@@ -625,7 +624,7 @@ export default function Politics() {
                   className={`p-1.5 rounded-xl text-xs font-bold border cursor-pointer transition-all ${
                     isPlaying
                       ? 'bg-amber-500 text-slate-950 border-amber-400'
-                      : 'bg-[#0f172a] text-slate-300 border-slate-700 hover:border-amber-400'
+                      : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-amber-400'
                   }`}
                   title={isPlaying ? '暂停演进' : '自动播放演进'}
                 >
@@ -644,7 +643,7 @@ export default function Politics() {
                 <div>
                   <div className="flex items-center justify-between text-xs text-amber-400/80 font-mono mb-1">
                     <span>{activeItem?.date || `${activeYear}年`}</span>
-                    <span>📍 {activeItem?.location || activeItem?.cityName || '中国'}</span>
+                    <span><IcMapPin className="emoji-icon" aria-hidden="true" />{activeItem?.location || activeItem?.cityName || '中国'}</span>
                   </div>
                   <h2 className="text-lg sm:text-xl font-black text-amber-300 leading-snug tracking-wide">
                     {activeItem?.title || `${activeYear}年历史概览`}
@@ -676,7 +675,7 @@ export default function Politics() {
                 <div className="rounded-xl p-3 bg-[#0a0f1c] border border-slate-800 space-y-1.5">
                   <div className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
                     <BookOpen className="w-3.5 h-3.5 text-amber-400" />
-                    <span>📜 历史背景与核心决议文献</span>
+                    <span>历史背景与核心决议文献</span>
                   </div>
                   {maskMode && !revealedIds[activeItem?.id || ''] ? (
                     <button
@@ -884,7 +883,7 @@ export default function Politics() {
                 {/* 考研标准历史地位 / 意义 */}
                 <div className="p-3 rounded-xl bg-[#0a0f1d] border border-slate-800 text-slate-200">
                   <div className="text-2xs font-bold text-sky-400 uppercase tracking-wider mb-1">
-                    🏛️ 考研标准历史意义
+                    <IcLandmark className="emoji-icon" aria-hidden="true" />考研标准历史意义
                   </div>
                   {maskMode && !revealedIds[activeItem?.id || ''] ? (
                     <div className="text-xs text-indigo-400 font-medium py-1">（已遮罩，默背中...）</div>
@@ -928,7 +927,7 @@ export default function Politics() {
           <div className="p-3 sm:p-3.5 rounded-2xl bg-[#090e1a] border border-amber-500/20 shadow-xl relative mt-1.5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mb-2 text-xs">
               <div className="flex items-center gap-2">
-                <span className="font-extrabold text-amber-400">📅 考研史纲全编年轴 (1840–2024)</span>
+                <span className="font-extrabold text-amber-400"><IcCalendar className="emoji-icon" aria-hidden="true" />考研史纲全编年轴 (1840–2024)</span>
                 <span className="text-slate-400 hidden sm:inline">| 全量事件直选与纪念年份速查</span>
               </div>
               <div className="font-mono text-slate-300">
@@ -1408,7 +1407,7 @@ export default function Politics() {
             {/* 收藏的史纲核心历史考点 */}
             <div className="space-y-3">
               <div className="text-xs font-bold text-slate-500 px-1 flex items-center justify-between">
-                <span>🏛️ 已收藏的史纲考点 ({favoritedItemsList.length})</span>
+                <span><IcLandmark className="emoji-icon" aria-hidden="true" />已收藏的史纲考点 ({favoritedItemsList.length})</span>
                 {favoritedItemsList.length > 0 && (
                   <button
                     type="button"
@@ -1434,7 +1433,7 @@ export default function Politics() {
                       </button>
                     </div>
                     <h3 className="text-sm font-extrabold text-slate-900">{item.title}</h3>
-                    <div className="text-xs font-bold text-indigo-700">🔑 {item.keyTag}</div>
+                    <div className="text-xs font-bold text-indigo-700"><IcKeyRound className="emoji-icon" aria-hidden="true" />{item.keyTag}</div>
                     <p className="text-xs text-slate-600 leading-relaxed">{item.content}</p>
                     <div className="pt-2 border-t border-slate-100 flex justify-end">
                       <button
@@ -1460,7 +1459,7 @@ export default function Politics() {
             {/* 收藏的肖秀荣 1000 题错题与精选真题 */}
             <div className="space-y-3">
               <div className="text-xs font-bold text-slate-500 px-1 flex items-center justify-between">
-                <span>📝 已收藏的 1000 题题目 ({favoritedQuestionsList.length})</span>
+                <span><IcFileText className="emoji-icon" aria-hidden="true" />已收藏的 1000 题题目 ({favoritedQuestionsList.length})</span>
                 {favoritedQuestionsList.length > 0 && (
                   <button
                     type="button"

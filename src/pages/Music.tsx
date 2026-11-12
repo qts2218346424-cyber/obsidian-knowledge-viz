@@ -22,8 +22,7 @@ import {
   ChevronDown,
   ChevronUp,
   CheckCircle2,
-  Smartphone,
-} from 'lucide-react'
+  Smartphone, Lightbulb as IcLightbulb } from 'lucide-react'
 import WarmCard from '../components/ui/WarmCard'
 import WarmButton from '../components/ui/WarmButton'
 import FolderPickerModal from '../components/FolderPickerModal'
@@ -384,7 +383,7 @@ export default function Music() {
               }`}
             >
               <Cloud className="w-4 h-4" />
-              <span>☁️ 云端音乐库 (手机/电脑上传·跨端同步)</span>
+              <span>云端音乐库 (手机/电脑上传·跨端同步)</span>
             </button>
             <button
               onClick={() => setLibrarySubTab('device')}
@@ -395,7 +394,7 @@ export default function Music() {
               }`}
             >
               <Smartphone className="w-4 h-4" />
-              <span>📱 本机免上传即播 (零流量·本地临时)</span>
+              <span>本机免上传即播 (零流量·本地临时)</span>
             </button>
           </div>
 
@@ -597,7 +596,7 @@ export default function Music() {
                 {showServerAdvanced && (
                   <div className="p-4 pt-1 border-t border-cream-200/80 dark:border-slate-800 space-y-3">
                     <p className="text-2xs text-warm-400 dark:text-slate-400 leading-relaxed">
-                      💡 提示：此选项仅适用于管理员或自建服务器用户，直接读取云主机本地磁盘路径。普通用户在手机或个人电脑端，建议直接使用上方的“上传音乐”即可。
+                      <IcLightbulb className="emoji-icon" aria-hidden="true" />提示：此选项仅适用于管理员或自建服务器用户，直接读取云主机本地磁盘路径。普通用户在手机或个人电脑端，建议直接使用上方的“上传音乐”即可。
                     </p>
                     <div className="flex flex-col sm:flex-row gap-2">
                       <input

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, Sparkles } from 'lucide-react'
+import { Check, Sparkles, Monitor as IcMonitor, Ruler as IcRuler } from 'lucide-react'
 
 // ── Subframe Screen 4 Replica: 考点掌握度状态色谱 (Mastery Palette) ──
 
@@ -85,7 +85,7 @@ export default function MasteryPaletteSection({ onSelectTopic }: { onSelectTopic
 
       <div className="flex flex-wrap items-center justify-between gap-2 py-1">
 
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white shadow-xs border border-slate-200/70 text-xs font-semibold text-[#18181b]">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white shadow-xs border border-slate-200/70 text-xs font-semibold text-slate-900">
 
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
 
@@ -97,7 +97,7 @@ export default function MasteryPaletteSection({ onSelectTopic }: { onSelectTopic
 
         <div className="flex items-center gap-2">
 
-          <div className="inline-flex items-center bg-white rounded-xl p-0.5 shadow-xs border border-slate-200/70 text-xs font-medium text-[#27272a]">
+          <div className="inline-flex items-center bg-white rounded-xl p-0.5 shadow-xs border border-slate-200/70 text-xs font-medium text-slate-800">
 
             <button
 
@@ -173,9 +173,9 @@ export default function MasteryPaletteSection({ onSelectTopic }: { onSelectTopic
 
           <div>
 
-            <h2 className="text-sm sm:text-base font-semibold text-[#18181b] flex items-center gap-2">
+            <h2 className="text-sm sm:text-base font-semibold text-slate-900 flex items-center gap-2">
 
-              <span>🖥️ 408 计算机学科专业基础 · 掌握度阶度</span>
+              <span><IcMonitor className="emoji-icon" aria-hidden="true" />408 计算机学科专业基础 · 掌握度阶度</span>
 
             </h2>
 
@@ -219,13 +219,13 @@ export default function MasteryPaletteSection({ onSelectTopic }: { onSelectTopic
 
               />
 
-              <div className="text-2xs font-semibold text-[#18181b] leading-tight group-hover:text-black line-clamp-1">
+              <div className="text-2xs font-semibold text-slate-900 leading-tight group-hover:text-black line-clamp-1">
 
                 {item.name}
 
               </div>
 
-              <div className="text-2xs text-[#8e9196] font-mono mt-0.5">
+              <div className="text-2xs text-slate-400 font-mono mt-0.5">
 
                 {item.stage}
 
@@ -281,9 +281,9 @@ export default function MasteryPaletteSection({ onSelectTopic }: { onSelectTopic
 
           <div>
 
-            <h2 className="text-sm sm:text-base font-semibold text-[#18181b] flex items-center gap-2">
+            <h2 className="text-sm sm:text-base font-semibold text-slate-900 flex items-center gap-2">
 
-              <span>📐 考研数学 · 核心公式与定理掌握度色谱</span>
+              <span><IcRuler className="emoji-icon" aria-hidden="true" />考研数学 · 核心公式与定理掌握度色谱</span>
 
             </h2>
 
@@ -323,13 +323,13 @@ export default function MasteryPaletteSection({ onSelectTopic }: { onSelectTopic
 
               />
 
-              <div className="text-2xs font-semibold text-[#18181b] leading-tight group-hover:text-black line-clamp-1">
+              <div className="text-2xs font-semibold text-slate-900 leading-tight group-hover:text-black line-clamp-1">
 
                 {item.name}
 
               </div>
 
-              <div className="text-2xs text-[#8e9196] font-mono mt-0.5">
+              <div className="text-2xs text-slate-400 font-mono mt-0.5">
 
                 {item.stage}
 

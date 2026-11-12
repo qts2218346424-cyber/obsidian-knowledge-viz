@@ -16,8 +16,7 @@ import {
   BookOpen,
   Award,
   Flame,
-  Check,
-} from 'lucide-react'
+  Check, Laptop as IcLaptop, Lightbulb as IcLightbulb } from 'lucide-react'
 import MarkdownRenderer from '../../../components/MarkdownRenderer'
 import { ALGORITHM_QUESTIONS_408, type AlgorithmQuestion } from '../../../data/algorithmQuestions'
 import { getAuthHeaders } from '../../../services/auth'
@@ -258,7 +257,7 @@ export default function AlgorithmSandboxModal({
                       : 'text-slate-500 hover:text-slate-800'
                   }`}
                 >
-                  💻 答题编辑台 (思想/代码/复杂度)
+                  <IcLaptop className="emoji-icon" aria-hidden="true" />答题编辑台 (思想/代码/复杂度)
                 </button>
                 <button
                   type="button"
@@ -457,7 +456,7 @@ export default function AlgorithmSandboxModal({
                 {currentResult.examinerNotes && (
                   <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-700 leading-relaxed">
                     <span className="font-bold text-slate-900 block mb-1">
-                      💡 408 考研名师复盘点拨：
+                      <IcLightbulb className="emoji-icon" aria-hidden="true" />408 考研名师复盘点拨：
                     </span>
                     {currentResult.examinerNotes}
                   </div>

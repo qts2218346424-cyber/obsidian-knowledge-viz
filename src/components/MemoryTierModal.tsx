@@ -2,8 +2,7 @@ import React, { useState } from 'react'
 import {
   Brain, Globe, Folder, MessageSquare, X, CheckCircle2,
   ShieldAlert, Sparkles, Layers, BookOpen, Clock, ArrowRight,
-  HardDrive, Info
-} from 'lucide-react'
+  HardDrive, Info, CircleCheck as IcCircleCheck, FolderOpen as IcFolderOpen, MessageSquare as IcMessageSquare, Pin as IcPin } from 'lucide-react'
 import type { AIProject } from '../services/ai-workspace'
 
 interface MemoryTierModalProps {
@@ -191,13 +190,13 @@ export default function MemoryTierModal({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-2xs">
               <div className="p-2.5 rounded-lg bg-cream-50 dark:bg-slate-800/40 border border-cream-200/80 dark:border-slate-700">
-                <span className="text-warm-400 font-medium block mb-1">📁 独立工作目录 (cwd)</span>
+                <span className="text-warm-400 font-medium block mb-1"><IcFolderOpen className="emoji-icon" aria-hidden="true" />独立工作目录 (cwd)</span>
                 <span className="font-mono text-warm-800 dark:text-slate-200 break-all select-all">
                   {activeProject?.cwd || '（默认 Vault 根目录）'}
                 </span>
               </div>
               <div className="p-2.5 rounded-lg bg-cream-50 dark:bg-slate-800/40 border border-cream-200/80 dark:border-slate-700">
-                <span className="text-warm-400 font-medium block mb-1">💬 当前项目会话数</span>
+                <span className="text-warm-400 font-medium block mb-1"><IcMessageSquare className="emoji-icon" aria-hidden="true" />当前项目会话数</span>
                 <span className="font-bold text-accent-orange">
                   {totalConversationsCount} 个独立研学会话
                 </span>
@@ -207,7 +206,7 @@ export default function MemoryTierModal({
             {/* 可编辑的项目专属领域记忆 */}
             <div>
               <label className="text-2xs font-bold text-warm-700 dark:text-slate-300 block mb-1.5 flex items-center justify-between">
-                <span>📌 项目专属领域记忆与要求 (Project Description / System Memory)</span>
+                <span><IcPin className="emoji-icon" aria-hidden="true" />项目专属领域记忆与要求 (Project Description / System Memory)</span>
                 {descSaved && (
                   <span className="text-2xs text-emerald-600 font-semibold flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3" /> 已保存生效
@@ -236,7 +235,7 @@ export default function MemoryTierModal({
         {/* 底部关闭栏 */}
         <div className="px-5 py-3 border-t border-cream-200 dark:border-slate-800 bg-cream-50/70 dark:bg-slate-800/50 flex items-center justify-between text-xs">
           <span className="text-2xs text-warm-500 dark:text-slate-400">
-            ✅ 会话隔离引擎与三层记忆已自动联动后端与本地智能体环境
+            <IcCircleCheck className="emoji-icon" aria-hidden="true" />会话隔离引擎与三层记忆已自动联动后端与本地智能体环境
           </span>
           <button
             onClick={onClose}

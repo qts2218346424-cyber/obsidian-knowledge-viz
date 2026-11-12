@@ -1,8 +1,7 @@
 import { createPortal } from 'react-dom'
 import { useState } from 'react'
 import {
-  X, FileText, Sparkles, Download, Maximize2, Minimize2, ExternalLink, Loader2
-} from 'lucide-react'
+  X, FileText, Sparkles, Download, Maximize2, Minimize2, ExternalLink, Loader2, Zap as IcZap } from 'lucide-react'
 import type { BookItem } from '../services/api'
 
 interface PdfViewerModalProps {
@@ -48,7 +47,7 @@ export default function PdfViewerModal({
                   {book.domain === 'cs_408' ? '408 计算机' : '考研数学'} · {book.category} · {sizeMb} MB
                 </span>
                 <span className="text-2xs text-emerald-400/90 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.2 rounded hidden sm:inline-block">
-                  ⚡ HTTP 206 分片秒开
+                  <IcZap className="emoji-icon" aria-hidden="true" />HTTP 206 分片秒开
                 </span>
               </div>
               <h2 className="text-sm font-bold text-white mt-0.5 truncate max-w-xl" title={book.name}>

@@ -402,7 +402,7 @@ export default function VocabTab() {
 
             {/* 真题语境例句 */}
             {currentWord.example && (
-              <div className="bg-[#fafafa] rounded-xl p-4 border border-slate-200/70 space-y-1.5 text-left">
+              <div className="bg-slate-50 rounded-xl p-4 border border-slate-200/70 space-y-1.5 text-left">
                 <div className="text-2xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1">
                   <Quote className="w-3 h-3 text-slate-500" />
                   <span>真题语境 (Exam Context)</span>

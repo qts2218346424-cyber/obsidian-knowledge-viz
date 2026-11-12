@@ -1,4 +1,4 @@
-import { X, Sparkles, Settings, Users, Brain } from 'lucide-react'
+import { X, Sparkles, Settings, Users, Brain, Settings as IcSettings } from 'lucide-react'
 import type { ProviderType, ChatFontSize } from './ChatStudioHeader'
 
 export type StudyTone = 'rigorous' | 'vivid' | 'exam'
@@ -122,7 +122,7 @@ export default function ChatMobileConfigSheet({ mobileConfigOpen, setMobileConfi
                         {m}
                       </option>
                     ))}
-                    {isAdmin && <option value="__custom__">⚙️ 自定义模型名称...</option>}
+                    {isAdmin && <option value="__custom__"><IcSettings className="emoji-icon" aria-hidden="true" />自定义模型名称...</option>}
                   </select>
                   {isAdmin && (
                     <button
