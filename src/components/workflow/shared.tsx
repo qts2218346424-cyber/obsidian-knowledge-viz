@@ -162,7 +162,7 @@ export function PipelineFlow({
 
   return (
     <div className={`flex flex-1 overflow-hidden ${className}`}>
-      <div className="flex-1" style={{ minHeight }}>
+      <div className="flex-1 min-w-0 relative" style={{ height: minHeight }}>
         <ReactFlow
           nodes={nodes}
           edges={edges}

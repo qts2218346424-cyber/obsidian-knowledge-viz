@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   X,
@@ -202,6 +202,7 @@ export default function UserGuideModal({
   const [currentSceneIndex, setCurrentSceneIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(true)
   const [dontShowAgain, setDontShowAgain] = useState(false)
+  const handleCloseRef = useRef<() => void>(() => {})
 
   // 手册搜索与筛选状态
   const [searchQuery, setSearchQuery] = useState('')
@@ -251,6 +252,19 @@ export default function UserGuideModal({
     })
   }, [selectedCategory, searchQuery])
 
+  // Esc 关闭（与关闭按钮行为一致）
+  useEffect(() => {
+    if (!isOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation()
+        handleCloseRef.current()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isOpen])
+
   if (!isOpen) return null
 
   const scene = TOUR_SCENES[currentSceneIndex]
@@ -263,6 +277,7 @@ export default function UserGuideModal({
     }
     onClose()
   }
+  handleCloseRef.current = handleClose
 
   const handleSkipTour = () => {
     try {

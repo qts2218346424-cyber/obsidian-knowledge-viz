@@ -306,7 +306,7 @@ function IngestionPanel() {
         </div>
 
         <div className="flex flex-1 overflow-hidden">
-          <div className="flex-1" style={{ minHeight: 380 }}>
+          <div className="flex-1 min-w-0 relative" style={{ height: 520 }}>
             <ReactFlow
               nodes={nodes}
               edges={edges}
@@ -512,7 +512,7 @@ function ResearchPanel() {
       )}
 
       <div className="flex flex-1 overflow-hidden">
-        <div className="flex-1" style={{ minHeight: 360 }}>
+        <div className="flex-1 min-w-0 relative" style={{ height: 360 }}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -689,7 +689,7 @@ function LintPanel() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Flow */}
-        <div className="flex-1" style={{ minHeight: 300 }}>
+        <div className="flex-1 min-w-0 relative" style={{ height: 300 }}>
           <ReactFlow
             nodes={nodes}
             edges={edges}

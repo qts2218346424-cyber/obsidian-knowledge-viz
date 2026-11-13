@@ -77,6 +77,37 @@ const SUBJECT_OPTIONS_BY_DOMAIN: Record<ResourceDomain, Array<{ value: string; l
   ],
 }
 
+/** 根据识别出的题目推断学科领域与科目（取出现次数最多的一项），用于联动左侧下拉框 */
+function inferDomainSubject(questions: Array<{ domain?: string; subject?: string }>): { domain?: ResourceDomain; subject?: string } {
+  const counts = new Map<string, number>()
+  for (const q of questions) {
+    const subject = (q.subject || '').trim()
+    // 科目比 domain 更可靠：模型常沿用请求里的默认 domain，但会按内容写对科目
+    let domain: ResourceDomain | undefined = subject
+      ? (Object.keys(SUBJECT_OPTIONS_BY_DOMAIN) as ResourceDomain[]).find(d =>
+          SUBJECT_OPTIONS_BY_DOMAIN[d].some(o => o.value === subject || o.label === subject),
+        )
+      : undefined
+    if (!domain && DOMAIN_OPTIONS.some(o => o.value === q.domain)) domain = q.domain as ResourceDomain
+    if (!domain) continue
+    const key = `${domain}|${subject}`
+    counts.set(key, (counts.get(key) || 0) + 1)
+  }
+  let best: string | null = null
+  let bestN = 0
+  counts.forEach((n, k) => {
+    if (n > bestN) {
+      best = k
+      bestN = n
+    }
+  })
+  if (!best) return {}
+  const [domain, subject] = (best as string).split('|') as [ResourceDomain, string]
+  const opt = SUBJECT_OPTIONS_BY_DOMAIN[domain]?.find(o => o.value === subject || o.label === subject)
+  return { domain, subject: opt?.value }
+}
+
+
 function getDomainLabel(domain?: string): string {
   return DOMAIN_OPTIONS.find(d => d.value === domain)?.shortLabel || '考研数学'
 }
@@ -705,6 +736,13 @@ export default function ImportResourceModal({
       const data = await res.json()
       if (data.questions && Array.isArray(data.questions)) {
         setParsedPreviewQuestions(data.questions)
+        {
+          const inferred = inferDomainSubject(data.questions)
+          if (inferred.domain) {
+            setImportDomain(inferred.domain)
+            setImportSubject(inferred.subject || getDefaultSubjectForDomain(inferred.domain))
+          }
+        }
       } else {
         alert(data.error || '解析失败，请检查文本格式')
       }
@@ -767,6 +805,13 @@ export default function ImportResourceModal({
       const data = await res.json()
       if (data.questions && Array.isArray(data.questions)) {
         setParsedPreviewQuestions(data.questions)
+        {
+          const inferred = inferDomainSubject(data.questions)
+          if (inferred.domain) {
+            setImportDomain(inferred.domain)
+            setImportSubject(inferred.subject || getDefaultSubjectForDomain(inferred.domain))
+          }
+        }
         if (data.offline) {
           setImportFeedback('当前处于离线模式，已为您生成高保真考研题目模板，支持直接编辑保存。')
         }

@@ -1,7 +1,7 @@
 import { getAuthHeaders, getStoredUser } from '../services/auth'
 import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react'
 import { createPortal } from 'react-dom'
-import { useSearchParams, Link, useNavigate } from 'react-router-dom'
+import { useSearchParams, Link, useNavigate, useLocation } from 'react-router-dom'
 import {
   Upload,
   ChevronDown,
@@ -197,6 +197,14 @@ export default function Quiz() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const [view, setView] = useState<ViewMode>('start')
+  const routerLocation = useLocation()
+  // 在报告页点击顶部导航「刷题中心」（同一路由）时，回到试卷列表
+  const lastLocationKeyRef = useRef(routerLocation.key)
+  useEffect(() => {
+    if (lastLocationKeyRef.current === routerLocation.key) return
+    lastLocationKeyRef.current = routerLocation.key
+    setView(prev => (prev === 'results' ? 'start' : prev))
+  }, [routerLocation.key])
 
   // Subject and category filters
   const [domainFilter, setDomainFilter] = useState<'all' | ResourceDomain>('all')
@@ -4464,8 +4472,16 @@ export default function Quiz() {
 
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-3">
-          <WarmButton onClick={() => { setActivePaperContext(null); setView('start'); }} className="bg-accent-orange text-white px-8">
-            再练一轮
+          <WarmButton
+            onClick={() => {
+              setActivePaperContext(null)
+              setHubTab('papers')
+              setView('start')
+              try { window.scrollTo({ top: 0, behavior: 'smooth' }) } catch {}
+            }}
+            className="bg-accent-orange text-white px-8"
+          >
+            返回试卷列表
           </WarmButton>
           <WarmButton
             onClick={() => {
