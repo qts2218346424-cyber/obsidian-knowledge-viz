@@ -126,22 +126,24 @@ export function DefuddlePanel() {
         </div>
       </div>
 
-      <div className="flex-1" style={{ minHeight: 340 }}>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          fitView
-          fitViewOptions={{ padding: 0.3 }}
-          proOptions={{ hideAttribution: true }}
-          nodesDraggable={true}
-          nodesConnectable={false}
-          className="!bg-cream-100"
-        >
-          <Background color="#E8D5BC" gap={20} />
-          <Controls className="!bg-surface !border-cream-300 !rounded-lg" showInteractive={false} />
-          <MiniMap nodeColor="#D4B896" maskColor="rgba(255,251,245,0.8)" className="!bg-surface !border-cream-200 !rounded-lg" />
-        </ReactFlow>
+      <div className="flex flex-1 overflow-hidden">
+        <div className="flex-1" style={{ minHeight: 340 }}>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
+            fitView
+            fitViewOptions={{ padding: 0.3 }}
+            proOptions={{ hideAttribution: true }}
+            nodesDraggable={true}
+            nodesConnectable={false}
+            className="!bg-slate-50"
+          >
+            <Background color="#E8D5BC" gap={20} />
+            <Controls className="!bg-white !border-slate-200/80 !rounded-lg" showInteractive={false} />
+            <MiniMap nodeColor="#D4B896" maskColor="rgba(255,251,245,0.8)" className="!bg-white !border-slate-200/80 !rounded-lg" />
+          </ReactFlow>
+        </div>
       </div>
 
       {result && (
@@ -264,7 +266,7 @@ export function QueryPanel() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Flow */}
-        <div className="flex-1" style={{ minHeight: 300 }}>
+        <div className="flex-1" style={{ minHeight: 320 }}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -512,7 +514,7 @@ export function FoldPanel() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Flow */}
-        <div className="flex-1" style={{ minHeight: 300 }}>
+        <div className="flex-1" style={{ minHeight: 320 }}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -775,7 +777,7 @@ export function ThinkPanel() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Flow or Mindmap */}
-        <div className="flex-1" style={{ minHeight: 300 }}>
+        <div className="flex-1" style={{ minHeight: 320 }}>
           {!result ? (
             <ReactFlow
               nodes={flowNodes}

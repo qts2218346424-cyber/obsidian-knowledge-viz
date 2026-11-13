@@ -5,6 +5,8 @@ import { lilin6CalculusQuestions } from './lilin6-calculus'
 import { lilin6LinearAlgebraQuestions } from './lilin6-linear-algebra'
 import { lilin6ProbabilityQuestions } from './lilin6-probability'
 import { classic1993Questions } from './classic-1993'
+import { recentRealExamQuestions } from './recent-real-exams'
+import { MATURE_REAL_EXAM_QUESTIONS } from './mature-real-exams'
 import { meizaleLinearAlgebraQuestions } from './meizale-linear-algebra'
 import { jiumingProbabilityQuestions } from './jiuming-probability'
 import type { MathCategory, MathSubject, UnifiedQuestion } from '../../../types/subject'
@@ -16,11 +18,13 @@ export { lilin6CalculusQuestions } from './lilin6-calculus'
 export { lilin6LinearAlgebraQuestions } from './lilin6-linear-algebra'
 export { lilin6ProbabilityQuestions } from './lilin6-probability'
 export { classic1993Questions } from './classic-1993'
+export { recentRealExamQuestions } from './recent-real-exams'
+export { MATURE_REAL_EXAM_QUESTIONS } from './mature-real-exams'
 export { meizaleLinearAlgebraQuestions } from './meizale-linear-algebra'
 export { jiumingProbabilityQuestions } from './jiuming-probability'
 
 /**
- * 考研数学全题库（高等数学 + 线性代数 + 概率论与数理统计，含历年真题、26李林六套卷、1993真题及救命课专项题库）
+ * 考研数学全题库（高等数学 + 线性代数 + 概率论与数理统计，含 2004-2024 完整统考真题、26李林六套卷、1993真题及救命课专项题库）
  */
 export const MATH_QUESTION_BANK: UnifiedQuestion[] = [
   ...calculusQuestions,
@@ -32,6 +36,8 @@ export const MATH_QUESTION_BANK: UnifiedQuestion[] = [
   ...lilin6ProbabilityQuestions,
   ...jiumingProbabilityQuestions,
   ...classic1993Questions,
+  ...recentRealExamQuestions,
+  ...MATURE_REAL_EXAM_QUESTIONS,
 ]
 
 /**

@@ -31,6 +31,7 @@ import { useVaultHealth, useVaultStats } from '../hooks/useVaultData'
 import { useThemeStyle } from '../hooks/useThemeStyle'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { useAuth } from '../contexts/AuthContext'
+import DangoAvatar from '../components/DangoAvatar'
 import MobileDashboardView from '../components/mobile/MobileDashboardView'
 import { getQuestionCounts, calibrateQuestionCounts } from '../data/questionCounts'
 
@@ -342,12 +343,8 @@ export default function Dashboard() {
       <div className="w-full flex items-center justify-between gap-3">
         {/* Top-Left Pill: Vault Logo + Review tasks left (Screen 3 8 pages left replica) */}
         <div className="inline-flex items-center gap-2 p-1.5 rounded-2xl bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-slate-200/80">
-          <Link to="/graph" className="p-1 rounded-lg hover:bg-slate-100 transition-colors" title="进入全景知识图谱">
-            <svg className="w-5 h-5 text-[#141416]" viewBox="0 0 28 28" fill="none">
-              <rect x="4" y="4" width="17" height="5.5" rx="1" fill="currentColor" />
-              <path d="M4 12.2H14.5L4 22.5V12.2Z" fill="currentColor" />
-              <circle cx="17.8" cy="17.8" r="3.4" fill="currentColor" />
-            </svg>
+          <Link to="/graph" className="w-6 h-6 rounded-lg overflow-hidden hover:scale-105 transition-transform shrink-0 shadow-xs ring-1 ring-rose-200/70" title="进入全景知识图谱">
+            <img src="/icon-192.png?v=dango" alt="研核" className="h-full w-full object-cover" />
           </Link>
           <Link
             to="/study"
@@ -416,9 +413,12 @@ export default function Dashboard() {
             </svg>
             <span className="ml-0.5 hidden sm:inline">AI 伴学舱就绪</span>
           </Link>
-          <div className="w-6 h-6 rounded-full bg-[#18181b] text-white text-xs font-medium flex items-center justify-center shadow-sm select-none">
-            考
-          </div>
+          <DangoAvatar
+            seed={user?.username || user?.displayName}
+            size="sm"
+            className="shadow-xs"
+            title={`${user?.displayName || user?.username || '考研上岸人'} · 专属团子头像`}
+          />
         </div>
       </div>
 

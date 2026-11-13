@@ -478,6 +478,36 @@ export default function Chat() {
   const [promptTopic, setPromptTopic] = useState<string | null>(null)
   const [isRefreshingPrompts, setIsRefreshingPrompts] = useState<boolean>(false)
 
+  // 发散提问开关偏好（受系统设置管控，支持在设置与打字框上随心启闭）
+  const [showQuickPrompts, setShowQuickPrompts] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('coreforge_show_quick_prompts') !== 'false'
+    } catch {
+      return true
+    }
+  })
+
+  useEffect(() => {
+    const handleQuickPromptsChange = (e: Event) => {
+      const customEvent = e as CustomEvent<boolean>
+      if (typeof customEvent.detail === 'boolean') {
+        setShowQuickPrompts(customEvent.detail)
+      }
+    }
+    window.addEventListener('coreforge_quick_prompts_change', handleQuickPromptsChange)
+    return () => {
+      window.removeEventListener('coreforge_quick_prompts_change', handleQuickPromptsChange)
+    }
+  }, [])
+
+  const handleCloseQuickPrompts = useCallback(() => {
+    setShowQuickPrompts(false)
+    try {
+      localStorage.setItem('coreforge_show_quick_prompts', 'false')
+      window.dispatchEvent(new CustomEvent('coreforge_quick_prompts_change', { detail: false }))
+    } catch {}
+  }, [])
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const isAtBottomRef = useRef(true)
@@ -2336,13 +2366,13 @@ export default function Chat() {
           setShowSessions={setShowSessions}
         />
 
-        {/* 2.2 中间：主伴学对话流 + 一体化智能输入舱 */}
-        <div className="flex-1 flex flex-col bg-white sm:border sm:border-slate-200/80 sm:rounded-xl overflow-hidden min-w-0 shadow-xs complex-panel-contain">
-          {/* 消息滚动列表 (手机端内边距紧凑化，释放大屏可视空间) */}
+        {/* 2.2 中间：主伴学对话流 + 一体化智能输入舱 (高级轻透磨砂质感，舒目纸感背景通透映现) */}
+        <div className="flex-1 flex flex-col bg-white/35 dark:bg-slate-900/40 backdrop-blur-xl sm:border sm:border-white/50 dark:sm:border-slate-800/60 sm:rounded-2xl overflow-hidden min-w-0 shadow-xs complex-panel-contain transition-colors">
+          {/* 消息滚动列表 (通透背景，漫射纸感自然映现) */}
           <div
             ref={messagesContainerRef}
             onScroll={handleMessagesScroll}
-            className="flex-1 overflow-y-auto px-2 sm:px-6 py-2.5 sm:py-6 space-y-3 sm:space-y-5 relative bg-slate-50/20"
+            className="flex-1 overflow-y-auto px-2 sm:px-6 py-2.5 sm:py-6 space-y-3 sm:space-y-5 relative bg-transparent"
           >
             {isWelcomeState ? (
               <div
@@ -2541,6 +2571,8 @@ export default function Chat() {
             onAddImages={handleAddImages}
             onAddGeneralFiles={handleAddGeneralFiles}
             hideQuickPrompts={isWelcomeState}
+            showQuickPrompts={showQuickPrompts}
+            onCloseQuickPrompts={handleCloseQuickPrompts}
             messageWidthClass={messageWidthClass}
           />
         </div>
@@ -2772,18 +2804,20 @@ export default function Chat() {
                   className="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:outline-hidden focus:border-indigo-500"
                 />
               </div>
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">
-                  独立本地工作目录 (cwd，可选)
-                </label>
-                <input
-                  type="text"
-                  value={newProjectCwd}
-                  onChange={e => setNewProjectCwd(e.target.value)}
-                  placeholder="绝对路径，例如 E:\考研\408考研学习\计算机网络"
-                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:outline-hidden focus:border-indigo-500 font-mono"
-                />
-              </div>
+              {isAdmin && (
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    独立本地工作目录 (cwd，可选)
+                  </label>
+                  <input
+                    type="text"
+                    value={newProjectCwd}
+                    onChange={e => setNewProjectCwd(e.target.value)}
+                    placeholder="管理员可选填服务器工作目录路径"
+                    className="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:outline-hidden focus:border-indigo-500 font-mono"
+                  />
+                </div>
+              )}
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"

@@ -14,6 +14,15 @@ export interface LocalSkill {
   allowedTools?: string[]
 }
 
+function sanitizeSkillText(raw: string): string {
+  if (!raw) return ''
+  return raw
+    .replace(/^\uFEFF/, '')
+    .replace(/\uFFFD/g, '')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    .replace(/\r\n/g, '\n')
+}
+
 function categorizeSkill(name: string, description: string): LocalSkill['category'] {
   const lower = `${name} ${description}`.toLowerCase()
   if (/exam|study|outline|math|408|quiz|knowledge|考点|考研|大纲|公式|真题|挖空|错题|命题/.test(lower)) {
@@ -37,7 +46,14 @@ function categorizeSkill(name: string, description: string): LocalSkill['categor
 function parseSkillFile(filePath: string, source: LocalSkill['source']): LocalSkill | null {
   try {
     if (!fs.existsSync(filePath)) return null
-    const text = fs.readFileSync(filePath, 'utf8')
+    const rawBuffer = fs.readFileSync(filePath)
+    const rawText = rawBuffer.toString('utf8')
+    // 若替换符占比过高（非 UTF-8 编码文件导致乱码），跳过收录以防界面出现乱码
+    const fffdCount = (rawText.match(/\uFFFD/g) || []).length
+    if (fffdCount > 3 && fffdCount / Math.max(rawText.length, 1) > 0.02) {
+      return null
+    }
+    const text = sanitizeSkillText(rawText)
     const filename = path.basename(filePath)
     const dirName = path.basename(path.dirname(filePath))
     let name = filename.endsWith('.md') && filename !== 'SKILL.md' ? filename.replace(/\.md$/, '') : dirName
@@ -73,7 +89,7 @@ function parseSkillFile(filePath: string, source: LocalSkill['source']): LocalSk
     }
 
     if (!description) {
-      description = `来自本地 ${source} 的自动化技能组件 (${name})`
+      description = '系统集成专项研学技能组件'
     }
 
     // Clean up formatted displayName
@@ -89,7 +105,8 @@ function parseSkillFile(filePath: string, source: LocalSkill['source']): LocalSk
       description,
       source,
       category: categorizeSkill(name, description),
-      path: filePath,
+      // 严禁下发宿主机/服务器真实磁盘路径或文件名
+      path: `skill://${source}/${name}`,
       instructions: instructions.slice(0, 15000), // Cap reasonable prompt size
       allowedTools,
     }
@@ -99,9 +116,10 @@ function parseSkillFile(filePath: string, source: LocalSkill['source']): LocalSk
 }
 
 /**
- * Scan all local skill paths across user machine
+ * Scan skill catalog safely (host CLI paths only when explicitly permitted for admins)
  */
-export function scanLocalSkills(): LocalSkill[] {
+export function scanLocalSkills(options?: { includeHostSkills?: boolean }): LocalSkill[] {
+  const includeHostSkills = options?.includeHostSkills ?? false
   const home = os.homedir()
   const results: LocalSkill[] = []
   const seenNames = new Set<string>()
@@ -111,119 +129,126 @@ export function scanLocalSkills(): LocalSkill[] {
     const key = `${skill.source}:${skill.name}`
     if (seenNames.has(key)) return
     seenNames.add(key)
-    results.push(skill)
+    results.push({
+      ...skill,
+      path: skill.path?.startsWith('builtin://') || skill.path?.startsWith('skill://')
+        ? skill.path
+        : `skill://${skill.source}/${skill.name}`,
+    })
   }
 
-  // 1. ~/.claude/skills/*/SKILL.md
-  const claudeSkillsDir = path.join(home, '.claude', 'skills')
-  if (fs.existsSync(claudeSkillsDir)) {
-    try {
-      const items = fs.readdirSync(claudeSkillsDir)
-      for (const item of items) {
-        const itemPath = path.join(claudeSkillsDir, item)
-        if (fs.statSync(itemPath).isDirectory()) {
-          const skillFile = path.join(itemPath, 'SKILL.md')
-          if (fs.existsSync(skillFile)) {
-            addSkill(parseSkillFile(skillFile, 'claude'))
-          }
-        }
-      }
-    } catch {}
-  }
-
-  // 2. ~/.claude/commands/*.md
-  const claudeCmdsDir = path.join(home, '.claude', 'commands')
-  if (fs.existsSync(claudeCmdsDir)) {
-    try {
-      const items = fs.readdirSync(claudeCmdsDir)
-      for (const item of items) {
-        if (item.endsWith('.md')) {
-          addSkill(parseSkillFile(path.join(claudeCmdsDir, item), 'claude'))
-        }
-      }
-    } catch {}
-  }
-
-  // 3. ~/.agents/skills/*/SKILL.md
-  const agentsSkillsDir = path.join(home, '.agents', 'skills')
-  if (fs.existsSync(agentsSkillsDir)) {
-    try {
-      const items = fs.readdirSync(agentsSkillsDir)
-      for (const item of items) {
-        const itemPath = path.join(agentsSkillsDir, item)
-        if (fs.statSync(itemPath).isDirectory()) {
-          const skillFile = path.join(itemPath, 'SKILL.md')
-          if (fs.existsSync(skillFile)) {
-            addSkill(parseSkillFile(skillFile, 'agents'))
-          }
-        }
-      }
-    } catch {}
-  }
-
-  // 4. ~/.codex/skills/*/SKILL.md & ~/.codex/prompts/*.md
-  const codexSkillsDir = path.join(home, '.codex', 'skills')
-  if (fs.existsSync(codexSkillsDir)) {
-    try {
-      const items = fs.readdirSync(codexSkillsDir)
-      for (const item of items) {
-        const itemPath = path.join(codexSkillsDir, item)
-        if (fs.statSync(itemPath).isDirectory()) {
-          const skillFile = path.join(itemPath, 'SKILL.md')
-          if (fs.existsSync(skillFile)) {
-            addSkill(parseSkillFile(skillFile, 'codex'))
-          }
-        }
-      }
-    } catch {}
-  }
-  const codexPromptsDir = path.join(home, '.codex', 'prompts')
-  if (fs.existsSync(codexPromptsDir)) {
-    try {
-      const items = fs.readdirSync(codexPromptsDir)
-      for (const item of items) {
-        if (item.endsWith('.md')) {
-          addSkill(parseSkillFile(path.join(codexPromptsDir, item), 'codex'))
-        }
-      }
-    } catch {}
-  }
-
-  // 5. ~/.gemini/antigravity/builtin/skills/*/SKILL.md
-  const antigravityDir = path.join(home, '.gemini', 'antigravity', 'builtin', 'skills')
-  if (fs.existsSync(antigravityDir)) {
-    try {
-      const items = fs.readdirSync(antigravityDir)
-      for (const item of items) {
-        const itemPath = path.join(antigravityDir, item)
-        if (fs.statSync(itemPath).isDirectory()) {
-          const skillFile = path.join(itemPath, 'SKILL.md')
-          if (fs.existsSync(skillFile)) {
-            addSkill(parseSkillFile(skillFile, 'antigravity'))
-          }
-        }
-      }
-    } catch {}
-  }
-
-  // 6. ~/.gemini/config/plugins/*/skills/*/SKILL.md
-  const pluginsDir = path.join(home, '.gemini', 'config', 'plugins')
-  if (fs.existsSync(pluginsDir)) {
-    try {
-      const plugins = fs.readdirSync(pluginsDir)
-      for (const plugin of plugins) {
-        const pSkills = path.join(pluginsDir, plugin, 'skills')
-        if (fs.existsSync(pSkills) && fs.statSync(pSkills).isDirectory()) {
-          const sDirs = fs.readdirSync(pSkills)
-          for (const s of sDirs) {
-            const skillFile = path.join(pSkills, s, 'SKILL.md')
+  if (includeHostSkills) {
+    // 1. ~/.claude/skills/*/SKILL.md
+    const claudeSkillsDir = path.join(home, '.claude', 'skills')
+    if (fs.existsSync(claudeSkillsDir)) {
+      try {
+        const items = fs.readdirSync(claudeSkillsDir)
+        for (const item of items) {
+          const itemPath = path.join(claudeSkillsDir, item)
+          if (fs.statSync(itemPath).isDirectory()) {
+            const skillFile = path.join(itemPath, 'SKILL.md')
             if (fs.existsSync(skillFile)) {
-              addSkill(parseSkillFile(skillFile, 'plugin'))
+              addSkill(parseSkillFile(skillFile, 'claude'))
             }
           }
         }
-      }
-    } catch {}
+      } catch {}
+    }
+
+    // 2. ~/.claude/commands/*.md
+    const claudeCmdsDir = path.join(home, '.claude', 'commands')
+    if (fs.existsSync(claudeCmdsDir)) {
+      try {
+        const items = fs.readdirSync(claudeCmdsDir)
+        for (const item of items) {
+          if (item.endsWith('.md')) {
+            addSkill(parseSkillFile(path.join(claudeCmdsDir, item), 'claude'))
+          }
+        }
+      } catch {}
+    }
+
+    // 3. ~/.agents/skills/*/SKILL.md
+    const agentsSkillsDir = path.join(home, '.agents', 'skills')
+    if (fs.existsSync(agentsSkillsDir)) {
+      try {
+        const items = fs.readdirSync(agentsSkillsDir)
+        for (const item of items) {
+          const itemPath = path.join(agentsSkillsDir, item)
+          if (fs.statSync(itemPath).isDirectory()) {
+            const skillFile = path.join(itemPath, 'SKILL.md')
+            if (fs.existsSync(skillFile)) {
+              addSkill(parseSkillFile(skillFile, 'agents'))
+            }
+          }
+        }
+      } catch {}
+    }
+
+    // 4. ~/.codex/skills/*/SKILL.md & ~/.codex/prompts/*.md
+    const codexSkillsDir = path.join(home, '.codex', 'skills')
+    if (fs.existsSync(codexSkillsDir)) {
+      try {
+        const items = fs.readdirSync(codexSkillsDir)
+        for (const item of items) {
+          const itemPath = path.join(codexSkillsDir, item)
+          if (fs.statSync(itemPath).isDirectory()) {
+            const skillFile = path.join(itemPath, 'SKILL.md')
+            if (fs.existsSync(skillFile)) {
+              addSkill(parseSkillFile(skillFile, 'codex'))
+            }
+          }
+        }
+      } catch {}
+    }
+    const codexPromptsDir = path.join(home, '.codex', 'prompts')
+    if (fs.existsSync(codexPromptsDir)) {
+      try {
+        const items = fs.readdirSync(codexPromptsDir)
+        for (const item of items) {
+          if (item.endsWith('.md')) {
+            addSkill(parseSkillFile(path.join(codexPromptsDir, item), 'codex'))
+          }
+        }
+      } catch {}
+    }
+
+    // 5. ~/.gemini/antigravity/builtin/skills/*/SKILL.md
+    const antigravityDir = path.join(home, '.gemini', 'antigravity', 'builtin', 'skills')
+    if (fs.existsSync(antigravityDir)) {
+      try {
+        const items = fs.readdirSync(antigravityDir)
+        for (const item of items) {
+          const itemPath = path.join(antigravityDir, item)
+          if (fs.statSync(itemPath).isDirectory()) {
+            const skillFile = path.join(itemPath, 'SKILL.md')
+            if (fs.existsSync(skillFile)) {
+              addSkill(parseSkillFile(skillFile, 'antigravity'))
+            }
+          }
+        }
+      } catch {}
+    }
+
+    // 6. ~/.gemini/config/plugins/*/skills/*/SKILL.md
+    const pluginsDir = path.join(home, '.gemini', 'config', 'plugins')
+    if (fs.existsSync(pluginsDir)) {
+      try {
+        const plugins = fs.readdirSync(pluginsDir)
+        for (const plugin of plugins) {
+          const pSkills = path.join(pluginsDir, plugin, 'skills')
+          if (fs.existsSync(pSkills) && fs.statSync(pSkills).isDirectory()) {
+            const sDirs = fs.readdirSync(pSkills)
+            for (const s of sDirs) {
+              const skillFile = path.join(pSkills, s, 'SKILL.md')
+              if (fs.existsSync(skillFile)) {
+                addSkill(parseSkillFile(skillFile, 'plugin'))
+              }
+            }
+          }
+        }
+      } catch {}
+    }
   }
 
   // 7. Built-in CoreForge Exam Study Skills
@@ -231,13 +256,14 @@ export function scanLocalSkills(): LocalSkill[] {
     addSkill(s)
   }
 
-  // Sort by category then name
+  // Sort by builtin first, then category, then name
   return results.sort((a, b) => {
-    // Put 研学与考研 first
+    if (a.source === 'builtin' && b.source !== 'builtin') return -1
+    if (b.source === 'builtin' && a.source !== 'builtin') return 1
     if (a.category === '研学与考研' && b.category !== '研学与考研') return -1
     if (b.category === '研学与考研' && a.category !== '研学与考研') return 1
     if (a.category !== b.category) return a.category.localeCompare(b.category, 'zh-CN')
-    return a.displayName.localeCompare(b.displayName)
+    return a.displayName.localeCompare(b.displayName, 'zh-CN')
   })
 }
 

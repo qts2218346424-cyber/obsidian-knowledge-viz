@@ -864,7 +864,10 @@ export const api = {
   openVaultFolder: () => postJSON<{ ok: boolean; vaultPath: string }>('/vault/open-folder', {}),
   exportSandboxZipUrl: () => `${BASE}/vault/export-zip`,
 
-  // File CRUD
+  // Folder & File CRUD
+  createFolder: (folderPath: string) =>
+    postJSON<{ ok: boolean; path: string; name: string }>('/vault/folder', { path: folderPath }),
+
   createFile: (filePath: string, content: string, frontmatter?: Record<string, unknown>) =>
     postJSON<FileDetail>('/vault/file', { path: filePath, content, frontmatter }),
 

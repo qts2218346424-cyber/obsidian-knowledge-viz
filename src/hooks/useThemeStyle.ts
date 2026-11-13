@@ -25,7 +25,7 @@ export const THEME_CONFIGS: Record<ThemeStyle, ThemeMeta> = {
     name: '经典极简黑白',
     shortName: '极简风',
     icon: '♟️',
-    description: 'Subframe 冷灰黑白极简设计，专注纯文本沉浸排版与清晰结构',
+    description: '源自讲义级微哑光纸感灰白基调，低眩光极简沉浸，专注长文精读与清晰推导',
     accentColor: '#18181b',
   },
   eyecare: {
@@ -33,7 +33,7 @@ export const THEME_CONFIGS: Record<ThemeStyle, ThemeMeta> = {
     name: '温润纸质护眼',
     shortName: '护眼风',
     icon: '🍃',
-    description: '柔和豆沙绿与天然纸色温，过滤高能蓝光，长时备考不酸胀',
+    description: '温润豆沙宣纸天然微色温，漫射柔和护目，过滤高能蓝光，长时备考不酸胀',
     accentColor: '#2d6a4f',
   },
   dark: {
@@ -97,7 +97,7 @@ function applyStyleToDOM(style: ThemeStyle) {
     const colorMap: Record<ThemeStyle, string> = {
       vibrant: '#ffffff',
       minimal: '#f8fafc',
-      eyecare: '#f4f7f2',
+      eyecare: '#f5f6f2',
       dark: '#0b0f19',
     }
     metaThemeColor.setAttribute('content', colorMap[style] || '#ffffff')

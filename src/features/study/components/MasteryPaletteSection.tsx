@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, Sparkles } from 'lucide-react'
+import { Check, HelpCircle, Sparkles } from 'lucide-react'
 
 // ── Subframe Screen 4 Replica: 考点掌握度状态色谱 (Mastery Palette) ──
 
@@ -130,6 +130,22 @@ export default function MasteryPaletteSection({ onSelectTopic }: { onSelectTopic
           </div>
 
 
+
+          <button
+            type="button"
+            onClick={() => {
+              window.dispatchEvent(
+                new CustomEvent('open-user-guide', {
+                  detail: { tab: 'doc', category: 'spectrum_graph', featureId: 'mastery-palette' },
+                })
+              )
+            }}
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold border border-purple-200 transition-colors cursor-pointer"
+            title="查看考点色谱的使用说明"
+          >
+            <HelpCircle className="w-3.5 h-3.5 text-purple-600" />
+            <span className="hidden sm:inline">色谱说明</span>
+          </button>
 
           <a
 

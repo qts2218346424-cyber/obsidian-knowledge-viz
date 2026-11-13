@@ -72,7 +72,7 @@ export default function Study() {
 
   const [tab, setTab] = useState<Tab>(
 
-    ['topology', 'mastery', 'flashcards', 'handouts', 'pdfs', 'coursewares', 'progress'].includes(initialTab)
+    ['graph', 'topology', 'mastery', 'flashcards', 'handouts', 'pdfs', 'coursewares', 'progress'].includes(initialTab)
 
       ? initialTab
 

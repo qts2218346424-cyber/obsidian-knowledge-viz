@@ -53,6 +53,8 @@ interface ChatComposerDockProps {
   onAddImages: (files: FileList | File[]) => void
   onAddGeneralFiles: (files: FileList | File[]) => void
   hideQuickPrompts?: boolean
+  showQuickPrompts?: boolean
+  onCloseQuickPrompts?: () => void
   messageWidthClass?: string
 }
 
@@ -94,6 +96,8 @@ export const ChatComposerDock = memo(function ChatComposerDock({
   onAddImages,
   onAddGeneralFiles,
   hideQuickPrompts = false,
+  showQuickPrompts = true,
+  onCloseQuickPrompts,
   messageWidthClass = 'max-w-5xl',
 }: ChatComposerDockProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -150,7 +154,7 @@ export const ChatComposerDock = memo(function ChatComposerDock({
   )
 
   return (
-    <div className="shrink-0 bg-gradient-to-t from-white via-white to-slate-50/40 pt-0 sm:pt-1">
+    <div className="shrink-0 bg-gradient-to-t from-white/50 via-white/20 to-transparent dark:from-slate-900/50 dark:via-slate-900/20 pt-0 sm:pt-1">
       <div className={`${messageWidthClass} mx-auto w-full px-1.5 sm:px-6 pb-0.5 sm:pb-2.5`}>
         {/* 1. 运行状态实时横幅 */}
         {runningStatus && (
@@ -170,9 +174,9 @@ export const ChatComposerDock = memo(function ChatComposerDock({
           </div>
         )}
 
-        {/* 2. 对话展开后的轻量发散追问条（移动端微缩紧凑） */}
-        {!hideQuickPrompts && promptsList.length > 0 && (
-          <div className="mb-0.5 sm:mb-1.5 flex items-center gap-1 sm:gap-1.5 overflow-x-auto whitespace-nowrap no-scrollbar py-0.2 sm:py-0.5">
+        {/* 2. 对话展开后的轻量发散追问条（受系统设置与收起按钮管控） */}
+        {!hideQuickPrompts && showQuickPrompts && promptsList.length > 0 && (
+          <div className="mb-0.5 sm:mb-1.5 flex items-center gap-1 sm:gap-1.5 overflow-x-auto whitespace-nowrap no-scrollbar py-0.2 sm:py-0.5 animate-fade-in">
             <div className="flex items-center gap-1 shrink-0">
               <span className="text-2xs font-semibold text-slate-500 flex items-center gap-1">
                 <span>{activeAgent.icon}</span>
@@ -189,7 +193,7 @@ export const ChatComposerDock = memo(function ChatComposerDock({
               type="button"
               onClick={onRefreshPrompts}
               disabled={isCurrentRunning || isRefreshingPrompts}
-              className="px-2 py-1 rounded-full text-2xs font-medium text-slate-500 hover:text-indigo-600 bg-white border border-slate-200/80 hover:border-indigo-300 transition-all shrink-0 flex items-center gap-1 cursor-pointer active:scale-95"
+              className="px-2 py-1 rounded-full text-2xs font-medium text-slate-500 hover:text-indigo-600 bg-white border border-slate-200/80 hover:border-indigo-300 transition-all shrink-0 flex items-center gap-1 cursor-pointer active:scale-95 shadow-2xs"
               title="换一组发散考点"
             >
               <RefreshCw
@@ -212,6 +216,19 @@ export const ChatComposerDock = memo(function ChatComposerDock({
                 {qp}
               </button>
             ))}
+
+            {/* 一键快捷收起/关闭发散问题按钮 */}
+            {onCloseQuickPrompts && (
+              <button
+                type="button"
+                onClick={onCloseQuickPrompts}
+                className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors shrink-0 cursor-pointer ml-auto"
+                title="收起发散追问（可在系统设置中随时重新开启）"
+                aria-label="收起发散追问"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
           </div>
         )}
 
@@ -252,7 +269,7 @@ export const ChatComposerDock = memo(function ChatComposerDock({
               onAddGeneralFiles(e.dataTransfer.files)
             }
           }}
-          className="rounded-2xl border border-slate-200/70 bg-white focus-within:border-indigo-500/80 focus-within:ring-2 focus-within:ring-indigo-500/15 transition-all shadow-[0_4px_24px_rgba(0,0,0,0.04)] overflow-hidden"
+          className="rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md focus-within:border-indigo-500/80 focus-within:ring-2 focus-within:ring-indigo-500/15 transition-all shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden"
         >
           {/* 3.1 顶部已挂载上下文胶囊条（笔记伴读、激活技能、待发图片/文件） */}
           {hasContextPills && (

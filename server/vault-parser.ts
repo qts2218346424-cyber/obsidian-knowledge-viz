@@ -217,6 +217,45 @@ function buildFileContent(content: string, frontmatter?: Record<string, any>): s
 }
 
 /**
+ * Create a new folder in the vault.
+ */
+export function createFolder(
+  vaultPath: string,
+  relativePath: string,
+): { ok: boolean; path: string; name: string } {
+  const cleaned = relativePath.trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '')
+  if (!cleaned) {
+    throw new Error('目录名称不能为空')
+  }
+  const segments = cleaned.split('/').filter(Boolean)
+  for (const seg of segments) {
+    if (seg === '.' || seg === '..' || seg.startsWith('.')) {
+      throw new Error(`非法的目录名称: ${seg}`)
+    }
+    if (/[<>:"|?*]/.test(seg)) {
+      throw new Error(`目录名称包含非法字符: ${seg}`)
+    }
+  }
+
+  const normalizedRel = segments.join('/')
+  const fullPath = ensureInsideVault(vaultPath, normalizedRel)
+  if (fs.existsSync(fullPath)) {
+    const stat = fs.statSync(fullPath)
+    if (stat.isDirectory()) {
+      throw new Error(`目录已存在: ${normalizedRel}`)
+    }
+    throw new Error(`同名文件已存在: ${normalizedRel}`)
+  }
+
+  fs.mkdirSync(fullPath, { recursive: true })
+  return {
+    ok: true,
+    path: normalizedRel,
+    name: segments[segments.length - 1],
+  }
+}
+
+/**
  * Create a new markdown file in the vault.
  */
 export function createFile(

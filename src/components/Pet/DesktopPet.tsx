@@ -21,6 +21,7 @@ import { useExamCountdown, EXAM_DATE_DISPLAY } from '../../utils/examDate'
 import {
   playPetSynthSound,
   NAILONG_DIALOGUES,
+  NailongChibiHead,
   type PetMood,
   type HitZone,
 } from './NailongRigAvatar'
@@ -889,7 +890,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
         title="点击唤出奶龙伴学小助手（可按住沿边缘自由拖动位置）"
       >
         <GripVertical className="w-3 h-3 text-amber-900/40 shrink-0" />
-        <span className="text-sm">🐲</span>
+        <NailongChibiHead className="w-5 h-5 shrink-0 drop-shadow-xs" withWhiteRim />
         <span className="text-2xs font-extrabold">奶龙</span>
       </div>
     )
@@ -927,7 +928,10 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
             <div className="flex items-start justify-between gap-1.5 sm:gap-2">
               <div className="flex flex-col min-w-0">
                 <div className="flex items-center gap-1.5 font-extrabold text-amber-600 dark:text-amber-400 text-2xs sm:text-xs">
-                  <span>{persona.emoji} {persona.name}</span>
+                  <span className="inline-flex items-center gap-1">
+                    <NailongChibiHead className="w-4 h-4 shrink-0" />
+                    <span>{persona.name}</span>
+                  </span>
             {eyeCareActive && (
               <span className="text-2xs text-sky-600 font-mono">
                 (👀 {eyeCareSecondsLeft}s)

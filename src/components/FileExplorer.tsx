@@ -1,14 +1,26 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronRight, ChevronDown, FileText, Folder, FolderOpen, Search, X, BookOpen, FileCode } from 'lucide-react'
+import { ChevronRight, ChevronDown, FileText, Folder, FolderOpen, Search, X, BookOpen, FileCode, FolderPlus, FilePlus } from 'lucide-react'
 import { api, type TreeNode } from '../services/api'
 
 interface FileExplorerProps {
   tree: TreeNode[]
   onFileClick: (path: string, options?: { mode?: 'preview' | 'write'; fromSearch?: boolean }) => void
   selectedPath?: string
+  selectedFolder?: string
+  onSelectFolder?: (folderPath: string) => void
+  onCreateNoteInFolder?: (folderPath: string) => void
+  onCreateFolder?: (parentFolderPath: string) => void
 }
 
-export default function FileExplorer({ tree, onFileClick, selectedPath }: FileExplorerProps) {
+export default function FileExplorer({
+  tree,
+  onFileClick,
+  selectedPath,
+  selectedFolder = '',
+  onSelectFolder,
+  onCreateNoteInFolder,
+  onCreateFolder,
+}: FileExplorerProps) {
   const [query, setQuery] = useState('')
   const [remoteMatchedPaths, setRemoteMatchedPaths] = useState<Set<string> | null>(null)
 
@@ -39,12 +51,34 @@ export default function FileExplorer({ tree, onFileClick, selectedPath }: FileEx
 
   if (tree.length === 0) {
     return (
-      <div className="h-full bg-surface border border-cream-200 rounded-xl p-4 flex flex-col items-center justify-center text-center space-y-2 select-none">
+      <div className="h-full bg-surface border border-cream-200 rounded-xl p-4 flex flex-col items-center justify-center text-center space-y-2.5 select-none">
         <FolderOpen className="w-7 h-7 text-warm-400/50" />
         <div className="text-xs font-bold text-warm-700">暂无个人考研笔记</div>
-        <p className="text-2xs text-warm-400 leading-relaxed max-w-[150px]">
-          点击上方「+ 新建笔记」或从考研讲义一键摘录，即可开始构建专属笔记库
+        <p className="text-2xs text-warm-400 leading-relaxed max-w-[160px]">
+          点击下方按钮新建目录或笔记，即可开始构建专属笔记库
         </p>
+        {(onCreateFolder || onCreateNoteInFolder) && (
+          <div className="flex items-center gap-1.5 pt-1">
+            {onCreateFolder && (
+              <button
+                type="button"
+                onClick={() => onCreateFolder('')}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-2xs font-semibold bg-cream-100 hover:bg-cream-200 text-warm-700 border border-cream-300 cursor-pointer"
+              >
+                <FolderPlus className="w-3 h-3" /> 新建目录
+              </button>
+            )}
+            {onCreateNoteInFolder && (
+              <button
+                type="button"
+                onClick={() => onCreateNoteInFolder('')}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-2xs font-semibold bg-slate-900 hover:bg-slate-800 text-white cursor-pointer"
+              >
+                <FilePlus className="w-3 h-3" /> 新建笔记
+              </button>
+            )}
+          </div>
+        )}
       </div>
     )
   }
@@ -52,10 +86,58 @@ export default function FileExplorer({ tree, onFileClick, selectedPath }: FileEx
   return (
     <div className="h-full bg-surface border border-cream-200 rounded-xl overflow-hidden flex flex-col">
       <div className="border-b border-cream-200">
-        <div className="px-3 py-2.5 text-xs font-medium text-warm-600 flex items-center gap-2">
-          <FolderOpen className="w-3.5 h-3.5 text-accent-orange" />
-          考研笔记目录
+        <div className="px-3 py-2 text-xs font-medium text-warm-600 flex items-center justify-between gap-1.5">
+          <button
+            type="button"
+            onClick={() => onSelectFolder?.('')}
+            title="点击回到根目录"
+            className="flex items-center gap-1.5 min-w-0 truncate hover:text-warm-900 transition-colors cursor-pointer"
+          >
+            <FolderOpen className="w-3.5 h-3.5 text-accent-orange shrink-0" />
+            <span className="truncate">考研笔记目录</span>
+          </button>
+          {(onCreateFolder || onCreateNoteInFolder) && (
+            <div className="flex items-center gap-1 shrink-0">
+              {onCreateNoteInFolder && (
+                <button
+                  type="button"
+                  onClick={() => onCreateNoteInFolder(selectedFolder)}
+                  title={selectedFolder ? `在「${selectedFolder}」下新建笔记` : '在根目录新建笔记'}
+                  aria-label="在当前目录新建笔记"
+                  className="p-1 rounded-md text-warm-500 hover:text-warm-900 hover:bg-cream-200 transition-colors cursor-pointer"
+                >
+                  <FilePlus className="w-3.5 h-3.5" />
+                </button>
+              )}
+              {onCreateFolder && (
+                <button
+                  type="button"
+                  onClick={() => onCreateFolder(selectedFolder)}
+                  title={selectedFolder ? `在「${selectedFolder}」下新建子目录` : '在根目录新建目录'}
+                  aria-label="新建目录"
+                  className="p-1 rounded-md text-warm-500 hover:text-warm-900 hover:bg-cream-200 transition-colors cursor-pointer"
+                >
+                  <FolderPlus className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          )}
         </div>
+        {onSelectFolder && selectedFolder && (
+          <div className="px-2.5 pb-1.5 flex items-center justify-between gap-1 text-[10px] text-warm-500">
+            <span className="truncate font-mono bg-cream-100 px-1.5 py-0.5 rounded border border-cream-200" title={`当前选中目录：${selectedFolder}`}>
+              📁 {selectedFolder}
+            </span>
+            <button
+              type="button"
+              onClick={() => onSelectFolder('')}
+              className="shrink-0 text-warm-400 hover:text-warm-700 px-1 cursor-pointer"
+              title="切回根目录"
+            >
+              根目录
+            </button>
+          </div>
+        )}
         <div className="px-2 pb-2">
           <div className="flex items-center gap-1.5 rounded-lg border border-cream-200 bg-cream-100 px-2 py-1.5">
             <Search className="h-3.5 w-3.5 shrink-0 text-warm-400" />
@@ -76,7 +158,18 @@ export default function FileExplorer({ tree, onFileClick, selectedPath }: FileEx
       </div>
       <div className="flex-1 overflow-auto p-2">
         {filteredTree.length > 0 ? filteredTree.map(node => (
-          <TreeNodeItem key={node.path} node={node} depth={0} onFileClick={onFileClick} selectedPath={selectedPath} isSearching={Boolean(query.trim())} />
+          <TreeNodeItem
+            key={node.path}
+            node={node}
+            depth={0}
+            onFileClick={onFileClick}
+            selectedPath={selectedPath}
+            selectedFolder={selectedFolder}
+            onSelectFolder={onSelectFolder}
+            onCreateNoteInFolder={onCreateNoteInFolder}
+            onCreateFolder={onCreateFolder}
+            isSearching={Boolean(query.trim())}
+          />
         )) : (
           <p className="px-3 py-6 text-center text-xs leading-5 text-warm-400">没有找到匹配的笔记</p>
         )}
@@ -115,15 +208,33 @@ function TreeNodeItem({
   depth,
   onFileClick,
   selectedPath,
+  selectedFolder,
+  onSelectFolder,
+  onCreateNoteInFolder,
+  onCreateFolder,
   isSearching,
 }: {
   node: TreeNode
   depth: number
   onFileClick: (path: string, options?: { mode?: 'preview' | 'write'; fromSearch?: boolean }) => void
   selectedPath?: string
+  selectedFolder?: string
+  onSelectFolder?: (folderPath: string) => void
+  onCreateNoteInFolder?: (folderPath: string) => void
+  onCreateFolder?: (parentFolderPath: string) => void
   isSearching?: boolean
 }) {
   const [expanded, setExpanded] = useState(depth < 1)
+
+  useEffect(() => {
+    if (isSearching) {
+      setExpanded(true)
+      return
+    }
+    if (node.type === 'folder' && selectedFolder && (selectedFolder === node.path || selectedFolder.startsWith(`${node.path}/`))) {
+      setExpanded(true)
+    }
+  }, [isSearching, selectedFolder, node.path, node.type])
 
   if (node.type === 'file') {
     const ext = node.ext || (node.path.includes('.') ? `.${node.path.split('.').pop()?.toLowerCase()}` : '.md')
@@ -136,7 +247,7 @@ function TreeNodeItem({
           if (isPdf || isHtml) {
             window.open(`/api/books/raw?path=${encodeURIComponent(node.path)}`, '_blank')
           }
-          onFileClick(node.path, { mode: isSearching ? 'preview' : undefined, fromSearch: Boolean(isSearching) })
+          onFileClick(node.path, { mode: 'preview', fromSearch: Boolean(isSearching) })
         }}
         title={isPdf ? `${node.name} (PDF 参考资料 - 点击在新标签页预览)` : isHtml ? `${node.name} (交互仿真课件 - 点击在新标签页打开)` : node.name}
         className={`w-full flex items-center gap-1.5 rounded px-2 py-2.5 sm:py-1 text-left text-xs transition-colors cursor-pointer ${
@@ -164,29 +275,93 @@ function TreeNodeItem({
     )
   }
 
+  const isFolderSelected = selectedFolder === node.path
+
   return (
     <div>
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-1.5 px-2 py-2.5 sm:py-1 rounded text-xs text-warm-600 hover:bg-cream-200/50 transition-colors text-left"
-        style={{ paddingLeft: `${depth * 12 + 8}px` }}
+      <div
+        className={`group flex items-center rounded transition-colors ${
+          isFolderSelected
+            ? 'bg-amber-50/90 text-warm-900 font-medium'
+            : 'text-warm-600 hover:bg-cream-200/50'
+        }`}
       >
-        {expanded ? (
-          <ChevronDown className="w-3 h-3 text-warm-400 shrink-0" />
-        ) : (
-          <ChevronRight className="w-3 h-3 text-warm-400 shrink-0" />
+        <button
+          type="button"
+          onClick={() => {
+            setExpanded(!expanded)
+            onSelectFolder?.(node.path)
+          }}
+          className="flex-1 min-w-0 flex items-center gap-1.5 px-2 py-2.5 sm:py-1 text-xs text-left cursor-pointer"
+          style={{ paddingLeft: `${depth * 12 + 8}px` }}
+          title={node.path}
+        >
+          {expanded ? (
+            <ChevronDown className="w-3 h-3 text-warm-400 shrink-0" />
+          ) : (
+            <ChevronRight className="w-3 h-3 text-warm-400 shrink-0" />
+          )}
+          {expanded ? (
+            <FolderOpen className="w-3 h-3 text-accent-amber shrink-0" />
+          ) : (
+            <Folder className="w-3 h-3 text-accent-amber shrink-0" />
+          )}
+          <span className="truncate">{node.name}</span>
+        </button>
+        {(onCreateNoteInFolder || onCreateFolder) && (
+          <div className={`flex items-center gap-0.5 pr-1 shrink-0 transition-opacity ${
+            isFolderSelected ? 'opacity-100' : 'opacity-80 sm:opacity-0 sm:group-hover:opacity-100'
+          }`}>
+            {onCreateNoteInFolder && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setExpanded(true)
+                  onSelectFolder?.(node.path)
+                  onCreateNoteInFolder(node.path)
+                }}
+                title={`在「${node.name}」目录下新建笔记`}
+                aria-label={`在 ${node.name} 目录下新建笔记`}
+                className="p-1 rounded text-warm-400 hover:text-warm-900 hover:bg-cream-200 cursor-pointer"
+              >
+                <FilePlus className="w-3 h-3" />
+              </button>
+            )}
+            {onCreateFolder && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setExpanded(true)
+                  onSelectFolder?.(node.path)
+                  onCreateFolder(node.path)
+                }}
+                title={`在「${node.name}」下新建子目录`}
+                aria-label={`在 ${node.name} 下新建子目录`}
+                className="p-1 rounded text-warm-400 hover:text-warm-900 hover:bg-cream-200 cursor-pointer"
+              >
+                <FolderPlus className="w-3 h-3" />
+              </button>
+            )}
+          </div>
         )}
-        {expanded ? (
-          <FolderOpen className="w-3 h-3 text-accent-amber shrink-0" />
-        ) : (
-          <Folder className="w-3 h-3 text-accent-amber shrink-0" />
-        )}
-        <span className="truncate">{node.name}</span>
-      </button>
+      </div>
       {expanded && node.children && (
         <div>
           {node.children.map(child => (
-            <TreeNodeItem key={child.path} node={child} depth={depth + 1} onFileClick={onFileClick} selectedPath={selectedPath} isSearching={isSearching} />
+            <TreeNodeItem
+              key={child.path}
+              node={child}
+              depth={depth + 1}
+              onFileClick={onFileClick}
+              selectedPath={selectedPath}
+              selectedFolder={selectedFolder}
+              onSelectFolder={onSelectFolder}
+              onCreateNoteInFolder={onCreateNoteInFolder}
+              onCreateFolder={onCreateFolder}
+              isSearching={isSearching}
+            />
           ))}
         </div>
       )}

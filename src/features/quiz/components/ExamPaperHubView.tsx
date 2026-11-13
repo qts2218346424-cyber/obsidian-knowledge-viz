@@ -199,9 +199,9 @@ export default function ExamPaperHubView({ onStartPaper }: ExamPaperHubViewProps
                 <Award className="w-3.5 h-3.5 text-amber-500" />
                 <span>满分 {paper.totalScore} 分</span>
               </span>
-              <span className="flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-neutral-400" />
-                <span>{paper.durationMinutes} 分钟</span>
+              <span className="flex items-center gap-1 text-neutral-600 font-medium">
+                <Clock className="w-3.5 h-3.5 text-indigo-500" />
+                <span>{paper.durationMinutes} 分钟倒计时</span>
               </span>
             </div>
           </div>

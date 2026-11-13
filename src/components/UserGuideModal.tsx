@@ -121,11 +121,11 @@ const TOUR_SCENES: TourScene[] = [
     colorBg: 'bg-rose-50/80',
     colorBorder: 'border-rose-200/80',
     description:
-      '系统会根据你的刷题对错和闪卡情况，把知识点涂成绿、黄、红三种颜色。看到闪烁红光的圆点别慌，直接点它就会弹出「提分急救舱」，顺着看历史错题、看动画课件，再练 5 道同类题把它救绿！',
+      '系统会根据你的刷题对错和闪卡情况，在「热力色谱图」把知识点涂成绿、黄、红三种颜色。看到闪烁红光的圆点别慌，直接点它就会弹出「提分急救舱」，顺着看历史错题、看动画课件，再练 5 道同类题把它救绿！',
     highlights: [
       '绿色 (≥80%) 代表稳了，黄色 (50%~80%) 需要巩固，红色 (<50%) 要优先抢救',
       '急救舱里整合了错题记录、配套仿真课件和 5 题靶向小测',
-      '切换成「关系图谱」模式，还能看清不同章节知识是怎么连在一起的',
+      '也可去「研学中心 → 考点色谱」按 11 级灰阶/紫阶梯队挨个攻克核心专题',
     ],
     route: '/graph',
     routeText: '查看考点热力图',
@@ -151,19 +151,19 @@ const TOUR_SCENES: TourScene[] = [
   },
   {
     id: 5,
-    title: '随手记与笔记编辑 · 想到重点一秒记下',
-    subtitle: '不打断当前做题流程 · 支持公式、双向链接与扫码传图',
-    badge: '随手记 /editor',
+    title: '笔记系统与随手记 · 知识大脑全天候沉淀',
+    subtitle: '优先预览 · 富文本与源码打字 · 多级目录分类 · Obsidian 双向同步',
+    badge: '笔记系统 /editor',
     icon: PenLine,
     colorText: 'text-emerald-600',
     colorBg: 'bg-emerald-50/80',
     colorBorder: 'border-emerald-200/80',
     description:
-      '做题或看书时突然记起一个易错结论，不用关掉题目切页面，在「更多功能」或手机首页点开「随手记」，写完点保存就能自动归入笔记库。需要长篇梳理时，打开完整笔记编辑器还能分栏实时预览数学公式。',
+      '点击目录里的笔记默认优先进入纯净预览模式，防误触改乱；需要编辑时点击右上角一键切换写作模式，支持富文本直观打字或 Markdown 源码编辑。随时随地新建多级分类目录、指定目录新建笔记，还支持 LaTeX 数学公式、截图粘贴、随页手写批注及与本地 Obsidian 实时同步！',
     highlights: [
-      '随手记自带 408、高数、线代、错题复盘等快捷标签，一键分类',
-      '编辑器支持写 `[[另一篇笔记]]` 把相关考点串联成超链接',
-      '写完一篇总结笔记，还能点「即学即练」让系统根据笔记内容现场出 3 道题测测自己',
+      '支持随时新建单级/多级目录，新建笔记可在标题下方自由指定保存目录或套用模版',
+      '写作模式支持富文本（像 Word 一样流畅打字）和源码双模式无缝切换，支持 Ctrl+V 粘贴截图与 Σ 公式速插',
+      '写完总结可点「即学即练」现场生成 3 道真题测验，也能点页面内「💡 笔记导览」手把手体验',
     ],
     route: '/editor',
     routeText: '打开笔记编辑器',
@@ -552,7 +552,7 @@ export default function UserGuideModal({
                   <Zap className="h-3.5 w-3.5 text-indigo-600" />
                   <span>按想法直达 · 我现在想做什么就点哪里</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
                   {QUICK_SCENARIO_GUIDES.map((sc) => {
                     const badgeClass = getBadgeStyle(sc.color)
                     return (
@@ -596,7 +596,7 @@ export default function UserGuideModal({
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="搜一搜功能名称或问题（如：错题本、答题卡、热力图、背单词、白噪音...）"
+                    placeholder="搜一搜功能名称或问题（如：考点色谱、词汇色谱、错题本、热力图、背单词...）"
                     className="w-full pl-9 pr-8 py-1.5 rounded-lg bg-white border border-slate-200 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900"
                   />
                   {searchQuery && (

@@ -207,10 +207,19 @@ export function ensureUserSandboxSync(userId: string, username: string): void {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
   }
 
-  // 2. 注入专属官方指引手册
-  const guideFilePath = path.join(userVault, '💡 新手指引 · CoreForge 研核完全使用手册.md')
+  // 2. 注入专属官方指引手册（优先复制主知识库完整使用手册）
+  const guideFileName = '💡 新手指引 · CoreForge 研核完全使用手册.md'
+  const guideFilePath = path.join(userVault, guideFileName)
   if (!fs.existsSync(guideFilePath)) {
-    const initialGuideContent = `---
+    const publicGuidePath = path.join(config.vaultPath, guideFileName)
+    let initialGuideContent = ''
+    if (fs.existsSync(publicGuidePath)) {
+      try {
+        initialGuideContent = fs.readFileSync(publicGuidePath, 'utf-8')
+      } catch {}
+    }
+    if (!initialGuideContent) {
+      initialGuideContent = `---
 title: 💡 新手指引 · CoreForge 研核完全使用手册
 date: ${new Date().toISOString().split('T')[0]}
 author: ${username}
@@ -230,6 +239,7 @@ tags:
 2. **独享 AI 记忆空间**：记录您的目标院校、薄弱考点与提问偏好。
 3. **独享做题档案**：真题训练得分与 SM-2 艾宾浩斯复习流自动沉淀。
 `
+    }
     fs.writeFileSync(guideFilePath, initialGuideContent, 'utf-8')
   }
 

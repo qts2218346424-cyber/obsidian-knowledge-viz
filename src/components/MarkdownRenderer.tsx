@@ -147,8 +147,17 @@ function normalizeMathSegments(text: string): string {
                 return full
               }
             }
+            // 自动修正常见丢失反斜杠的 LaTeX 统计/微积分符号（如 chi^2, dots, sum, sqrt 等）
+            let autoFixed = trimmed.replace(
+              /(?<!\\)\b(chi|sim|dots|sum|prod|sqrt|mu|sigma|alpha|beta|gamma|delta|lambda|theta|omega|pi|infty|partial|subset|cup|cap|times|div|pm|leq|geq|neq|approx|equiv)\b/g,
+              '\\$1'
+            )
+            // 修复括弧不平衡（如 D(\chi^2(n)] -> D[\chi^2(n)]）
+            if (autoFixed.includes('(') && autoFixed.includes(']') && !autoFixed.includes('[')) {
+              autoFixed = autoFixed.replace(/\(/g, '[').replace(/\)/g, ']')
+            }
             const fixedInner = upgradeComplexInlineFractions(
-              trimmed.replace(LATEX_CMD_DOUBLE_BS_RE, '\\')
+              autoFixed.replace(LATEX_CMD_DOUBLE_BS_RE, '\\')
             )
             return '$' + fixedInner + '$'
           })
@@ -169,9 +178,13 @@ function normalizeMathSegments(text: string): string {
 function breakInlineSubItems(text: string): string {
   if (!text) return ''
 
-  // 1. 保护行内数学公式 $...$
+  // 1. 优先保护块级公式 $$...$$ 与行内数学公式 $...$，防止公式内部罗马数字或序号被拆碎
   const mathTokens: string[] = []
-  const safeText = text.replace(/(?<!\\)\$(?!\$)[^\$\n]+?(?<!\\)\$(?!\$)/g, (m) => {
+  let safeText = text.replace(/\$\$[\s\S]*?\$\$/g, (m) => {
+    mathTokens.push(m)
+    return `\u0000MATH_${mathTokens.length - 1}\u0000`
+  })
+  safeText = safeText.replace(/(?<!\\)\$(?!\$)[^\$\n]+?(?<!\\)\$(?!\$)/g, (m) => {
     mathTokens.push(m)
     return `\u0000MATH_${mathTokens.length - 1}\u0000`
   })

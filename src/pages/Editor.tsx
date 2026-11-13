@@ -1,14 +1,15 @@
 import { useAuth } from '../contexts/AuthContext'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   Save, Trash2, FileEdit, FilePlus, Upload,
   ChevronDown, ChevronRight, X, Loader2, AlertTriangle,
-  FolderTree, Eye, Bold, Italic, Heading, List, Code,
+  FolderTree, FolderPlus, Folder, Eye, Bold, Italic, Heading, List, Code,
   Link, Table, Hash, Sparkles, Wand2,
   Undo2, Copy, Check, Quote, Strikethrough, Minus, ListOrdered,
   Sigma, Target, Image as ImageIcon, PenTool, MoreHorizontal, FileText,
+  Compass, BookOpen,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -17,7 +18,7 @@ import rehypeHighlight from 'rehype-highlight'
 import rehypeKatex from 'rehype-katex'
 import 'highlight.js/styles/github-dark.css'
 import 'katex/dist/katex.min.css'
-import { api, type FileDetail, type IngestStatus, type IngestResult, type AttachmentResult } from '../services/api'
+import { api, type FileDetail, type IngestStatus, type IngestResult, type AttachmentResult, type TreeNode } from '../services/api'
 import { useVaultTree } from '../hooks/useVaultData'
 import MarkdownRenderer from '../components/MarkdownRenderer'
 import FileExplorer from '../components/FileExplorer'
@@ -25,6 +26,7 @@ import QuickPracticeModal from '../components/QuickPracticeModal'
 import ObsidianSyncModal from '../components/ObsidianSyncModal'
 import HandwritingModal from '../components/HandwritingModal'
 import InteractiveAnnotationOverlay from '../components/InteractiveAnnotationOverlay'
+import EditorTourGuide from '../components/EditorTourGuide'
 
 
 type NoteTemplateKey = 'blank' | 'learning' | 'wrong-question' | 'idea'
@@ -267,39 +269,54 @@ function markdownToRichHtml(markdown: string) {
   return html.join('')
 }
 
+function collectFolders(nodes: TreeNode[]): string[] {
+  const folders: string[] = []
+  const walk = (items: TreeNode[]) => {
+    for (const item of items) {
+      if (item.type === 'folder') {
+        folders.push(item.path)
+        if (item.children?.length) {
+          walk(item.children)
+        }
+      }
+    }
+  }
+  walk(nodes)
+  return folders
+}
+
 function htmlToMarkdown(html: string) {
   if (typeof document === 'undefined') return html
   const root = document.createElement('div')
   root.innerHTML = html
 
   const render = (node: Node): string => {
-    if (node.nodeType === Node.TEXT_NODE) return node.textContent || ''
+    if (node.nodeType === Node.TEXT_NODE) return (node.textContent || '').replace(/\u00A0/g, ' ')
     if (node.nodeType !== Node.ELEMENT_NODE) return ''
     const element = node as HTMLElement
     const children = Array.from(element.childNodes).map(render).join('')
     switch (element.tagName.toLowerCase()) {
       case 'strong':
       case 'b':
-        return `**${children}**`
+        return children ? `**${children}**` : ''
       case 'em':
       case 'i':
-        return `*${children}*`
+        return children ? `*${children}*` : ''
       case 'del':
       case 's':
-        return `~~${children}~~`
+        return children ? `~~${children}~~` : ''
       case 'code':
         return element.parentElement?.tagName.toLowerCase() === 'pre' ? children : `\`${children}\``
       case 'pre':
-        return `\`\`\`\n${element.textContent || ''}\n\`\`\`
-`
+        return `\`\`\`\n${(element.textContent || '').replace(/\u00A0/g, ' ')}\n\`\`\`\n\n`
       case 'br':
         return '\n'
       case 'h1':
-        return `# ${children}\n\n`
+        return `# ${children.trim()}\n\n`
       case 'h2':
-        return `## ${children}\n\n`
+        return `## ${children.trim()}\n\n`
       case 'h3':
-        return `### ${children}\n\n`
+        return `### ${children.trim()}\n\n`
       case 'blockquote':
         return `${children.split('\n').filter(Boolean).map(line => `> ${line}`).join('\n')}\n\n`
       case 'hr':
@@ -309,7 +326,7 @@ function htmlToMarkdown(html: string) {
         return href ? `[${children}](${href})` : children
       }
       case 'li':
-        return children
+        return children.replace(/\n+$/, '')
       case 'img': {
         const src = element.getAttribute('src') || ''
         const alt = element.getAttribute('alt') || '笔记插图'
@@ -320,8 +337,10 @@ function htmlToMarkdown(html: string) {
       case 'ol':
         return `${Array.from(element.children).map((item, index) => `${index + 1}. ${render(item)}`).join('\n')}\n\n`
       case 'p':
-      case 'div':
-        return `${children}\n\n`
+      case 'div': {
+        const cleaned = children.replace(/^\n+|\n+$/g, '')
+        return cleaned ? `${cleaned}\n\n` : '\n'
+      }
       default:
         return children
     }
@@ -374,19 +393,32 @@ export default function Editor() {
   const [showPreview, setShowPreview] = useState(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)
-      return params.get('mode') === 'preview' || params.get('from') === 'search'
+      const hasFile = Boolean(params.get('path') || params.get('file'))
+      const mode = params.get('mode')
+      if (hasFile) return mode !== 'write'
+      return mode === 'preview' || params.get('from') === 'search'
     }
     return false
   })
   const [showModeNotice, setShowModeNotice] = useState(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)
-      return params.get('mode') === 'preview' || params.get('from') === 'search'
+      const hasFile = Boolean(params.get('path') || params.get('file'))
+      const mode = params.get('mode')
+      if (hasFile) return mode !== 'write'
+      return mode === 'preview' || params.get('from') === 'search'
     }
     return false
   })
   const [editorMode, setEditorMode] = useState<'write' | 'markdown'>('write')
-  const [richHtml, setRichHtml] = useState('')
+
+  // Folder selection & creation states
+  const [selectedFolder, setSelectedFolder] = useState('')
+  const [showNewFolderDialog, setShowNewFolderDialog] = useState(false)
+  const [newFolderParent, setNewFolderParent] = useState('')
+  const [newFolderName, setNewFolderName] = useState('')
+  const [creatingFolder, setCreatingFolder] = useState(false)
+  const [folderError, setFolderError] = useState('')
 
   // AI Edit state
   const [showAiMenu, setShowAiMenu] = useState(false)
@@ -397,11 +429,27 @@ export default function Editor() {
   const [showMathMenu, setShowMathMenu] = useState(false)
   const [showMoreFormatTools, setShowMoreFormatTools] = useState(false)
   const [practiceModalOpen, setPracticeModalOpen] = useState(false)
+  const [editorTourOpen, setEditorTourOpen] = useState(false)
+
+  useEffect(() => {
+    const handleStartEditorTour = () => setEditorTourOpen(true)
+    window.addEventListener('start-editor-tour', handleStartEditorTour)
+    return () => window.removeEventListener('start-editor-tour', handleStartEditorTour)
+  }, [])
+
+  const openEditorManual = () => {
+    window.dispatchEvent(
+      new CustomEvent('open-user-guide', {
+        detail: { tab: 'doc', category: 'system_collab', featureId: 'markdown-editor' },
+      })
+    )
+  }
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const richEditorRef = useRef<HTMLDivElement>(null)
   const richEditorFocusedRef = useRef(false)
   const isComposingRef = useRef(false)
+  const richSyncSourceRef = useRef<'external' | 'rich-input'>('external')
   const [obsidianSyncModalOpen, setObsidianSyncModalOpen] = useState(false)
   const [showHandwritingModal, setShowHandwritingModal] = useState(false)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
@@ -410,6 +458,22 @@ export default function Editor() {
   const paperDocumentRef = useRef<HTMLDivElement>(null)
   const [vaultStats, setVaultStats] = useState<{ totalNotes: number; vaultPath: string } | null>(null)
   const { tree, reload: reloadTree } = useVaultTree()
+  const availableFolders = useMemo(() => collectFolders(tree), [tree])
+
+  // 非受控富文本 DOM 同步：仅在外部内容变更、打开文件、切回写作/富文本模式时更新 innerHTML，用户输入打字期间绝不重刷 DOM
+  useEffect(() => {
+    if (showPreview || editorMode !== 'write') return
+    if (richSyncSourceRef.current === 'rich-input') {
+      richSyncSourceRef.current = 'external'
+      return
+    }
+    const el = richEditorRef.current
+    if (!el) return
+    const nextHtml = markdownToRichHtml(content)
+    if (el.innerHTML !== nextHtml) {
+      el.innerHTML = nextHtml
+    }
+  }, [content, showPreview, editorMode, currentFile?.path])
 
   // Load ingest status & vault stats
   useEffect(() => {
@@ -435,13 +499,14 @@ export default function Editor() {
   const loadFile = useCallback(async (filePath: string) => {
     try {
       const note = await api.getFile(filePath)
+      richSyncSourceRef.current = 'external'
       setCurrentFile(note)
       setContent(note.content)
-      const nextHtml = markdownToRichHtml(note.content)
-      setRichHtml(nextHtml)
       if (richEditorRef.current) {
-        richEditorRef.current.innerHTML = nextHtml
+        richEditorRef.current.innerHTML = markdownToRichHtml(note.content)
       }
+      const lastSlash = note.path.lastIndexOf('/')
+      setSelectedFolder(lastSlash > 0 ? note.path.slice(0, lastSlash) : '')
       setOriginalContent(note.content)
       setTags(note.tags.join(', '))
       setTitle(note.title)
@@ -451,18 +516,21 @@ export default function Editor() {
     } catch {
       // 知识图谱节点指向尚未创建的考点笔记：提供高审美友好空状态与标准考纲模版引导
       const cleanName = decodeURIComponent(filePath).split(/[\\/]/).pop()?.replace(/\.md$/i, '') || filePath
+      const lastSlash = filePath.replace(/\\/g, '/').lastIndexOf('/')
+      const fallbackFolder = lastSlash > 0 ? filePath.replace(/\\/g, '/').slice(0, lastSlash) : ''
+      richSyncSourceRef.current = 'external'
       setCurrentFile(null)
       setTitle(cleanName)
       setNewFileName(cleanName)
+      setNewFileFolder(fallbackFolder)
+      setNewFilePath(fallbackFolder ? `${fallbackFolder}/${cleanName}.md` : `${cleanName}.md`)
       setTags('考研考点, 核心精读')
       
       const draftTemplate = `# ${cleanName}\n\n> 🎯 **考研大纲考点精读与真题归纳**\n> - 关联科目：考研核心统考学科\n> - 来源导航：知识图谱考纲节点推荐（草稿待归档）\n\n---\n\n## 一、 核心概念与大纲要求\n- 基本定义与核心理论推导背景；\n- 统考大纲对本考点的重点考察形式（选择题 / 综合应用大题）。\n\n## 二、 核心性质与定理推导\n1. 重点算法 / 逻辑结构：\n2. 关键时空复杂度分析：\n\n## 三、 历年统考真题考法与避坑指南\n- 陷阱剖析：易混淆概念与做题误区；\n- 阅卷采分点踩分提示。\n\n## 四、 双链延伸网络\n- 关联前置考点：[[考研核心讲义]]\n- 关联真题测验：[[做题中心错题本]]\n`
       
       setContent(draftTemplate)
-      const nextHtml = markdownToRichHtml(draftTemplate)
-      setRichHtml(nextHtml)
       if (richEditorRef.current) {
-        richEditorRef.current.innerHTML = nextHtml
+        richEditorRef.current.innerHTML = markdownToRichHtml(draftTemplate)
       }
       setOriginalContent('')
       setSaveMsg(`💡 考点笔记「${cleanName}」尚未收录，已自动加载考纲标准模版，点击「保存」即可一键入库！`)
@@ -474,10 +542,9 @@ export default function Editor() {
     const params = new URLSearchParams(location.search)
     const filePath = params.get('path') || params.get('file')
     const mode = params.get('mode')
-    const fromSearch = params.get('from') === 'search' || mode === 'preview'
     if (filePath) {
       loadFile(filePath)
-      if (fromSearch) {
+      if (mode !== 'write') {
         setShowPreview(true)
         setShowModeNotice(true)
       } else {
@@ -507,6 +574,7 @@ export default function Editor() {
 
 
   const handleSwitchToWriting = () => {
+    richSyncSourceRef.current = 'external'
     setShowPreview(false)
     setShowModeNotice(false)
     setSaveMsg('已切换为写作模式，可直接编辑修改笔记')
@@ -523,35 +591,40 @@ export default function Editor() {
   }
 
   const handleFileClick = (filePath: string, options?: { mode?: 'preview' | 'write'; fromSearch?: boolean }) => {
+    const preferPreview = options?.mode !== 'write'
     if (currentFile?.path === filePath) {
-      if (options?.mode === 'preview' || options?.fromSearch) {
+      if (preferPreview) {
         setShowPreview(true)
         setShowModeNotice(true)
+      } else {
+        handleSwitchToWriting()
       }
       if (window.innerWidth < 768) setShowFiles(false)
       return
     }
     if (dirty && !window.confirm('当前笔记有未保存修改，切换后这些修改会丢失。继续切换吗？')) return
     loadFile(filePath)
-    if (options?.mode === 'preview' || options?.fromSearch) {
+    if (preferPreview) {
       setShowPreview(true)
       setShowModeNotice(true)
+    } else {
+      setShowPreview(false)
+      setShowModeNotice(false)
     }
     if (window.innerWidth < 768) setShowFiles(false)
   }
 
   const handleSave = async () => {
     if (!currentFile) {
-      let finalName = newFileName.trim()
+      let finalName = (newFileName.trim() || title.trim()).replace(/[\\/:*?"<>|]/g, '_')
       if (!finalName) {
         const now = new Date()
         const timeStr = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`
         finalName = `未命名笔记_${timeStr}`
       }
       if (!finalName.endsWith('.md')) finalName += '.md'
-      const finalPath = newFileFolder.trim()
-        ? `${newFileFolder.replace(/[\\/]+$/, '')}/${finalName}`
-        : finalName
+      const cleanFolder = newFileFolder.trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '')
+      const finalPath = cleanFolder ? `${cleanFolder}/${finalName}` : finalName
 
       setSaving(true)
       try {
@@ -559,6 +632,7 @@ export default function Editor() {
         const note = await api.createFile(finalPath, content, fm)
         setCurrentFile(note)
         setOriginalContent(content)
+        setSelectedFolder(cleanFolder)
         setSaveMsg(`✅ 已同步至本地 Obsidian：${note.path}`)
         setShowNewDialog(false)
         setNewFilePath('')
@@ -595,13 +669,16 @@ export default function Editor() {
     if (!currentFile) return
     try {
       await api.deleteFile(currentFile.path)
+      richSyncSourceRef.current = 'external'
       setCurrentFile(null)
       setContent('')
+      if (richEditorRef.current) richEditorRef.current.innerHTML = ''
       setOriginalContent('')
       setTags('')
       setTitle('')
       setSaveMsg('已移入回收站')
       setShowDeleteConfirm(false)
+      await reloadTree()
     } catch (err: any) {
       setSaveMsg(`删除失败：${err.message}`)
     }
@@ -666,7 +743,7 @@ export default function Editor() {
     }
   }
 
-  const handleNewFile = (forceDialog = false) => {
+  const handleNewFile = (forceDialog = false, targetFolder?: string) => {
     if (dirty && !window.confirm('当前笔记有未保存修改，新建后这些修改会丢失。继续新建吗？')) return
     const now = new Date()
     const month = String(now.getMonth() + 1).padStart(2, '0')
@@ -674,26 +751,34 @@ export default function Editor() {
     const hour = String(now.getHours()).padStart(2, '0')
     const min = String(now.getMinutes()).padStart(2, '0')
     const defaultName = `考点速记_${month}${day}_${hour}${min}`
+    const resolvedFolder = (targetFolder !== undefined ? targetFolder : selectedFolder)
+      .trim()
+      .replace(/\\/g, '/')
+      .replace(/^\/+|\/+$/g, '')
 
+    richSyncSourceRef.current = 'external'
     setCurrentFile(null)
     setContent('')
-    setRichHtml('')
+    if (richEditorRef.current) richEditorRef.current.innerHTML = ''
     setOriginalContent('')
     setTags('')
     setTitle(defaultName)
     setNewFileName(defaultName)
-    setNewFileFolder('wiki')
-    setNewFilePath(`wiki/${defaultName}.md`)
+    setNewFileFolder(resolvedFolder)
+    setNewFilePath(resolvedFolder ? `${resolvedFolder}/${defaultName}.md` : `${defaultName}.md`)
     setNewTemplateKey('blank')
     setShowPreview(false)
     setShowModeNotice(false)
+    if (window.innerWidth < 768) setShowFiles(false)
 
-    // 移动端或快捷新建：直接进入即写状态，杜绝繁琐多层弹窗干扰
+    // 移动端或快捷新建：直接进入即写状态，顶部元信息栏可直接选目录；模板新建则打开弹窗
     if (forceDialog) {
       setShowNewDialog(true)
     } else {
       setShowNewDialog(false)
-      setSaveMsg('✨ 已进入极速编辑态，直接输入标题与正文，点击右上角保存即可落盘')
+      setSaveMsg(resolvedFolder
+        ? `✨ 已在目录「${resolvedFolder}」进入极速编辑态，输入标题与正文后保存即可`
+        : '✨ 已进入极速编辑态，可在标题下方切换保存目录，写完点击保存即可')
       setTimeout(() => {
         const titleEl = document.querySelector('input[aria-label="笔记标题"]') as HTMLInputElement
         titleEl?.focus()
@@ -702,16 +787,54 @@ export default function Editor() {
     }
   }
 
+  const openNewFolderModal = (parentFolder = selectedFolder) => {
+    const cleanParent = parentFolder.trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '')
+    setNewFolderParent(cleanParent)
+    setNewFolderName('')
+    setFolderError('')
+    setShowNewFolderDialog(true)
+  }
+
+  const handleCreateFolder = async () => {
+    const cleanName = newFolderName.trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '')
+    if (!cleanName) {
+      setFolderError('请输入目录名称')
+      return
+    }
+    const cleanParent = newFolderParent.trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '')
+    const fullFolderPath = cleanParent ? `${cleanParent}/${cleanName}` : cleanName
+
+    setCreatingFolder(true)
+    setFolderError('')
+    try {
+      const res = await api.createFolder(fullFolderPath)
+      await reloadTree()
+      setSelectedFolder(res.path)
+      if (!currentFile) {
+        setNewFileFolder(res.path)
+        const activeName = (newFileName.trim() || title.trim() || '未命名笔记').replace(/[\\/:*?"<>|]/g, '_')
+        setNewFilePath(`${res.path}/${activeName}.md`)
+      }
+      setShowNewFolderDialog(false)
+      setNewFolderName('')
+      setSaveMsg(`📁 已新建目录：${res.path}`)
+      setTimeout(() => setSaveMsg(''), 3500)
+    } catch (err: any) {
+      setFolderError(err?.message || '新建目录失败')
+    } finally {
+      setCreatingFolder(false)
+    }
+  }
+
   const applyNewTemplate = (key: NoteTemplateKey, nextTitle = newFileName) => {
     const template = noteTemplates.find(item => item.key === key) || noteTemplates[0]
+    richSyncSourceRef.current = 'external'
     setNewTemplateKey(key)
     setTags(template.tags)
     const nextContent = template.content(nextTitle)
     setContent(nextContent)
-    const nextHtml = markdownToRichHtml(nextContent)
-    setRichHtml(nextHtml)
     if (richEditorRef.current) {
-      richEditorRef.current.innerHTML = nextHtml
+      richEditorRef.current.innerHTML = markdownToRichHtml(nextContent)
     }
   }
 
@@ -729,6 +852,7 @@ export default function Editor() {
   const syncRichContent = () => {
     if (isComposingRef.current) return
     const html = richEditorRef.current?.innerHTML || ''
+    richSyncSourceRef.current = 'rich-input'
     setContent(htmlToMarkdown(html))
   }
   const execRich = (command: string, value?: string) => {
@@ -739,12 +863,8 @@ export default function Editor() {
   const switchEditorMode = (nextMode: 'write' | 'markdown') => {
     if (nextMode === editorMode) return
     if (nextMode === 'write') {
-      const nextHtml = markdownToRichHtml(content)
-      setRichHtml(nextHtml)
+      richSyncSourceRef.current = 'external'
       setEditorMode('write')
-      window.setTimeout(() => {
-        if (richEditorRef.current) richEditorRef.current.innerHTML = nextHtml
-      }, 0)
       return
     }
     syncRichContent()
@@ -918,8 +1038,11 @@ export default function Editor() {
 
   const applyAiResult = () => {
     if (aiResult && !aiResult.startsWith('AI 编辑失败：')) {
+      richSyncSourceRef.current = 'external'
       setContent(aiResult)
-      setRichHtml(markdownToRichHtml(aiResult))
+      if (richEditorRef.current) {
+        richEditorRef.current.innerHTML = markdownToRichHtml(aiResult)
+      }
       setShowAiResult(false)
       setAiResult('')
       setSaveMsg('AI 编辑已应用')
@@ -942,12 +1065,16 @@ export default function Editor() {
       e.preventDefault(); fmt.h3()
     } else if (e.key === 'Tab') {
       e.preventDefault()
-      const el = ta()
-      if (el) {
-        const start = el.selectionStart
-        const newContent = content.substring(0, start) + '  ' + content.substring(el.selectionEnd)
-        setContent(newContent)
-        setTimeout(() => { el.selectionStart = el.selectionEnd = start + 2 }, 0)
+      if (editorMode === 'write') {
+        execRich('insertText', '  ')
+      } else {
+        const el = ta()
+        if (el) {
+          const start = el.selectionStart
+          const newContent = content.substring(0, start) + '  ' + content.substring(el.selectionEnd)
+          setContent(newContent)
+          setTimeout(() => { el.selectionStart = el.selectionEnd = start + 2 }, 0)
+        }
       }
     }
   }
@@ -971,7 +1098,7 @@ export default function Editor() {
       )}
 
       {/* File Explorer Sidebar: 移动端为侧滑抽屉，桌面端保持经典侧边栏 */}
-      <div className={`
+      <div data-tour="editor-file-tree" className={`
         fixed inset-y-0 left-0 z-50 w-72 bg-[#fbfbfc] shadow-xl transition-transform duration-200
         lg:static lg:z-auto lg:shadow-none lg:transition-all
         ${showFiles ? 'translate-x-0 lg:w-56' : '-translate-x-full lg:w-0'}
@@ -990,83 +1117,106 @@ export default function Editor() {
           </button>
         </div>
         <div className="flex-1 overflow-y-auto min-h-0">
-          <FileExplorer tree={tree} onFileClick={handleFileClick} selectedPath={currentFile?.path} />
+          <FileExplorer
+            tree={tree}
+            onFileClick={handleFileClick}
+            selectedPath={currentFile?.path}
+            selectedFolder={selectedFolder}
+            onSelectFolder={setSelectedFolder}
+            onCreateNoteInFolder={(folderPath) => handleNewFile(false, folderPath)}
+            onCreateFolder={(parentPath) => openNewFolderModal(parentPath)}
+          />
         </div>
       </div>
 
       {/* Main Editor Area */}
       <div className="flex-1 flex flex-col min-w-0 w-full max-w-full overflow-x-hidden">
-        {/* Top Toolbar: File operations (自适应防溢出，手机端超紧凑精致排版) */}
-        <div className="flex items-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 border-b border-slate-200/80 bg-white/95 shrink-0 max-w-full overflow-x-auto no-scrollbar">
-          <button onClick={() => setShowFiles(!showFiles)}
-            className={`p-1.5 rounded-lg text-xs transition-colors shrink-0 ${showFiles ? 'bg-cream-200 text-warm-600' : 'text-warm-500 hover:text-warm-700'}`}
-            title={showFiles ? '隐藏文件列表' : '显示文件列表'}>
-            <FolderTree className="w-4 h-4" />
-          </button>
-          <div className="w-px h-4 sm:h-5 bg-cream-200 shrink-0" />
-          <button onClick={() => handleNewFile(false)}
-            className="subframe-btn-black px-2 py-1 sm:px-2.5 sm:py-1.5 text-[11px] sm:text-xs font-medium flex items-center gap-1 sm:gap-1.5 shrink-0 active:scale-95 cursor-pointer shadow-xs"
-            title="极速新建空白笔记，开箱即写">
-            <FilePlus className="w-3.5 h-3.5" /> <span>新建</span>
-          </button>
-          <button onClick={() => setShowNewDialog(true)}
-            className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all shrink-0 cursor-pointer shadow-xs"
-            title="选择学习卡片、错题复盘或灵感模板">
-            <span>模板</span>
-          </button>
-          {/* Obsidian Sync Status Pill (只在电脑或平板宽屏展示) */}
-          <button
-            onClick={() => setObsidianSyncModalOpen(true)}
-            className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-slate-100 hover:bg-slate-200/70 border border-slate-200 text-slate-800 transition-all cursor-pointer shadow-xs shrink-0"
-            title="点击查看与本地 Obsidian 实时双向同步状态及文件夹"
-          >
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-            <span className="font-medium">Obsidian 同步</span>
-            <span className="subframe-pill text-2xs">
-              {typeof vaultStats?.totalNotes === 'number' ? `${vaultStats.totalNotes} 篇` : '就绪'}
-            </span>
-          </button>
-          <button onClick={handleSave} disabled={saving || (!dirty && !!currentFile)}
-            className="flex items-center gap-1 sm:gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-2xs sm:text-xs bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all shrink-0 font-semibold shadow-xs cursor-pointer active:scale-95">
-            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} 
-            <span>保存</span>
-          </button>
-          {currentFile && (
-            <div className="hidden sm:flex items-center gap-1.5 shrink-0">
-              <button onClick={() => setShowRenameDialog(true)}
-                className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs bg-slate-100 text-warm-700 hover:bg-slate-200 transition-colors">
-                <FileEdit className="w-3.5 h-3.5" /> 重命名
+        {/* Top Toolbar: 优雅双栏架构，左侧自适应滑移工具，右侧核心操作永远常驻可见 */}
+        <div className="flex items-center justify-between px-2 sm:px-3 py-1.5 sm:py-2 border-b border-slate-200/80 bg-white/95 shrink-0 max-w-full relative z-20">
+          {/* 左侧可平滑横滚操作流 (文件列表开关、新建、新建目录、保存、Obsidian状态、即练等) */}
+          <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar min-w-0 flex-1 mr-1 sm:mr-2">
+            <button onClick={() => setShowFiles(!showFiles)}
+              className={`p-1.5 rounded-lg text-xs transition-colors shrink-0 cursor-pointer ${showFiles ? 'bg-cream-200 text-warm-600' : 'text-warm-500 hover:text-warm-700'}`}
+              title={showFiles ? '隐藏文件列表' : '显示文件列表'}>
+              <FolderTree className="w-4 h-4" />
+            </button>
+            <div className="w-px h-4 sm:h-5 bg-cream-200 shrink-0" />
+            <div data-tour="editor-new-actions" className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+              <button onClick={() => handleNewFile(false)}
+                className="subframe-btn-black px-2 py-1 sm:px-2.5 sm:py-1.5 text-[11px] sm:text-xs font-medium flex items-center gap-1 sm:gap-1.5 shrink-0 active:scale-95 cursor-pointer shadow-xs"
+                title={selectedFolder ? `在「${selectedFolder}」下极速新建空白笔记` : '极速新建空白笔记，开箱即写'}>
+                <FilePlus className="w-3.5 h-3.5" /> <span>新建</span>
               </button>
-              <button onClick={() => setShowDeleteConfirm(true)}
-                className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs bg-slate-100 text-accent-rose hover:bg-accent-rose/10 transition-colors">
-                <Trash2 className="w-3.5 h-3.5" /> 删除
+              <button onClick={() => openNewFolderModal(selectedFolder)}
+                className="flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg text-[11px] sm:text-xs bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all shrink-0 cursor-pointer shadow-xs"
+                title="新建笔记目录">
+                <FolderPlus className="w-3.5 h-3.5 text-amber-600" />
+                <span className="hidden sm:inline">新建目录</span>
+              </button>
+              <button onClick={() => handleNewFile(true)}
+                className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all shrink-0 cursor-pointer shadow-xs"
+                title="选择学习卡片、错题复盘或灵感模板并指定目录">
+                <span>模板</span>
               </button>
             </div>
-          )}
-          <div className="hidden sm:block w-px h-5 bg-cream-200 shrink-0" />
-          {/* Import */}
-          <div className="relative hidden sm:block shrink-0">
-            <input ref={fileInputRef} type="file" multiple
-              accept={ingestStatus?.supportedFormats?.join(',') || '.pdf,.docx,.xlsx,.pptx,.html,.csv'}
-              onChange={handleImport} className="hidden" />
-            <button onClick={() => fileInputRef.current?.click()} disabled={importing}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-white border border-slate-200 text-slate-800 hover:bg-slate-50 disabled:opacity-40 transition-all cursor-pointer shadow-xs">
-              {importing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-              导入{importing && batchProgress ? ` (${batchProgress.done}/${batchProgress.total})` : ''}
+            {/* Obsidian Sync Status Pill */}
+            <button
+              data-tour="editor-sync-pill"
+              onClick={() => setObsidianSyncModalOpen(true)}
+              className="hidden sm:flex items-center gap-1.5 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg text-xs bg-slate-100 hover:bg-slate-200/70 border border-slate-200 text-slate-800 transition-all cursor-pointer shadow-xs shrink-0"
+              title="点击查看与本地 Obsidian 实时双向同步状态及文件夹"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              <span className="font-medium hidden xl:inline">Obsidian 同步</span>
+              <span className="subframe-pill text-2xs">
+                {typeof vaultStats?.totalNotes === 'number' ? `${vaultStats.totalNotes} 篇` : '就绪'}
+              </span>
             </button>
+            <button onClick={handleSave} disabled={saving || (!dirty && !!currentFile)}
+              className="flex items-center gap-1 sm:gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-2xs sm:text-xs bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all shrink-0 font-semibold shadow-xs cursor-pointer active:scale-95">
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} 
+              <span>保存</span>
+            </button>
+            {currentFile && (
+              <div className="hidden md:flex items-center gap-1.5 shrink-0">
+                <button onClick={() => setShowRenameDialog(true)}
+                  className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs bg-slate-100 text-warm-700 hover:bg-slate-200 transition-colors">
+                  <FileEdit className="w-3.5 h-3.5" /> 重命名
+                </button>
+                <button onClick={() => setShowDeleteConfirm(true)}
+                  className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs bg-slate-100 text-accent-rose hover:bg-accent-rose/10 transition-colors">
+                  <Trash2 className="w-3.5 h-3.5" /> 删除
+                </button>
+              </div>
+            )}
+            <div className="hidden sm:block w-px h-5 bg-cream-200 shrink-0" />
+            {/* Import */}
+            <div className="relative hidden md:block shrink-0">
+              <input ref={fileInputRef} type="file" multiple
+                accept={ingestStatus?.supportedFormats?.join(',') || '.pdf,.docx,.xlsx,.pptx,.html,.csv'}
+                onChange={handleImport} className="hidden" />
+              <button onClick={() => fileInputRef.current?.click()} disabled={importing}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs bg-white border border-slate-200 text-slate-800 hover:bg-slate-50 disabled:opacity-40 transition-all cursor-pointer shadow-xs">
+                {importing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                导入{importing && batchProgress ? ` (${batchProgress.done}/${batchProgress.total})` : ''}
+              </button>
+            </div>
+
+            <div data-tour="editor-practice-ai" className="hidden lg:flex items-center gap-1.5 shrink-0">
+              {/* Practice */}
+              <button
+                onClick={() => setPracticeModalOpen(true)}
+                disabled={!currentFile && !content.trim()}
+                className="subframe-btn-secondary px-2.5 py-1.5 text-xs font-medium flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed transition-all shrink-0 cursor-pointer shadow-xs"
+                title="基于本篇笔记考点，立即生成 3 道测试题进行随堂真题测验"
+              >
+                <Target className="w-3.5 h-3.5 text-slate-700" /> <span>即学即练</span>
+              </button>
+            </div>
           </div>
 
-          {/* Practice */}
-          <button
-            onClick={() => setPracticeModalOpen(true)}
-            disabled={!currentFile && !content.trim()}
-            className="subframe-btn-secondary px-3 py-1.5 text-xs font-medium hidden md:flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed transition-all shrink-0 cursor-pointer shadow-xs"
-            title="基于本篇笔记考点，立即生成 3 道测试题进行随堂真题测验"
-          >
-            <Target className="w-3.5 h-3.5 text-slate-700" /> <span>即学即练</span>
-          </button>
-
-          <div className="ml-auto flex items-center gap-1 sm:gap-2 shrink-0">
+          {/* 右侧核心操作常驻岛：未保存状态、笔记导览、手册、切换写作模式、更多操作 (永远常驻右侧不被截断！) */}
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 pl-1.5 bg-white/95 border-l border-slate-100">
             {saveMsg && (
               <div className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-md shrink-0 ${saveMsg.includes('失败') ? 'text-accent-rose bg-accent-rose/10' : 'text-accent-sage bg-accent-sage/10'}`}>
                 {saveMsg}
@@ -1077,7 +1227,32 @@ export default function Editor() {
                 <AlertTriangle className="w-3 h-3 text-amber-500" /> <span className="hidden sm:inline">未保存</span>
               </div>
             )}
+
+            {/* 导览与使用手册快捷入口 */}
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                onClick={() => setEditorTourOpen(true)}
+                className="flex items-center gap-1 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 font-semibold transition-all shrink-0 cursor-pointer shadow-xs active:scale-95"
+                title="开启笔记系统细致分步功能导览"
+              >
+                <Compass className="w-3.5 h-3.5 text-indigo-600" />
+                <span className="hidden xl:inline">笔记导览</span>
+              </button>
+              <button
+                type="button"
+                onClick={openEditorManual}
+                className="flex items-center gap-1 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg text-xs bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 transition-all shrink-0 cursor-pointer shadow-xs"
+                title="查阅详细图文使用手册（涵盖公式、目录、手写等全部操作）"
+              >
+                <BookOpen className="w-3.5 h-3.5 text-slate-500" />
+                <span className="hidden 2xl:inline">使用手册</span>
+              </button>
+            </div>
+
+            {/* 核心模式切换大按钮：预览 / 写作 */}
             <button
+              data-tour="editor-preview-toggle"
               onClick={handleTogglePreview}
               className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-2xs sm:text-xs font-semibold transition-all shrink-0 cursor-pointer ${
                 showPreview
@@ -1101,9 +1276,11 @@ export default function Editor() {
                 </>
               )}
             </button>
+
+            {/* 移动端与紧凑屏幕更多笔记操作按钮 */}
             <button
               onClick={() => setMobileActionsOpen(true)}
-              className="md:hidden p-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 active:scale-95 transition-all shrink-0"
+              className="lg:hidden p-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 active:scale-95 transition-all shrink-0 cursor-pointer"
               title="更多笔记操作（重命名、删除、模板、导入、即学即练）"
               aria-label="更多操作"
             >
@@ -1149,7 +1326,7 @@ export default function Editor() {
         {!showPreview && (
         <div className="relative shrink-0 border-b border-cream-200 bg-white/90 max-w-full overflow-hidden">
           <div className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 overflow-x-auto whitespace-nowrap scroll-smooth no-scrollbar max-w-full">
-            <div className="mr-1 flex items-center rounded-lg border border-slate-200 bg-slate-100 p-0.5 shrink-0">
+            <div data-tour="editor-mode-switcher" className="mr-1 flex items-center rounded-lg border border-slate-200 bg-slate-100 p-0.5 shrink-0">
               <button
                 onClick={() => switchEditorMode('write')}
                 className={`rounded px-2 py-0.5 sm:px-2.5 sm:py-1 text-2xs sm:text-2xs transition-colors ${editorMode === 'write' ? 'bg-white font-bold text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
@@ -1191,6 +1368,8 @@ export default function Editor() {
               <ChevronDown className={`w-3 h-3 transition-transform ${showAiMenu ? 'rotate-180' : ''}`} />
             </button>
 
+            {/* 常用核心组与媒体组包裹以便导览精准高亮 */}
+            <div data-tour="editor-format-tools" className="flex items-center gap-1 shrink-0">
             {/* 常用核心组（保持精简清爽，不再 17 个图标挤成一团） */}
             <div className="flex items-center bg-slate-100/90 border border-slate-200/80 rounded-lg p-0.5 shrink-0 gap-0.5">
               <ToolBtn icon={Bold} label="粗体 (Ctrl+B)" onClick={fmt.bold} />
@@ -1228,6 +1407,7 @@ export default function Editor() {
               >
                 <span>演草纸</span>
               </button>
+            </div>
             </div>
 
             {/* 可折叠工具抽屉按钮：收纳其余不常用排版图标 */}
@@ -1357,7 +1537,7 @@ export default function Editor() {
                 </button>
 
                 <button
-                  onClick={() => { setMobileActionsOpen(false); setShowNewDialog(true) }}
+                  onClick={() => { setMobileActionsOpen(false); handleNewFile(true) }}
                   className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 text-[11px] sm:text-xs font-bold text-slate-800 active:scale-95"
                 >
                   <FileText className="w-3.5 h-3.5 text-slate-900 shrink-0" />
@@ -1371,6 +1551,22 @@ export default function Editor() {
                 >
                   <Upload className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                   <span>导入外部文档</span>
+                </button>
+
+                <button
+                  onClick={() => { setMobileActionsOpen(false); setEditorTourOpen(true) }}
+                  className="flex items-center gap-2 p-2.5 rounded-xl bg-amber-50/80 border border-amber-200/80 text-[11px] sm:text-xs font-bold text-amber-800 active:scale-95"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span>笔记功能导览</span>
+                </button>
+
+                <button
+                  onClick={() => { setMobileActionsOpen(false); openEditorManual() }}
+                  className="flex items-center gap-2 p-2.5 rounded-xl bg-blue-50/80 border border-blue-200/80 text-[11px] sm:text-xs font-bold text-blue-800 active:scale-95"
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                  <span>笔记使用手册</span>
                 </button>
 
                 <button
@@ -1440,13 +1636,21 @@ export default function Editor() {
               <input
                 type="text"
                 value={title}
-                onChange={e => setTitle(e.target.value)}
+                onChange={e => {
+                  const val = e.target.value
+                  setTitle(val)
+                  if (!currentFile) {
+                    setNewFileName(val)
+                    const cleanFolder = newFileFolder.trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '')
+                    setNewFilePath(val ? (cleanFolder ? `${cleanFolder}/${val}.md` : `${val}.md`) : '')
+                  }
+                }}
                 placeholder="输入笔记标题..."
                 aria-label="笔记标题"
                 className="w-full bg-transparent text-sm sm:text-lg md:text-xl font-bold tracking-tight text-slate-900 outline-none placeholder:text-slate-300"
               />
-              <div className="mt-1 flex items-center justify-between gap-1.5 text-2xs sm:text-2xs text-slate-400 max-w-full min-w-0">
-                <div className="flex items-center gap-1.5 min-w-0 truncate">
+              <div className="mt-1.5 flex flex-wrap items-center justify-between gap-1.5 text-2xs sm:text-2xs text-slate-400 max-w-full min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 min-w-0">
                   {currentFile ? (
                     <>
                       <span className="max-w-[140px] sm:max-w-[360px] truncate font-mono">{currentFile.path}</span>
@@ -1456,7 +1660,44 @@ export default function Editor() {
                       <span className="hidden sm:inline">{currentFile.links.length} 条双链</span>
                     </>
                   ) : (
-                    <span className="truncate">新笔记 · 保存后自动归档至知识库</span>
+                    <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                      <span className="inline-flex items-center gap-1 text-slate-500 font-medium shrink-0">
+                        <Folder className="w-3 h-3 text-amber-500" />
+                        <span>存放目录：</span>
+                      </span>
+                      <select
+                        aria-label="新笔记存放目录"
+                        value={newFileFolder}
+                        onChange={e => {
+                          const folder = e.target.value
+                          setNewFileFolder(folder)
+                          setSelectedFolder(folder)
+                          const activeName = (newFileName.trim() || title.trim() || '未命名笔记').replace(/[\\/:*?"<>|]/g, '_')
+                          setNewFilePath(folder ? `${folder}/${activeName}.md` : `${activeName}.md`)
+                        }}
+                        className="max-w-[170px] sm:max-w-[240px] rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-700 outline-none focus:border-accent-orange cursor-pointer"
+                      >
+                        <option value="">根目录 (/)</option>
+                        {availableFolders.map(folder => (
+                          <option key={folder} value={folder}>{folder}</option>
+                        ))}
+                        {newFileFolder && !availableFolders.includes(newFileFolder) && (
+                          <option value={newFileFolder}>{newFileFolder}（新建）</option>
+                        )}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => openNewFolderModal(newFileFolder)}
+                        className="inline-flex items-center gap-0.5 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[11px] font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 cursor-pointer shrink-0"
+                        title="新建一个目录并存放到此处"
+                      >
+                        <FolderPlus className="w-3 h-3 text-amber-600" />
+                        <span>新建目录</span>
+                      </button>
+                      <span className="hidden sm:inline text-slate-400 font-mono truncate max-w-[240px]">
+                        → {newFileFolder ? `${newFileFolder}/` : ''}{(newFileName.trim() || title.trim() || '未命名笔记')}.md
+                      </span>
+                    </div>
                   )}
                 </div>
                 {!currentFile && (
@@ -1504,7 +1745,23 @@ export default function Editor() {
                 {/* 讲义级交互纸张视窗 */}
                 <div
                   ref={paperDocumentRef}
-                  className="relative w-full max-w-4xl min-h-[85vh] bg-white dark:bg-slate-900 rounded-xl sm:rounded-2xl shadow-sm hover:shadow border border-slate-200/90 dark:border-slate-800 p-2.5 sm:p-6 md:p-10 transition-shadow max-w-full overflow-x-hidden"
+                  onClick={(e) => {
+                    if (isAnnotationActive) return
+                    const editorEl = richEditorRef.current
+                    if (!editorEl) return
+                    if (e.target === paperDocumentRef.current) {
+                      editorEl.focus()
+                      const selection = window.getSelection()
+                      if (selection) {
+                        const range = document.createRange()
+                        range.selectNodeContents(editorEl)
+                        range.collapse(false)
+                        selection.removeAllRanges()
+                        selection.addRange(range)
+                      }
+                    }
+                  }}
+                  className="relative w-full max-w-4xl min-h-[85vh] flex flex-col bg-white dark:bg-slate-900 rounded-xl sm:rounded-2xl shadow-sm hover:shadow border border-slate-200/90 dark:border-slate-800 p-2.5 sm:p-6 md:p-10 transition-shadow max-w-full overflow-x-hidden cursor-text"
                 >
                   {/* 随页就地手写批注图层（完全覆盖于正文与插图之上，随页面滚动与自适应，智能笔直接书写） */}
                   <InteractiveAnnotationOverlay
@@ -1514,7 +1771,7 @@ export default function Editor() {
                     onToggleAnnotation={setIsAnnotationActive}
                   />
 
-                  {/* 富文本讲义正文与图片流 */}
+                  {/* 富文本讲义正文与图片流（非受控 DOM，避免 React 重渲染重置选区和输入内容） */}
                   <div
                     ref={richEditorRef}
                     key={currentFile?.path || 'new-note-writing'}
@@ -1529,9 +1786,8 @@ export default function Editor() {
                     onPaste={handlePasteEvent}
                     onDrop={handleEditorDrop}
                     onDragOver={(e) => { e.preventDefault() }}
-                    dangerouslySetInnerHTML={{ __html: richHtml }}
-                    data-placeholder={currentFile || showNewDialog ? '从这里开始写作与排版… (支持粘贴截图、拖拽图片、点击上方直接提笔手写批注)' : '点击上方「新建」或「打开已有笔记」开始写作…'}
-                    className="rich-note-editor relative z-10 min-h-full text-[14px] sm:text-[16px] leading-relaxed sm:leading-8 text-warm-800 dark:text-slate-200 outline-none max-w-full break-words"
+                    data-placeholder={currentFile || showNewDialog ? '从这里开始写作与排版… (支持粘贴截图、拖拽图片、点击上方直接提笔手写批注)' : '点击此处直接开始写作，或点击左侧目录打开已有笔记…'}
+                    className="rich-note-editor relative z-10 flex-1 min-h-[70vh] text-[14px] sm:text-[16px] leading-relaxed sm:leading-8 text-warm-800 dark:text-slate-200 outline-none max-w-full break-words"
                   />
                 </div>
               </div>
@@ -1687,6 +1943,7 @@ export default function Editor() {
                     if (newTemplateKey !== 'blank') {
                       const template = noteTemplates.find(item => item.key === newTemplateKey)
                       if (template) {
+                        richSyncSourceRef.current = 'external'
                         const nextContent = template.content(value)
                         setContent(nextContent)
                       }
@@ -1707,26 +1964,58 @@ export default function Editor() {
               </div>
 
               <div>
-                <label className="text-2xs sm:text-2xs font-semibold text-warm-600 mb-1 block">放入子文件夹（可选）</label>
-                <input
-                  type="text"
-                  value={newFileFolder}
-                  onChange={e => {
-                    const value = e.target.value
-                    setNewFileFolder(value)
-                    setNewFilePath(newFileName ? `${value.replace(/[\\/]+$/, '') ? `${value.replace(/[\\/]+$/, '')}/` : ''}${newFileName}.md` : '')
-                  }}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      handleSave()
-                    } else if (e.key === 'Escape') {
-                      setShowNewDialog(false)
-                    }
-                  }}
-                  placeholder="例如：课程笔记 或 专题复习 (留空存放在根目录)"
-                  className="w-full bg-white border-2 border-indigo-200 focus:border-accent-orange rounded-xl px-3 py-2 text-xs sm:text-sm font-medium text-warm-800 placeholder:text-warm-300 outline-none shadow-xs transition-all"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-2xs sm:text-2xs font-semibold text-warm-600">存放目录（可选）</label>
+                  <button
+                    type="button"
+                    onClick={() => openNewFolderModal(newFileFolder)}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 cursor-pointer"
+                  >
+                    <FolderPlus className="w-3 h-3" />
+                    <span>+ 新建目录</span>
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  <select
+                    aria-label="选择已有目录"
+                    value={availableFolders.includes(newFileFolder) ? newFileFolder : (newFileFolder ? '__custom__' : '')}
+                    onChange={e => {
+                      const val = e.target.value
+                      if (val === '__custom__') return
+                      setNewFileFolder(val)
+                      setNewFilePath(newFileName ? `${val ? `${val}/` : ''}${newFileName}.md` : '')
+                    }}
+                    className="w-full bg-white border border-slate-200 focus:border-accent-orange rounded-xl px-3 py-2 text-xs sm:text-sm font-medium text-warm-800 outline-none shadow-xs transition-all cursor-pointer"
+                  >
+                    <option value="">根目录 (/)</option>
+                    {availableFolders.map(folder => (
+                      <option key={folder} value={folder}>{folder}</option>
+                    ))}
+                    {newFileFolder && !availableFolders.includes(newFileFolder) && (
+                      <option value="__custom__">自定义：{newFileFolder}</option>
+                    )}
+                  </select>
+                  <input
+                    type="text"
+                    value={newFileFolder}
+                    onChange={e => {
+                      const value = e.target.value
+                      setNewFileFolder(value)
+                      const clean = value.trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '')
+                      setNewFilePath(newFileName ? `${clean ? `${clean}/` : ''}${newFileName}.md` : '')
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        handleSave()
+                      } else if (e.key === 'Escape') {
+                        setShowNewDialog(false)
+                      }
+                    }}
+                    placeholder="或直接输入目录路径，如：408数据结构/树（留空存根目录）"
+                    className="w-full bg-white border-2 border-indigo-200 focus:border-accent-orange rounded-xl px-3 py-2 text-xs sm:text-sm font-medium text-warm-800 placeholder:text-warm-300 outline-none shadow-xs transition-all"
+                  />
+                </div>
               </div>
 
               {/* Obsidian Local Vault Path Realtime Banner */}
@@ -1737,7 +2026,7 @@ export default function Editor() {
                 </div>
                 <div className="font-mono text-2xs sm:text-2xs text-purple-700 break-all select-all font-semibold">
                   {isAdmin ? `${vaultStats?.vaultPath || 'E:\\考研\\408考研学习'}\\` : '专属沙盒 / '}
-                  {newFilePath || `${newFileName || '未命名笔记'}.md`}
+                  {`${newFileFolder.trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '') ? `${newFileFolder.trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '')}/` : ''}${newFileName.trim() || '未命名笔记'}.md`}
                 </div>
               </div>
 
@@ -1762,6 +2051,102 @@ export default function Editor() {
               <p className="text-2xs sm:text-2xs text-warm-400 text-center">
                 💡 提示：输入名称后直接按 Enter 回车键即可极速创建并开始写作
               </p>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* New Folder Dialog */}
+      {showNewFolderDialog && createPortal(
+        <div
+          onClick={() => setShowNewFolderDialog(false)}
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-[110] animate-in fade-in duration-150 p-3 sm:p-4"
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="bg-surface border border-cream-300 rounded-2xl p-4 sm:p-6 w-[min(94vw,26rem)] shadow-xl space-y-3.5"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FolderPlus className="w-4 h-4 text-amber-600" />
+                <h3 className="text-sm sm:text-base font-bold text-warm-900">新建笔记目录</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowNewFolderDialog(false)}
+                className="p-1 rounded-xl hover:bg-cream-200 text-warm-400 hover:text-warm-700 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-2xs font-semibold text-warm-600 mb-1 block">父级目录</label>
+                <select
+                  aria-label="父级目录"
+                  value={newFolderParent}
+                  onChange={e => setNewFolderParent(e.target.value)}
+                  className="w-full bg-white border border-slate-200 focus:border-accent-orange rounded-xl px-3 py-2 text-xs sm:text-sm font-medium text-warm-800 outline-none cursor-pointer"
+                >
+                  <option value="">根目录 (/)</option>
+                  {availableFolders.map(folder => (
+                    <option key={folder} value={folder}>{folder}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-2xs font-semibold text-warm-600 mb-1 block">目录名称</label>
+                <input
+                  type="text"
+                  value={newFolderName}
+                  onChange={e => {
+                    setNewFolderName(e.target.value)
+                    if (folderError) setFolderError('')
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      handleCreateFolder()
+                    } else if (e.key === 'Escape') {
+                      setShowNewFolderDialog(false)
+                    }
+                  }}
+                  placeholder="例如：操作系统 或 专题/图论"
+                  autoFocus
+                  className="w-full bg-white border-2 border-indigo-200 focus:border-accent-orange rounded-xl px-3 py-2 text-xs sm:text-sm font-medium text-warm-800 placeholder:text-warm-300 outline-none shadow-xs"
+                />
+              </div>
+
+              <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-[11px] font-mono text-slate-600 break-all">
+                目标路径：{newFolderParent ? `${newFolderParent}/` : ''}{newFolderName.trim() || '新目录'}
+              </div>
+
+              {folderError && (
+                <div className="text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5">
+                  {folderError}
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowNewFolderDialog(false)}
+                  className="flex-1 px-3 py-2 rounded-xl text-xs font-semibold bg-cream-200 text-warm-600 hover:bg-cream-300 transition-colors cursor-pointer"
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCreateFolder}
+                  disabled={creatingFolder || !newFolderName.trim()}
+                  className="flex-1 px-3 py-2 rounded-xl text-xs font-bold bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-40 transition-colors cursor-pointer"
+                >
+                  {creatingFolder ? '创建中…' : '确认创建'}
+                </button>
+              </div>
             </div>
           </div>
         </div>,
@@ -1908,6 +2293,18 @@ export default function Editor() {
         isOpen={showHandwritingModal}
         onClose={() => setShowHandwritingModal(false)}
         onInsert={handleHandwritingInsert}
+      />
+
+      {/* 笔记系统专属沉浸式交互导览 */}
+      <EditorTourGuide
+        isOpen={editorTourOpen}
+        onClose={() => setEditorTourOpen(false)}
+        onTogglePreview={handleTogglePreview}
+        onSwitchEditorMode={switchEditorMode}
+        onOpenNewFolderModal={() => openNewFolderModal(selectedFolder)}
+        onOpenMathMenu={() => { setShowMathMenu(true); setShowAiMenu(false) }}
+        isCurrentPreview={showPreview}
+        currentEditorMode={editorMode}
       />
     </div>
   )

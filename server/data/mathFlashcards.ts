@@ -1,7 +1,7 @@
 import type { FlashcardItem } from '../routes/flashcards.js'
 
 /** 考研数学闪卡播种版本号：新增或修订卡片内容时递增，以便已有用户增量获得新卡。 */
-export const MATH_FLASHCARD_SEED_VERSION = 3
+export const MATH_FLASHCARD_SEED_VERSION = 4
 
 type Seed = {
   id: string
@@ -925,29 +925,29 @@ $$X \text{ 与 } Y \text{ 相互独立} \iff \operatorname{Cov}(X, Y) = 0 \iff \
     title: '三大抽样分布（卡方、t、F 分布）的构造与自由度法则',
     subject: '概率论与数理统计',
     chapter: '数理统计的基本概念',
-    front: '请默写统计学中三大抽样分布（$\chi^2(n), t(n), F(m, n)$）基于独立标准正态变量 $X_i \sim N(0, 1)$ 的典型构造公式，并说明正态样本均值 $\bar{X}$ 与样本方差 $S^2$ 的独立性定理。',
+    front: '请默写统计学中三大抽样分布（$\\chi^2(n), t(n), F(m, n)$）基于独立标准正态变量 $X_i \\sim N(0, 1)$ 的典型构造公式，并说明正态样本均值 $\\bar{X}$ 与样本方差 $S^2$ 的独立性定理。',
     back: `### 1. 三大抽样分布构造法
-1. **卡方分布 $\chi^2(n)$**：
-   - 设 $X_1, X_2, \dots, X_n \overset{i.i.d.}{\sim} N(0, 1)$，则平方和：
-     $$\sum_{i=1}^n X_i^2 \sim \chi^2(n)$$
-   - 性质：期望 $E[\chi^2(n)] = n$，方差 $D(\chi^2(n)] = 2n$。
+1. **卡方分布 $\\chi^2(n)$**：
+   - 设 $X_1, X_2, \\dots, X_n \\stackrel{\\text{i.i.d.}}{\\sim} N(0, 1)$，则平方和：
+     $$\\sum_{i=1}^n X_i^2 \\sim \\chi^2(n)$$
+   - 性质：期望 $E[\\chi^2(n)] = n$，方差 $D[\\chi^2(n)] = 2n$。
 2. **学生氏 t 分布 $t(n)$**：
-   - 设 $X \sim N(0, 1)$，$Y \sim \chi^2(n)$，且 $X$ 与 $Y$ 独立，则：
-     $$T = \frac{X}{\sqrt{Y/n}} \sim t(n)$$
-   - 图形关于 $t=0$ 对称，当 $n \to \infty$ 时极限逼近标准正态分布。
+   - 设 $X \\sim N(0, 1)$，$Y \\sim \\chi^2(n)$，且 $X$ 与 $Y$ 独立，则：
+     $$T = \\frac{X}{\\sqrt{Y/n}} \\sim t(n)$$
+   - 图形关于 $t=0$ 对称，当 $n \\to \\infty$ 时极限逼近标准正态分布。
 3. **费希尔 F 分布 $F(m, n)$**：
-   - 设 $U \sim \chi^2(m)$，$V \sim \chi^2(n)$，且 $U$ 与 $V$ 独立，则比值：
-     $$F = \frac{U/m}{V/n} \sim F(m, n)$$
-   - 性质：若 $F \sim F(m, n)$，则 $\frac{1}{F} \sim F(n, m)$；若 $T \sim t(n)$，则 $T^2 \sim F(1, n)$。
+   - 设 $U \\sim \\chi^2(m)$，$V \\sim \\chi^2(n)$，且 $U$ 与 $V$ 独立，则比值：
+     $$F = \\frac{U/m}{V/n} \\sim F(m, n)$$
+   - 性质：若 $F \\sim F(m, n)$，则 $\\frac{1}{F} \\sim F(n, m)$；若 $T \\sim t(n)$，则 $T^2 \\sim F(1, n)$。
 
 ### 2. 正态总体样本均值与方差定理
-设 $X_1, \dots, X_n \sim N(\mu, \sigma^2)$，则：
-1. $\bar{X} \sim N(\mu, \frac{\sigma^2}{n})$；
-2. **$\bar{X}$ 与 $S^2$ 相互独立**（极高频考点！）；
-3. $\frac{(n-1)S^2}{\sigma^2} \sim \chi^2(n-1)$；
-4. $\frac{\bar{X} - \mu}{S / \sqrt{n}} \sim t(n-1)$。`,
-    mnemonic: '卡方独立平方和，t值分子正态立；F双卡自由比，均值方差独立明。',
-    pitfall: '样本方差求卡方分布时，自由度是 $n-1$ 而不是 $n$！因为均值 $\bar{X}$ 占去了一个自由度约束。',
+设 $X_1, \\dots, X_n \\sim N(\\mu, \\sigma^2)$，则：
+1. $\\bar{X} \\sim N\\left(\\mu, \\frac{\\sigma^2}{n}\\right)$；
+2. **$\\bar{X}$ 与 $S^2$ 相互独立**（极高频考点！）；
+3. $\\frac{(n-1)S^2}{\\sigma^2} \\sim \\chi^2(n-1)$；
+4. $\\frac{\\bar{X} - \\mu}{S / \\sqrt{n}} \\sim t(n-1)$。`,
+    mnemonic: '💡 记忆口诀：卡方独立平方和，t值分子正态立；F双卡自由比，均值方差独立明。',
+    pitfall: '⚠️ 命题陷阱：样本方差求卡方分布时，自由度是 $n-1$ 而不是 $n$！因为均值 $\\bar{X}$ 占去了一个自由度约束。',
     difficulty: 'medium',
     tags: ['考研数学高频', '概率论', '抽样分布', '卡方分布', 't分布', 'F分布'],
   },

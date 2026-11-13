@@ -795,12 +795,13 @@ quizRouter.post('/quiz/variant', async (req, res) => {
       variants = generateFallbackVariants(question)
     }
 
-    res.json({ variants, source: variants[0]?.tags?.includes('变式强化') ? 'ai_generated' : 'syllabus_fallback' })
+    const validatedVariants = validateAndNormalizeGeneratedQuestions(variants)
+    res.json({ variants: validatedVariants, source: validatedVariants[0]?.tags?.includes('变式强化') ? 'ai_generated' : 'syllabus_fallback' })
   } catch (err: any) {
     console.warn('AI variants fallback triggered:', err.message)
     try {
       const { question } = req.body || {}
-      const fallback = generateFallbackVariants(question)
+      const fallback = validateAndNormalizeGeneratedQuestions(generateFallbackVariants(question))
       res.json({ variants: fallback, source: 'offline_fallback' })
     } catch (fallbackErr: any) {
       res.status(500).json({ error: '变式题生成失败: ' + err.message })
@@ -891,6 +892,7 @@ quizRouter.post('/quiz/submit', (req, res) => {
     }
 
     // 3. 同时生成 Obsidian Markdown 做题小结 (双轨落地)
+    const userVault = getRequestVaultPath(req)
     try {
       const fileName = `${dateStr}-${hmStr}.md`
       const targetPath = `做题记录/${fileName}`
@@ -907,15 +909,131 @@ quizRouter.post('/quiz/submit', (req, res) => {
       }
 
       try {
-        createFile(config.vaultPath, targetPath, summary.content, fm)
+        createFile(userVault, targetPath, summary.content, fm)
       } catch {
-        updateFile(config.vaultPath, targetPath, summary.content, fm)
+        updateFile(userVault, targetPath, summary.content, fm)
+      }
+      if (userVault !== config.vaultPath) {
+        try {
+          createFile(config.vaultPath, targetPath, summary.content, fm)
+        } catch {
+          updateFile(config.vaultPath, targetPath, summary.content, fm)
+        }
       }
       markSelfWrite(targetPath)
       invalidateCache()
       summaryPath = targetPath
     } catch (saveErr: any) {
       console.error('Quiz summary save error:', saveErr.message)
+    }
+
+    // 4. 自动将答错的题目持久化入库并在用户知识库沉淀独立错题卡片（考试模式/练习模式自动入库）
+    try {
+      const userId = req.user?.id || 'default'
+      for (const q of questions) {
+        const userAns = (answers[q.id] || '').trim()
+        const isCorrect =
+          userAns === 'mastered' ||
+          (userAns !== 'unmastered' &&
+            userAns !== '' &&
+            (userAns.toUpperCase() === (q.answer || '').trim().toUpperCase() ||
+              userAns === (q.answer || '').replace(/[\$\s]/g, '')))
+
+        if (!isCorrect && userAns !== '') {
+          const rawId = String(q.id || Date.now())
+          const errorId = rawId.startsWith('err-') ? rawId : `err-${rawId}`
+          const qDomain = (q as any).domain || (q.subject?.includes('数学') ? 'math' : 'cs_408')
+          const syllabusNode = matchSyllabusNode(q.question, q.subject)
+
+          // 4.1 SQLite 数据库写入
+          database.upsertErrorQuestion({
+            id: errorId,
+            userId,
+            domain: qDomain,
+            subject: q.subject,
+            chapter: (q as any).chapter || '',
+            syllabusId: syllabusNode?.id || String((q as any).syllabusId || ''),
+            question: q.question,
+            optionsJson: JSON.stringify((q as any).options || {}),
+            userAnswer: userAns,
+            correctAnswer: q.answer || '',
+            explanation: q.explanation || '',
+            errorType: '概念模糊',
+            difficulty: (q as any).difficulty || '中等',
+            sourceNote: `做题记录/${dateStr}-${hmStr}.md`,
+            status: 'active',
+            notes: '',
+            createdAt: dateStr,
+            updatedAt: dateStr,
+          })
+
+          // 4.2 双轨沉淀：在用户的 03-真题错题归因 下写入 Markdown 笔记
+          try {
+            const cleanSubj = (q.subject || '综合').replace(/[\\/:*?"<>|]/g, '_')
+            const cleanId = rawId.replace(/[\\/:*?"<>|]/g, '_')
+            const noteFileName = `${cleanId}.md`
+            const noteRelPath = `03-真题错题归因/${cleanSubj}/${noteFileName}`
+
+            const options = (q as any).options
+            let optsText = ''
+            if (options && typeof options === 'object') {
+              optsText = Object.entries(options).map(([k, v]) => `- **${k}**: ${v}`).join('\n')
+            }
+
+            const errorNoteContent = `
+# ❌ 错题复盘：${(q as any).chapter || q.subject} · ${rawId}
+
+## 1. 题目与当时作答
+* **科目**：${q.subject}
+* **题型**：${(q as any).type === 'choice' ? '选择题' : '填空题'}
+* **难度**：${(q as any).difficulty || '中等'}
+* **当时作答**：\`${userAns || '未作答'}\`
+* **标准答案**：\`${q.answer || ''}\`
+
+### 题面：
+${q.question}
+
+${optsText ? `### 选项：\n${optsText}\n` : ''}
+
+## 2. 错因深度诊断
+> [!CAUTION]
+> **诊断类型**：\`概念模糊\`
+
+* **思维障碍/误区复现**：
+在做题过程中未准确切中考点或推导出现偏差，需强化巩固。
+
+## 3. 标准分步严谨推导
+${q.explanation || '暂无详细解析'}
+
+## 4. 关联知识点与防重犯锚点
+- [ ] 对应知识点：[[${q.subject}]]
+- [ ] 防重犯准则：审清题设限制条件，严格按照考研通法分步推导。
+`
+            const fm = {
+              type: 'error_log',
+              domain: qDomain,
+              subject: q.subject,
+              chapter: (q as any).chapter || '',
+              error_type: '概念模糊',
+              status: 'active',
+              tags: ['错题', qDomain, q.subject, '自动入库'],
+              created: dateStr,
+              updated: dateStr,
+            }
+
+            try {
+              createFile(userVault, noteRelPath, errorNoteContent, fm)
+            } catch {
+              updateFile(userVault, noteRelPath, errorNoteContent, fm)
+            }
+            markSelfWrite(noteRelPath)
+          } catch (noteErr: any) {
+            console.warn('[Auto Error Note Error]:', noteErr.message)
+          }
+        }
+      }
+    } catch (errQ: any) {
+      console.warn('[Auto Upsert Error Question Failed]:', errQ.message)
     }
 
     res.json({
@@ -1107,6 +1225,8 @@ quizRouter.post('/quiz/errors/sync-vault', (req, res) => {
       path.resolve(vaultPath, '错题本'),
       path.resolve(vaultPath, '03-刷题与复盘'),
       path.resolve(vaultPath, '03-真题与错题'),
+      path.resolve(vaultPath, '做题记录'),
+      path.resolve(config.vaultPath, '做题记录'),
     ]
     const candidateDirs: string[] = []
     for (const baseDir of baseDirs) {
@@ -1219,6 +1339,49 @@ quizRouter.post('/quiz/errors/sync-vault', (req, res) => {
                   importedCount++
                 }
               }
+            } else if (!questionText && (body.includes('### 错题') || body.includes('## ❌ 错题详情'))) {
+              // 3. 尝试解析【做题记录小结】格式 (例如 2026-11-13-0954.md)
+              const blocks = body.split(/^### 错题\s*\d+[：:]?\s*/m).filter(Boolean)
+              for (const block of blocks) {
+                const subjLineMatch = block.match(/^([^\r\n]+)/)
+                const subj = subjLineMatch ? subjLineMatch[1].trim() : '考研综合'
+
+                const qMatch = block.match(/\*\*题目\*\*[：:]\s*([\s\S]*?)(?=\n\s*-\s*你的答案|\n\s*-\s*正确答案|$)/)
+                const uMatch = block.match(/-\s*你的答案[：:]\s*([^\r\n]*)/)
+                const cMatch = block.match(/-\s*正确答案[：:]\s*\*\*?([^\r\n*]+)\*\*?/)
+                const dMatch = block.match(/-\s*难度[：:]\s*([^\r\n]*)/)
+                const eMatch = block.match(/\*\*解析\*\*[：:]\s*([\s\S]*?)(?=\n\s*标签[：:]|\n\s*---|\n\s*###|$)/)
+
+                const qText = qMatch ? qMatch[1].trim() : ''
+                if (qText && !seenIds.has(qText.slice(0, 40))) {
+                  seenIds.add(qText.slice(0, 40))
+                  const errId = `err-record-${Date.now()}-${Math.floor(Math.random() * 10000)}`
+                  const syllabusNode = matchSyllabusNode(qText, subj)
+                  const domain = syllabusNode?.domain || (subj.includes('数学') ? 'math' : 'cs_408')
+
+                  database.upsertErrorQuestion({
+                    id: errId,
+                    userId: req.user?.id || 'default',
+                    domain,
+                    subject: subj,
+                    chapter: syllabusNode?.level2 || '',
+                    syllabusId: syllabusNode?.id || '',
+                    question: qText,
+                    optionsJson: '{}',
+                    userAnswer: uMatch ? uMatch[1].trim() : '',
+                    correctAnswer: cMatch ? cMatch[1].trim() : '',
+                    explanation: eMatch ? eMatch[1].trim() : '',
+                    errorType: '概念模糊',
+                    difficulty: dMatch ? (dMatch[1].trim() === '未知' ? '中等' : dMatch[1].trim()) : '中等',
+                    sourceNote: path.relative(vaultPath, fullPath).replace(/\\/g, '/'),
+                    status: 'active',
+                    notes: '',
+                    createdAt: meta?.date || new Date().toISOString().split('T')[0],
+                    updatedAt: meta?.date || new Date().toISOString().split('T')[0],
+                  })
+                  importedCount++
+                }
+              }
             }
           } catch {}
         }
@@ -1273,6 +1436,96 @@ quizRouter.get('/quiz/history', (req, res) => {
 
 // ===== 7. AI Generate Questions from Note (即学即练) =====
 
+function computeHuffmanWpl(weights: number[]): number {
+  if (weights.length <= 1) return 0
+  const heap = [...weights].sort((a, b) => a - b)
+  let totalWpl = 0
+  while (heap.length > 1) {
+    const w1 = heap.shift()!
+    const w2 = heap.shift()!
+    const sum = w1 + w2
+    totalWpl += sum
+    let idx = heap.findIndex(x => x >= sum)
+    if (idx === -1) heap.push(sum)
+    else heap.splice(idx, 0, sum)
+  }
+  return totalWpl
+}
+
+function validateAndNormalizeGeneratedQuestions(questions: any[]): any[] {
+  if (!Array.isArray(questions)) return []
+
+  return questions.map((q) => {
+    if (!q || typeof q !== 'object') return q
+
+    // 1. 清除“需核对”、“需核实”、“存疑”、“待确认”等大模型幻觉占位符
+    const cleanPhantoms = (str?: string): string => {
+      if (!str || typeof str !== 'string') return ''
+      return str
+        .replace(/[（(]?[需待]?核对[)）]?/g, '')
+        .replace(/[（(]?[需待]?核实[)）]?/g, '')
+        .replace(/[（(]?存疑[)）]?/g, '')
+        .replace(/[（(]?待确认[)）]?/g, '')
+        .trim()
+    }
+
+    q.question = cleanPhantoms(q.question)
+    q.explanation = cleanPhantoms(q.explanation)
+    if (q.options && typeof q.options === 'object') {
+      for (const k of Object.keys(q.options)) {
+        q.options[k] = cleanPhantoms(q.options[k])
+      }
+    }
+
+    // 2. 针对哈夫曼树带权路径长度 WPL 的数值一致性自动化校准
+    const combined = `${q.question} ${q.explanation}`.toLowerCase()
+    if (combined.includes('哈夫曼') || combined.includes('huffman') || combined.includes('wpl')) {
+      const weightMatch = q.question.match(/权值[分别为为：:\s]*([\d\s,，、]+)/)
+      if (weightMatch) {
+        const nums = weightMatch[1]
+          .split(/[,，、\s]+/)
+          .map((n: string) => parseInt(n.trim(), 10))
+          .filter((n: number) => !isNaN(n) && n > 0)
+
+        if (nums.length >= 3) {
+          const exactWpl = computeHuffmanWpl(nums)
+          if (exactWpl > 0) {
+            const exactStr = String(exactWpl)
+            const ansKey = (q.answer || 'A').toUpperCase()
+
+            const hasExact = Object.values(q.options || {}).some(v => String(v).includes(exactStr))
+            if (!hasExact) {
+              if (q.options && typeof q.options === 'object') {
+                q.options[ansKey] = exactStr
+              }
+            } else {
+              for (const [k, v] of Object.entries(q.options || {})) {
+                if (String(v).includes(exactStr)) {
+                  q.answer = k
+                  break
+                }
+              }
+            }
+
+            if (!q.explanation.includes(exactStr)) {
+              q.explanation = `【严谨推导】根据哈夫曼树构造算法，带权路径长度 WPL 计算结果为 ${exactWpl}。\n\n` + q.explanation
+            }
+          }
+        }
+      }
+    }
+
+    // 3. 确保 answer 字段为规范的大写字母 A/B/C/D
+    if (typeof q.answer === 'string') {
+      const trimmed = q.answer.trim().toUpperCase()
+      const match = trimmed.match(/^([A-D])/)
+      if (match) q.answer = match[1]
+    }
+
+    return q
+  })
+}
+
 quizRouter.post('/quiz/generate-from-note', async (req, res) => {
   try {
     if (!anthropic) {
@@ -1326,8 +1579,13 @@ ${(content || '').slice(0, 3500)}
 1. 命制 3 道单项选择题（A/B/C/D 四个选项），题干考查核心关键结论、易错陷阱与计算或分析能力。
 2. 难度梯度合理（简单、中等、中等/困难）。
 3. 所有数学与计算机表达式必须严格使用 KaTeX 规范的 LaTeX 语法，用 $...$ 或 $$...$$ 包裹。
-4. 提供深入透彻的分步解析（explanation）与踩分点/思维切入点（steps）。
-5. 严格只输出纯 JSON 数组，严禁任何额外文本或 Markdown 代码块包裹：
+4. 【数值计算与选项一致性绝对铁律】：
+   - 凡涉及计算题（如哈夫曼树的带权路径长度 WPL、二叉树度数/深度推导、线性探测散列查找次数、Cache 命中率/平均访问时间、流水线加速比、矩阵特征值与行列式等），必须在思维中严格演算并得出唯一确切数值！
+   - 正确计算结果必须且只能作为选项之一（A/B/C/D 中有且仅有一个匹配该数值）！
+   - 答案键 answer 必须与包含该正确数值的选项严格一致！严禁答案键与解析结论自相矛盾！
+   - 严禁在解析或选项中输出“需核对”、“需核实”、“存疑”、“待确认”等推卸责任的语句，必须给出 100% 确信的权威定稿！
+5. 提供深入透彻的分步解析（explanation）与踩分点/思维切入点（steps）。
+6. 严格只输出纯 JSON 数组，严禁任何额外文本或 Markdown 代码块包裹：
 [
   {
     "id": "drill-${Date.now()}-1",
@@ -1358,9 +1616,9 @@ ${(content || '').slice(0, 3500)}
     })
 
     const raw = extractTextFromAiContent(aiRes.content)
-    const questions = safeParseJsonArray(raw)
+    const rawQuestions = safeParseJsonArray(raw)
 
-    if (!questions || questions.length === 0) {
+    if (!rawQuestions || rawQuestions.length === 0) {
       res.status(500).json({
         success: false,
         error: '未能提取到有效题目，请重试',
@@ -1369,11 +1627,13 @@ ${(content || '').slice(0, 3500)}
       return
     }
 
+    const validatedQuestions = validateAndNormalizeGeneratedQuestions(rawQuestions)
+
     res.json({
       success: true,
       subject,
       domain,
-      questions
+      questions: validatedQuestions
     })
   } catch (err: any) {
     console.error('Generate questions from note failed:', err.message)

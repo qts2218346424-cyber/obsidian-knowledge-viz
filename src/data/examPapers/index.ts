@@ -1,5 +1,8 @@
 import type { ExamPaper, ExamPaperQuestion, PaperCategory, PaperType, PaperFilterSection } from './types'
 import { MATH_EXAM_PAPERS } from './mathPapers'
+import { MATH1_RECENT_EXAM_PAPERS } from './math1RecentPapers'
+import { MATH1_MATURE_2016_2020_EXAM_PAPERS } from './math1Mature2016_2020'
+import { MATH1_MATURE_2004_2015_EXAM_PAPERS } from './math1Mature2004_2015'
 import { CLASSIC_MATH_EXAM_PAPERS } from './classicMathPapers'
 import { LILIN6_EXAM_PAPERS } from './lilin6Papers'
 import { CS408_EXAM_PAPERS } from './cs408Papers'
@@ -7,6 +10,9 @@ import { ENGLISH_EXAM_PAPERS } from './englishPapers'
 
 export * from './types'
 export { MATH_EXAM_PAPERS } from './mathPapers'
+export { MATH1_RECENT_EXAM_PAPERS } from './math1RecentPapers'
+export { MATH1_MATURE_2016_2020_EXAM_PAPERS } from './math1Mature2016_2020'
+export { MATH1_MATURE_2004_2015_EXAM_PAPERS } from './math1Mature2004_2015'
 export { CLASSIC_MATH_EXAM_PAPERS } from './classicMathPapers'
 export { LILIN6_EXAM_PAPERS } from './lilin6Papers'
 export { CS408_EXAM_PAPERS } from './cs408Papers'
@@ -19,6 +25,9 @@ export { ENGLISH_EXAM_PAPERS } from './englishPapers'
  */
 export const ALL_EXAM_PAPERS: ExamPaper[] = [
   ...LILIN6_EXAM_PAPERS,
+  ...MATH1_RECENT_EXAM_PAPERS,
+  ...MATH1_MATURE_2016_2020_EXAM_PAPERS,
+  ...MATH1_MATURE_2004_2015_EXAM_PAPERS,
   ...MATH_EXAM_PAPERS,
   ...CLASSIC_MATH_EXAM_PAPERS,
   ...CS408_EXAM_PAPERS,

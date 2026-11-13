@@ -110,12 +110,8 @@ export default function Login() {
             <div>
               {/* Logo 标识 */}
               <div className="flex items-center gap-2 mb-5">
-                <div className="w-8 h-8 rounded-lg bg-[#18181b] text-white flex items-center justify-center shadow-sm">
-                  <svg className="w-5 h-5 text-white" viewBox="0 0 28 28" fill="none">
-                    <rect x="4" y="4" width="17" height="5.5" rx="1" fill="currentColor" />
-                    <path d="M4 12.2H14.5L4 22.5V12.2Z" fill="currentColor" />
-                    <circle cx="17.8" cy="17.8" r="3.4" fill="currentColor" />
-                  </svg>
+                <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center shadow-xs ring-1 ring-rose-200/70 shrink-0">
+                  <img src="/icon-192.png?v=dango" alt="研核" className="h-full w-full object-cover" />
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="font-bold text-base tracking-tight text-[#18181b]">研核</span>

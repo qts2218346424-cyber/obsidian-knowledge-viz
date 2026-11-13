@@ -1,4 +1,126 @@
-import React from 'react'
+import React, { useId } from 'react'
+
+/**
+ * Q 版奶龙小头像 SVG 组件（圆润明黄麻薯头 + 招牌抹茶绿大眼眶 + 呆萌憨笑）
+ * 适用于边缘隐藏胶囊、气泡标题、AI 对话头像等小尺寸精致展示场景
+ */
+export function NailongChibiHead({
+  className = 'w-5 h-5',
+  withWhiteRim = false,
+  title = '奶龙',
+}: {
+  className?: string
+  withWhiteRim?: boolean
+  title?: string
+}) {
+  const uid = useId().replace(/:/g, '')
+  const bodyGradId = `nl-head-body-${uid}`
+  const eyeGradId = `nl-head-eye-${uid}`
+  const headPath =
+    'M 32 8.5 C 44.5 8.5, 51.5 17.5, 54 28.5 C 56.8 40.5, 52.5 53.5, 32 54.5 C 11.5 53.5, 7.2 40.5, 10 28.5 C 12.5 17.5, 19.5 8.5, 32 8.5 Z'
+
+  return (
+    <svg
+      viewBox="0 0 64 64"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      role="img"
+      aria-label={title}
+    >
+      <defs>
+        <radialGradient id={bodyGradId} cx="42%" cy="32%" r="68%">
+          <stop offset="0%" stopColor="#FFF176" />
+          <stop offset="52%" stopColor="#FFD82B" />
+          <stop offset="100%" stopColor="#F5AF00" />
+        </radialGradient>
+        <radialGradient id={eyeGradId} cx="40%" cy="35%" r="65%">
+          <stop offset="0%" stopColor="#B8F095" />
+          <stop offset="65%" stopColor="#8AD66A" />
+          <stop offset="100%" stopColor="#65B849" />
+        </radialGradient>
+      </defs>
+
+      {/* 贴纸感奶油白外圈描边，防止在黄色按钮底色中边缘融合 */}
+      {withWhiteRim && (
+        <path
+          d={headPath}
+          stroke="#FFFDF7"
+          strokeWidth="7.5"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+      )}
+
+      {/* 奶龙圆润亮黄色 Q 版头部轮廓 */}
+      <path
+        d={headPath}
+        fill={`url(#${bodyGradId})`}
+        stroke="#854D0E"
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+      />
+
+      {/* 头顶 Q 弹柔和反光 */}
+      <ellipse
+        cx="25"
+        cy="16.5"
+        rx="7.5"
+        ry="3"
+        transform="rotate(-18 25 16.5)"
+        fill="#FFFDE7"
+        fillOpacity="0.65"
+      />
+
+      {/* 左眼：奶龙标志性抹茶绿眼眶 + 乌黑圆瞳 + 双高光 */}
+      <circle
+        cx="21.5"
+        cy="28"
+        r="7"
+        fill={`url(#${eyeGradId})`}
+        stroke="#4D8F36"
+        strokeWidth="1.1"
+      />
+      <circle cx="21.8" cy="28.2" r="4.3" fill="#18181B" />
+      <circle cx="23.4" cy="26.3" r="1.7" fill="#FFFFFF" />
+      <circle cx="20.2" cy="29.9" r="0.8" fill="#FFFFFF" fillOpacity="0.75" />
+
+      {/* 右眼：奶龙标志性抹茶绿眼眶 + 乌黑圆瞳 + 双高光 */}
+      <circle
+        cx="42.5"
+        cy="28"
+        r="7"
+        fill={`url(#${eyeGradId})`}
+        stroke="#4D8F36"
+        strokeWidth="1.1"
+      />
+      <circle cx="42.2" cy="28.2" r="4.3" fill="#18181B" />
+      <circle cx="43.8" cy="26.3" r="1.7" fill="#FFFFFF" />
+      <circle cx="40.6" cy="29.9" r="0.8" fill="#FFFFFF" fillOpacity="0.75" />
+
+      {/* 脸颊软萌粉橘腮红 */}
+      <ellipse cx="14.8" cy="38.5" rx="4.2" ry="2.4" fill="#FB7185" fillOpacity="0.42" />
+      <ellipse cx="49.2" cy="38.5" rx="4.2" ry="2.4" fill="#FB7185" fillOpacity="0.42" />
+
+      {/* 憨萌微微弧形微笑小嘴 */}
+      <path
+        d="M 26 35.8 Q 32 39.2 38 35.8"
+        stroke="#78350F"
+        strokeWidth="2.3"
+        strokeLinecap="round"
+        fill="none"
+      />
+      <path
+        d="M 29.5 39.8 Q 32 41.2 34.5 39.8"
+        stroke="#B45309"
+        strokeOpacity="0.45"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        fill="none"
+      />
+    </svg>
+  )
+}
 
 // ============================================================================
 // 1. 类型与常量定义

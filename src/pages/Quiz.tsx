@@ -27,9 +27,12 @@ import {
   Trash2,
   RotateCcw,
   Clock,
+  Play,
+  Pause,
   History,
   LayoutGrid,
   PenLine,
+  Loader2,
 } from 'lucide-react'
 import WarmButton from '../components/ui/WarmButton'
 import MarkdownRenderer from '../components/MarkdownRenderer'
@@ -77,7 +80,8 @@ import type {
   QuizResult,
 } from '../features/quiz/types'
 import { ALL_SUBJECTS, ERROR_REASONS, SCRATCHPAD_MATH_SYMBOLS } from '../features/quiz/constants'
-import { shuffleArray, formatTime } from '../features/quiz/utils'
+import { shuffleArray, formatTime, playExamAlertSound } from '../features/quiz/utils'
+import QuizTimerControl from '../features/quiz/components/QuizTimerControl'
 
 /** 若纯数学答案串含 LaTeX 命令但缺失定界符，自动补齐 $...$ 以免渲染成源码 */
 function formatMathInline(raw?: string): string {
@@ -113,6 +117,8 @@ export interface QuizProgressRecord {
   currentIndex: number
   answers: Record<string, string>
   timeElapsed: number
+  timerMode?: 'countdown' | 'elapsed'
+  timeLimitMinutes?: number
   bookmarkedIds: string[]
   errorReasons: Record<string, string>
   scratchpads: Record<string, string>
@@ -225,6 +231,27 @@ export default function Quiz() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const scratchpadRef = useRef<HTMLTextAreaElement>(null)
 
+  // ── 全真模拟考场倒计时与计时器状态 ───────────────────────────────────────────
+  const [timerMode, setTimerMode] = useState<'countdown' | 'elapsed'>('countdown')
+  const [timeLimitMinutes, setTimeLimitMinutes] = useState<number>(180)
+  const [isTimerPaused, setIsTimerPaused] = useState<boolean>(false)
+  const [isTimeUpModalOpen, setIsTimeUpModalOpen] = useState<boolean>(false)
+  const [hasOvertimeAcknowledged, setHasOvertimeAcknowledged] = useState<boolean>(false)
+  const [hasTriggered15MinAlert, setHasTriggered15MinAlert] = useState<boolean>(false)
+  const [hasTriggered5MinAlert, setHasTriggered5MinAlert] = useState<boolean>(false)
+  const [hasTriggeredTimeUpAlert, setHasTriggeredTimeUpAlert] = useState<boolean>(false)
+  const [examToast, setExamToast] = useState<{ message: string; type: 'warn' | 'error' | 'info' } | null>(null)
+  const [examCustomDuration, setExamCustomDuration] = useState<number>(60)
+  const examToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const showExamToast = useCallback((message: string, type: 'warn' | 'error' | 'info' = 'info') => {
+    if (examToastTimerRef.current) clearTimeout(examToastTimerRef.current)
+    setExamToast({ message, type })
+    examToastTimerRef.current = setTimeout(() => {
+      setExamToast(null)
+    }, 5000)
+  }, [])
+
   // ── 刷题断点记忆与进度回溯状态 ───────────────────────────────────────────────
   const [savedProgress, setSavedProgress] = useState<QuizProgressRecord | null>(() => loadSavedQuizProgress())
   const [confirmClearDraft, setConfirmClearDraft] = useState(false)
@@ -233,6 +260,8 @@ export default function Quiz() {
     currentIndex,
     answers,
     timeElapsed,
+    timerMode,
+    timeLimitMinutes,
     bookmarkedIds,
     errorReasons,
     scratchpads,
@@ -261,6 +290,7 @@ export default function Quiz() {
   const [savingError, setSavingError] = useState(false)
   const [savedErrorMsg, setSavedErrorMsg] = useState<string | null>(null)
   const [generatingVariants, setGeneratingVariants] = useState(false)
+  const [variantElapsedSec, setVariantElapsedSec] = useState(0)
   const [variantModalOpen, setVariantModalOpen] = useState(false)
   const [variantSourceQ, setVariantSourceQ] = useState<ActiveQuizQuestion | null>(null)
   const [variantQuestions, setVariantQuestions] = useState<ActiveQuizQuestion[]>([])
@@ -437,15 +467,27 @@ export default function Quiz() {
 
   const handleGenerateVariants = async (currentQ: ActiveQuizQuestion) => {
     setGeneratingVariants(true)
+    setVariantElapsedSec(0)
     setVariantSourceQ(currentQ)
     setVariantAnswers({})
     setVariantShowExplanation({})
+
+    const timer = setInterval(() => {
+      setVariantElapsedSec((prev) => prev + 1)
+    }, 1000)
+
     try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 60000)
+
       const res = await fetch('/api/quiz/variant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({ question: currentQ }),
+        signal: controller.signal,
       })
+      clearTimeout(timeoutId)
+
       const data = await res.json()
       if (data.variants && data.variants.length > 0) {
         const formatted: ActiveQuizQuestion[] = data.variants.map((v: any) => ({
@@ -464,11 +506,16 @@ export default function Quiz() {
         setVariantQuestions(formatted)
         setVariantModalOpen(true)
       } else {
-        alert(data.error || '未生成有效变式题，请重试')
+        alert(data.error || '未能生成有效变式题，请重试')
       }
     } catch (err: any) {
-      alert('生成变式题失败: ' + err.message)
+      if (err.name === 'AbortError') {
+        alert('变式题生成超时（超过 60 秒），AI 命题服务正在负载中，请稍后重试。')
+      } else {
+        alert('生成变式题失败: ' + err.message)
+      }
     } finally {
+      clearInterval(timer)
       setGeneratingVariants(false)
     }
   }
@@ -543,15 +590,38 @@ export default function Quiz() {
   // ── Timer & 自动保存断点进度 ──────────────────────────────────────────────
 
   useEffect(() => {
-    if (view === 'quiz') {
-      timerRef.current = setInterval(() => {
-        setTimeElapsed((prev) => prev + 1)
-      }, 1000)
+    if (view !== 'quiz' || isTimerPaused) {
+      if (timerRef.current) clearInterval(timerRef.current)
+      return
     }
+
+    timerRef.current = setInterval(() => {
+      setTimeElapsed((prev) => {
+        const next = prev + 1
+        const totalLimitSec = (timeLimitMinutes || 180) * 60
+        const remSec = totalLimitSec - next
+
+        // 倒计时阶段考场关键节点提示与警报
+        if (timerMode === 'countdown' && totalLimitSec > 0) {
+          if (remSec === 15 * 60) {
+            playExamAlertSound('warning')
+            showExamToast('⏱️ 考场提醒：模拟测试剩余时间不足 15 分钟，请把控答题节奏！', 'warn')
+          } else if (remSec === 5 * 60) {
+            playExamAlertSound('warning')
+            showExamToast('🚨 考场临近结束：剩余时间不足 5 分钟，请抓紧涂卡与核对！', 'error')
+          } else if (remSec === 0) {
+            playExamAlertSound('timeup')
+            setIsTimeUpModalOpen(true)
+          }
+        }
+        return next
+      })
+    }, 1000)
+
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
     }
-  }, [view])
+  }, [view, isTimerPaused, timerMode, timeLimitMinutes, showExamToast])
 
   // 每次进入 start 视图时自动刷新最新本地未完成进度
   useEffect(() => {
@@ -568,6 +638,8 @@ export default function Quiz() {
       currentIndex,
       answers,
       timeElapsed,
+      timerMode,
+      timeLimitMinutes,
       bookmarkedIds,
       errorReasons,
       scratchpads,
@@ -575,7 +647,7 @@ export default function Quiz() {
       activePaperContext,
       activeTopicLabel,
     }
-  }, [questions, currentIndex, answers, timeElapsed, bookmarkedIds, errorReasons, scratchpads, mode, activePaperContext, activeTopicLabel])
+  }, [questions, currentIndex, answers, timeElapsed, timerMode, timeLimitMinutes, bookmarkedIds, errorReasons, scratchpads, mode, activePaperContext, activeTopicLabel])
 
   // 派生当前刷题的标题
   const deriveQuizTitle = useCallback((): string => {
@@ -614,6 +686,8 @@ export default function Quiz() {
       currentIndex: curIdx,
       answers: curAns,
       timeElapsed,
+      timerMode,
+      timeLimitMinutes,
       bookmarkedIds: Array.from(bookmarkedIds),
       errorReasons,
       scratchpads,
@@ -623,14 +697,14 @@ export default function Quiz() {
     }
     saveQuizProgressToStorage(record)
     setSavedProgress(record)
-  }, [view, questions, currentIndex, answers, timeElapsed, bookmarkedIds, errorReasons, scratchpads, mode, activePaperContext, activeTopicLabel, deriveQuizTitle])
+  }, [view, questions, currentIndex, answers, timeElapsed, timerMode, timeLimitMinutes, bookmarkedIds, errorReasons, scratchpads, mode, activePaperContext, activeTopicLabel, deriveQuizTitle])
 
   // 做题中关键状态变化时自动保存（防崩溃/防意外刷新）
   useEffect(() => {
     if (view === 'quiz' && questions.length > 0) {
       persistCurrentProgress()
     }
-  }, [view, questions, currentIndex, answers, bookmarkedIds, errorReasons, scratchpads, mode, activePaperContext, activeTopicLabel])
+  }, [view, questions, currentIndex, answers, timerMode, timeLimitMinutes, bookmarkedIds, errorReasons, scratchpads, mode, activePaperContext, activeTopicLabel])
 
   // 页面离开前自动保存一次最新状态
   useEffect(() => {
@@ -662,6 +736,8 @@ export default function Quiz() {
           currentIndex: s.currentIndex,
           answers: s.answers,
           timeElapsed: s.timeElapsed,
+          timerMode: s.timerMode,
+          timeLimitMinutes: s.timeLimitMinutes,
           bookmarkedIds: Array.from(s.bookmarkedIds),
           errorReasons: s.errorReasons,
           scratchpads: s.scratchpads,
@@ -735,6 +811,14 @@ export default function Quiz() {
     const targetMode: QuizMode = section === 'all' ? 'exam' : 'practice'
     setMode(targetMode)
 
+    const initialDuration = section === 'all'
+      ? (paper.durationMinutes || 180)
+      : section === 'choice'
+      ? Math.max(30, mapped.length * 3)
+      : section === 'analysis'
+      ? Math.max(60, mapped.length * 15)
+      : Math.max(30, mapped.length * 4)
+
     setActivePaperContext({
       paperId: paper.id,
       title: paper.title,
@@ -742,9 +826,19 @@ export default function Quiz() {
       category: paper.category,
       section,
       totalScore: sectionTotalScore,
-      durationMinutes: section === 'all' ? paper.durationMinutes : Math.max(30, mapped.length * 4),
+      durationMinutes: initialDuration,
     })
     setActiveTopicLabel(null)
+
+    setTimeLimitMinutes(initialDuration)
+    setTimerMode('countdown') // 真题全真模拟默认以倒计时模式启动！
+    setTimeElapsed(0)
+    setIsTimerPaused(false)
+    setIsTimeUpModalOpen(false)
+    setHasOvertimeAcknowledged(false)
+    setHasTriggered15MinAlert(false)
+    setHasTriggered5MinAlert(false)
+    setHasTriggeredTimeUpAlert(false)
 
     setQuestions(mapped)
     setCurrentIndex(0)
@@ -753,7 +847,6 @@ export default function Quiz() {
     setBlankInput('')
     setShowFeedback(false)
     setShowSteps(false)
-    setTimeElapsed(0)
     setBookmarkedIds(new Set())
     setErrorReasons({})
     setScratchpads({})
@@ -778,6 +871,17 @@ export default function Quiz() {
     }
     setActiveTopicLabel(topicLabel)
 
+    const initialDuration = mode === 'exam' ? (examCustomDuration || 60) : 60
+    setTimeLimitMinutes(initialDuration)
+    setTimerMode(mode === 'exam' ? 'countdown' : 'elapsed')
+    setTimeElapsed(0)
+    setIsTimerPaused(false)
+    setIsTimeUpModalOpen(false)
+    setHasOvertimeAcknowledged(false)
+    setHasTriggered15MinAlert(false)
+    setHasTriggered5MinAlert(false)
+    setHasTriggeredTimeUpAlert(false)
+
     setQuestions(selected)
     setCurrentIndex(0)
     setAnswers({})
@@ -785,13 +889,12 @@ export default function Quiz() {
     setBlankInput('')
     setShowFeedback(false)
     setShowSteps(false)
-    setTimeElapsed(0)
     setBookmarkedIds(new Set())
     setErrorReasons({})
     setScratchpads({})
     setActiveSideTab('palette')
     setView('quiz')
-  }, [allAvailableQuestions, questionCount, selectedCsChapters])
+  }, [allAvailableQuestions, questionCount, selectedCsChapters, mode, examCustomDuration])
 
   const startTopicsQuiz = useCallback((
     topicIds: string[],
@@ -1075,6 +1178,14 @@ export default function Quiz() {
     setCurrentIndex(savedProgress.currentIndex)
     setAnswers(savedProgress.answers || {})
     setTimeElapsed(savedProgress.timeElapsed || 0)
+    if (savedProgress.timerMode) setTimerMode(savedProgress.timerMode)
+    if (savedProgress.timeLimitMinutes) setTimeLimitMinutes(savedProgress.timeLimitMinutes)
+    setIsTimerPaused(false)
+    setIsTimeUpModalOpen(false)
+    setHasOvertimeAcknowledged(false)
+    setHasTriggered15MinAlert(false)
+    setHasTriggered5MinAlert(false)
+    setHasTriggeredTimeUpAlert(false)
     setBookmarkedIds(new Set(savedProgress.bookmarkedIds || []))
     setErrorReasons(savedProgress.errorReasons || {})
     setScratchpads(savedProgress.scratchpads || {})
@@ -1193,6 +1304,10 @@ export default function Quiz() {
       correct: correctCount,
       wrong: wrongQuestions.length,
       timeTaken: timeElapsed,
+      timeLimitMinutes,
+      timerMode,
+      isOvertime: timerMode === 'countdown' && timeElapsed > (timeLimitMinutes || 180) * 60,
+      overtimeSeconds: Math.max(0, timeElapsed - (timeLimitMinutes || 180) * 60),
       mode,
       createdAt: new Date().toISOString(),
       subjectBreakdown,
@@ -1214,8 +1329,13 @@ export default function Quiz() {
           answers: finalAnswers,
           questions: questions.map(q => ({
             id: q.id,
+            domain: q.domain,
             subject: q.subject,
+            chapter: q.chapter,
+            type: q.type,
+            difficulty: q.difficulty,
             question: q.question,
+            options: q.options,
             answer: q.answer,
             explanation: q.explanation,
             tags: q.tags,
@@ -1239,7 +1359,7 @@ export default function Quiz() {
     } catch {
       // Local result shown
     }
-  }, [answers, questions, timeElapsed, mode, errorReasons])
+  }, [answers, questions, timeElapsed, timeLimitMinutes, timerMode, mode, errorReasons])
   finishQuizRef.current = finishQuiz
 
 
@@ -1386,6 +1506,131 @@ export default function Quiz() {
                     立即交卷结算
                   </button>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* ⏰ 全真模考时间到提示弹窗 */}
+          {isTimeUpModalOpen && (
+            <div
+              role="dialog"
+              aria-modal="true"
+              className="fixed inset-0 z-[220] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+            >
+              <div
+                className="w-full max-w-md rounded-3xl bg-white p-6 sm:p-7 shadow-2xl border border-rose-200 space-y-5 animate-in zoom-in-95 duration-150 text-left"
+              >
+                <div className="flex items-start gap-3.5">
+                  <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center text-2xl shrink-0 shadow-inner animate-bounce">
+                    ⏰
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">真题模拟考试时间到！</h3>
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                      本次全真模考设定的答题时限（<strong className="text-slate-800 font-mono">{timeLimitMinutes} 分钟</strong>）已全部用完。真实考场此时应停止作答。
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-rose-50/70 border border-rose-200/80 text-xs text-rose-900 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span>当前做题进度：</span>
+                    <span className="font-mono font-bold">已答 {Object.keys(answers).length} / {questions.length} 题</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>剩余未作答题目：</span>
+                    <span className="font-mono font-bold text-rose-700">{Math.max(0, questions.length - Object.keys(answers).length)} 题</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsTimeUpModalOpen(false)
+                      finishQuiz()
+                    }}
+                    className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <CheckCircle2 size={14} />
+                    <span>立即交卷结算</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsTimeUpModalOpen(false)
+                      setHasOvertimeAcknowledged(true)
+                    }}
+                    className="flex-1 py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <Clock size={14} />
+                    <span>延时继续作答 (+超时计时)</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ⏸️ 模考暂停防窥遮罩 */}
+          {isTimerPaused && view === 'quiz' && (
+            <div
+              className="fixed inset-0 z-[210] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200"
+            >
+              <div
+                className="w-full max-w-sm rounded-3xl bg-white p-6 sm:p-7 shadow-2xl border border-slate-200 text-center space-y-4 animate-in zoom-in-95 duration-150"
+              >
+                <div className="w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center mx-auto text-2xl shadow-inner">
+                  ⏸️
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">模拟测试计时已暂停</h3>
+                  <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                    为保障全真模拟测试的严肃性与准确性，题目已临时防窥隐藏。休息完毕后点击下方按钮继续答题。
+                  </p>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-600 font-mono">
+                  {timerMode === 'countdown'
+                    ? `当前剩余时间：${formatTime(Math.max(0, timeLimitMinutes * 60 - timeElapsed))}`
+                    : `当前答题用时：${formatTime(timeElapsed)}`}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsTimerPaused(false)}
+                  className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Play size={14} className="fill-white" />
+                  <span>恢复作答与计时</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* 🔔 考场关键节点浮动提醒 Toast */}
+          {examToast && (
+            <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[250] max-w-md w-full px-4 animate-in slide-in-from-top-4 duration-200 pointer-events-none">
+              <div
+                className={`py-3 px-4 rounded-2xl shadow-xl border flex items-center gap-3 backdrop-blur-md pointer-events-auto ${
+                  examToast.type === 'error'
+                    ? 'bg-rose-900/95 text-white border-rose-700'
+                    : examToast.type === 'warn'
+                    ? 'bg-amber-900/95 text-white border-amber-700'
+                    : 'bg-slate-900/95 text-white border-slate-700'
+                }`}
+              >
+                <div className="text-base shrink-0">
+                  {examToast.type === 'error' ? '🚨' : examToast.type === 'warn' ? '⏱️' : '🔔'}
+                </div>
+                <div className="text-xs font-semibold leading-snug flex-1">
+                  {examToast.message}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setExamToast(null)}
+                  className="text-xs text-white/70 hover:text-white px-1.5 py-0.5 rounded cursor-pointer"
+                >
+                  ✕
+                </button>
               </div>
             </div>
           )}
@@ -1620,6 +1865,7 @@ export default function Quiz() {
               onStartRetest={startErrorRetestQuiz}
               onAskAI={(err) => handleAskAI(convertErrorToActiveQuestion(err))}
               onGenerateVariants={(err) => handleGenerateVariants(convertErrorToActiveQuestion(err))}
+              generatingVariantId={generatingVariants ? (variantSourceQ?.id || null) : null}
             />
           </Suspense>
         ) : (
@@ -2073,6 +2319,56 @@ export default function Quiz() {
           </div>
         </div>
 
+        {/* 全真模考倒计时时限设定（当选择考试模式时展示） */}
+        {mode === 'exam' && (
+          <div className="bento-card rounded-xl border border-indigo-200/90 bg-gradient-to-r from-indigo-50/70 via-white to-blue-50/60 shadow-xs p-5 space-y-3.5 animate-in fade-in duration-200">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                  <Clock className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">模考倒计时时限预设</h3>
+                  <p className="text-xs text-slate-500">模拟考场真实作答节奏，做题过程中可随时一键切换正计时/倒计时</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 self-start sm:self-auto">
+                <span className="text-xs text-slate-500">当前设定:</span>
+                <span className="text-sm font-bold font-mono text-indigo-700 bg-indigo-100/80 px-2.5 py-0.5 rounded-lg border border-indigo-200">
+                  {examCustomDuration} 分钟
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-1">
+              {[
+                { m: 180, label: '180分钟', desc: '全真套卷' },
+                { m: 120, label: '120分钟', desc: '两小时模考' },
+                { m: 90, label: '90分钟', desc: '综合演练' },
+                { m: 60, label: '60分钟', desc: '一小时小测' },
+                { m: 45, label: '45分钟', desc: '专项速测' },
+                { m: 30, label: '30分钟', desc: '单选题快练' },
+              ].map((item) => (
+                <button
+                  key={item.m}
+                  type="button"
+                  onClick={() => setExamCustomDuration(item.m)}
+                  className={`py-2 px-2 rounded-xl text-center border transition-all cursor-pointer ${
+                    examCustomDuration === item.m
+                      ? 'border-indigo-600 bg-indigo-600 text-white shadow-xs font-bold'
+                      : 'border-slate-200/90 bg-white hover:bg-slate-50 text-slate-700'
+                  }`}
+                >
+                  <div className="text-xs font-bold">{item.label}</div>
+                  <div className={`text-[10px] ${examCustomDuration === item.m ? 'text-indigo-100' : 'text-slate-400'}`}>
+                    {item.desc}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* 做题计费与免积分透明公示卡片 */}
         <div className="rounded-xl border border-emerald-200/90 bg-emerald-50/70 p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-emerald-950 text-xs animate-fade-in-up">
           <div className="flex items-center gap-2.5">
@@ -2357,6 +2653,37 @@ export default function Quiz() {
           document.body
         )}
 
+        {/* ── AI 举一反三变式题生成中状态全局浮层 ── */}
+        {generatingVariants && typeof document !== 'undefined' && createPortal(
+          <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+            <div className="bg-white rounded-3xl border border-slate-200/90 shadow-2xl max-w-md w-full p-6 text-center animate-in zoom-in-95 font-sans">
+              <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-sky-500/20">
+                <Loader2 className="w-7 h-7 animate-spin" />
+              </div>
+              <h3 className="text-base font-bold text-slate-900 mb-1">
+                AI 举一反三 · 深度命制变式题
+              </h3>
+              <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+                正在深度剖析考点「{variantSourceQ?.chapter || variantSourceQ?.subject || '核心考点'}」，自检数学逻辑并重组选项干扰项...
+              </p>
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold mb-4">
+                <span className="w-2 h-2 rounded-full bg-sky-500 animate-ping" />
+                <span>已耗时 {variantElapsedSec} 秒（通常需 15~30 秒）</span>
+              </div>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setGeneratingVariants(false)}
+                  className="text-xs text-slate-400 hover:text-slate-600 underline cursor-pointer"
+                >
+                  后台继续生成（关闭等待提示）
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
         </>
         )}
       </div>
@@ -2405,7 +2732,18 @@ export default function Quiz() {
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+            <QuizTimerControl
+              timeElapsed={timeElapsed}
+              timeLimitMinutes={timeLimitMinutes}
+              timerMode={timerMode}
+              isPaused={isTimerPaused}
+              isExamMode={isExamMode}
+              onToggleMode={() => setTimerMode((prev) => (prev === 'countdown' ? 'elapsed' : 'countdown'))}
+              onTogglePause={() => setIsTimerPaused((prev) => !prev)}
+              onChangeTimeLimit={(newMinutes) => setTimeLimitMinutes(newMinutes)}
+              onResetTimer={() => setTimeElapsed(0)}
+            />
             <span className="text-2xs font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
               {currentIndex + 1}/{questions.length}
             </span>
@@ -2505,10 +2843,17 @@ export default function Quiz() {
               <span>题库与书架</span>
             </button>
             <div className="hidden sm:block h-4 w-px bg-slate-200" />
-            <div className="text-xs font-mono text-slate-500 flex items-center gap-1.5 tabular-nums">
-              <span>⏱</span>
-              <span className="font-semibold text-slate-850 font-mono">{formatTime(timeElapsed)}</span>
-            </div>
+            <QuizTimerControl
+              timeElapsed={timeElapsed}
+              timeLimitMinutes={timeLimitMinutes}
+              timerMode={timerMode}
+              isPaused={isTimerPaused}
+              isExamMode={isExamMode}
+              onToggleMode={() => setTimerMode((prev) => (prev === 'countdown' ? 'elapsed' : 'countdown'))}
+              onTogglePause={() => setIsTimerPaused((prev) => !prev)}
+              onChangeTimeLimit={(newMinutes) => setTimeLimitMinutes(newMinutes)}
+              onResetTimer={() => setTimeElapsed(0)}
+            />
             <div className="h-4 w-px bg-slate-200" />
             <span className="text-xs font-bold text-slate-700 font-mono">
               {currentIndex + 1} / {questions.length} 题
@@ -3700,6 +4045,37 @@ export default function Quiz() {
           document.body
         )}
 
+        {/* ── AI 举一反三变式题生成中状态全局浮层 ── */}
+        {generatingVariants && typeof document !== 'undefined' && createPortal(
+          <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+            <div className="bg-white rounded-3xl border border-slate-200/90 shadow-2xl max-w-md w-full p-6 text-center animate-in zoom-in-95 font-sans">
+              <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-sky-500/20">
+                <Loader2 className="w-7 h-7 animate-spin" />
+              </div>
+              <h3 className="text-base font-bold text-slate-900 mb-1">
+                AI 举一反三 · 深度命制变式题
+              </h3>
+              <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+                正在深度剖析考点「{variantSourceQ?.chapter || variantSourceQ?.subject || '核心考点'}」，自检数学逻辑并重组选项干扰项...
+              </p>
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold mb-4">
+                <span className="w-2 h-2 rounded-full bg-sky-500 animate-ping" />
+                <span>已耗时 {variantElapsedSec} 秒（通常需 15~30 秒）</span>
+              </div>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setGeneratingVariants(false)}
+                  className="text-xs text-slate-400 hover:text-slate-600 underline cursor-pointer"
+                >
+                  后台继续生成（关闭等待提示）
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
       </div>
     )
   }
@@ -3725,9 +4101,35 @@ export default function Quiz() {
             <h1 className="mt-1 text-2xl font-bold text-slate-900 flex items-center gap-2">
               <span>{gradeEmoji} 测评报告生成完毕</span>
             </h1>
-            <p className="mt-1 text-xs text-slate-500">
-              {(result.mode || mode) === 'practice' ? '练习模式' : '考试模式'} · 答题用时 {formatTime(result.timeTaken)} · 共 {result.total} 题（已答 {answeredCount} 题{unansweredCount > 0 ? `，未答 ${unansweredCount} 题不计入错题` : ''}）
-            </p>
+            <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+              <span className="font-semibold text-slate-700">
+                {(result.mode || mode) === 'practice' ? '练习模式' : '全真模考'}
+              </span>
+              <span>·</span>
+              <span className="font-mono">
+                答题用时 <strong className="text-slate-800">{formatTime(result.timeTaken)}</strong>
+                {result.timeLimitMinutes && (
+                  <span className="text-slate-400"> / 考场限时 {result.timeLimitMinutes} 分钟</span>
+                )}
+              </span>
+              <span>·</span>
+              <span>
+                共 {result.total} 题（已答 {answeredCount} 题{unansweredCount > 0 ? `，未答 ${unansweredCount} 题不计入错题` : ''}）
+              </span>
+              {result.timeLimitMinutes && (
+                <span
+                  className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${
+                    result.isOvertime
+                      ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                      : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  }`}
+                >
+                  {result.isOvertime
+                    ? `⚠️ 超时 ${formatTime(result.overtimeSeconds || 0)}`
+                    : `✨ 限时内完成 (耗时占比 ${Math.round((result.timeTaken / (result.timeLimitMinutes * 60)) * 100)}%)`}
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center justify-center gap-4 sm:gap-7 bg-slate-50 px-4 sm:px-6 py-3 sm:py-4 rounded-xl border border-slate-200/80 w-full sm:w-auto">
@@ -4245,6 +4647,37 @@ export default function Quiz() {
                   className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 text-white hover:bg-slate-800 transition-colors cursor-pointer"
                 >
                   完成巩固并关闭
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+        {/* ── AI 举一反三变式题生成中状态全局浮层 ── */}
+        {generatingVariants && typeof document !== 'undefined' && createPortal(
+          <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+            <div className="bg-white rounded-3xl border border-slate-200/90 shadow-2xl max-w-md w-full p-6 text-center animate-in zoom-in-95 font-sans">
+              <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-sky-500/20">
+                <Loader2 className="w-7 h-7 animate-spin" />
+              </div>
+              <h3 className="text-base font-bold text-slate-900 mb-1">
+                AI 举一反三 · 深度命制变式题
+              </h3>
+              <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+                正在深度剖析考点「{variantSourceQ?.chapter || variantSourceQ?.subject || '核心考点'}」，自检数学逻辑并重组选项干扰项...
+              </p>
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold mb-4">
+                <span className="w-2 h-2 rounded-full bg-sky-500 animate-ping" />
+                <span>已耗时 {variantElapsedSec} 秒（通常需 15~30 秒）</span>
+              </div>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setGeneratingVariants(false)}
+                  className="text-xs text-slate-400 hover:text-slate-600 underline cursor-pointer"
+                >
+                  后台继续生成（关闭等待提示）
                 </button>
               </div>
             </div>

@@ -204,7 +204,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
     <div className={`shrink-0 space-y-2 relative ${isAnyPopoverOpen ? 'z-40' : 'z-20'}`}>
       {/* 📱 移动端折叠收缩后的极简超细微型胶囊 (高度仅 26px，完全释放上方聊天视野) */}
       {isHeaderCollapsed && (
-        <div className="flex md:hidden items-center justify-between gap-1 px-2 py-0.5 bg-white/95 border-b border-slate-200/80 shadow-xs backdrop-blur-md relative z-20">
+        <div className="flex md:hidden items-center justify-between gap-1 px-2 py-0.5 bg-white/50 dark:bg-slate-900/50 border-b border-white/60 dark:border-slate-800/60 shadow-xs backdrop-blur-xl relative z-20">
           <div className="flex items-center gap-1 min-w-0">
             <button
               type="button"
@@ -411,7 +411,7 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
 
       {/* 🖥️ 桌面端收起态微型悬浮条 */}
       {isHeaderCollapsed && (
-        <div className="hidden md:flex items-center justify-between gap-3 bg-white/95 border border-slate-200/80 rounded-xl px-3 py-1 shadow-xs backdrop-blur-md relative z-20">
+        <div className="hidden md:flex items-center justify-between gap-3 bg-white/50 dark:bg-slate-900/50 border border-white/60 dark:border-slate-800/60 rounded-xl px-3 py-1 shadow-xs backdrop-blur-xl relative z-20">
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -458,8 +458,8 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
         </div>
       )}
 
-      {/* 🖥️ 桌面端：清爽呼吸感双组工作台顶栏 (支持一键收缩) */}
-      <div className={`${isHeaderCollapsed ? 'hidden' : 'hidden md:flex'} items-center justify-between gap-4 bg-white border border-slate-200/80 rounded-xl px-3.5 py-2 shadow-xs backdrop-blur-md relative ${isAnyPopoverOpen ? 'z-40' : 'z-20'}`}>
+      {/* 🖥️ 桌面端：清爽呼吸感双组工作台顶栏 (支持一键收缩，轻透磨砂质感) */}
+      <div className={`${isHeaderCollapsed ? 'hidden' : 'hidden md:flex'} items-center justify-between gap-4 bg-white/50 dark:bg-slate-900/50 border border-white/60 dark:border-slate-800/60 rounded-xl px-3.5 py-2 shadow-xs backdrop-blur-xl relative ${isAnyPopoverOpen ? 'z-40' : 'z-20'} transition-colors`}>
         {/* 左组：侧栏开关 + 当值导师切换 + 新对话 */}
         <div className="flex items-center gap-2 min-w-0">
           <button

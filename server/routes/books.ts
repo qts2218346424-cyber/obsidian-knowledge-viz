@@ -647,14 +647,24 @@ function resolveBookFile(req: Request, relPath: string, requestedScope?: string)
 
 // Configure multer for file uploads into raw-sources (管理员入公共库，普通用户入个人独享沙箱)
 const storage = multer.diskStorage({
-  destination: (req, _file, cb) => {
+  destination: (req, file, cb) => {
     const user = resolveUserFromReq(req)
     if (!user) {
       cb(new Error('请先登录账号后再导入资料'), '')
       return
     }
 
-    const domain = normalizeResourceDomain(req.body?.domain as string)
+    let domain = normalizeResourceDomain(req.body?.domain as string)
+    const originalName = file.originalname || ''
+    const lowerName = originalName.toLowerCase()
+
+    // 智能校准：基于上传文件的真实名称纠错学科领域（杜绝默认“考研数学”导致 408 资料误存）
+    if (/408|操作系统|进程|虚拟内存|死锁|分页|计算机组成|计组|指令|微程序|流水线|cache|数据结构|二叉树|哈夫曼|图论|计网|网络|tcp|udp|ip/.test(lowerName)) {
+      domain = 'cs_408'
+    } else if (/数学|高数|微积分|极限|导数|积分|级数|线代|矩阵|行列式|概率|随机变量|分布/.test(lowerName)) {
+      domain = 'math'
+    }
+
     let category = (req.body?.category as string) || '经典教材'
     if (category === '教材') category = '经典教材'
     if (category === '历年真题') category = '真题'
@@ -1017,6 +1027,30 @@ booksRouter.post('/books/upload', (req, res, next) => {
           try { fs.unlinkSync(tmpLinearized) } catch {}
         }
       })
+    }
+
+    // 同名文件异地清理去重（防止同一文件此前因学科误判在其他分类下留有旧副本）
+    try {
+      const rawSourcesRoot = path.join(vaultRoot, 'raw-sources')
+      if (fs.existsSync(rawSourcesRoot)) {
+        const findAndRemoveDuplicate = (dir: string) => {
+          const entries = fs.readdirSync(dir, { withFileTypes: true })
+          for (const entry of entries) {
+            const entryPath = path.join(dir, entry.name)
+            if (entry.isDirectory()) {
+              findAndRemoveDuplicate(entryPath)
+            } else if (entry.isFile() && entry.name === safeName && entryPath !== req.file!.path) {
+              try {
+                fs.unlinkSync(entryPath)
+                console.log(`[Deduplicate]: 清理旧重复源文件 -> ${entryPath}`)
+              } catch {}
+            }
+          }
+        }
+        findAndRemoveDuplicate(rawSourcesRoot)
+      }
+    } catch (dedupErr: any) {
+      console.warn('[Deduplicate Warning]:', dedupErr.message)
     }
 
     invalidateCache(req.user.id)

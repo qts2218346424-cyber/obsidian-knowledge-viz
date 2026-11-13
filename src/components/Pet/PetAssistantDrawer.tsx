@@ -17,6 +17,10 @@ import { STUDY_AGENTS } from '../../data/studyAgents'
 import { formatUnifiedModelName, detectCrossSubjectProxy } from '../../utils/modelDisplay'
 import type { PetMood } from './DesktopPet'
 import LuluAvatar, { PET_PERSONAS, getSavedPetTheme } from './LuluAvatar'
+import { NailongChibiHead } from './NailongRigAvatar'
+import DangoAvatar from '../DangoAvatar'
+import { useAuth } from '../../contexts/AuthContext'
+import { getAuthHeaders } from '../../services/auth'
 
 interface Message {
   id: string
@@ -60,10 +64,10 @@ const PROVIDER_INFO: Record<ProviderType, { label: string; short: string; defaul
 }
 
 const QUICK_PROMPTS = [
+  '🌿 备考好焦虑，感觉背不完学不动了...',
   '💡 帮我解析泰勒展开公式本质与考点',
   '⚡ 408 虚拟内存页表与 TLB 命中机制',
   '🎯 考我一道 408 核心考点高频选择题',
-  '🌿 学习有点累了，给我加加油打打气',
 ]
 
 export default function PetAssistantDrawer({
@@ -80,6 +84,7 @@ export default function PetAssistantDrawer({
   })
   const [selectedAgentId, setSelectedAgentId] = useState<string>('agent-408')
   const activeStudyAgent = STUDY_AGENTS.find(a => a.id === selectedAgentId) || STUDY_AGENTS[0]
+  const isPsychologyMode = activeStudyAgent.id === 'agent-psychology'
   const [agents, setAgents] = useState<LocalAgentStatus[]>([])
   const [showConfig, setShowConfig] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
@@ -115,7 +120,7 @@ export default function PetAssistantDrawer({
       id: 'welcome',
       role: 'assistant',
       content:
-        '我是奶龙！🐲\n考研数学或 408 复习遇到卡壳了？随时把题目发给我，秒速为你推导解析~',
+        '我是奶龙！🐲🫧\n无论是 408/高数考点卡壳，还是备考压力大、心里焦虑学不动了，都可以随时跟我聊聊！揉揉大肚皮，俺不仅懂真题算法，还能做你的暖心心理疗愈师哟~ 🍗✨',
     },
   ])
   const [loading, setLoading] = useState(false)
@@ -168,15 +173,24 @@ export default function PetAssistantDrawer({
     setInput('')
     setLoading(true)
     onSetMood('thinking')
-    setCurrentToolStatus(`${activeStudyAgent.name}正在查阅知识库并推导...`)
+    setCurrentToolStatus(
+      isPsychologyMode
+        ? '奶龙正在捧着热茶认真倾听你的心里话...'
+        : `${activeStudyAgent.name}正在查阅知识库并推导...`
+    )
 
     try {
       const isLocal = provider === 'codex' || provider === 'claude-code'
       const endpoint = '/api/local-agents/chat'
+      const historyPayload = messages
+        .filter(m => m.id !== 'welcome' && m.id !== 'reset' && m.content)
+        .slice(-6)
+        .map(m => ({ role: m.role, content: m.content }))
       const body = {
         provider,
         prompt: text,
         model: selectedModel || undefined,
+        history: historyPayload,
         agentPrompt: `${activeStudyAgent.systemPrompt}${
           proxySubject ? `\n【跨科代答提示】：本题涉及${proxySubject}，当前由「${activeStudyAgent.name}」代答。` : ''
         }`,
@@ -184,7 +198,7 @@ export default function PetAssistantDrawer({
 
       const res = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(body),
       })
 
@@ -319,6 +333,7 @@ export default function PetAssistantDrawer({
     ])
   }
 
+  const { user } = useAuth()
   const personaName = PET_PERSONAS[getSavedPetTheme()]?.name || '奶龙'
 
   return (
@@ -384,6 +399,50 @@ export default function PetAssistantDrawer({
           </div>
         </div>
 
+        {/* 极简轻巧人设快捷切换条（让心理聊天师与各科导师一目了然、一触直达） */}
+        <div className="px-3 py-1.5 border-b border-amber-100/80 dark:border-slate-800/80 bg-amber-50/35 dark:bg-slate-900/60 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+          {[
+            ...STUDY_AGENTS.filter(a => a.id === 'agent-408' || a.id === 'agent-psychology'),
+            ...STUDY_AGENTS.filter(a => a.id !== 'agent-408' && a.id !== 'agent-psychology'),
+          ].map(agent => {
+            const active = selectedAgentId === agent.id
+            const label = agent.id === 'agent-psychology' ? '心理聊天师' : agent.name
+            return (
+              <button
+                key={agent.id}
+                type="button"
+                onClick={() => {
+                  setSelectedAgentId(agent.id)
+                  if (messages.length <= 1) {
+                    setMessages([
+                      {
+                        id: 'welcome',
+                        role: 'assistant',
+                        agentName: agent.name,
+                        agentIcon: agent.icon,
+                        content:
+                          agent.id === 'agent-psychology'
+                            ? '呼噜噜~ 欢迎来到奶龙的秘密情绪树洞！🫧\n考研这条路有时候挺孤单也挺累的吧？不管今天是学不进去、错题一大堆，还是深夜焦虑失眠，都可以慢慢跟我说，奶龙的大肚皮一直为你敞开着哟~ 🐲💛'
+                            : `已切换至「${agent.icon} ${agent.name} · ${agent.title}」！随时把你的问题发给我吧~`,
+                      },
+                    ])
+                  }
+                }}
+                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold shrink-0 whitespace-nowrap transition-all cursor-pointer border ${
+                  active
+                    ? agent.id === 'agent-psychology'
+                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white border-amber-500 shadow-xs'
+                      : 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                    : 'bg-white/90 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-amber-300'
+                }`}
+              >
+                <span>{agent.icon}</span>
+                <span>{label}</span>
+              </button>
+            )
+          })}
+        </div>
+
         {/* 极简折叠引擎与导师选择卡（默认收起，点小标签展开） */}
         {showConfig && (
           <div className="px-3.5 py-2.5 bg-amber-50/70 dark:bg-slate-950/80 border-b border-amber-200/60 dark:border-slate-800 shrink-0 animate-in fade-in slide-in-from-top-1 text-xs space-y-2">
@@ -437,13 +496,16 @@ export default function PetAssistantDrawer({
               className={`flex items-start gap-2 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}
             >
               {m.role === 'assistant' ? (
-                <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-950 border border-amber-300/80 flex items-center justify-center shrink-0 mt-0.5">
-                  <span className="text-xs">🐲</span>
+                <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-950 border border-amber-300/80 flex items-center justify-center shrink-0 mt-0.5 overflow-hidden">
+                  <NailongChibiHead className="w-5 h-5" />
                 </div>
               ) : (
-                <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-2xs font-bold text-slate-600 dark:text-slate-300 shrink-0 mt-0.5">
-                  你
-                </div>
+                <DangoAvatar
+                  seed={user?.username || user?.displayName}
+                  size="sm"
+                  className="mt-0.5 shadow-xs"
+                  title={user?.displayName || user?.username || '我'}
+                />
               )}
 
               <div className={`space-y-1.5 max-w-[85%] ${m.role === 'user' ? 'items-end' : ''}`}>
@@ -531,16 +593,16 @@ export default function PetAssistantDrawer({
             <div className="pt-2 space-y-1.5 animate-in fade-in">
               <div className="text-2xs font-bold text-slate-400 px-1 flex items-center gap-1">
                 <Sparkles className="w-3 h-3 text-amber-500" />
-                <span>点选快捷提问:</span>
+                <span>{isPsychologyMode ? '想和奶龙聊聊什么？' : '点选快捷提问:'}</span>
               </div>
               <div className="flex flex-col gap-1">
-                {QUICK_PROMPTS.map((p, idx) => (
+                {(isPsychologyMode ? activeStudyAgent.quickPrompts : QUICK_PROMPTS).map((p, idx) => (
                   <button
                     key={idx}
-                    onClick={() => handleSendMessage(p.slice(2))}
+                    onClick={() => handleSendMessage(isPsychologyMode ? p : p.slice(2))}
                     className="w-full text-left px-2.5 py-1.5 rounded-xl bg-amber-50/60 dark:bg-slate-800/60 hover:bg-amber-100/60 dark:hover:bg-slate-800 border border-amber-200/50 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 text-2xs transition-all cursor-pointer truncate"
                   >
-                    {p}
+                    {isPsychologyMode ? `🫧 ${p}` : p}
                   </button>
                 ))}
               </div>
@@ -564,7 +626,11 @@ export default function PetAssistantDrawer({
             <textarea
               ref={inputRef}
               rows={1}
-              placeholder="向奶龙随时提问（Enter 发送）..."
+              placeholder={
+                isPsychologyMode
+                  ? '跟奶龙·心理聊天师说说心里话（Enter 发送）...'
+                  : '向奶龙随时提问（Enter 发送）...'
+              }
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => {

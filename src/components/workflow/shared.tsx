@@ -1,6 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, useEffect } from 'react'
 import {
-  ReactFlow, Background, Controls, MiniMap,
+  ReactFlow, Background, Controls, MiniMap, useReactFlow,
   type Node, type Edge, type NodeTypes, Handle, Position
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
@@ -149,26 +149,36 @@ export const delay = (ms: number) => new Promise(r => setTimeout(r, ms))
 
 // ─── Flow Wrapper (reusable) ──────────────────────────────────────────────────
 
-export function PipelineFlow({ steps, minHeight = 340 }: { steps: PipelineStep[]; minHeight?: number }) {
+export function PipelineFlow({
+  steps,
+  minHeight = 360,
+  className = '',
+}: {
+  steps: PipelineStep[]
+  minHeight?: number
+  className?: string
+}) {
   const { nodes, edges } = useMemo(() => getLayoutedElements(steps), [steps])
 
   return (
-    <div className="flex-1" style={{ minHeight }}>
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.3 }}
-        proOptions={{ hideAttribution: true }}
-        nodesDraggable={true}
-        nodesConnectable={false}
-        className="!bg-cream-100"
-      >
-        <Background color="#E8D5BC" gap={20} />
-        <Controls className="!bg-surface !border-cream-300 !rounded-lg" showInteractive={false} />
-        <MiniMap nodeColor="#D4B896" maskColor="rgba(255,251,245,0.8)" className="!bg-surface !border-cream-200 !rounded-lg" />
-      </ReactFlow>
+    <div className={`flex flex-1 overflow-hidden ${className}`}>
+      <div className="flex-1" style={{ minHeight }}>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          fitView
+          fitViewOptions={{ padding: 0.3 }}
+          proOptions={{ hideAttribution: true }}
+          nodesDraggable={true}
+          nodesConnectable={false}
+          className="!bg-slate-50"
+        >
+          <Background color="#E8D5BC" gap={20} />
+          <Controls className="!bg-white !border-slate-200/80 !rounded-lg" showInteractive={false} />
+          <MiniMap nodeColor="#D4B896" maskColor="rgba(255,251,245,0.8)" className="!bg-white !border-slate-200/80 !rounded-lg" />
+        </ReactFlow>
+      </div>
     </div>
   )
 }

@@ -33,6 +33,7 @@ import {
   EyeOff,
   Download,
   Wand2,
+  Loader2,
 } from 'lucide-react'
 import {
   api,
@@ -46,7 +47,8 @@ import MarkdownRenderer from '../../../components/MarkdownRenderer'
 interface ErrorNotebookHubViewProps {
   onStartRetest: (questions: ActiveQuizQuestion[], title?: string) => void
   onAskAI?: (question: DetailedErrorQuestion) => void
-  onGenerateVariants?: (question: DetailedErrorQuestion) => void
+  onGenerateVariants?: (question: DetailedErrorQuestion) => void | Promise<void>
+  generatingVariantId?: string | null
 }
 
 const COMMON_SUBJECTS = [
@@ -84,10 +86,12 @@ export default function ErrorNotebookHubView({
   onStartRetest,
   onAskAI,
   onGenerateVariants,
+  generatingVariantId,
 }: ErrorNotebookHubViewProps) {
   // 数据与加载态
   const [stats, setStats] = useState<ErrorNotebookStats | null>(null)
   const [errors, setErrors] = useState<DetailedErrorQuestion[]>([])
+  const [localGeneratingId, setLocalGeneratingId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [toastMsg, setToastMsg] = useState<string | null>(null)
@@ -1395,17 +1399,44 @@ export default function ErrorNotebookHubView({
                     )}
 
                     {/* 变式题强化 */}
-                    {onGenerateVariants && (
-                      <button
-                        type="button"
-                        onClick={() => onGenerateVariants(item)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 transition-all cursor-pointer"
-                        title="基于此题考点让 AI 变异生成新考法"
-                      >
-                        <RotateCcw className="w-3 h-3 text-sky-600" />
-                        <span>生成变式题</span>
-                      </button>
-                    )}
+                    {onGenerateVariants && (() => {
+                      const isGeneratingThis =
+                        (generatingVariantId && (generatingVariantId === item.id || generatingVariantId === `err-${item.id}`)) ||
+                        localGeneratingId === item.id
+                      return (
+                        <button
+                          type="button"
+                          disabled={Boolean(isGeneratingThis)}
+                          onClick={async () => {
+                            if (isGeneratingThis) return
+                            setLocalGeneratingId(item.id)
+                            try {
+                              await onGenerateVariants(item)
+                            } finally {
+                              setLocalGeneratingId(null)
+                            }
+                          }}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                            isGeneratingThis
+                              ? 'bg-sky-100 text-sky-800 border-sky-300 cursor-wait shadow-xs'
+                              : 'text-sky-700 bg-sky-50 hover:bg-sky-100 border-sky-200 cursor-pointer active:scale-95'
+                          }`}
+                          title={isGeneratingThis ? 'AI 正在深度命制变式题...' : '基于此题考点让 AI 变异生成新考法'}
+                        >
+                          {isGeneratingThis ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 text-sky-600 animate-spin" />
+                              <span>AI 命制中...</span>
+                            </>
+                          ) : (
+                            <>
+                              <RotateCcw className="w-3 h-3 text-sky-600" />
+                              <span>生成变式题</span>
+                            </>
+                          )}
+                        </button>
+                      )
+                    })()}
                   </div>
 
                   <div className="flex items-center gap-2">

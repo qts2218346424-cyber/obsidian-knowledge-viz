@@ -237,10 +237,10 @@ body {
 }
 
 .aurora-mesh {
-  background-color: #FAFAFA;
+  background-color: #f8fafc;
   background-image: 
-    radial-gradient(at 0% 0%, rgba(243, 244, 246, 0.85) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(243, 244, 246, 0.65) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(241, 245, 249, 0.95) 0px, transparent 60%),
+    radial-gradient(at 100% 100%, rgba(226, 232, 240, 0.55) 0px, transparent 60%);
   background-attachment: fixed;
 }
 
@@ -1379,27 +1379,74 @@ input[type="range"].history-range-slider:focus-visible {
 }
 
 /* ==========================================================================
+   ♟️ 经典极简风全局增强规则 (Minimalist Theme Global Rules)
+   借鉴笔记系统讲义级微哑光舒目纸质背景，低眩光、纯净通透、沉浸专注
+   ========================================================================== */
+.theme-minimal {
+  --color-brand-primary: #18181b;
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+.theme-minimal body {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+/* 极简舒目微哑光纸感网格背景 (继承讲义级微冷灰微漫射，柔和不刺眼) */
+.theme-minimal .aurora-mesh {
+  background-color: #f8fafc !important;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(226, 232, 240, 0.6) 0px, transparent 55%),
+    radial-gradient(at 100% 0%, rgba(241, 245, 249, 0.85) 0px, transparent 60%),
+    radial-gradient(at 100% 100%, rgba(226, 232, 240, 0.5) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(241, 245, 249, 0.75) 0px, transparent 55%) !important;
+}
+
+/* 极简卡片：纯净纸白配合细腻柔和微边框与漫射投影 */
+.theme-minimal .bento-card,
+.theme-minimal .bg-white {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+.theme-minimal .bento-card {
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.03) !important;
+}
+
+.theme-minimal .bento-card-hover:hover {
+  box-shadow: 0 10px 24px -4px rgba(15, 23, 42, 0.07), 0 2px 4px 0 rgba(15, 23, 42, 0.02) !important;
+}
+
+/* 顶栏与浮层毛玻璃 */
+.theme-minimal .glass-header,
+.theme-minimal header {
+  background-color: rgba(255, 255, 255, 0.94) !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* ==========================================================================
    🍃 温润纸质护眼风全局增强规则 (Eyecare Theme Global Rules)
    ========================================================================== */
 .theme-eyecare {
   --color-brand-primary: #2d6a4f;
-  background-color: #f4f7f2 !important;
+  background-color: #f5f6f2 !important;
   color: #243329 !important;
 }
 
 .theme-eyecare body {
-  background-color: #f4f7f2 !important;
+  background-color: #f5f6f2 !important;
   color: #243329 !important;
 }
 
-/* 护眼温润竹韵网格背景 */
+/* 护眼温润竹韵天然纸色背景 (柔和微漫射，消除刺眼高能白光) */
 .theme-eyecare .aurora-mesh {
-  background-color: #f4f7f2 !important;
+  background-color: #f5f6f2 !important;
   background-image: 
-    radial-gradient(at 0% 0%, rgba(45, 106, 79, 0.08) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(82, 183, 136, 0.06) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(216, 243, 220, 0.22) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(116, 198, 157, 0.07) 0px, transparent 50%) !important;
+    radial-gradient(at 0% 0%, rgba(45, 106, 79, 0.04) 0px, transparent 60%),
+    radial-gradient(at 100% 0%, rgba(82, 183, 136, 0.04) 0px, transparent 60%),
+    radial-gradient(at 100% 100%, rgba(216, 243, 220, 0.15) 0px, transparent 60%),
+    radial-gradient(at 0% 100%, rgba(116, 198, 157, 0.04) 0px, transparent 60%) !important;
 }
 
 /* 护眼卡片与微光 */
@@ -1879,12 +1926,13 @@ code, pre, kbd, samp, .font-mono {
 
   /* 消除移动端每帧滑动重新计算多重复杂 radial-gradient 的恶性重绘开销 */
   .aurora-mesh,
-  .theme-vibrant .aurora-mesh {
+  .theme-vibrant .aurora-mesh,
+  .theme-minimal .aurora-mesh {
     background-color: #f8fafc !important;
     background-image: none !important;
   }
   .theme-eyecare .aurora-mesh {
-    background-color: #f4f7f2 !important;
+    background-color: #f5f6f2 !important;
     background-image: none !important;
   }
   .dark .aurora-mesh,
@@ -1967,4 +2015,18 @@ h1, h2, h3 {
   .animate-spin {
     animation: spin 1.5s linear infinite !important;
   }
+}
+
+/* KaTeX 渲染异常优雅回退：隐藏刺眼的技术栈错误，以精致的行内代码形式展示原文本 */
+.katex-error {
+  color: #64748b !important;
+  background: #f1f5f9;
+  border-radius: 4px;
+  padding: 1px 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.9em;
+}
+.dark .katex-error {
+  color: #94a3b8 !important;
+  background: #1e293b;
 }

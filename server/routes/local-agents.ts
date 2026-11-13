@@ -16,25 +16,33 @@ import {
 import { database } from '../db/database.js'
 export const localAgentsRouter = Router()
 
-localAgentsRouter.get('/local-agents/status', async (_req, res) => {
+localAgentsRouter.get('/local-agents/status', async (req, res) => {
   try {
-    const agents = await detectAllLocalAgents(config.localAgents)
+    const isAdmin = req.user?.role === 'admin'
+    const rawAgents = await detectAllLocalAgents(config.localAgents)
+    const agents = isAdmin
+      ? rawAgents
+      : rawAgents.map(({ resolvedPath, ...rest }) => rest)
     res.json({
       agents,
-      defaultCwd: config.localAgents?.defaultCwd || config.vaultPath,
+      defaultCwd: isAdmin ? (config.localAgents?.defaultCwd || config.vaultPath) : '专属研学工作区',
     })
   } catch (err: any) {
     res.status(500).json({ error: err.message })
   }
 })
 
-localAgentsRouter.post('/local-agents/sync-models', async (_req, res) => {
+localAgentsRouter.post('/local-agents/sync-models', async (req, res) => {
   try {
-    const agents = await detectAllLocalAgents(config.localAgents)
+    const isAdmin = req.user?.role === 'admin'
+    const rawAgents = await detectAllLocalAgents(config.localAgents)
+    const agents = isAdmin
+      ? rawAgents
+      : rawAgents.map(({ resolvedPath, ...rest }) => rest)
     res.json({
       success: true,
       agents,
-      defaultCwd: config.localAgents?.defaultCwd || config.vaultPath,
+      defaultCwd: isAdmin ? (config.localAgents?.defaultCwd || config.vaultPath) : '专属研学工作区',
     })
   } catch (err: any) {
     res.status(500).json({ error: err.message })
@@ -105,9 +113,11 @@ localAgentsRouter.get('/local-agents/deleted-models', async (_req, res) => {
   }
 })
 
-localAgentsRouter.get('/local-agents/skills', async (_req, res) => {
+localAgentsRouter.get('/local-agents/skills', async (req, res) => {
   try {
-    const skills = scanLocalSkills()
+    const isAdmin = req.user?.role === 'admin'
+    const includeHostSkills = isAdmin && req.query?.includeHost === '1'
+    const skills = scanLocalSkills({ includeHostSkills })
     const categories = ['全部', ...Array.from(new Set(skills.map(s => s.category)))]
     const sources = ['全部', ...Array.from(new Set(skills.map(s => s.source)))]
     res.json({
@@ -122,9 +132,13 @@ localAgentsRouter.get('/local-agents/skills', async (_req, res) => {
   }
 })
 
-localAgentsRouter.post('/local-agents/sync-skills', async (_req, res) => {
+localAgentsRouter.post('/local-agents/sync-skills', async (req, res) => {
   try {
-    const skills = scanLocalSkills()
+    if (req.user?.role !== 'admin') {
+      res.status(403).json({ error: '仅管理员可执行系统技能扫描同步' })
+      return
+    }
+    const skills = scanLocalSkills({ includeHostSkills: true })
     const categories = ['全部', ...Array.from(new Set(skills.map(s => s.category)))]
     const sources = ['全部', ...Array.from(new Set(skills.map(s => s.source)))]
     res.json({
@@ -215,13 +229,17 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
           '4. 微观拆解：针对该疑问所涉步骤进行显微镜式的深入推演，步步有据，严谨闭环；\n' +
           '5. 针对性自测：解答完该疑问后，给出一个极小粒度的针对性微自测问题，检验用户是否真正弄懂。'
         : '',
-      '【母语习惯与语言交付绝对铁律（最高优先级）】：\n' +
-      '★ 全程纯中文作答：必须全程使用规范、严谨、通顺、地道的简体中文进行深度解析推导，严格符合中文母语考生的思维与阅读习惯！除专业技术原语、C/C++代码段与专有英文缩写（如 TCP/IP, TLB, Cache, O(n)）保留外，所有问题剖析、原理解释、步骤推演、设坑分析与总结一律采用纯中文表达，严禁出现整句英文或中英夹生翻译腔！\n' +
-      '【排版交付强制准则】：\n' +
-      '1. 结论先行：首句直击答案，严禁“同学你好/我是XX导师/根据历年命题规律”等客套废话；\n' +
-      '2. 严控垂直篇幅：正文紧凑精炼，杜绝过度拉长页面；段落之间最多 1 个空行，严禁连续多空行；严禁一句话一换行的诗歌体，同一要点需在同一段内自然连续书写；列表项之间严禁空行；\n' +
-      '3. 中文标点规范：必须使用标准全角中文标点（，。、！？：；“”），严禁中英文标点混杂；标点紧随文字，严禁在标点后强行断行；序号与内容必须同行；\n' +
-      '4. 结构清晰：使用 ### 小标题、加粗清单（- **要点**：...）、对比表格与 > ⚠️ 避坑引用块，末尾附 1~2 句速记口诀。',
+      (body.agentPrompt?.includes('心灵疗愈') || body.agentPrompt?.includes('心理聊天师'))
+        ? '【心理聊天师对话与语言铁律】：\n' +
+          '★ 全程纯中文温和共情对话：请以温柔、接纳、有安全感的纯简体中文倾听并陪伴用户，严禁英文夹生与冷漠说教；\n' +
+          '★ 自然交谈排版：使用标准中文全角标点，段落自然紧凑，先接住情绪、再轻量认知重构、最后给出 1~2 个微步建议，无需套用生硬的做题表格或应试口诀。'
+        : '【母语习惯与语言交付绝对铁律（最高优先级）】：\n' +
+          '★ 全程纯中文作答：必须全程使用规范、严谨、通顺、地道的简体中文进行深度解析推导，严格符合中文母语考生的思维与阅读习惯！除专业技术原语、C/C++代码段与专有英文缩写（如 TCP/IP, TLB, Cache, O(n)）保留外，所有问题剖析、原理解释、步骤推演、设坑分析与总结一律采用纯中文表达，严禁出现整句英文或中英夹生翻译腔！\n' +
+          '【排版交付强制准则】：\n' +
+          '1. 结论先行：首句直击答案，严禁“同学你好/我是XX导师/根据历年命题规律”等客套废话；\n' +
+          '2. 严控垂直篇幅：正文紧凑精炼，杜绝过度拉长页面；段落之间最多 1 个空行，严禁连续多空行；严禁一句话一换行的诗歌体，同一要点需在同一段内自然连续书写；列表项之间严禁空行；\n' +
+          '3. 中文标点规范：必须使用标准全角中文标点（，。、！？：；“”），严禁中英文标点混杂；标点紧随文字，严禁在标点后强行断行；序号与内容必须同行；\n' +
+          '4. 结构清晰：使用 ### 小标题、加粗清单（- **要点**：...）、对比表格与 > ⚠️ 避坑引用块，末尾附 1~2 句速记口诀。',
       body.pageContext ? `当前页面：${body.pageContext}` : '',
       body.skillPrompt ? `已启用 Skill：\n${body.skillPrompt}` : '',
       historySummary ? `【此前会话历史脉络（请基于此上下文连续作答）】：\n${historySummary}` : '',
@@ -360,12 +378,16 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
 
   const abortController = new AbortController()
   const abortRun = () => {
+    if (abortController.signal.aborted) return
     abortController.abort()
     safeRefundPointsIfNeeded('连接被中止')
   }
   req.on('aborted', abortRun)
-  req.on('close', abortRun)
-  res.on('close', abortRun)
+  res.on('close', () => {
+    if (!res.writableEnded) {
+      abortRun()
+    }
+  })
 
   // 构造标准多轮对话消息列表（用于云端模型与本地推理服务）
   const conversationMessages: Array<{ role: 'user' | 'assistant'; content: any }> = []

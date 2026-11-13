@@ -1532,7 +1532,7 @@ ${essayInput.trim()}
           板块 4: 大纲核心背单词中心 (聚合现有 2000+ 词汇与掌握度色谱)
           ───────────────────────────────────────────────────────────── */}
       {activeTab === 'vocab' && (
-        <div className="space-y-5">
+        <div className="space-y-4 sm:space-y-5">
           {/* 子导航 */}
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
             {[
@@ -1545,7 +1545,7 @@ ${essayInput.trim()}
                 key={st.key}
                 type="button"
                 onClick={() => setVocabSubTab(st.key as any)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`shrink-0 whitespace-nowrap px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   vocabSubTab === st.key
                     ? 'bg-slate-900 text-white shadow-xs'
                     : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
@@ -1556,14 +1556,20 @@ ${essayInput.trim()}
             ))}
           </div>
 
-          <div className="rounded-3xl border border-slate-200/90 bg-white p-6 shadow-xs">
+          <div
+            className={`rounded-2xl sm:rounded-3xl border border-slate-200/90 bg-white shadow-xs ${
+              vocabSubTab === 'relations' ? 'p-2 sm:p-4 overflow-hidden' : 'p-3.5 sm:p-6'
+            }`}
+          >
             {vocabSubTab === 'review' && <VocabTab />}
             {vocabSubTab === 'browse' && <WordBrowser />}
             {vocabSubTab === 'stats' && <VocabStats />}
             {vocabSubTab === 'relations' && (
               <ChunkErrorBoundary title="词根词缀衍生树加载失败">
                 <Suspense fallback={<SuspenseTimeoutFallback label="正在装载词根词缀衍生树..." />}>
-                  <WordRelations />
+                  <div className="h-[62dvh] min-h-[440px] max-h-[620px] md:h-[640px] w-full">
+                    <WordRelations />
+                  </div>
                 </Suspense>
               </ChunkErrorBoundary>
             )}

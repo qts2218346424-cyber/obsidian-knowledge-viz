@@ -497,36 +497,48 @@ export async function executeBookScanJob(
     throw new Error('该资料有效文字内容为空，无法进行扫描提取')
   }
 
-  // 根据首片真实文本与书名/路径智能校准二级学科（防止未传 subject 时 cs_408 默认退化为“数据结构”）
-  const refineSubjectFromText = (sampleText: string, bookName: string, relPath: string, domain: ResourceDomain, curSubject: string): string => {
+  // 跨学科全科综合探测：同时校准 domain 与 subject（彻底解决前端默认 math 导致 408 资料被归到高等数学）
+  const refineSubjectAndDomainFromText = (
+    sampleText: string,
+    bookName: string,
+    relPath: string,
+    inputDomain: ResourceDomain,
+    curSubject: string
+  ): { effectiveDomain: ResourceDomain; effectiveSubject: string } => {
     const combined = `${relPath} ${bookName} ${sampleText}`.toLowerCase()
-    if (domain === 'cs_408') {
-      const scores: Array<[string, number]> = [
-        ['操作系统', ['操作系统', '进程', '线程', '死锁', '信号量', 'pv操作', '虚拟内存', '分页', '分段', '页面置换', 'tlb', '快表', '文件系统', 'inode', 'spooling', '调度算法'].filter(k => combined.includes(k)).length],
-        ['计算机组成原理', ['计算机组成', '计组', '组原', '指令系统', '微程序', '流水线', '补码', 'ieee754', 'cache', '组相联', '主存', 'dram', '总线'].filter(k => combined.includes(k)).length],
-        ['计算机网络', ['计算机网络', '计网', 'tcp', 'udp', 'ip地址', '子网掩码', 'cidr', '三次握手', '滑动窗口', '拥塞控制', 'csma/cd', '路由器', 'rip', 'ospf', 'dns', 'http'].filter(k => combined.includes(k)).length],
-        ['数据结构', ['数据结构', '二叉树', 'avl', '红黑树', 'b+树', '哈夫曼', '拓扑排序', '关键路径', 'dijkstra', '快速排序', '堆排序', '链表'].filter(k => combined.includes(k)).length],
-      ]
-      scores.sort((a, b) => b[1] - a[1])
-      if (scores[0][1] > 0 && (!curSubject || curSubject === '数据结构' || scores[0][1] >= 2)) {
-        return scores[0][0]
-      }
-    } else if (domain === 'math') {
-      const scores: Array<[string, number]> = [
-        ['线性代数', ['线性代数', '行列式', '矩阵的秩', '线性相关', '线性无关', '基础解系', '特征值', '特征向量', '相似对角化', '二次型', '正定'].filter(k => combined.includes(k)).length],
-        ['概率论与数理统计', ['概率论', '数理统计', '随机变量', '概率密度', '分布函数', '数学期望', '方差', '协方差', '大数定律', '中心极限定理', '卡方分布'].filter(k => combined.includes(k)).length],
-        ['高等数学', ['微积分', '高等数学', '极限', '泰勒公式', '洛必达', '中值定理', '拉格朗日', '不定积分', '定积分', '二重积分', '微分方程', '级数'].filter(k => combined.includes(k)).length],
-      ]
-      scores.sort((a, b) => b[1] - a[1])
-      if (scores[0][1] > 0 && (!curSubject || curSubject === '高等数学' || scores[0][1] >= 2)) {
-        return scores[0][0]
-      }
+
+    const csScores: Array<[string, number]> = [
+      ['操作系统', ['操作系统', '进程', '线程', '死锁', '信号量', 'pv操作', '虚拟内存', '分页', '分段', '页面置换', 'tlb', '快表', '文件系统', 'inode', 'spooling', '调度算法'].filter(k => combined.includes(k)).length],
+      ['计算机组成原理', ['计算机组成', '计组', '组原', '指令系统', '微程序', '流水线', '补码', 'ieee754', 'cache', '组相联', '主存', 'dram', '总线'].filter(k => combined.includes(k)).length],
+      ['计算机网络', ['计算机网络', '计网', 'tcp', 'udp', 'ip地址', '子网掩码', 'cidr', '三次握手', '滑动窗口', '拥塞控制', 'csma/cd', '路由器', 'rip', 'ospf', 'dns', 'http'].filter(k => combined.includes(k)).length],
+      ['数据结构', ['数据结构', '二叉树', 'avl', '红黑树', 'b+树', '哈夫曼', '拓扑排序', '关键路径', 'dijkstra', '快速排序', '堆排序', '链表'].filter(k => combined.includes(k)).length],
+    ]
+    csScores.sort((a, b) => b[1] - a[1])
+    const maxCsScore = csScores[0][1]
+
+    const mathScores: Array<[string, number]> = [
+      ['线性代数', ['线性代数', '行列式', '矩阵的秩', '线性相关', '线性无关', '基础解系', '特征值', '特征向量', '相似对角化', '二次型', '正定'].filter(k => combined.includes(k)).length],
+      ['概率论与数理统计', ['概率论', '数理统计', '随机变量', '概率密度', '分布函数', '数学期望', '方差', '协方差', '大数定律', '中心极限定理', '卡方分布'].filter(k => combined.includes(k)).length],
+      ['高等数学', ['微积分', '高等数学', '极限', '泰勒公式', '洛必达', '中值定理', '拉格朗日', '不定积分', '定积分', '二重积分', '微分方程', '级数'].filter(k => combined.includes(k)).length],
+    ]
+    mathScores.sort((a, b) => b[1] - a[1])
+    const maxMathScore = mathScores[0][1]
+
+    if (maxCsScore > maxMathScore && maxCsScore >= 1) {
+      return { effectiveDomain: 'cs_408', effectiveSubject: csScores[0][0] }
+    } else if (maxMathScore > maxCsScore && maxMathScore >= 1) {
+      return { effectiveDomain: 'math', effectiveSubject: mathScores[0][0] }
     }
-    return curSubject
+
+    if (inputDomain === 'cs_408') {
+      return { effectiveDomain: 'cs_408', effectiveSubject: maxCsScore > 0 ? csScores[0][0] : (curSubject || '数据结构') }
+    } else {
+      return { effectiveDomain: 'math', effectiveSubject: maxMathScore > 0 ? mathScores[0][0] : (curSubject || '高等数学') }
+    }
   }
 
   const sampleTextForSubject = chunks.slice(0, 2).map(c => c.text).join('\n')
-  const effectiveSubject = refineSubjectFromText(sampleTextForSubject, input.bookName, input.relativePath, input.domain, input.subject)
+  const { effectiveDomain, effectiveSubject } = refineSubjectAndDomainFromText(sampleTextForSubject, input.bookName, input.relativePath, input.domain, input.subject)
 
   const answerKeySnippet = extractAnswerKeySnippet(extracted.pages)
 
@@ -611,14 +623,14 @@ export async function executeBookScanJob(
   })
 
   const finalQuestions = normalizeAndDeduplicateQuestions(rawQuestionsPool, {
-    domain: input.domain,
+    domain: effectiveDomain,
     subject: effectiveSubject,
     bookName: input.bookName
   })
 
   const wikiNote = buildFinalWikiNoteContent({
     bookName: input.bookName,
-    domain: input.domain,
+    domain: effectiveDomain,
     subject: effectiveSubject,
     totalPages,
     scannedPageRange,
@@ -640,6 +652,25 @@ export async function executeBookScanJob(
       const created = createFile(input.vaultRoot, wikiNote.suggestedPath, wikiNote.content)
       savedNotePath = created.path || wikiNote.suggestedPath
     }
+
+    // 异地残留笔记自动清理：防止同名精粹笔记在误判的旧目录（如 01-考研数学/高等数学/）下成为冗余死链接
+    try {
+      const noteBaseName = path.basename(wikiNote.suggestedPath)
+      const possibleOldPaths = [
+        path.resolve(input.vaultRoot, 'wiki', '01-考研数学', '高等数学', noteBaseName),
+        path.resolve(input.vaultRoot, 'wiki', '01-考研数学', effectiveSubject, noteBaseName),
+        path.resolve(input.vaultRoot, 'wiki', '02-408计算机', '数据结构', noteBaseName),
+      ]
+      for (const oldP of possibleOldPaths) {
+        if (oldP !== absNotePath && fs.existsSync(oldP)) {
+          try {
+            fs.unlinkSync(oldP)
+            console.log(`[Clean Old Wiki Note]: 清理异地误存旧笔记 -> ${oldP}`)
+          } catch {}
+        }
+      }
+    } catch {}
+
     invalidateCache(input.userId !== 'anonymous' ? input.userId : undefined)
   } catch (noteErr: any) {
     console.warn('Save scan wiki note warning:', noteErr?.message)

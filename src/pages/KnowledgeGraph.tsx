@@ -1684,7 +1684,7 @@ export default function KnowledgeGraph({
                 className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-700 hover:text-indigo-900 transition-colors cursor-pointer"
               >
                 <BookOpen className="w-3.5 h-3.5" />
-                <span>在系统手册中查阅所有 22 项小功能说明字典 →</span>
+                <span>在系统手册中查阅全站完整功能说明字典 →</span>
               </button>
 
               <button

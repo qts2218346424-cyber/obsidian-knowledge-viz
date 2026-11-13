@@ -61,5 +61,8 @@ export function detectCrossSubjectProxy(promptText: string, currentAgentId: stri
   if (/高数|线性代数|概率论|微积分|极限|泰勒|中值定理|特征值|矩阵|二重积分/.test(text)) {
     return '考研数学（原需数小通）'
   }
+  if (/焦虑|崩溃|内耗|失眠|学不动|学不进去|难过|想放弃|压力大|好累|心情|自卑|恐惧/.test(text)) {
+    return '心理解压（原需奶龙·心灵疗愈师）'
+  }
   return null
 }

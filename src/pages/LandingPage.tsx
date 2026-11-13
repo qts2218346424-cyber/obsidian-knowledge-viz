@@ -350,12 +350,8 @@ export default function LandingPage() {
       <header className="relative z-30 w-full max-w-[1280px] mx-auto px-5 sm:px-8 pt-4 pb-3 flex items-center justify-between">
         {/* 左侧 Logo 标识 */}
         <Link to="/" className="group flex items-center gap-2.5 focus:outline-none">
-          <div className="w-7 h-7 rounded-lg bg-[#18181b] text-white flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
-            <svg className="w-4 h-4 text-white" viewBox="0 0 28 28" fill="none">
-              <rect x="4" y="4" width="17" height="5.5" rx="1" fill="currentColor" />
-              <path d="M4 12.2H14.5L4 22.5V12.2Z" fill="currentColor" />
-              <circle cx="17.8" cy="17.8" r="3.4" fill="currentColor" />
-            </svg>
+          <div className="w-7 h-7 rounded-lg overflow-hidden flex items-center justify-center shadow-xs ring-1 ring-rose-200/70 group-hover:scale-105 transition-transform shrink-0">
+            <img src="/icon-192.png?v=dango" alt="研核" className="h-full w-full object-cover" />
           </div>
           <div className="flex items-center gap-1.5">
             <span className="font-bold text-[15px] tracking-tight text-[#171719]">CoreForge</span>
@@ -1158,12 +1154,8 @@ export default function LandingPage() {
             {/* 左栏：身份认证、注册与找回密码 (手机端独立纵向滚动，高度自适应，紧凑排版) */}
             <div className="lg:col-span-5 bg-[#efefef] rounded-xl p-3.5 sm:p-7 flex flex-col justify-between text-left border border-white/70 overflow-y-auto max-h-[calc(100dvh-3rem)] lg:max-h-none modal-scroll-contain overscroll-contain">
               <div>
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#18181b] text-white flex items-center justify-center shadow-sm mb-3 sm:mb-5">
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" viewBox="0 0 28 28" fill="none">
-                    <rect x="4" y="4" width="17" height="5.5" rx="1" fill="currentColor" />
-                    <path d="M4 12.2H14.5L4 22.5V12.2Z" fill="currentColor" />
-                    <circle cx="17.8" cy="17.8" r="3.4" fill="currentColor" />
-                  </svg>
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg overflow-hidden flex items-center justify-center shadow-xs ring-1 ring-rose-200/70 mb-3 sm:mb-5 shrink-0">
+                  <img src="/icon-192.png?v=dango" alt="研核" className="h-full w-full object-cover" />
                 </div>
 
                 <h2 className="text-[16.5px] sm:text-[25px] leading-[1.2] tracking-tight font-bold text-[#18181b] mb-2 sm:mb-4">
@@ -1556,7 +1548,7 @@ export default function LandingPage() {
             {/* 左侧：Logo + 标题 */}
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               <div className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center overflow-hidden rounded-lg border border-rose-200/30 shadow-xs shrink-0">
-                <img src="/favicon.svg" alt="研核" className="h-full w-full object-cover" />
+                <img src="/icon-192.png?v=dango" alt="研核" className="h-full w-full object-cover" />
               </div>
               <span className="hidden xs:inline font-extrabold text-white text-2xs sm:text-sm whitespace-nowrap">
                 试玩实验室

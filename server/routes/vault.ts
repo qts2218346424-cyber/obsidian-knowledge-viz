@@ -16,6 +16,7 @@ import {
 } from '../context.js'
 import {
   createFile,
+  createFolder,
   updateFile,
   deleteFile,
   renameFile,
@@ -173,7 +174,26 @@ vaultRouter.get('/vault/tree', (req, res) => {
   }
 })
 
-// ===== File CRUD =====
+// ===== Folder & File CRUD =====
+
+vaultRouter.post('/vault/folder', (req, res) => {
+  try {
+    const { path: folderPath } = req.body as { path?: string }
+    if (!folderPath || !String(folderPath).trim()) {
+      res.status(400).json({ error: '请输入目录名称或路径' })
+      return
+    }
+    const vaultPath = getRequestVaultPath(req)
+    if (req.user?.id) {
+      resolveSafeUserVaultPath(req.user, String(folderPath))
+    }
+    const result = createFolder(vaultPath, String(folderPath))
+    invalidateCache(req.user?.id)
+    res.json(result)
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
 
 vaultRouter.post('/vault/file', (req, res) => {
   try {

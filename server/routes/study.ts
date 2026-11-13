@@ -1091,20 +1091,34 @@ studyRouter.get('/vocab/relations', (req, res) => {
   try {
     const searchRoot = ((req.query.root as string) || '').toLowerCase()
 
-    const rootMap = new Map<string, { meaning: string; words: Array<{ word: string; definition: string; unit: number; frequency: string }> }>()
+    const rootMap = new Map<
+      string,
+      {
+        meaning: string
+        seenWords: Set<string>
+        words: Array<{ word: string; definition: string; unit: number; frequency: string }>
+      }
+    >()
 
     for (const entry of VOCAB_POOL) {
       const roots = (entry as any).roots
       if (!roots) continue
       const matches = roots.match(/([a-zA-Z-]+)\(([^)]+)\)/g)
       if (!matches) continue
+      const wordKey = String(entry.word || '').trim().toLowerCase()
+      if (!wordKey) continue
       for (const m of matches) {
         const rm = m.match(/([a-zA-Z-]+)\(([^)]+)\)/)
         if (!rm) continue
         const rootKey = rm[1].replace(/-$/, '').toLowerCase()
         const meaning = rm[2]
-        if (!rootMap.has(rootKey)) rootMap.set(rootKey, { meaning, words: [] })
-        rootMap.get(rootKey)!.words.push({
+        if (!rootMap.has(rootKey)) {
+          rootMap.set(rootKey, { meaning, seenWords: new Set(), words: [] })
+        }
+        const bucket = rootMap.get(rootKey)!
+        if (bucket.seenWords.has(wordKey)) continue
+        bucket.seenWords.add(wordKey)
+        bucket.words.push({
           word: entry.word,
           definition: entry.definition,
           unit: entry.unit,

@@ -1,4 +1,5 @@
-import { useState, Component, lazy, Suspense, type ReactNode } from 'react'
+import { useState, useEffect, Component, lazy, Suspense, type ReactNode } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   BookOpen,
   BarChart3,
@@ -191,7 +192,27 @@ const tabs: { key: Tab; label: string; icon: any }[] = [
 ]
 
 export default function Vocabulary() {
-  const [tab, setTab] = useState<Tab>('review')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const initialTabParam = searchParams.get('tab') as Tab | null
+  const [tab, setTab] = useState<Tab>(
+    initialTabParam && ['review', 'palette', 'browse', 'stats', 'relations', 'import'].includes(initialTabParam)
+      ? initialTabParam
+      : 'review'
+  )
+
+  useEffect(() => {
+    const paramTab = searchParams.get('tab') as Tab | null
+    if (paramTab && ['review', 'palette', 'browse', 'stats', 'relations', 'import'].includes(paramTab)) {
+      setTab(paramTab)
+    }
+  }, [searchParams])
+
+  const handleSelectTab = (nextTab: Tab) => {
+    setTab(nextTab)
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.set('tab', nextTab)
+    setSearchParams(nextParams, { replace: true })
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-5 animate-fade-in-up pb-10">
@@ -243,7 +264,7 @@ export default function Vocabulary() {
         {tabs.map(t => (
           <button
             key={t.key}
-            onClick={() => setTab(t.key)}
+            onClick={() => handleSelectTab(t.key)}
             className={`flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-lg text-xs font-medium shrink-0 transition-all cursor-pointer active:scale-98 shadow-xs ${
               tab === t.key
                 ? 'bg-slate-900 text-white shadow-xs font-semibold'
@@ -257,7 +278,7 @@ export default function Vocabulary() {
       </div>
 
       {/* 页面内容区 */}
-      <div className={tab === 'relations' ? 'h-[calc(100dvh-270px)]' : ''}>
+      <div className={tab === 'relations' ? 'h-[72dvh] min-h-[500px] md:h-[calc(100dvh-270px)] md:min-h-[560px]' : ''}>
         <TabErrorBoundary>
           {tab === 'review' && <VocabTab />}
           {tab === 'palette' && <VocabMasteryPalette />}

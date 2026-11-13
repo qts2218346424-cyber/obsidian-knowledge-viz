@@ -41,6 +41,7 @@ import { useExamCountdown } from '../utils/examDate'
 import { useVaultEvents } from '../hooks/useVaultEvents'
 import DesktopPet from './Pet/DesktopPet'
 import { useAuth } from '../contexts/AuthContext'
+import DangoAvatar, { DangoColorPicker } from './DangoAvatar'
 import { HelpCircle, Compass, KeyRound, History as HistoryIcon } from 'lucide-react'
 import { LogOut, Users as UsersIcon, ShieldAlert as ShieldAlertIcon } from 'lucide-react'
 import { prefetchRoute } from '../app/routes'
@@ -102,7 +103,7 @@ interface LayoutProps {
 }
 
 function navClass(isActive: boolean) {
-  return `relative inline-flex items-center gap-1.5 rounded-lg px-2 2xl:px-2.5 py-1.5 text-xs font-medium transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer select-none active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
+  return `relative inline-flex items-center gap-1 xl:gap-1.5 rounded-lg px-1.5 xl:px-2 2xl:px-2.5 py-1.5 text-xs font-medium transition-all duration-150 whitespace-nowrap cursor-pointer select-none active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
     isActive
       ? 'bg-slate-900 text-white shadow-xs'
       : 'text-slate-600 hover:bg-slate-100/90 hover:text-slate-900'
@@ -335,14 +336,23 @@ export default function Layout({ children }: LayoutProps) {
     if (!user) return null
     return (
       <>
-        <div className="px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 mb-1.5">
-          <div className="text-xs font-bold text-slate-900 truncate">{user.displayName || user.username}</div>
-          <div className="text-2xs text-slate-400 font-mono truncate">@{user.username}</div>
-          <div className="mt-1 flex items-center gap-1.5">
+        <div className="px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-100 mb-1.5 space-y-2">
+          <div className="flex items-center gap-2.5">
+            <DangoAvatar seed={user.username || user.displayName} size="lg" />
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-bold text-slate-900 truncate">{user.displayName || user.username}</div>
+              <div className="text-2xs text-slate-400 font-mono truncate">@{user.username}</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5">
             <span className="inline-flex items-center gap-1 text-2xs font-semibold px-2 py-0.5 rounded-full bg-white text-indigo-700 border border-slate-200/80 shadow-xs">
               {user.role === 'admin' ? '👑 超级管理员' : '🎓 考研研学者'}
             </span>
             <span className="text-2xs font-mono text-amber-700">⚡ {points.toFixed(1)}分</span>
+          </div>
+          <div className="pt-1 border-t border-slate-200/60">
+            <div className="text-[10px] font-semibold text-slate-400 mb-1.5">团子头像颜色</div>
+            <DangoColorPicker seed={user.username || user.displayName} compact />
           </div>
         </div>
 
@@ -411,18 +421,30 @@ export default function Layout({ children }: LayoutProps) {
           <div className="flex items-center gap-1.5 select-none shrink-0 min-w-0">
             <Link to="/dashboard" className="flex items-center gap-1 shrink-0 active:scale-95 transition-transform">
               <div className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-md shadow-xs ring-1 ring-rose-200/70 shrink-0">
-                <img src="/favicon.svg" alt="研核" className="h-full w-full object-cover" />
+                <img src="/icon-192.png?v=dango" alt="研核" className="h-full w-full object-cover" />
               </div>
               <span className="text-[13px] font-extrabold tracking-tight text-slate-900">
                 研核
               </span>
             </Link>
             <div 
-              className="inline-flex items-center gap-0.5 text-2xs font-mono font-bold px-1.5 py-0.2 rounded-full bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/10 text-amber-900 border border-amber-300/80 shadow-xs shrink-0"
+              className={`inline-flex items-center gap-0.5 text-2xs font-mono font-bold px-1.5 py-0.2 rounded-full border shadow-xs shrink-0 transition-colors ${
+                isEyecare
+                  ? 'bg-emerald-100/80 text-emerald-900 border-emerald-300/80'
+                  : isMinimal
+                  ? 'bg-zinc-100 text-zinc-900 border-zinc-300'
+                  : isDark
+                  ? 'bg-sky-950/70 text-sky-200 border-sky-800/60'
+                  : 'bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-amber-500/10 text-amber-900 border-amber-300/80'
+              }`}
               title={`${countdown.targetLabel}：剩余 ${countdown.days} 天`}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0" />
-              <span className="text-amber-800 font-sans text-2xs font-medium">考研</span>
+              <span className={`w-1.5 h-1.5 rounded-full animate-pulse shrink-0 ${
+                isEyecare ? 'bg-emerald-600' : isMinimal ? 'bg-zinc-700' : isDark ? 'bg-sky-400' : 'bg-amber-500'
+              }`} />
+              <span className={`font-sans text-2xs font-medium ${
+                isEyecare ? 'text-emerald-800' : isMinimal ? 'text-zinc-600' : isDark ? 'text-sky-300' : 'text-amber-800'
+              }`}>考研</span>
               <span>{countdown.days}天</span>
             </div>
           </div>
@@ -436,7 +458,15 @@ export default function Layout({ children }: LayoutProps) {
                 setQuickNoteOpen(true)
                 openModal('quick-note')
               }}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white text-2xs font-extrabold shadow-xs active:scale-95 transition-all shrink-0 cursor-pointer"
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-white text-2xs font-extrabold shadow-xs active:scale-95 transition-all shrink-0 cursor-pointer ${
+                isEyecare
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 shadow-emerald-900/10'
+                  : isMinimal
+                  ? 'bg-zinc-900 hover:bg-black text-white'
+                  : isDark
+                  ? 'bg-gradient-to-r from-sky-600 to-indigo-600'
+                  : 'bg-gradient-to-r from-amber-500 to-orange-500'
+              }`}
               title="随手记笔记 · 极速入库 (支持拍照、LaTeX公式与快捷标签)"
             >
               <PenLine className="w-3 h-3" />
@@ -451,7 +481,15 @@ export default function Layout({ children }: LayoutProps) {
                 setGuideOpen(true)
                 openModal('user-guide')
               }}
-              className="w-7 h-7 inline-flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200/80 text-indigo-600 active:scale-95 transition-all shrink-0 cursor-pointer"
+              className={`w-7 h-7 inline-flex items-center justify-center rounded-lg active:scale-95 transition-all shrink-0 cursor-pointer ${
+                isEyecare
+                  ? 'bg-emerald-100/70 text-emerald-800 hover:bg-emerald-200/70'
+                  : isMinimal
+                  ? 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200'
+                  : isDark
+                  ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  : 'bg-slate-100 hover:bg-slate-200/80 text-indigo-600'
+              }`}
               title="使用手册与操作说明"
               aria-label="使用手册"
             >
@@ -464,10 +502,20 @@ export default function Layout({ children }: LayoutProps) {
                 setCheckinTab('checkin')
                 setCheckinOpen(true)
               }}
-              className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg bg-amber-50 border border-amber-200/90 text-amber-800 text-2xs font-bold shadow-xs active:scale-95 cursor-pointer shrink-0"
+              className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg border text-2xs font-bold shadow-xs active:scale-95 cursor-pointer shrink-0 transition-colors ${
+                isEyecare
+                  ? 'bg-emerald-50/90 border-emerald-200/80 text-emerald-900'
+                  : isMinimal
+                  ? 'bg-zinc-100 border-zinc-200 text-zinc-800'
+                  : isDark
+                  ? 'bg-slate-800/80 border-slate-700 text-sky-300'
+                  : 'bg-amber-50 border-amber-200/90 text-amber-800'
+              }`}
               title="签到打卡领积分"
             >
-              <Coins className="w-3 h-3 text-amber-600" />
+              <Coins className={`w-3 h-3 ${
+                isEyecare ? 'text-emerald-700' : isMinimal ? 'text-zinc-700' : isDark ? 'text-sky-400' : 'text-amber-600'
+              }`} />
               <span className="font-mono">{points.toFixed(1)}</span>
             </button>
 
@@ -492,14 +540,14 @@ export default function Layout({ children }: LayoutProps) {
                   onClick={() => setMobileUserMenuOpen(prev => !prev)}
                   aria-label="打开个人账号菜单"
                   title={`${user.displayName || user.username} · 个人账号与退出登录`}
-                  className="flex h-7 w-7 items-center justify-center rounded-full text-2xs font-bold text-white bg-indigo-600 shadow-xs border border-indigo-200/80 active:scale-95 transition-transform cursor-pointer"
+                  className="flex h-7 w-7 items-center justify-center rounded-full shadow-xs active:scale-95 transition-transform cursor-pointer"
                 >
-                  {user.displayName ? user.displayName.slice(0, 1).toUpperCase() : user.username.slice(0, 1).toUpperCase()}
+                  <DangoAvatar seed={user.username || user.displayName} size="md" />
                 </button>
                 {mobileUserMenuOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setMobileUserMenuOpen(false)} />
-                    <div className="absolute right-0 top-full z-50 mt-1.5 w-56 rounded-2xl border border-slate-200/90 bg-white/98 p-2 shadow-[0_16px_40px_rgba(0,0,0,0.12)] backdrop-blur-xl animate-fade-in-up text-slate-800">
+                    <div className="absolute right-0 top-full z-50 mt-1.5 w-60 rounded-2xl border border-slate-200/90 bg-white/98 p-2 shadow-[0_16px_40px_rgba(0,0,0,0.12)] backdrop-blur-xl animate-fade-in-up text-slate-800">
                       {renderUserMenuCard(() => setMobileUserMenuOpen(false))}
                     </div>
                   </>
@@ -510,22 +558,22 @@ export default function Layout({ children }: LayoutProps) {
         </div>
 
         {/* ── 💻 平板与桌面端专属全景 Header (保持原电脑端多栏工作台架构) ── */}
-        <div className="hidden md:flex mx-auto h-13 sm:h-14 max-w-[1600px] items-center gap-2 2xl:gap-3 px-3 sm:px-5">
+        <div className="hidden md:flex mx-auto h-13 sm:h-14 max-w-[1600px] items-center gap-1.5 lg:gap-2 2xl:gap-3 px-2.5 sm:px-4 2xl:px-5">
           {/* Logo & Subframe Pill */}
-          <Link to="/dashboard" className="flex min-w-0 items-center gap-2 rounded-xl outline-none group select-none shrink-0">
+          <Link to="/dashboard" className="flex min-w-0 items-center gap-1.5 sm:gap-2 rounded-xl outline-none group select-none shrink-0">
             <div className="relative flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center overflow-hidden rounded-lg shadow-xs ring-1 ring-rose-200/70 transition-transform group-hover:scale-105 shrink-0">
-              <img src="/favicon.svg" alt="研核图标" className="h-full w-full object-cover" />
+              <img src="/icon-192.png?v=dango" alt="研核图标" className="h-full w-full object-cover" />
             </div>
             <div className="flex items-center gap-1.5 min-w-0">
               <span className="text-sm sm:text-[15px] font-bold tracking-tight text-slate-900 whitespace-nowrap">
                 研核
               </span>
               <div 
-                className="hidden sm:inline-flex items-center gap-1.5 subframe-pill text-2xs px-2 py-0.5"
+                className="hidden xl:inline-flex items-center gap-1.5 subframe-pill text-2xs px-2 py-0.5"
                 title={connected ? `知识库已连接：共 ${noteCount ?? 0} 篇笔记` : '知识库离线'}
               >
                 <span className={`h-1.5 w-1.5 rounded-full ${connected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-                <span className="truncate max-w-[80px] 2xl:max-w-[110px] hidden md:inline">
+                <span className="truncate max-w-[80px] 2xl:max-w-[110px]">
                   {connected ? `${noteCount ?? ''} 篇在线` : '离线'}
                 </span>
               </div>
@@ -533,7 +581,7 @@ export default function Layout({ children }: LayoutProps) {
           </Link>
 
           {/* ── 5 核心模块主导航 (Linear / Notion 极简克制呼吸感) ── */}
-          <nav className="ml-1 2xl:ml-3 mr-3 2xl:mr-6 hidden flex-1 items-center justify-center gap-1.5 md:flex shrink-0 min-w-0" aria-label="主导航">
+          <nav className="ml-1 lg:ml-2 2xl:ml-3 mr-1 lg:mr-2 2xl:mr-4 hidden flex-1 items-center justify-center gap-1 xl:gap-1.5 2xl:gap-2 md:flex min-w-0" aria-label="主导航">
             {/* 1. 总览 */}
             <NavLink
               to="/dashboard"
@@ -561,7 +609,10 @@ export default function Layout({ children }: LayoutProps) {
               {({ isActive }) => (
                 <>
                   <ClipboardList className={`h-3.5 w-3.5 shrink-0 ${isActive && !['/politics', '/english'].includes(location.pathname) ? 'text-white' : 'text-slate-400'}`} />
-                  <span className="whitespace-nowrap font-medium">刷题中心</span>
+                  <span className="whitespace-nowrap font-medium">
+                    <span className="inline lg:hidden">刷题</span>
+                    <span className="hidden lg:inline">刷题中心</span>
+                  </span>
                 </>
               )}
             </NavLink>
@@ -585,7 +636,10 @@ export default function Layout({ children }: LayoutProps) {
                     ? 'text-white'
                     : 'text-slate-400'
                 }`} />
-                <span className="whitespace-nowrap font-medium">学科专项</span>
+                <span className="whitespace-nowrap font-medium">
+                  <span className="inline lg:hidden">专项</span>
+                  <span className="hidden lg:inline">学科专项</span>
+                </span>
                 <ChevronDown className={`h-3 w-3 shrink-0 transition-transform duration-200 ${subjectMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
@@ -625,7 +679,7 @@ export default function Layout({ children }: LayoutProps) {
                               <div className="flex items-center justify-between gap-1">
                                 <span className="font-bold text-slate-800 text-xs">{sub.label}</span>
                                 {sub.badge && (
-                                  <span className="text-2xs px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-600 border border-slate-200/60 font-mono">
+                                   <span className="text-2xs px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-600 border border-slate-200/60 font-mono">
                                     {sub.badge}
                                   </span>
                                 )}
@@ -652,7 +706,10 @@ export default function Layout({ children }: LayoutProps) {
               {({ isActive }) => (
                 <>
                   <GraduationCap className={`h-3.5 w-3.5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                  <span className="whitespace-nowrap font-medium">研学中心</span>
+                  <span className="whitespace-nowrap font-medium">
+                    <span className="inline lg:hidden">研学</span>
+                    <span className="hidden lg:inline">研学中心</span>
+                  </span>
                 </>
               )}
             </NavLink>
@@ -675,14 +732,14 @@ export default function Layout({ children }: LayoutProps) {
           </nav>
 
           {/* ── 右侧极简工具矩阵：视觉风格、搜索 ⌘K、使用手册、算力积分与更多功能 ── */}
-          <div className="ml-auto flex items-center gap-2 shrink-0">
+          <div className="ml-auto flex items-center gap-1.5 xl:gap-2 shrink-0">
 
             {/* 0.1 视觉风格一键切换胶囊 (鲜艳风 / 极简风 / 护眼风 / 黑夜风) */}
             <button
               type="button"
               data-tour="btn-theme"
               onClick={toggleThemeStyle}
-              className={`inline-flex items-center gap-1.5 h-8 px-2.5 rounded-xl border text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95 shrink-0 ${
+              className={`inline-flex items-center gap-1.5 h-8 px-2 xl:px-2.5 rounded-xl border text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95 shrink-0 ${
                 isDark
                   ? 'border-sky-500/40 bg-slate-900/90 text-sky-400 hover:border-sky-400 shadow-sky-500/20'
                   : isEyecare
@@ -702,7 +759,7 @@ export default function Layout({ children }: LayoutProps) {
               ) : (
                 <Palette className="h-3.5 w-3.5 text-slate-400" />
               )}
-              <span className="hidden lg:inline">{currentThemeMeta.shortName}</span>
+              <span className="hidden xl:inline">{currentThemeMeta.shortName}</span>
             </button>
 
             {/* 1. 全局快捷搜索框 ⌘K */}
@@ -715,11 +772,11 @@ export default function Layout({ children }: LayoutProps) {
               }}
               aria-label="全局检索"
               title="全局搜索知识库与真题（快捷键 Ctrl+K / ⌘K）"
-              className="inline-flex items-center gap-2 h-8 px-2.5 rounded-xl border border-slate-200/80 bg-slate-50/80 hover:bg-white hover:border-slate-300 text-slate-500 hover:text-slate-800 text-xs shadow-xs transition-all cursor-pointer active:scale-95"
+              className="inline-flex items-center gap-1.5 xl:gap-2 h-8 px-2 xl:px-2.5 rounded-xl border border-slate-200/80 bg-slate-50/80 hover:bg-white hover:border-slate-300 text-slate-500 hover:text-slate-800 text-xs shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
             >
               <Search className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-              <span className="hidden sm:inline font-normal">搜索...</span>
-              <kbd className="inline-flex items-center text-2xs font-mono text-slate-400 bg-white border border-slate-200/90 rounded px-1.5 py-0.5 shadow-xs">
+              <span className="hidden xl:inline font-normal">搜索...</span>
+              <kbd className="hidden xl:inline-flex items-center text-2xs font-mono text-slate-400 bg-white border border-slate-200/90 rounded px-1.5 py-0.5 shadow-xs">
                 ⌘K
               </kbd>
             </button>
@@ -733,11 +790,11 @@ export default function Layout({ children }: LayoutProps) {
                 setGuideOpen(true)
                 openModal('user-guide')
               }}
-              className="hidden lg:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-xl border border-slate-200/80 bg-slate-50/80 hover:bg-white hover:border-indigo-300 text-slate-600 hover:text-indigo-700 text-xs font-medium shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
+              className="hidden 2xl:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-xl border border-slate-200/80 bg-slate-50/80 hover:bg-white hover:border-indigo-300 text-slate-600 hover:text-indigo-700 text-xs font-medium shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
               title="打开全功能通俗使用手册与新手导览"
             >
               <BookOpen className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
-              <span className="hidden xl:inline">手册</span>
+              <span>手册</span>
             </button>
 
             {/* 2. 算力伴学积分胶囊 */}
@@ -748,14 +805,14 @@ export default function Layout({ children }: LayoutProps) {
                   setCheckinOpen(true)
                   openModal('checkin')
                 }}
-                className="relative inline-flex h-8 items-center gap-1.5 rounded-xl border border-amber-200/70 bg-gradient-to-r from-amber-50/90 to-amber-100/50 px-2.5 text-amber-900 shadow-xs hover:border-amber-300 hover:shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
+                className="relative inline-flex h-8 items-center gap-1 xl:gap-1.5 rounded-xl border border-amber-200/70 bg-gradient-to-r from-amber-50/90 to-amber-100/50 px-2 xl:px-2.5 text-amber-900 shadow-xs hover:border-amber-300 hover:shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
                 title={`伴学算力中心：当前可用 ${points.toFixed(1)} 算力点数 · 点击签到打卡或查看消费明细`}
               >
                 <Coins className="h-3.5 w-3.5 text-amber-600 shrink-0" />
                 <span className="text-xs font-bold font-mono text-amber-950">
                   {points.toFixed(1)}
                 </span>
-                <span className="text-2xs text-amber-700 font-medium hidden sm:inline">算力</span>
+                <span className="text-2xs text-amber-700 font-medium hidden xl:inline">算力</span>
                 {canCheckinToday && (
                   <span className="relative flex h-2 w-2 shrink-0">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
@@ -774,7 +831,7 @@ export default function Layout({ children }: LayoutProps) {
                   setMoreOpen(prev => !prev)
                   setUserMenuOpen(false)
                 }}
-                className={`inline-flex items-center gap-1.5 h-8 px-2.5 rounded-xl border text-xs font-medium shadow-xs transition-all cursor-pointer active:scale-95 shrink-0 ${
+                className={`inline-flex items-center gap-1 xl:gap-1.5 h-8 px-2 xl:px-2.5 rounded-xl border text-xs font-medium shadow-xs transition-all cursor-pointer active:scale-95 shrink-0 ${
                   moreOpen
                     ? 'border-indigo-300 bg-indigo-50/90 text-indigo-700 shadow-indigo-500/10'
                     : 'border-slate-200/80 bg-slate-50/80 hover:bg-white hover:border-slate-300 text-slate-600 hover:text-slate-900'
@@ -783,7 +840,7 @@ export default function Layout({ children }: LayoutProps) {
                 aria-expanded={moreOpen}
               >
                 <LayoutGrid className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
-                <span className="hidden sm:inline font-medium">更多功能</span>
+                <span className="hidden xl:inline font-medium">更多功能</span>
                 <ChevronDown className={`h-3 w-3 shrink-0 text-slate-400 transition-transform duration-200 ${moreOpen ? 'rotate-180' : ''}`} />
               </button>
 
@@ -972,15 +1029,13 @@ export default function Layout({ children }: LayoutProps) {
                   className="flex items-center gap-1.5 rounded-full p-0.5 border border-slate-200/90 hover:ring-2 hover:ring-indigo-100 transition-all cursor-pointer active:scale-95"
                   title={`${user.displayName || user.username} (${user.role === 'admin' ? '👑 超级管理员' : '🎓 考研研学者'}) · 点击展开设置与个人中心`}
                 >
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-white bg-indigo-600 shadow-xs">
-                    {user.displayName ? user.displayName.slice(0, 1).toUpperCase() : user.username.slice(0, 1).toUpperCase()}
-                  </div>
+                  <DangoAvatar seed={user.username || user.displayName} size="md" className="shadow-xs" />
                 </button>
 
                 {userMenuOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
-                    <div className="absolute right-0 top-full z-50 mt-1.5 w-56 rounded-2xl border border-slate-200/90 bg-white/98 p-2 shadow-[0_16px_40px_rgba(0,0,0,0.1)] backdrop-blur-xl animate-fade-in-up text-slate-800">
+                    <div className="absolute right-0 top-full z-50 mt-1.5 w-60 rounded-2xl border border-slate-200/90 bg-white/98 p-2 shadow-[0_16px_40px_rgba(0,0,0,0.1)] backdrop-blur-xl animate-fade-in-up text-slate-800">
                       {renderUserMenuCard(() => setUserMenuOpen(false))}
                     </div>
                   </>
@@ -1078,9 +1133,7 @@ export default function Layout({ children }: LayoutProps) {
               {user && (
                 <div className="flex items-center justify-between gap-2 rounded-2xl bg-slate-50 border border-slate-200/80 p-3">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white shadow-xs">
-                      {user.displayName ? user.displayName.slice(0, 1).toUpperCase() : user.username.slice(0, 1).toUpperCase()}
-                    </div>
+                    <DangoAvatar seed={user.username || user.displayName} size="lg" className="shadow-xs" />
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs font-bold text-slate-900 truncate">{user.displayName || user.username}</span>
@@ -1320,7 +1373,13 @@ export default function Layout({ children }: LayoutProps) {
                 <div
                   className={`relative flex items-center justify-center w-9.5 h-6 rounded-lg transition-all duration-150 ${
                     active
-                      ? isVibrant
+                      ? isEyecare
+                        ? 'bg-emerald-700 text-white shadow-xs scale-105'
+                        : isMinimal
+                        ? 'bg-zinc-900 text-white shadow-xs scale-105'
+                        : isDark
+                        ? 'bg-sky-600 text-white shadow-xs scale-105'
+                        : isVibrant
                         ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-xs scale-105'
                         : 'bg-slate-900 text-white shadow-xs scale-105'
                       : 'text-slate-500 group-active:scale-95 hover:text-slate-700'
@@ -1330,7 +1389,7 @@ export default function Layout({ children }: LayoutProps) {
                 </div>
                 <span
                   className={`text-2xs tracking-tight mt-0.5 transition-colors flex items-center gap-0.5 ${
-                    active ? 'text-slate-900 font-extrabold' : 'text-slate-500 font-medium'
+                    active ? (isEyecare ? 'text-emerald-900 font-extrabold' : isDark ? 'text-sky-300 font-extrabold' : 'text-slate-900 font-extrabold') : 'text-slate-500 font-medium'
                   }`}
                 >
                   <span>{tab.label}</span>
@@ -1355,19 +1414,49 @@ export default function Layout({ children }: LayoutProps) {
                     <div
                       className={`relative flex items-center justify-center w-10.5 h-8.5 rounded-xl transition-all duration-200 shadow-sm ${
                         isActive
-                          ? 'bg-gradient-to-tr from-indigo-600 via-indigo-700 to-purple-600 text-white ring-2 ring-indigo-400 scale-105'
+                          ? isEyecare
+                            ? 'bg-gradient-to-tr from-emerald-600 via-teal-700 to-emerald-600 text-white ring-2 ring-emerald-400 scale-105'
+                            : isMinimal
+                            ? 'bg-zinc-900 text-white ring-2 ring-zinc-400 scale-105'
+                            : isDark
+                            ? 'bg-gradient-to-tr from-sky-600 via-indigo-700 to-sky-600 text-white ring-2 ring-sky-400 scale-105'
+                            : 'bg-gradient-to-tr from-indigo-600 via-indigo-700 to-purple-600 text-white ring-2 ring-indigo-400 scale-105'
+                          : isEyecare
+                          ? 'bg-gradient-to-tr from-[#1b4332] to-[#2d6a4f] text-emerald-200 border border-emerald-500/40 group-active:scale-95'
+                          : isMinimal
+                          ? 'bg-zinc-900 text-zinc-200 border border-zinc-700 group-active:scale-95'
+                          : isDark
+                          ? 'bg-gradient-to-tr from-[#0b0f19] to-slate-900 text-sky-300 border border-sky-800/40 group-active:scale-95'
                           : 'bg-gradient-to-tr from-slate-900 to-indigo-950 text-amber-300 border border-indigo-400/40 group-active:scale-95'
                       }`}
                     >
                       <tab.icon className="h-4 w-4" />
                       <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400" />
+                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                          isEyecare ? 'bg-emerald-400' : isMinimal ? 'bg-zinc-300' : isDark ? 'bg-sky-400' : 'bg-amber-400'
+                        }`} />
+                        <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                          isEyecare ? 'bg-emerald-400' : isMinimal ? 'bg-zinc-300' : isDark ? 'bg-sky-400' : 'bg-amber-400'
+                        }`} />
                       </span>
                     </div>
                     <span
                       className={`text-2xs tracking-tight mt-0.5 transition-colors font-black ${
-                        isActive ? 'text-indigo-600' : 'text-slate-800'
+                        isActive
+                          ? isEyecare
+                            ? 'text-emerald-700'
+                            : isMinimal
+                            ? 'text-zinc-900'
+                            : isDark
+                            ? 'text-sky-400'
+                            : 'text-indigo-600'
+                          : isEyecare
+                          ? 'text-[#243329]'
+                          : isMinimal
+                          ? 'text-zinc-800'
+                          : isDark
+                          ? 'text-slate-300'
+                          : 'text-slate-800'
                       }`}
                     >
                       {tab.label}
@@ -1400,7 +1489,13 @@ export default function Layout({ children }: LayoutProps) {
                   <div
                     className={`relative flex items-center justify-center w-9.5 h-6 rounded-lg transition-all duration-150 ${
                       isActive
-                        ? 'bg-slate-900 text-white shadow-xs scale-105'
+                        ? isEyecare
+                          ? 'bg-emerald-700 text-white shadow-xs scale-105'
+                          : isMinimal
+                          ? 'bg-zinc-900 text-white shadow-xs scale-105'
+                          : isDark
+                          ? 'bg-sky-600 text-white shadow-xs scale-105'
+                          : 'bg-slate-900 text-white shadow-xs scale-105'
                         : 'text-slate-500 group-active:scale-95'
                     }`}
                   >
@@ -1408,7 +1503,13 @@ export default function Layout({ children }: LayoutProps) {
                   </div>
                   <span
                     className={`text-2xs tracking-tight mt-0.5 transition-colors ${
-                      isActive ? 'text-slate-900 font-extrabold' : 'text-slate-500 font-medium'
+                      isActive
+                        ? isEyecare
+                          ? 'text-emerald-900 font-extrabold'
+                          : isDark
+                          ? 'text-sky-300 font-extrabold'
+                          : 'text-slate-900 font-extrabold'
+                        : 'text-slate-500 font-medium'
                     }`}
                   >
                     {tab.label}

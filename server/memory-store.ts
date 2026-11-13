@@ -3,6 +3,16 @@ import path from 'path'
 import matter from 'gray-matter'
 import { config, runtimeDataDir } from './context.js'
 
+export function sanitizeUtf8Text(raw: string): string {
+  if (!raw) return ''
+  return raw
+    .replace(/^\uFEFF/, '')
+    .replace(/\uFFFD/g, '')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    .replace(/\r\n/g, '\n')
+    .replace(/(CoreForge\s*智能体设定与记忆(?:仓库|档案))\s*\(agent\.md\)/gi, '$1')
+}
+
 export interface AgentPersona {
   name: string
   role: string
@@ -173,7 +183,7 @@ export function formatAgentMarkdown(cfg: AgentMemoryConfig): string {
   lines.push(`lastUpdated: "${frontmatter.lastUpdated}"`)
   lines.push('---')
   lines.push('')
-  lines.push('# 🤖 CoreForge 智能体设定与记忆仓库 (agent.md)')
+  lines.push('# 🤖 CoreForge 智能体设定与记忆档案')
   lines.push('')
   lines.push('> 这是我对 AI 伴学助手的核心人设、行为准则与长期记忆设定。AI 在所有对话、解题与笔记管理中严格遵循本设定。')
   lines.push('')
@@ -227,7 +237,8 @@ export function formatAgentMarkdown(cfg: AgentMemoryConfig): string {
  */
 export function parseAgentMarkdown(raw: string): AgentMemoryConfig {
   try {
-    const { data: fm, content } = matter(raw)
+    const cleanRaw = sanitizeUtf8Text(raw)
+    const { data: fm, content } = matter(cleanRaw)
 
     const persona: AgentPersona = {
       name: (fm.name as string) || DEFAULT_PERSONA.name,
@@ -246,6 +257,7 @@ export function parseAgentMarkdown(raw: string): AgentMemoryConfig {
     // Section parser
     const lines = content.split('\n')
     let currentSection = ''
+    let userProfileListMode: 'weakPoints' | 'customPreferences' = 'weakPoints'
 
     for (const line of lines) {
       const trimmed = line.trim()
@@ -291,12 +303,23 @@ export function parseAgentMarkdown(raw: string): AgentMemoryConfig {
           userProfile.currentStage = trimmed.replace('- **当前阶段**：', '').trim()
           continue
         }
-        if (trimmed.startsWith('- **薄弱考点预警**：') || trimmed.startsWith('- **学习偏好**：')) {
+        if (trimmed.startsWith('- **薄弱考点预警**：')) {
+          userProfileListMode = 'weakPoints'
+          continue
+        }
+        if (trimmed.startsWith('- **学习偏好**：')) {
+          userProfileListMode = 'customPreferences'
           continue
         }
         if (line.startsWith('  - ')) {
           const val = line.slice(4).trim()
-          if (val) weakPoints.push(val)
+          if (val) {
+            if (userProfileListMode === 'customPreferences') {
+              customPreferences.push(val)
+            } else {
+              weakPoints.push(val)
+            }
+          }
         }
       } else if (currentSection === 'directives') {
         // match checkbox directives: - [x] <!-- id:dir-01 cat:behavior --> **[title]** content
@@ -353,7 +376,7 @@ export function loadAgentMemoryConfig(vaultPath?: string): {
   const filePath = getAgentMemoryPath(vaultPath)
   if (fs.existsSync(filePath)) {
     try {
-      const raw = fs.readFileSync(filePath, 'utf8')
+      const raw = sanitizeUtf8Text(fs.readFileSync(filePath, 'utf8'))
       const parsed = parseAgentMarkdown(raw)
       return { config: parsed, rawMarkdown: raw, filePath }
     } catch (err) {
@@ -416,11 +439,12 @@ export function saveRawAgentMarkdown(rawMarkdown: string, vaultPath?: string): {
   config: AgentMemoryConfig
   filePath: string
 } {
+  const cleanMarkdown = sanitizeUtf8Text(rawMarkdown)
   const filePath = getAgentMemoryPath(vaultPath)
   fs.mkdirSync(path.dirname(filePath), { recursive: true })
-  fs.writeFileSync(filePath, rawMarkdown, 'utf8')
+  fs.writeFileSync(filePath, cleanMarkdown, 'utf8')
 
-  const parsed = parseAgentMarkdown(rawMarkdown)
+  const parsed = parseAgentMarkdown(cleanMarkdown)
   return { success: true, config: parsed, filePath }
 }
 
@@ -519,7 +543,7 @@ ${activeDirectives.length > 0
 6. create_error_note — 一键将错题、解析与四维错因诊断归档至 wiki/03-真题与错题/
 7. organize_vault — 诊断知识库健康度并给出分类与重构建议
 
-请在每一次交流中严格履行上述 agent.md 中的设定与长效记忆！`
+请在每一次交流中严格履行上述智能体记忆档案中的设定与长效记忆！`
 }
 
 // ===== Backward compatibility helpers for legacy queries =====

@@ -41,11 +41,11 @@ export default function ChatSessionSidebar({ activeConvId, activeProject, worksp
                   : undefined
                 : undefined,
             }}
-            className={`fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl transition-transform duration-200 md:static md:z-auto md:shadow-xs md:transition-none ${
+            className={`fixed inset-y-0 left-0 z-50 w-72 bg-white/45 dark:bg-slate-900/45 backdrop-blur-xl shadow-xl transition-transform duration-200 md:static md:z-auto md:shadow-xs md:transition-none ${
               showSessions ? 'translate-x-0' : '-translate-x-full md:hidden'
-            } overflow-hidden md:border md:border-slate-200/80 md:rounded-xl shrink-0 shadow-xs complex-panel-contain`}
+            } overflow-hidden md:border md:border-white/60 dark:md:border-slate-800/60 md:rounded-xl shrink-0 shadow-xs complex-panel-contain`}
           >
-            <div className="h-full flex flex-col bg-white">
+            <div className="h-full flex flex-col bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl">
               {/* 项目工作区与快捷操作一体顶栏 */}
               <div className="p-3 border-b border-slate-100 flex flex-col gap-2 shrink-0">
                 <div className="flex items-center justify-between gap-1">

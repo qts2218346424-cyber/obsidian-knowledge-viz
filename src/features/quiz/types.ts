@@ -45,6 +45,10 @@ export interface QuizResult {
   correct: number
   wrong: number
   timeTaken: number
+  timeLimitMinutes?: number
+  timerMode?: 'countdown' | 'elapsed'
+  isOvertime?: boolean
+  overtimeSeconds?: number
   mode?: QuizMode
   createdAt?: string
   subjectBreakdown: Record<

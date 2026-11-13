@@ -22,6 +22,7 @@ import {
 import type { UserProfile, UserRole, CouponCodeItem } from '../types/auth'
 import * as authService from '../services/auth'
 import { useAuth } from '../contexts/AuthContext'
+import DangoAvatar from './DangoAvatar'
 
 interface UserManagementModalProps {
   isOpen: boolean
@@ -441,9 +442,13 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-200 text-slate-700 font-bold text-sm shrink-0">
-                            {u.displayName ? u.displayName.slice(0, 1).toUpperCase() : u.username.slice(0, 1).toUpperCase()}
-                          </div>
+                          <DangoAvatar
+                            seed={u.username || u.id}
+                            followUserPreference={isSelf}
+                            size="lg"
+                            className="rounded-xl shadow-xs"
+                            title={u.displayName || u.username}
+                          />
                           <div>
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-xs font-bold text-slate-900">{u.displayName || u.username}</span>

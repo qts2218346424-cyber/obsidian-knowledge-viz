@@ -26,6 +26,7 @@ import {
   BookOpen,
   Cpu,
   PenLine,
+  FileEdit,
   Crosshair,
   RotateCcw,
   Layers,
@@ -59,6 +60,7 @@ export interface TourStep {
     | 'open_coursewares'
     | 'open_flashcards'
     | 'open_politics'
+    | 'open_editor'
   sampleQuestions?: string[]
 }
 
@@ -232,10 +234,31 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     id: 9,
+    title: '笔记系统 · 优先预览、公式排版与 Obsidian 同步',
+    route: '/editor',
+    icon: FileEdit,
+    badge: '第 9 站 · 知识大脑',
+    highlightColor: 'text-indigo-600 bg-indigo-50 border-indigo-200',
+    summary:
+      '点击目录笔记默认优先进入防误触预览模式；一键切换写作模式支持富文本顺滑打字和源码切换，还能新建多级分类目录、插数学公式、提笔批注，并与本地 Obsidian 实时同步！',
+    whereHint: '顶栏「更多功能 → 笔记编辑」（或手机端「全部 → 笔记编辑」）',
+    checklist: [
+      '点击左侧目录里的任意笔记，体验默认优先预览阅读；点右上角「切换写作模式」再进入编辑',
+      '点顶栏「新建目录」创建新文件夹，再点「新建」并在标题下方下拉选择保存目录',
+      '写作时试试富文本顺滑打字、点 Σ 插入数学公式、或点页面内「笔记导览」按钮体验专属分步引导',
+    ],
+    tips: ['写完总结可点「即学即练」现场生成 3 道真题测验，所有笔记均以标准 .md 落盘本地。'],
+    targetSelectors: ['[data-tour="btn-more"]', '[data-tour="nav-mobile-all"]'],
+    pointerLabel: '笔记编辑器入口在这里',
+    actionLabel: '直达笔记编辑器并查看页面导览',
+    actionType: 'open_editor',
+  },
+  {
+    id: 10,
     title: '英语背词 & 政治史纲时空轴',
     route: '/english',
     icon: Layers,
-    badge: '第 9 站 · 公共课专项',
+    badge: '第 10 站 · 公共课专项',
     highlightColor: 'text-violet-600 bg-violet-50 border-violet-200',
     summary:
       '除了 408 和数学，公共课也很趁手：考研英语支持词汇色谱记忆和 AI 逐句批改作文；考研政治把近代史纲重要事件排成了时间轴，下面直接配 1000 题。',
@@ -252,11 +275,11 @@ export const TOUR_STEPS: TourStep[] = [
     actionType: 'open_politics',
   },
   {
-    id: 10,
+    id: 11,
     title: 'AI 伴学导师 & 白噪音自习室',
     route: '/chat',
     icon: MessageCircle,
-    badge: '第 10 站 · 伴学与专注',
+    badge: '第 11 站 · 伴学与专注',
     highlightColor: 'text-cyan-600 bg-cyan-50 border-cyan-200',
     summary:
       '遇到不会证的高数题或吃不透的 408 概念，在「AI 伴学」随时发问；学习前点一首「白噪音」电台，离开音乐页切回刷题声音照样放！',
@@ -537,6 +560,14 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
       case 'open_politics': {
         navigate('/politics')
         setActionFeedback('已前往考研政治中心，上方是近代史纲时间轴，下方是 1000 题专项。')
+        break
+      }
+      case 'open_editor': {
+        navigate('/editor')
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('start-editor-tour'))
+        }, 250)
+        onClose()
         break
       }
       default: {

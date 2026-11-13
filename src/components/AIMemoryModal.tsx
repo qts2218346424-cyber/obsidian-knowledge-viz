@@ -33,7 +33,6 @@ export default function AIMemoryModal({
   const [activeTab, setActiveTab] = useState<TabType>('directives')
   const [config, setConfig] = useState<AgentMemoryConfig | null>(null)
   const [rawMarkdown, setRawMarkdown] = useState<string>('')
-  const [filePath, setFilePath] = useState<string>('')
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [actionFeedback, setActionFeedback] = useState<string | null>(null)
@@ -64,14 +63,13 @@ export default function AIMemoryModal({
       if (res.success && res.config) {
         setConfig(res.config)
         setRawMarkdown(res.rawMarkdown || '')
-        setFilePath(res.filePath || 'agent.md')
         setEditingPersona(res.config.persona)
         setEditingProfile(res.config.userProfile)
         setEditingRules(res.config.rules || [])
       }
     } catch (err: any) {
       console.error('Failed to load agent memory config:', err)
-      setActionFeedback('加载 agent.md 设定失败: ' + err.message)
+      setActionFeedback('加载记忆设定失败: ' + err.message)
     } finally {
       setLoading(false)
     }
@@ -83,7 +81,7 @@ export default function AIMemoryModal({
     }
   }, [isOpen, loadData])
 
-  // Save current structured config to agent.md
+  // Save current structured config
   const handleSaveConfig = async () => {
     if (!config || !editingPersona || !editingProfile) return
     setSaving(true)
@@ -99,7 +97,7 @@ export default function AIMemoryModal({
       if (res.success) {
         setConfig(res.config)
         setRawMarkdown(res.rawMarkdown)
-        setActionFeedback('agent.md 设定已成功保存并实时注入 AI System Prompt！')
+        setActionFeedback('记忆设定已成功保存并实时生效！')
         setTimeout(() => setActionFeedback(null), 3000)
       }
     } catch (err: any) {
@@ -119,11 +117,11 @@ export default function AIMemoryModal({
         setEditingPersona(res.config.persona)
         setEditingProfile(res.config.userProfile)
         setEditingRules(res.config.rules || [])
-        setActionFeedback('agent.md 源码已成功保存并同步生效！')
+        setActionFeedback('记忆档案内容已成功保存并同步生效！')
         setTimeout(() => setActionFeedback(null), 3000)
       }
     } catch (err: any) {
-      alert('保存 Markdown 源码失败: ' + err.message)
+      alert('保存档案内容失败: ' + err.message)
     } finally {
       setSaving(false)
     }
@@ -150,7 +148,7 @@ export default function AIMemoryModal({
 
   // Delete directive
   const handleDeleteDirective = async (id: string, title: string) => {
-    if (!confirm(`确定要从 agent.md 中删除记忆指令《${title}》吗？`)) return
+    if (!confirm(`确定要从记忆库中删除记忆指令《${title}》吗？`)) return
     try {
       const res = await api.deleteAgentDirective(id)
       if (res.success) {
@@ -192,7 +190,7 @@ export default function AIMemoryModal({
         setShowAddDirectiveModal(false)
         setNewTitle('')
         setNewContent('')
-        setActionFeedback(`已将记忆指令《${res.directive.title}》追加写入 agent.md！`)
+        setActionFeedback(`已将记忆指令《${res.directive.title}》保存至云端记忆库！`)
         setTimeout(() => setActionFeedback(null), 3000)
       }
     } catch (err: any) {
@@ -202,7 +200,7 @@ export default function AIMemoryModal({
 
   // Reset to default
   const handleResetDefault = async () => {
-    if (!confirm('确定要将 agent.md 恢复为初始标准推荐设定吗？此操作会重置人设、规则与预置长效记忆。')) return
+    if (!confirm('确定要恢复为初始标准推荐设定吗？此操作会重置人设、规则与预置长效记忆。')) return
     try {
       const res = await api.resetAgentMemoryDefault()
       if (res.success) {
@@ -211,7 +209,7 @@ export default function AIMemoryModal({
         setEditingPersona(res.config.persona)
         setEditingProfile(res.config.userProfile)
         setEditingRules(res.config.rules || [])
-        setActionFeedback('已重置恢复默认 agent.md 设定！')
+        setActionFeedback('已恢复默认研学记忆设定！')
         setTimeout(() => setActionFeedback(null), 3000)
       }
     } catch (err: any) {
@@ -252,39 +250,42 @@ export default function AIMemoryModal({
   if (!isOpen) return null
 
   const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fade-in">
-      <div className="flex h-[90vh] w-full max-w-5xl flex-col rounded-2xl border border-cream-300 bg-surface shadow-xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4 backdrop-blur-sm animate-fade-in">
+      <div className="flex h-[92dvh] sm:h-[90vh] w-full max-w-5xl flex-col rounded-t-2xl sm:rounded-2xl border border-cream-300 bg-surface shadow-xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-cream-200 bg-surface/90 px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-orange/15 text-accent-orange shadow-sm">
+        <div className="flex items-start sm:items-center justify-between gap-2 border-b border-cream-200 bg-surface/90 px-4 py-3 sm:px-6 sm:py-4 shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+            <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-accent-orange/15 text-accent-orange shadow-sm">
               <Brain className="h-5 w-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-warm-800">AI 可视化记忆仓库</h2>
-                <span className="rounded-md bg-accent-orange/12 px-2 py-0.5 text-2xs font-semibold text-accent-orange">
-                  agent.md 智能体设定
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-[16px] sm:text-base font-bold text-warm-800 whitespace-nowrap">
+                  AI 可视化记忆仓库
+                </h2>
+                <span className="rounded-md bg-accent-orange/12 px-2 py-0.5 text-[11px] sm:text-2xs font-semibold text-accent-orange whitespace-nowrap">
+                  专属伴学设定
                 </span>
               </div>
-              <p className="mt-0.5 text-xs text-warm-500">
-                我对 AI 智能体的角色人设、行为准则规范与长期记忆库，实时同步本地知识库并注入 System Prompt。
+              <p className="mt-0.5 text-[12px] sm:text-xs text-warm-500 line-clamp-2">
+                定制 AI 伴学助手的角色人设、回答准则与长期记忆，实时同步生效。
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={loadData}
               disabled={loading}
               title="刷新设定"
-              className="flex h-8 w-8 items-center justify-center rounded-xl border border-cream-200 text-warm-500 hover:bg-cream-100 hover:text-warm-800 transition-colors"
+              className="flex h-8 w-8 items-center justify-center rounded-xl border border-cream-200 text-warm-500 hover:bg-cream-100 hover:text-warm-800 transition-colors cursor-pointer"
             >
               <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
             <button
               onClick={onClose}
-              className="flex h-8 w-8 items-center justify-center rounded-xl border border-cream-200 text-warm-400 hover:bg-cream-100 hover:text-warm-700 transition-colors"
+              aria-label="关闭弹窗"
+              className="flex h-8 w-8 items-center justify-center rounded-xl border border-cream-200 text-warm-400 hover:bg-cream-100 hover:text-warm-700 transition-colors cursor-pointer"
             >
               <X className="h-4 w-4" />
             </button>
@@ -293,74 +294,74 @@ export default function AIMemoryModal({
 
         {/* Global Action Feedback Alert */}
         {actionFeedback && (
-          <div className="flex items-center justify-between bg-accent-sage/10 border-b border-accent-sage/20 px-6 py-2 text-xs font-medium text-accent-sage animate-fade-in">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-accent-sage" />
-              <span>{actionFeedback}</span>
+          <div className="flex items-center justify-between gap-2 bg-accent-sage/10 border-b border-accent-sage/20 px-4 sm:px-6 py-2 text-[12px] sm:text-xs font-medium text-accent-sage animate-fade-in shrink-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <CheckCircle2 className="h-4 w-4 text-accent-sage shrink-0" />
+              <span className="truncate">{actionFeedback}</span>
             </div>
-            <button onClick={() => setActionFeedback(null)} className="text-2xs underline hover:opacity-80">
+            <button onClick={() => setActionFeedback(null)} className="text-[11px] sm:text-2xs underline hover:opacity-80 shrink-0 whitespace-nowrap">
               关闭
             </button>
           </div>
         )}
 
-        {/* Top Metric Overview Bar */}
-        <div className="grid grid-cols-2 gap-3 border-b border-cream-200 bg-cream-50/60 px-6 py-3 sm:grid-cols-4">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
-              <UserCheck className="h-4 w-4" />
+        {/* Top Metric Overview Bar (在手机端编辑纯文本时自动收起以释放空间) */}
+        <div className={`${activeTab === 'raw_markdown' ? 'hidden sm:grid' : 'grid'} grid-cols-2 gap-2 sm:gap-3 border-b border-cream-200 bg-cream-50/60 px-4 py-2 sm:px-6 sm:py-3 sm:grid-cols-4 shrink-0`}>
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+              <UserCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </div>
-            <div>
-              <div className="text-2xs text-warm-400">当前人设</div>
-              <div className="text-xs font-bold text-warm-800 truncate max-w-[140px]">{stats.personaName}</div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
-              <ShieldCheck className="h-4 w-4" />
-            </div>
-            <div>
-              <div className="text-2xs text-warm-400">全局准则规范</div>
-              <div className="text-xs font-bold text-warm-800">{stats.rulesCount} 项严选规则</div>
+            <div className="min-w-0">
+              <div className="text-[11px] sm:text-2xs text-warm-400">当前人设</div>
+              <div className="text-[12px] sm:text-xs font-bold text-warm-800 truncate">{stats.personaName}</div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-orange/15 text-accent-orange">
-              <Zap className="h-4 w-4" />
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+              <ShieldCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </div>
-            <div>
-              <div className="text-2xs text-warm-400">活跃长效记忆</div>
-              <div className="text-xs font-bold text-warm-800">{stats.active} / {stats.total} 条生效中</div>
+            <div className="min-w-0">
+              <div className="text-[11px] sm:text-2xs text-warm-400">全局准则</div>
+              <div className="text-[12px] sm:text-xs font-bold text-warm-800 whitespace-nowrap">{stats.rulesCount} 项规则</div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600">
-              <AlertTriangle className="h-4 w-4" />
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg bg-accent-orange/15 text-accent-orange">
+              <Zap className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </div>
-            <div>
-              <div className="text-2xs text-warm-400">重点弱项画像</div>
-              <div className="text-xs font-bold text-warm-800">{stats.weakPointsCount} 个标记考点</div>
+            <div className="min-w-0">
+              <div className="text-[11px] sm:text-2xs text-warm-400">长效记忆</div>
+              <div className="text-[12px] sm:text-xs font-bold text-warm-800 whitespace-nowrap">{stats.active} / {stats.total} 条生效</div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-lg bg-rose-50 text-rose-600">
+              <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[11px] sm:text-2xs text-warm-400">薄弱考点</div>
+              <div className="text-[12px] sm:text-xs font-bold text-warm-800 whitespace-nowrap">{stats.weakPointsCount} 个标记</div>
             </div>
           </div>
         </div>
 
         {/* Tab Navigation & Mode Switch */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-cream-200 px-6 py-2 bg-surface">
-          <div className="flex items-center gap-1.5 overflow-x-auto">
+        <div className="flex items-center justify-between gap-3 border-b border-cream-200 px-3 sm:px-6 py-2 bg-surface shrink-0">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar w-full sm:w-auto">
             <button
               onClick={() => setActiveTab('directives')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+              className={`shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[13px] sm:text-xs font-medium transition-all cursor-pointer ${
                 activeTab === 'directives'
                   ? 'bg-accent-orange text-white shadow-sm'
                   : 'text-warm-600 hover:bg-cream-100'
               }`}
             >
-              <Zap className="h-3.5 w-3.5" />
-              <span>长效记忆清单</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-2xs ${
+              <Zap className="h-3.5 w-3.5 shrink-0" />
+              <span>长效记忆</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[11px] sm:text-2xs ${
                 activeTab === 'directives' ? 'bg-white/20 text-white' : 'bg-cream-200 text-warm-600'
               }`}>
                 {stats.active}
@@ -369,27 +370,27 @@ export default function AIMemoryModal({
 
             <button
               onClick={() => setActiveTab('persona')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+              className={`shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[13px] sm:text-xs font-medium transition-all cursor-pointer ${
                 activeTab === 'persona'
                   ? 'bg-accent-orange text-white shadow-sm'
                   : 'text-warm-600 hover:bg-cream-100'
               }`}
             >
-              <UserCheck className="h-3.5 w-3.5" />
-              <span>人设与角色定位</span>
+              <UserCheck className="h-3.5 w-3.5 shrink-0" />
+              <span>角色人设</span>
             </button>
 
             <button
               onClick={() => setActiveTab('rules')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+              className={`shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[13px] sm:text-xs font-medium transition-all cursor-pointer ${
                 activeTab === 'rules'
                   ? 'bg-accent-orange text-white shadow-sm'
                   : 'text-warm-600 hover:bg-cream-100'
               }`}
             >
-              <ShieldCheck className="h-3.5 w-3.5" />
-              <span>行为准则规范</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-2xs ${
+              <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+              <span>行为准则</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[11px] sm:text-2xs ${
                 activeTab === 'rules' ? 'bg-white/20 text-white' : 'bg-cream-200 text-warm-600'
               }`}>
                 {stats.rulesCount}
@@ -398,34 +399,34 @@ export default function AIMemoryModal({
 
             <button
               onClick={() => setActiveTab('profile')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+              className={`shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[13px] sm:text-xs font-medium transition-all cursor-pointer ${
                 activeTab === 'profile'
                   ? 'bg-accent-orange text-white shadow-sm'
                   : 'text-warm-600 hover:bg-cream-100'
               }`}
             >
-              <Target className="h-3.5 w-3.5" />
-              <span>考生档案与偏好</span>
+              <Target className="h-3.5 w-3.5 shrink-0" />
+              <span>考生档案</span>
             </button>
 
             <button
               onClick={() => setActiveTab('raw_markdown')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+              className={`shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[13px] sm:text-xs font-medium transition-all cursor-pointer ${
                 activeTab === 'raw_markdown'
                   ? 'bg-accent-orange text-white shadow-sm'
                   : 'text-warm-600 hover:bg-cream-100'
               }`}
             >
-              <Code2 className="h-3.5 w-3.5" />
-              <span>agent.md 源码所见即所得</span>
+              <Code2 className="h-3.5 w-3.5 shrink-0" />
+              <span>纯文本档案</span>
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="hidden sm:flex items-center gap-2 shrink-0">
             <button
               onClick={handleResetDefault}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-cream-200 text-warm-500 hover:bg-cream-100 text-xs transition-colors"
-              title="重置为默认 agent.md"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-cream-200 text-warm-500 hover:bg-cream-100 text-xs whitespace-nowrap transition-colors cursor-pointer"
+              title="恢复默认研学记忆设定"
             >
               <RotateCcw className="h-3.5 w-3.5" />
               <span>恢复默认</span>
@@ -435,16 +436,16 @@ export default function AIMemoryModal({
               <button
                 onClick={handleSaveRawMarkdown}
                 disabled={saving}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-accent-orange text-white text-xs font-medium hover:bg-accent-orange/90 shadow-sm transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-accent-orange text-white text-xs font-medium hover:bg-accent-orange/90 shadow-sm whitespace-nowrap transition-colors cursor-pointer"
               >
                 <Save className="h-3.5 w-3.5" />
-                <span>{saving ? '保存中...' : '保存 Markdown 源码'}</span>
+                <span>{saving ? '保存中...' : '保存档案原文'}</span>
               </button>
             ) : (
               <button
                 onClick={handleSaveConfig}
                 disabled={saving}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-accent-orange text-white text-xs font-medium hover:bg-accent-orange/90 shadow-sm transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-accent-orange text-white text-xs font-medium hover:bg-accent-orange/90 shadow-sm whitespace-nowrap transition-colors cursor-pointer"
               >
                 <Save className="h-3.5 w-3.5" />
                 <span>{saving ? '同步中...' : '保存并同步生效'}</span>
@@ -454,67 +455,65 @@ export default function AIMemoryModal({
         </div>
 
         {/* Tab Content Container */}
-        <div className="flex-1 overflow-y-auto p-6 bg-[#FAF8F5]">
+        <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-6 bg-[#FAF8F5]">
           {/* TAB 1: ACTIVE DIRECTIVES (LONG-TERM MEMORY) */}
           {activeTab === 'directives' && (
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3 sm:gap-4">
               {/* Directive Toolbar */}
-              <div className="flex flex-wrap items-center justify-between gap-3 bg-surface p-3 rounded-2xl border border-cream-200 shadow-sm">
-                <div className="flex items-center gap-2 flex-1 max-w-sm">
-                  <div className="relative w-full">
+              <div className="flex flex-col gap-2.5 bg-surface p-3 rounded-2xl border border-cream-200 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1 min-w-0">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-warm-400" />
                     <input
                       type="text"
                       value={searchQuery}
                       onChange={e => setSearchQuery(e.target.value)}
                       placeholder="搜索记忆指令关键词..."
-                      className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-cream-200 bg-cream-50 text-xs text-warm-700 placeholder-warm-400 focus:bg-white focus:outline-none focus:border-accent-orange transition-colors"
+                      className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-cream-200 bg-cream-50 text-[13px] sm:text-xs text-warm-700 placeholder-warm-400 focus:bg-white focus:outline-none focus:border-accent-orange transition-colors"
                     />
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1 bg-cream-100 p-1 rounded-xl text-xs">
-                    {(['all', 'behavior', 'knowledge', 'habit', 'preference'] as const).map(cat => (
-                      <button
-                        key={cat}
-                        onClick={() => setCategoryFilter(cat)}
-                        className={`px-2.5 py-1 rounded-lg transition-all ${
-                          categoryFilter === cat
-                            ? 'bg-surface font-semibold text-warm-800 shadow-sm'
-                            : 'text-warm-500 hover:text-warm-800'
-                        }`}
-                      >
-                        {cat === 'all' ? '全部类别' : cat === 'behavior' ? '解题规范' : cat === 'knowledge' ? '考点防错' : cat === 'habit' ? '笔记习惯' : '交互偏好'}
-                      </button>
-                    ))}
                   </div>
 
                   <button
                     onClick={() => setShowAddDirectiveModal(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-accent-orange text-white text-xs font-semibold hover:bg-accent-orange/90 shadow-sm transition-colors"
+                    className="shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3 py-2 sm:py-1.5 rounded-xl bg-accent-orange text-white text-[13px] sm:text-xs font-semibold hover:bg-accent-orange/90 shadow-sm transition-colors cursor-pointer"
                   >
                     <Plus className="h-3.5 w-3.5" />
-                    <span>新增记忆指令</span>
+                    <span>新增记忆</span>
                   </button>
+                </div>
+
+                <div className="flex items-center gap-1 bg-cream-100 p-1 rounded-xl overflow-x-auto no-scrollbar">
+                  {(['all', 'behavior', 'knowledge', 'habit', 'preference'] as const).map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => setCategoryFilter(cat)}
+                      className={`shrink-0 whitespace-nowrap px-2.5 py-1 rounded-lg text-[12px] sm:text-xs transition-all cursor-pointer ${
+                        categoryFilter === cat
+                          ? 'bg-surface font-semibold text-warm-800 shadow-sm'
+                          : 'text-warm-500 hover:text-warm-800'
+                      }`}
+                    >
+                      {cat === 'all' ? '全部类别' : cat === 'behavior' ? '解题规范' : cat === 'knowledge' ? '考点防错' : cat === 'habit' ? '笔记习惯' : '交互偏好'}
+                    </button>
+                  ))}
                 </div>
               </div>
 
               {/* Directive Cards Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-3.5">
                 {filteredDirectives.map(d => (
                   <div
                     key={d.id}
-                    className={`flex flex-col justify-between rounded-2xl border p-4 transition-all ${
+                    className={`flex flex-col justify-between rounded-2xl border p-3.5 sm:p-4 transition-all ${
                       d.enabled
                         ? 'border-cream-300 bg-surface shadow-sm'
                         : 'border-cream-200/80 bg-cream-50/70 opacity-60'
                     }`}
                   >
                     <div>
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 rounded-full text-2xs font-semibold ${
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-1.5 flex-wrap min-w-0 flex-1">
+                          <span className={`px-2 py-0.5 rounded-full text-[11px] sm:text-2xs font-semibold shrink-0 whitespace-nowrap ${
                             d.category === 'behavior' ? 'bg-indigo-50 text-indigo-600' :
                             d.category === 'knowledge' ? 'bg-emerald-50 text-emerald-600' :
                             d.category === 'habit' ? 'bg-accent-orange/15 text-accent-orange' :
@@ -522,11 +521,11 @@ export default function AIMemoryModal({
                           }`}>
                             {d.category === 'behavior' ? '解题规范' : d.category === 'knowledge' ? '考点防错' : d.category === 'habit' ? '笔记习惯' : '个性化偏好'}
                           </span>
-                          <span className="text-xs font-bold text-warm-800">{d.title}</span>
+                          <span className="text-[14px] sm:text-xs font-bold text-warm-800 leading-snug">{d.title}</span>
                         </div>
 
                         {/* Enable/Disable Toggle */}
-                        <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                        <label className="flex items-center gap-1.5 cursor-pointer select-none shrink-0">
                           <input
                             type="checkbox"
                             checked={d.enabled}
@@ -540,24 +539,24 @@ export default function AIMemoryModal({
                               d.enabled ? 'left-4' : 'left-0.5'
                             }`} />
                           </div>
-                          <span className="text-2xs font-medium text-warm-500">
+                          <span className="text-[11px] sm:text-2xs font-medium text-warm-500 whitespace-nowrap">
                             {d.enabled ? '已启用' : '已停用'}
                           </span>
                         </label>
                       </div>
 
-                      <p className="text-xs text-warm-600 leading-relaxed font-normal whitespace-pre-wrap">
+                      <p className="text-[13px] sm:text-xs text-warm-600 leading-relaxed font-normal whitespace-pre-wrap">
                         {d.content}
                       </p>
                     </div>
 
-                    <div className="flex items-center justify-between border-t border-cream-100 pt-3 mt-3 text-2xs text-warm-400">
+                    <div className="flex items-center justify-between border-t border-cream-100 pt-2.5 mt-3 text-[12px] sm:text-2xs text-warm-400">
                       <span>更新: {d.lastUpdated}</span>
                       <div className="flex items-center gap-2">
                         {onAskAgent && (
                           <button
-                            onClick={() => onAskAgent(`请基于你 agent.md 中关于【${d.title}】的记忆设定，指导我练习一道对应的考研题。`)}
-                            className="text-accent-orange hover:underline flex items-center gap-1"
+                            onClick={() => onAskAgent(`请基于你记忆档案中关于【${d.title}】的设定，指导我练习一道对应的考研题。`)}
+                            className="text-accent-orange hover:underline flex items-center gap-1 whitespace-nowrap"
                           >
                             <MessageSquare className="h-3 w-3" />
                             <span>提问此设定</span>
@@ -577,10 +576,10 @@ export default function AIMemoryModal({
               </div>
 
               {filteredDirectives.length === 0 && (
-                <div className="flex flex-col items-center justify-center p-12 text-center rounded-2xl border border-dashed border-cream-300 bg-surface/60">
+                <div className="flex flex-col items-center justify-center p-8 sm:p-12 text-center rounded-2xl border border-dashed border-cream-300 bg-surface/60">
                   <Brain className="h-10 w-10 text-warm-300 mb-2" />
-                  <div className="text-sm font-semibold text-warm-700">没有找到匹配的记忆指令</div>
-                  <p className="text-xs text-warm-400 mt-1">您可以尝试清空搜索框或点击右上角“新增记忆指令”添加新规则。</p>
+                  <div className="text-[14px] sm:text-sm font-semibold text-warm-700">没有找到匹配的记忆指令</div>
+                  <p className="text-[12px] sm:text-xs text-warm-400 mt-1">您可以尝试清空搜索框或点击右上角“新增记忆”添加新规则。</p>
                 </div>
               )}
             </div>
@@ -588,61 +587,61 @@ export default function AIMemoryModal({
 
           {/* TAB 2: PERSONA & IDENTITY */}
           {activeTab === 'persona' && editingPersona && (
-            <div className="max-w-2xl mx-auto flex flex-col gap-4 bg-surface p-6 rounded-2xl border border-cream-200 shadow-sm">
+            <div className="max-w-2xl mx-auto flex flex-col gap-4 bg-surface p-4 sm:p-6 rounded-2xl border border-cream-200 shadow-sm">
               <div className="flex items-center gap-2 border-b border-cream-100 pb-3">
-                <UserCheck className="h-5 w-5 text-accent-orange" />
+                <UserCheck className="h-5 w-5 text-accent-orange shrink-0" />
                 <div>
-                  <h3 className="text-sm font-bold text-warm-800">智能体角色定位与语气人设</h3>
-                  <p className="text-xs text-warm-400">定义 AI 助手的身份、回答风格与核心教学理念。</p>
+                  <h3 className="text-[15px] sm:text-sm font-bold text-warm-800">智能体角色定位与语气人设</h3>
+                  <p className="text-[12px] sm:text-xs text-warm-400">定义 AI 助手的身份、回答风格与核心教学理念。</p>
                 </div>
               </div>
 
               <div className="space-y-3.5">
                 <div>
-                  <label className="block text-xs font-semibold text-warm-700 mb-1">助手称谓 / 名字</label>
+                  <label className="block text-[13px] sm:text-xs font-semibold text-warm-700 mb-1">助手称谓 / 名字</label>
                   <input
                     type="text"
                     value={editingPersona.name}
                     onChange={e => setEditingPersona({ ...editingPersona, name: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-cream-200 bg-cream-50 text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange"
+                    className="w-full px-3 py-2 rounded-xl border border-cream-200 bg-cream-50 text-[13px] sm:text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-warm-700 mb-1">角色定位</label>
+                  <label className="block text-[13px] sm:text-xs font-semibold text-warm-700 mb-1">角色定位</label>
                   <input
                     type="text"
                     value={editingPersona.role}
                     onChange={e => setEditingPersona({ ...editingPersona, role: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-cream-200 bg-cream-50 text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange"
+                    className="w-full px-3 py-2 rounded-xl border border-cream-200 bg-cream-50 text-[13px] sm:text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-warm-700 mb-1">对话语气与教学风格</label>
+                  <label className="block text-[13px] sm:text-xs font-semibold text-warm-700 mb-1">对话语气与教学风格</label>
                   <input
                     type="text"
                     value={editingPersona.tone}
                     onChange={e => setEditingPersona({ ...editingPersona, tone: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-cream-200 bg-cream-50 text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange"
+                    className="w-full px-3 py-2 rounded-xl border border-cream-200 bg-cream-50 text-[13px] sm:text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-warm-700 mb-1">能力概述与核心使命</label>
+                  <label className="block text-[13px] sm:text-xs font-semibold text-warm-700 mb-1">能力概述与核心使命</label>
                   <textarea
                     rows={4}
                     value={editingPersona.summary}
                     onChange={e => setEditingPersona({ ...editingPersona, summary: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-cream-200 bg-cream-50 text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange leading-relaxed"
+                    className="w-full px-3 py-2 rounded-xl border border-cream-200 bg-cream-50 text-[13px] sm:text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange leading-relaxed"
                   />
                 </div>
 
-                <div className="pt-2 flex justify-end">
+                <div className="pt-2 hidden sm:flex justify-end">
                   <button
                     onClick={handleSaveConfig}
                     disabled={saving}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-accent-orange text-white text-xs font-semibold hover:bg-accent-orange/90 transition-colors shadow-sm"
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-accent-orange text-white text-xs font-semibold hover:bg-accent-orange/90 transition-colors shadow-sm cursor-pointer"
                   >
                     <Save className="h-3.5 w-3.5" />
                     <span>保存人设修改</span>
@@ -655,27 +654,27 @@ export default function AIMemoryModal({
           {/* TAB 3: BEHAVIORAL DIRECTIVES (RULES) */}
           {activeTab === 'rules' && (
             <div className="max-w-3xl mx-auto flex flex-col gap-4">
-              <div className="bg-surface p-5 rounded-2xl border border-cream-200 shadow-sm">
-                <div className="flex items-center justify-between border-b border-cream-100 pb-3 mb-4">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="h-5 w-5 text-accent-orange" />
-                    <div>
-                      <h3 className="text-sm font-bold text-warm-800">全局行为准则与交互规范</h3>
-                      <p className="text-xs text-warm-400">大模型在每一次答疑、解题和操作笔记时必须严格履行的铁律。</p>
+              <div className="bg-surface p-4 sm:p-5 rounded-2xl border border-cream-200 shadow-sm">
+                <div className="flex items-center justify-between gap-2 border-b border-cream-100 pb-3 mb-4">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <ShieldCheck className="h-5 w-5 text-accent-orange shrink-0" />
+                    <div className="min-w-0">
+                      <h3 className="text-[15px] sm:text-sm font-bold text-warm-800">全局行为准则与交互规范</h3>
+                      <p className="text-[12px] sm:text-xs text-warm-400">AI 在每一次答疑、解题时严格履行的准则。</p>
                     </div>
                   </div>
-                  <span className="text-xs font-bold text-accent-orange">{editingRules.length} 条已生效</span>
+                  <span className="text-[12px] sm:text-xs font-bold text-accent-orange shrink-0 whitespace-nowrap">{editingRules.length} 条</span>
                 </div>
 
                 <div className="space-y-2.5 mb-4">
                   {editingRules.map((rule, idx) => (
                     <div
                       key={idx}
-                      className="flex items-start justify-between gap-3 p-3 rounded-xl border border-cream-200 bg-cream-50/70 hover:bg-cream-50 transition-colors"
+                      className="flex items-start justify-between gap-2.5 p-3 rounded-xl border border-cream-200 bg-cream-50/70 hover:bg-cream-50 transition-colors"
                     >
-                      <div className="flex items-start gap-2 text-xs text-warm-700 leading-relaxed">
+                      <div className="flex items-start gap-2 text-[13px] sm:text-xs text-warm-700 leading-relaxed min-w-0">
                         <span className="font-bold text-accent-orange shrink-0">{idx + 1}.</span>
-                        <span>{rule}</span>
+                        <span className="break-words">{rule}</span>
                       </div>
                       <button
                         onClick={() => setEditingRules(editingRules.filter((_, i) => i !== idx))}
@@ -689,13 +688,13 @@ export default function AIMemoryModal({
                 </div>
 
                 {/* Add new rule */}
-                <div className="flex items-center gap-2 pt-2 border-t border-cream-100">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-2 border-t border-cream-100">
                   <input
                     type="text"
                     value={newRuleText}
                     onChange={e => setNewRuleText(e.target.value)}
-                    placeholder="输入新的行为准则规范（例如：每次回答前先简要提炼 3 个核心定理关键词）..."
-                    className="flex-1 px-3 py-2 rounded-xl border border-cream-200 bg-cream-50 text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange"
+                    placeholder="输入新的行为准则规范..."
+                    className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-cream-200 bg-cream-50 text-[13px] sm:text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange"
                     onKeyDown={e => {
                       if (e.key === 'Enter' && newRuleText.trim()) {
                         setEditingRules([...editingRules, newRuleText.trim()])
@@ -709,7 +708,7 @@ export default function AIMemoryModal({
                       setEditingRules([...editingRules, newRuleText.trim()])
                       setNewRuleText('')
                     }}
-                    className="px-3 py-2 rounded-xl bg-warm-800 text-white text-xs font-semibold hover:bg-warm-900 transition-colors"
+                    className="px-4 py-2 rounded-xl bg-warm-800 text-white text-[13px] sm:text-xs font-semibold hover:bg-warm-900 transition-colors shrink-0 whitespace-nowrap cursor-pointer"
                   >
                     添加规则
                   </button>
@@ -720,65 +719,65 @@ export default function AIMemoryModal({
 
           {/* TAB 4: USER PROFILE & CONTEXT */}
           {activeTab === 'profile' && editingProfile && (
-            <div className="max-w-3xl mx-auto flex flex-col gap-4 bg-surface p-6 rounded-2xl border border-cream-200 shadow-sm">
+            <div className="max-w-3xl mx-auto flex flex-col gap-4 bg-surface p-4 sm:p-6 rounded-2xl border border-cream-200 shadow-sm">
               <div className="flex items-center gap-2 border-b border-cream-100 pb-3">
-                <Target className="h-5 w-5 text-accent-orange" />
+                <Target className="h-5 w-5 text-accent-orange shrink-0" />
                 <div>
-                  <h3 className="text-sm font-bold text-warm-800">考生背景档案与个性化偏好记忆</h3>
-                  <p className="text-xs text-warm-400">告知 AI 你的目标考向、基础背景与薄弱考点，AI 将因材施教量身定制回答。</p>
+                  <h3 className="text-[15px] sm:text-sm font-bold text-warm-800">考生背景档案与个性化偏好</h3>
+                  <p className="text-[12px] sm:text-xs text-warm-400">告知 AI 你的目标考向与薄弱考点，量身定制解答。</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-warm-700 mb-1">目标考向 / 科目</label>
+                  <label className="block text-[13px] sm:text-xs font-semibold text-warm-700 mb-1">目标考向 / 科目</label>
                   <input
                     type="text"
                     value={editingProfile.targetExam}
                     onChange={e => setEditingProfile({ ...editingProfile, targetExam: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-cream-200 bg-cream-50 text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange"
+                    className="w-full px-3 py-2 rounded-xl border border-cream-200 bg-cream-50 text-[13px] sm:text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-warm-700 mb-1">目标院校 / 院系</label>
+                  <label className="block text-[13px] sm:text-xs font-semibold text-warm-700 mb-1">目标院校 / 院系</label>
                   <input
                     type="text"
                     value={editingProfile.targetSchool}
                     onChange={e => setEditingProfile({ ...editingProfile, targetSchool: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-cream-200 bg-cream-50 text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange"
+                    className="w-full px-3 py-2 rounded-xl border border-cream-200 bg-cream-50 text-[13px] sm:text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-warm-700 mb-1">考生基础与背景</label>
+                  <label className="block text-[13px] sm:text-xs font-semibold text-warm-700 mb-1">考生基础与背景</label>
                   <input
                     type="text"
                     value={editingProfile.userBackground}
                     onChange={e => setEditingProfile({ ...editingProfile, userBackground: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-cream-200 bg-cream-50 text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange"
+                    className="w-full px-3 py-2 rounded-xl border border-cream-200 bg-cream-50 text-[13px] sm:text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-warm-700 mb-1">当前备考阶段</label>
+                  <label className="block text-[13px] sm:text-xs font-semibold text-warm-700 mb-1">当前备考阶段</label>
                   <input
                     type="text"
                     value={editingProfile.currentStage}
                     onChange={e => setEditingProfile({ ...editingProfile, currentStage: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-cream-200 bg-cream-50 text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange"
+                    className="w-full px-3 py-2 rounded-xl border border-cream-200 bg-cream-50 text-[13px] sm:text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange"
                   />
                 </div>
               </div>
 
               {/* Weak Points Tags */}
               <div className="border-t border-cream-100 pt-3">
-                <label className="block text-xs font-semibold text-warm-700 mb-2">重点薄弱考点清单（AI 会自动加强相关变式）</label>
-                <div className="flex flex-wrap gap-1.5 mb-2">
+                <label className="block text-[13px] sm:text-xs font-semibold text-warm-700 mb-2">重点薄弱考点清单</label>
+                <div className="flex flex-wrap gap-1.5 mb-2.5">
                   {editingProfile.weakPoints.map((wp, idx) => (
                     <span
                       key={idx}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-[12px] sm:text-xs"
                     >
                       <span>{wp}</span>
                       <button
@@ -786,7 +785,7 @@ export default function AIMemoryModal({
                           ...editingProfile,
                           weakPoints: editingProfile.weakPoints.filter((_, i) => i !== idx)
                         })}
-                        className="hover:text-rose-900"
+                        className="hover:text-rose-900 shrink-0"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -798,8 +797,8 @@ export default function AIMemoryModal({
                     type="text"
                     value={newWeakPointText}
                     onChange={e => setNewWeakPointText(e.target.value)}
-                    placeholder="添加薄弱考点（如：线代相似对角化判定）..."
-                    className="flex-1 px-3 py-1.5 rounded-xl border border-cream-200 bg-cream-50 text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange"
+                    placeholder="添加薄弱考点..."
+                    className="flex-1 min-w-0 px-3 py-1.5 rounded-xl border border-cream-200 bg-cream-50 text-[13px] sm:text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange"
                     onKeyDown={e => {
                       if (e.key === 'Enter' && newWeakPointText.trim()) {
                         setEditingProfile({
@@ -819,26 +818,26 @@ export default function AIMemoryModal({
                       })
                       setNewWeakPointText('')
                     }}
-                    className="px-3 py-1.5 rounded-xl bg-cream-200 text-warm-700 text-xs font-semibold hover:bg-cream-300 transition-colors"
+                    className="px-3 py-1.5 rounded-xl bg-cream-200 text-warm-700 text-[13px] sm:text-xs font-semibold hover:bg-cream-300 transition-colors shrink-0 whitespace-nowrap"
                   >
-                    添加考点
+                    添加
                   </button>
                 </div>
               </div>
 
               {/* Preferences */}
               <div className="border-t border-cream-100 pt-3">
-                <label className="block text-xs font-semibold text-warm-700 mb-2">个人习惯与学习偏好</label>
-                <div className="space-y-1.5 mb-2">
+                <label className="block text-[13px] sm:text-xs font-semibold text-warm-700 mb-2">个人习惯与学习偏好</label>
+                <div className="space-y-1.5 mb-2.5">
                   {editingProfile.customPreferences.map((cp, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-2 rounded-xl bg-cream-50 text-xs text-warm-700">
-                      <span>• {cp}</span>
+                    <div key={idx} className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-cream-50 text-[13px] sm:text-xs text-warm-700">
+                      <span className="min-w-0 break-words">• {cp}</span>
                       <button
                         onClick={() => setEditingProfile({
                           ...editingProfile,
                           customPreferences: editingProfile.customPreferences.filter((_, i) => i !== idx)
                         })}
-                        className="text-warm-400 hover:text-rose-600 p-0.5"
+                        className="text-warm-400 hover:text-rose-600 p-0.5 shrink-0"
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
@@ -850,8 +849,8 @@ export default function AIMemoryModal({
                     type="text"
                     value={newPreferenceText}
                     onChange={e => setNewPreferenceText(e.target.value)}
-                    placeholder="添加个人习惯（如：喜欢用 Python 代码验证高数求极限）..."
-                    className="flex-1 px-3 py-1.5 rounded-xl border border-cream-200 bg-cream-50 text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange"
+                    placeholder="添加个人习惯..."
+                    className="flex-1 min-w-0 px-3 py-1.5 rounded-xl border border-cream-200 bg-cream-50 text-[13px] sm:text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange"
                     onKeyDown={e => {
                       if (e.key === 'Enter' && newPreferenceText.trim()) {
                         setEditingProfile({
@@ -871,18 +870,18 @@ export default function AIMemoryModal({
                       })
                       setNewPreferenceText('')
                     }}
-                    className="px-3 py-1.5 rounded-xl bg-cream-200 text-warm-700 text-xs font-semibold hover:bg-cream-300 transition-colors"
+                    className="px-3 py-1.5 rounded-xl bg-cream-200 text-warm-700 text-[13px] sm:text-xs font-semibold hover:bg-cream-300 transition-colors shrink-0 whitespace-nowrap"
                   >
-                    添加习惯
+                    添加
                   </button>
                 </div>
               </div>
 
-              <div className="pt-3 flex justify-end">
+              <div className="pt-3 hidden sm:flex justify-end">
                 <button
                   onClick={handleSaveConfig}
                   disabled={saving}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-accent-orange text-white text-xs font-semibold hover:bg-accent-orange/90 transition-colors shadow-sm"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-accent-orange text-white text-xs font-semibold hover:bg-accent-orange/90 transition-colors shadow-sm cursor-pointer"
                 >
                   <Save className="h-3.5 w-3.5" />
                   <span>保存档案设定</span>
@@ -893,56 +892,88 @@ export default function AIMemoryModal({
 
           {/* TAB 5: RAW MARKDOWN EDITOR */}
           {activeTab === 'raw_markdown' && (
-            <div className="h-full flex flex-col gap-3 bg-surface p-4 rounded-2xl border border-cream-200 shadow-sm">
-              <div className="flex items-center justify-between text-xs text-warm-500 border-b border-cream-100 pb-2">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-accent-orange" />
-                  <span className="font-mono text-warm-700">{filePath}</span>
+            <div className="h-full min-h-[360px] flex flex-col gap-2.5 sm:gap-3 bg-surface p-3 sm:p-4 rounded-2xl border border-cream-200 shadow-sm">
+              <div className="flex items-center justify-between gap-2 text-[12px] sm:text-xs text-warm-500 border-b border-cream-100 pb-2 shrink-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  <FileText className="h-4 w-4 text-accent-orange shrink-0" />
+                  <span className="font-medium text-warm-700 truncate">个人云端记忆档案（纯文本视图）</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleCopyMarkdown}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-cream-200 hover:bg-cream-100 text-warm-600 transition-colors"
-                  >
-                    {copied ? <Check className="h-3.5 w-3.5 text-accent-sage" /> : <Copy className="h-3.5 w-3.5" />}
-                    <span>{copied ? '已复制' : '复制全文'}</span>
-                  </button>
-                </div>
+                <button
+                  onClick={handleCopyMarkdown}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-cream-200 hover:bg-cream-100 text-warm-600 transition-colors shrink-0 whitespace-nowrap cursor-pointer"
+                >
+                  {copied ? <Check className="h-3.5 w-3.5 text-accent-sage" /> : <Copy className="h-3.5 w-3.5" />}
+                  <span>{copied ? '已复制' : '复制全文'}</span>
+                </button>
               </div>
 
-              <div className="flex-1 flex flex-col min-h-0">
+              <div className="flex-1 flex flex-col min-h-[260px]">
                 <textarea
                   value={rawMarkdown}
                   onChange={e => setRawMarkdown(e.target.value)}
-                  className="w-full flex-1 p-3 rounded-xl border border-cream-200 bg-[#FAF9F5] font-mono text-xs text-warm-800 leading-relaxed focus:bg-white focus:outline-none focus:border-accent-orange resize-none"
-                  placeholder="agent.md 完整 Markdown 源码..."
+                  className="w-full flex-1 min-h-[260px] p-3 rounded-xl border border-cream-200 bg-[#FAF9F5] font-mono text-[13px] sm:text-xs text-warm-800 leading-relaxed focus:bg-white focus:outline-none focus:border-accent-orange resize-none"
+                  placeholder="在此直接编辑记忆档案纯文本内容..."
                 />
               </div>
 
-              <div className="flex items-center justify-between text-xs text-warm-400 pt-1">
-                <span>提示：直接在此处编辑标准 Markdown，点击右上方“保存 Markdown 源码”将直接持久化至知识库并实时生效。</span>
-                <span className="font-mono">{rawMarkdown.length} 字符</span>
+              <div className="flex items-center justify-between gap-2 text-[11px] sm:text-xs text-warm-400 pt-1 shrink-0">
+                <span className="truncate">提示：修改后点击保存即可同步生效</span>
+                <span className="font-mono shrink-0 whitespace-nowrap">{rawMarkdown.length} 字符</span>
               </div>
             </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between border-t border-cream-200 bg-surface px-6 py-3 text-xs text-warm-400">
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-accent-sage animate-pulse" />
-            <span>实时同步文件：{filePath}</span>
+        {/* Footer: Desktop Status + Mobile Action Bar */}
+        <div className="shrink-0 border-t border-cream-200 bg-surface px-4 sm:px-6 py-2.5 sm:py-3 pb-[max(0.625rem,env(safe-area-inset-bottom))]">
+          {/* 移动端固定操作条：直接提供“恢复默认”与“保存生效” */}
+          <div className="flex sm:hidden items-center justify-between gap-2">
+            <button
+              onClick={handleResetDefault}
+              className="flex items-center justify-center gap-1 px-3 py-2 rounded-xl border border-cream-200 text-warm-600 hover:bg-cream-100 text-[13px] font-medium whitespace-nowrap shrink-0"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span>恢复默认</span>
+            </button>
+
+            {activeTab === 'raw_markdown' ? (
+              <button
+                onClick={handleSaveRawMarkdown}
+                disabled={saving}
+                className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-accent-orange text-white text-[13px] font-semibold hover:bg-accent-orange/90 shadow-sm whitespace-nowrap"
+              >
+                <Save className="h-3.5 w-3.5" />
+                <span>{saving ? '保存中...' : '保存档案原文'}</span>
+              </button>
+            ) : (
+              <button
+                onClick={handleSaveConfig}
+                disabled={saving}
+                className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-accent-orange text-white text-[13px] font-semibold hover:bg-accent-orange/90 shadow-sm whitespace-nowrap"
+              >
+                <Save className="h-3.5 w-3.5" />
+                <span>{saving ? '同步中...' : '保存并同步生效'}</span>
+              </button>
+            )}
           </div>
-          <span>设置即时写入大模型 System Prompt · 考研伴学双核大脑</span>
+
+          {/* 桌面端状态说明 */}
+          <div className="hidden sm:flex items-center justify-between text-xs text-warm-400">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-accent-sage animate-pulse" />
+              <span>云端专属记忆已连接，实时同步</span>
+            </div>
+            <span>设置即时融入 AI 对话规范 · 考研伴学双核大脑</span>
+          </div>
         </div>
       </div>
 
       {/* Add Directive Modal Popup */}
       {showAddDirectiveModal && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs animate-fade-in">
-          <div className="w-full max-w-md rounded-2xl border border-cream-300 bg-surface p-5 shadow-xl">
+          <div className="w-full max-w-md rounded-2xl border border-cream-300 bg-surface p-4 sm:p-5 shadow-xl">
             <div className="flex items-center justify-between border-b border-cream-100 pb-3 mb-3">
-              <h3 className="text-sm font-bold text-warm-800">新建长效记忆指令 (agent.md)</h3>
+              <h3 className="text-[15px] sm:text-sm font-bold text-warm-800">新建长效记忆指令</h3>
               <button onClick={() => setShowAddDirectiveModal(false)} className="text-warm-400 hover:text-warm-600">
                 <X className="h-4 w-4" />
               </button>
@@ -950,11 +981,11 @@ export default function AIMemoryModal({
 
             <form onSubmit={handleAddDirectiveSubmit} className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-warm-700 mb-1">指令分类</label>
+                <label className="block text-[13px] sm:text-xs font-semibold text-warm-700 mb-1">指令分类</label>
                 <select
                   value={newCategory}
                   onChange={e => setNewCategory(e.target.value as any)}
-                  className="w-full px-3 py-1.5 rounded-xl border border-cream-200 bg-cream-50 text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange"
+                  className="w-full px-3 py-2 rounded-xl border border-cream-200 bg-cream-50 text-[13px] sm:text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange"
                 >
                   <option value="behavior">解题规范 (行为与格式约束)</option>
                   <option value="knowledge">考点防错 (核心陷阱与定理约束)</option>
@@ -964,24 +995,24 @@ export default function AIMemoryModal({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-warm-700 mb-1">记忆标题 (简明标签)</label>
+                <label className="block text-[13px] sm:text-xs font-semibold text-warm-700 mb-1">记忆标题 (简明标签)</label>
                 <input
                   type="text"
                   value={newTitle}
                   onChange={e => setNewTitle(e.target.value)}
                   placeholder="例如：泰勒展开截断阶数必须一致"
-                  className="w-full px-3 py-1.5 rounded-xl border border-cream-200 bg-cream-50 text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange"
+                  className="w-full px-3 py-2 rounded-xl border border-cream-200 bg-cream-50 text-[13px] sm:text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-warm-700 mb-1">长效记忆指令内容</label>
+                <label className="block text-[13px] sm:text-xs font-semibold text-warm-700 mb-1">长效记忆指令内容</label>
                 <textarea
                   rows={3}
                   value={newContent}
                   onChange={e => setNewContent(e.target.value)}
-                  placeholder="详细描述你希望 AI 始终记住并履行的规则，例如：在回答任何未定式求极限题目前，先核对分母阶数，并在步骤中高亮提示展开阶数..."
-                  className="w-full px-3 py-1.5 rounded-xl border border-cream-200 bg-cream-50 text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange leading-relaxed"
+                  placeholder="详细描述你希望 AI 始终记住并履行的规则..."
+                  className="w-full px-3 py-2 rounded-xl border border-cream-200 bg-cream-50 text-[13px] sm:text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange leading-relaxed"
                 />
               </div>
 
@@ -989,15 +1020,15 @@ export default function AIMemoryModal({
                 <button
                   type="button"
                   onClick={() => setShowAddDirectiveModal(false)}
-                  className="px-3 py-1.5 rounded-xl border border-cream-200 text-warm-600 text-xs hover:bg-cream-100"
+                  className="px-3.5 py-2 rounded-xl border border-cream-200 text-warm-600 text-[13px] sm:text-xs hover:bg-cream-100"
                 >
                   取消
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 rounded-xl bg-accent-orange text-white text-xs font-semibold hover:bg-accent-orange/90 shadow-sm"
+                  className="px-4 py-2 rounded-xl bg-accent-orange text-white text-[13px] sm:text-xs font-semibold hover:bg-accent-orange/90 shadow-sm"
                 >
-                  写入 agent.md
+                  保存至记忆库
                 </button>
               </div>
             </form>

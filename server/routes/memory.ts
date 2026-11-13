@@ -3,6 +3,7 @@ import path from 'path'
 import fs from 'fs'
 import { config, invalidateCache } from '../context.js'
 import {
+  getAgentMemoryPath,
   loadAgentMemoryConfig,
   saveAgentMemoryConfig,
   saveRawAgentMarkdown,
@@ -14,11 +15,14 @@ import {
   addMemory,
   updateMemory,
   deleteMemory,
+  sanitizeUtf8Text,
   type AgentMemoryConfig,
   type AgentDirective,
 } from '../memory-store.js'
 import { createFile } from '../vault-parser.js'
-import { getUserAgentMemoryPath } from '../services/user-sandbox.js'
+import { getRequestVaultPath, getUserAgentMemoryPath } from '../services/user-sandbox.js'
+
+const VIRTUAL_MEMORY_LABEL = '云端专属记忆空间'
 
 function getRequestMemoryPath(req: any): string {
   if (req.user?.id) {
@@ -63,7 +67,7 @@ memoryRouter.get('/memory/tier', (req, res) => {
 })
 
 /**
- * Get AI Agent Memory Config & agent.md
+ * Get AI Agent Memory Config
  */
 memoryRouter.get('/memory/agent-config', (req, res) => {
   try {
@@ -72,7 +76,7 @@ memoryRouter.get('/memory/agent-config', (req, res) => {
       success: true,
       config: data.config,
       rawMarkdown: data.rawMarkdown,
-      filePath: data.filePath,
+      filePath: VIRTUAL_MEMORY_LABEL,
     })
   } catch (err: any) {
     res.status(500).json({ error: err.message })
@@ -80,7 +84,7 @@ memoryRouter.get('/memory/agent-config', (req, res) => {
 })
 
 /**
- * Save AI Agent Memory Config or raw markdown to agent.md
+ * Save AI Agent Memory Config or raw markdown
  */
 memoryRouter.post('/memory/agent-config', (req, res) => {
   try {
@@ -90,14 +94,15 @@ memoryRouter.post('/memory/agent-config', (req, res) => {
     }
 
     if (rawMarkdown !== undefined) {
-      const result = saveRawAgentMarkdown(rawMarkdown, getRequestMemoryPath(req))
+      const cleanRaw = sanitizeUtf8Text(rawMarkdown)
+      const result = saveRawAgentMarkdown(cleanRaw, getRequestMemoryPath(req))
       invalidateCache()
       res.json({
         success: true,
         config: result.config,
-        rawMarkdown,
-        filePath: result.filePath,
-        message: 'agent.md 已实时保存并同步生效！',
+        rawMarkdown: cleanRaw,
+        filePath: VIRTUAL_MEMORY_LABEL,
+        message: '记忆档案已实时保存并同步生效！',
       })
       return
     }
@@ -125,8 +130,8 @@ memoryRouter.post('/memory/agent-config', (req, res) => {
         success: true,
         config: mergedConfig,
         rawMarkdown: result.rawMarkdown,
-        filePath: result.filePath,
-        message: '智能体设定已更新并保存至 agent.md！',
+        filePath: VIRTUAL_MEMORY_LABEL,
+        message: '智能体记忆设定已更新并同步生效！',
       })
       return
     }
@@ -206,22 +211,23 @@ memoryRouter.delete('/memory/directive/:id', (req, res) => {
 })
 
 /**
- * Reset agent.md to standard preset
+ * Reset agent memory to standard preset
  */
 memoryRouter.post('/memory/reset-default', (req, res) => {
   try {
-    const filePath = path.join(config.vaultPath || '.', 'agent.md')
+    const reqMemoryPath = getRequestMemoryPath(req)
+    const filePath = getAgentMemoryPath(reqMemoryPath)
     if (fs.existsSync(filePath)) {
       try { fs.unlinkSync(filePath) } catch {}
     }
-    const data = loadAgentMemoryConfig(getRequestMemoryPath(req))
+    const data = loadAgentMemoryConfig(reqMemoryPath)
     invalidateCache()
     res.json({
       success: true,
       config: data.config,
       rawMarkdown: data.rawMarkdown,
-      filePath: data.filePath,
-      message: '已恢复默认 agent.md 设定',
+      filePath: VIRTUAL_MEMORY_LABEL,
+      message: '已恢复默认研学记忆设定',
     })
   } catch (err: any) {
     res.status(500).json({ error: err.message })
@@ -301,6 +307,7 @@ memoryRouter.post('/memory/export-to-obsidian', (req, res) => {
       return
     }
 
+    const targetVault = getRequestVaultPath(req)
     const safeTitle = title.replace(/[<>:"/\\|?*]/g, '_').slice(0, 50)
     const relPath = `wiki/AI伴学设定/${safeTitle}.md`
     const today = new Date().toISOString().split('T')[0]
@@ -308,21 +315,21 @@ memoryRouter.post('/memory/export-to-obsidian', (req, res) => {
     const fm = {
       title,
       subject: subject || 'AI设定与记忆',
-      tags: ['agent-md', ...(tags || []), '考研智能体'],
+      tags: ['agent-memory', ...(tags || []), '考研智能体'],
       created: today,
       type: 'agent-directive',
     }
 
-    const fullPath = path.resolve(config.vaultPath, relPath)
+    const fullPath = path.resolve(targetVault, relPath)
     fs.mkdirSync(path.dirname(fullPath), { recursive: true })
 
-    const note = createFile(config.vaultPath, relPath, content, fm)
+    const note = createFile(targetVault, relPath, content, fm)
     invalidateCache()
 
     res.json({
       success: true,
       notePath: note.path,
-      message: `已成功导出至知识库笔记：${relPath}`,
+      message: `已成功导出至个人知识库《${safeTitle}》`,
     })
   } catch (err: any) {
     res.status(500).json({ error: err.message })

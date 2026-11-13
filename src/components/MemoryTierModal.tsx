@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useAuth } from '../contexts/AuthContext'
 import {
   Brain, Globe, Folder, MessageSquare, X, CheckCircle2,
   ShieldAlert, Sparkles, Layers, BookOpen, Clock, ArrowRight,
@@ -23,6 +24,7 @@ export default function MemoryTierModal({
   totalConversationsCount,
   onUpdateProjectDesc,
 }: MemoryTierModalProps) {
+  const { isAdmin } = useAuth()
   const [editingDesc, setEditingDesc] = useState(activeProject?.description || '')
   const [descSaved, setDescSaved] = useState(false)
 
@@ -189,11 +191,11 @@ export default function MemoryTierModal({
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-2xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[12px] sm:text-2xs">
               <div className="p-2.5 rounded-lg bg-cream-50 dark:bg-slate-800/40 border border-cream-200/80 dark:border-slate-700">
-                <span className="text-warm-400 font-medium block mb-1">📁 独立工作目录 (cwd)</span>
+                <span className="text-warm-400 font-medium block mb-1">📁 专属研学空间</span>
                 <span className="font-mono text-warm-800 dark:text-slate-200 break-all select-all">
-                  {activeProject?.cwd || '（默认个人笔记库）'}
+                  {isAdmin ? (activeProject?.cwd || '（默认主知识库空间）') : '云端个人沙盒隔离空间'}
                 </span>
               </div>
               <div className="p-2.5 rounded-lg bg-cream-50 dark:bg-slate-800/40 border border-cream-200/80 dark:border-slate-700">

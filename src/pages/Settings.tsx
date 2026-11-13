@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useAuth } from '../contexts/AuthContext'
+import DangoAvatar, { DangoColorPicker } from '../components/DangoAvatar'
 import { useThemeStyle } from '../hooks/useThemeStyle'
 import { getSecuritySettings, updateSecuritySettings } from '../services/auth'
 import { api, type AppSettings, type CloudEndpoint } from '../services/api'
@@ -8,7 +9,7 @@ import {
   Save, RefreshCw, CheckCircle, AlertCircle, FolderOpen, Globe, Cpu, Palette,
   Eye, EyeOff, Folder, AlertTriangle, Zap, ChevronRight, ArrowUp,
   Loader2, X, HardDrive, Check, Download, Plug, Plus, Trash2, Star, KeyRound, ShieldCheck, Lock, Copy, ShieldAlert,
-  Moon, Leaf, LogOut
+  Moon, Leaf, LogOut, Sparkles
 } from 'lucide-react'
 
 declare global {
@@ -98,6 +99,13 @@ export default function Settings() {
       return localStorage.getItem('coreforge_graph_show_arch') === 'true'
     } catch {
       return false
+    }
+  })
+  const [showQuickPrompts, setShowQuickPrompts] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('coreforge_show_quick_prompts') !== 'false'
+    } catch {
+      return true
     }
   })
   const { themeStyle, isVibrant, isMinimal, isEyecare, isDark, setThemeStyle } = useThemeStyle()
@@ -510,6 +518,8 @@ export default function Settings() {
       localStorage.setItem('coreforge_pref_daily_quiz_goal', String(dailyQuizGoal))
       localStorage.setItem('coreforge_pref_daily_vocab_goal', String(dailyVocabGoal))
       localStorage.setItem('coreforge_pref_editor_mode', defaultEditorMode)
+      localStorage.setItem('coreforge_show_quick_prompts', String(showQuickPrompts))
+      window.dispatchEvent(new CustomEvent('coreforge_quick_prompts_change', { detail: showQuickPrompts }))
       setMessage({ type: 'success', text: '研学与备考偏好已保存！' })
       setTimeout(() => setMessage(null), 3000)
     } catch {
@@ -598,10 +608,16 @@ export default function Settings() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-wrap items-center justify-between gap-2">
-                <div className="space-y-1 min-w-0">
-                  <span className="text-slate-400">当前备考登录身份：</span>
-                  <p className="font-bold text-slate-900 text-sm truncate">{user?.username || '未登录备考者'} <span className="text-xs text-slate-400 font-normal">({user?.role === 'admin' ? '系统管理员' : '考研学员'})</span></p>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <DangoAvatar seed={user?.username || user?.displayName} size="xl" className="shadow-xs" />
+                  <div className="space-y-1 min-w-0">
+                    <span className="text-slate-400">当前备考登录身份：</span>
+                    <p className="font-bold text-slate-900 text-sm truncate">{user?.username || '未登录备考者'} <span className="text-xs text-slate-400 font-normal">({user?.role === 'admin' ? '系统管理员' : '考研学员'})</span></p>
+                    <div className="pt-0.5">
+                      <DangoColorPicker seed={user?.username || user?.displayName} compact />
+                    </div>
+                  </div>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <button
@@ -891,6 +907,60 @@ export default function Settings() {
                 >
                   <div className="font-bold text-xs text-slate-900">极客 Markdown 源码模式</div>
                   <div className="text-2xs text-slate-400 mt-0.5">纯文本双链极速录入与快捷键编辑</div>
+                </button>
+              </div>
+            </div>
+          </section>
+
+          {/* AI 智能伴学与交互偏好 */}
+          <section className="bento-card bg-white border border-slate-200/80 rounded-xl shadow-xs p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-indigo-600" />
+                <span>AI 智能伴学与交互偏好</span>
+              </div>
+              <span className={`text-2xs font-semibold px-2.5 py-0.5 rounded-full border ${
+                showQuickPrompts
+                  ? 'text-indigo-700 bg-indigo-50 border-indigo-200'
+                  : 'text-slate-600 bg-slate-100 border-slate-200'
+              }`}>
+                {showQuickPrompts ? '发散提问：开启' : '发散提问：关闭'}
+              </span>
+            </div>
+
+            {/* 开关：打字框上方发散问题选项 */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200/80">
+              <div className="space-y-1 min-w-0 flex-1">
+                <div className="text-xs font-bold text-slate-800 flex items-center gap-2">
+                  <span>显示打字框上方发散问题建议</span>
+                  {showQuickPrompts && (
+                    <span className="text-[10px] bg-indigo-100 text-indigo-700 font-semibold px-1.5 py-0.2 rounded-full">
+                      延伸启发
+                    </span>
+                  )}
+                </div>
+                <p className="text-2xs text-slate-500 leading-relaxed">
+                  开启后，智能导师在回复后会在输入框上方生成 3~4 个发散考点与深入追问气泡，支持一键直接提问；关闭后输入框上方不显示发散标签，界面更简洁专注。
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowQuickPrompts(prev => !prev)}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    showQuickPrompts ? 'bg-indigo-600' : 'bg-slate-300'
+                  }`}
+                  role="switch"
+                  aria-checked={showQuickPrompts}
+                  title={showQuickPrompts ? '点击关闭打字框上方发散问题' : '点击开启打字框上方发散问题'}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      showQuickPrompts ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
                 </button>
               </div>
             </div>

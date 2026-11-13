@@ -497,9 +497,48 @@ export default function ImportResourceModal({
       return
     }
 
+    let effectiveDomain = uploadDomain
+    let effectiveSubject = uploadSubject
+
+    // 智能全科预判：基于文件名纠正领域与二级学科（杜绝默认“考研数学”导致 408 资料被误存入高数）
+    const lowerName = file.name.toLowerCase()
+    if (/408|操作系统|进程|虚拟内存|死锁|分页|计算机组成|计组|指令|微程序|流水线|cache|数据结构|二叉树|哈夫曼|图论|计网|网络|tcp|udp|ip/.test(lowerName)) {
+      effectiveDomain = 'cs_408'
+      setUploadDomain('cs_408')
+      if (/操作系统|进程|虚拟内存|死锁|分页|页面置换|调度算法/.test(lowerName)) {
+        effectiveSubject = '操作系统'
+        setUploadSubject('操作系统')
+      } else if (/计算机组成|计组|指令|流水线|微程序|cache/.test(lowerName)) {
+        effectiveSubject = '计算机组成原理'
+        setUploadSubject('计算机组成原理')
+      } else if (/计算机网络|计网|tcp|udp|ip|路由|子网/.test(lowerName)) {
+        effectiveSubject = '计算机网络'
+        setUploadSubject('计算机网络')
+      } else if (/数据结构|树|图|链表|排序|查找/.test(lowerName)) {
+        effectiveSubject = '数据结构'
+        setUploadSubject('数据结构')
+      }
+    } else if (/数学|高数|微积分|极限|导数|积分|级数|线代|矩阵|行列式|概率|随机变量|分布/.test(lowerName)) {
+      effectiveDomain = 'math'
+      setUploadDomain('math')
+      if (/线代|矩阵|行列式|特征值|二次型/.test(lowerName)) {
+        effectiveSubject = '线性代数'
+        setUploadSubject('线性代数')
+      } else if (/概率|随机变量|分布|期望|方差/.test(lowerName)) {
+        effectiveSubject = '概率论与数理统计'
+        setUploadSubject('概率论与数理统计')
+      } else if (/高数|微积分|极限|导数|定积分|微分方程/.test(lowerName)) {
+        effectiveSubject = '高等数学'
+        setUploadSubject('高等数学')
+      }
+    }
+
     setIsUploading(true)
     const formData = new FormData()
-    formData.append('domain', uploadDomain)
+    formData.append('domain', effectiveDomain)
+    if (effectiveSubject && effectiveSubject !== 'auto') {
+      formData.append('subject', effectiveSubject)
+    }
     formData.append('category', uploadCategory)
     formData.append('file', file)
 
@@ -541,7 +580,7 @@ export default function ImportResourceModal({
             name: data.file.name,
             relativePath: data.file.relativePath,
             fullPath: '',
-            domain: uploadDomain,
+            domain: effectiveDomain,
             category: uploadCategory,
             size: data.file.size,
             ext: '.' + (data.file.name.split('.').pop() || 'pdf'),
@@ -555,7 +594,7 @@ export default function ImportResourceModal({
           setPageRangeInput('')
           if (uploadActionMode === 'scan_and_keep') {
             const preferredMode = (uploadCategory === '真题' || uploadCategory === '模拟题') ? 'question' : scanExtractMode
-            await handleAutoExtract(data.file.relativePath, uploadDomain, data.file.name, uploadedScope, preferredMode)
+            await handleAutoExtract(data.file.relativePath, effectiveDomain, data.file.name, uploadedScope, preferredMode)
           } else {
             // 仅保存原 PDF 预览时，探测一次元信息（页数、是否扫描件）
             setInspectingBook(true)
