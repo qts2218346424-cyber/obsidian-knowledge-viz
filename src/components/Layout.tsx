@@ -219,14 +219,6 @@ export default function Layout({ children }: LayoutProps) {
     window.addEventListener('vault-notes-updated', onNotesUpdated)
     window.addEventListener('vault-stats-updated', onNotesUpdated)
 
-    // 新用户首次登录智能唤起指引（避免提前 return 导致后续快捷键与事件监听器失效）
-    let onboardingTimer: ReturnType<typeof setTimeout> | undefined
-    try {
-      const dismissed = localStorage.getItem('coreforge_onboarding_dismissed')
-      if (!dismissed) {
-        onboardingTimer = setTimeout(() => openModal('user-guide'), 1200)
-      }
-    } catch {}
     const handler = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault()
@@ -260,7 +252,6 @@ export default function Layout({ children }: LayoutProps) {
     }
     window.addEventListener('keydown', handler)
     return () => {
-      if (onboardingTimer) clearTimeout(onboardingTimer)
       window.removeEventListener('keydown', handler)
       window.removeEventListener('open-quick-note', onOpenQuickNote)
       window.removeEventListener('open-user-guide', onOpenGuide)
@@ -272,6 +263,29 @@ export default function Layout({ children }: LayoutProps) {
       window.removeEventListener('vault-stats-updated', onNotesUpdated)
     }
   }, [openModal, closeModal, activeModals, assistantOpen])
+
+  // 新用户首次登录自动唤起指引：每个浏览器会话最多自动弹出一次。
+  // 单独放在只运行一次的 effect 里——上面的 effect 依赖 activeModals，
+  // 关闭弹窗会让它重跑，旧写法因此会在关闭后再次自动弹出。
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    try {
+      const dismissed = localStorage.getItem('coreforge_onboarding_dismissed')
+      const shownThisSession = sessionStorage.getItem('coreforge_onboarding_autoshown')
+      if (!dismissed && !shownThisSession) {
+        timer = setTimeout(() => {
+          try {
+            sessionStorage.setItem('coreforge_onboarding_autoshown', '1')
+          } catch {}
+          openModal('user-guide')
+        }, 1200)
+      }
+    } catch {}
+    return () => {
+      if (timer) clearTimeout(timer)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     const ROUTE_PAGE_TITLES: Record<string, string> = {
@@ -1315,7 +1329,7 @@ export default function Layout({ children }: LayoutProps) {
       <main className={`mx-auto max-w-[1600px] w-full min-w-0 max-w-full overflow-x-clip ${
         isFullHeightPage
           ? 'h-[calc(100dvh-2.75rem-env(safe-area-inset-top,0px))] sm:h-[calc(100dvh-3.5rem-env(safe-area-inset-top,0px))] overflow-hidden flex flex-col pb-[calc(3.75rem+env(safe-area-inset-bottom,0px))] xl:pb-0'
-          : 'min-h-[calc(100dvh-2.75rem)] pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] xl:pb-8'
+          : 'min-h-[calc(100dvh-2.75rem)] pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] xl:pb-32'
       }`}>
         {syncNotice && (
           <div className="fixed right-3 sm:right-5 top-[3.5rem] sm:top-[4rem] z-30 flex items-center gap-2 rounded-full border border-emerald-200 bg-white/95 px-3 py-1 sm:px-3.5 sm:py-1.5 text-2xs sm:text-xs font-medium text-emerald-700 shadow-xl backdrop-blur-xl animate-fade-in-up">

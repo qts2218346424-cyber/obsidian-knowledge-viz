@@ -430,7 +430,8 @@ export default function KnowledgeGraph({
         const count = (d as SimNode).linkCount || 0
         return -145 - Math.min(130, count * 10)
       }).distanceMax(400))
-      .force('center', d3.forceCenter(initW / 2, initH / 2).strength(0.08))
+      // 不使用 forceCenter：它会平移所有节点让质心归位，拖动单个节点时整张图会反向漂移/被甩出画布。
+      // 向心约束由下面的 forceX / forceY 承担，只作用于各自节点。
       .force('x', d3.forceX<SimNode>(initW / 2).strength(radialPull))
       .force('y', d3.forceY<SimNode>(initH / 2).strength(radialPull))
       .force('collision', d3.forceCollide<SimNode>().radius(d => {
@@ -506,7 +507,8 @@ export default function KnowledgeGraph({
               // 注意：d3-drag 在 drag 回调期间 event.active === 1，不能用 !event.active 判断
               if (!isDraggingSim) {
                 isDraggingSim = true
-                simulation.alphaTarget(0.35).restart()
+                // 低能量牵引：只让邻近节点轻微跟随，不让整张图重新布局
+                simulation.alphaTarget(0.08).restart()
               }
               d.fx = event.x
               d.fy = event.y
@@ -516,9 +518,12 @@ export default function KnowledgeGraph({
               if (isDraggingSim && !event.active) {
                 simulation.alphaTarget(0)
               }
+              // 拖过的节点固定在松手位置（与 Obsidian 一致）；未真正拖动则不固定
+              if (!isDraggingSim) {
+                d.fx = null
+                d.fy = null
+              }
               isDraggingSim = false
-              d.fx = null
-              d.fy = null
             })
         })()
       )
@@ -927,7 +932,14 @@ export default function KnowledgeGraph({
   }
 
   const reheatSimulation = () => {
-    simulationRef.current?.alpha(0.65).restart()
+    const sim = simulationRef.current
+    if (!sim) return
+    // 重排时释放用户拖拽固定的节点
+    sim.nodes().forEach((n: any) => {
+      n.fx = null
+      n.fy = null
+    })
+    sim.alpha(0.65).restart()
   }
 
   // 启动仿真课件处理函数

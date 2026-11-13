@@ -127,7 +127,7 @@ export function DefuddlePanel() {
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        <div className="flex-1" style={{ minHeight: 340 }}>
+        <div className="flex-1 min-w-0 relative" style={{ height: 340 }}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -266,7 +266,7 @@ export function QueryPanel() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Flow */}
-        <div className="flex-1" style={{ minHeight: 320 }}>
+        <div className="flex-1 min-w-0 relative" style={{ height: 320 }}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -514,7 +514,7 @@ export function FoldPanel() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Flow */}
-        <div className="flex-1" style={{ minHeight: 320 }}>
+        <div className="flex-1 min-w-0 relative" style={{ height: 320 }}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -777,7 +777,7 @@ export function ThinkPanel() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Flow or Mindmap */}
-        <div className="flex-1" style={{ minHeight: 320 }}>
+        <div className="flex-1 min-w-0 relative" style={{ height: 320 }}>
           {!result ? (
             <ReactFlow
               nodes={flowNodes}
