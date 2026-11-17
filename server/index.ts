@@ -92,15 +92,23 @@ const distPath = getDistPath()
 if (fs.existsSync(distPath)) {
   app.use(
     express.static(distPath, {
-      maxAge: '1y',
-      immutable: true,
+      etag: false,
       setHeaders: (res, filePath) => {
-        // index.html 必须协商缓存，确保版本发布后用户第一时间拉取最新入口
-        if (filePath.endsWith('.html')) {
-          res.setHeader('Cache-Control', 'no-cache, must-revalidate')
-        } else {
-          // 带有 content-hash 的 JS/CSS/图片/字体设置 1 年强缓存，二次进入 0 延迟秒开
+        const normalized = filePath.replace(/\\/g, '/')
+        // index.html 严禁浏览器与边缘 CDN 强缓存，确保每次发版用户刷新即刻获取最新资源哈希
+        if (normalized.endsWith('.html')) {
+          res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0')
+          res.setHeader('Pragma', 'no-cache')
+          res.setHeader('Expires', '0')
+          res.setHeader('Surrogate-Control', 'no-store')
+          res.setHeader('CDN-Cache-Control', 'no-store')
+          res.setHeader('Cloudflare-CDN-Cache-Control', 'no-store')
+        } else if (normalized.includes('/dist/assets/')) {
+          // 带有 content-hash 的构建产物开启 1 年不可变强缓存，二次进入 0 延迟秒开
           res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+        } else {
+          // public/ 下的非哈希静态资源采用短时效可重验策略
+          res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate')
         }
       },
     })
