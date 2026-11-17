@@ -26,10 +26,96 @@
         margin: 0;
         -webkit-tap-highlight-color: transparent;
       }
+      @keyframes cfBootFadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+      .cf-boot-shell {
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        text-align: center;
+        color: #334155;
+        opacity: 0;
+        animation: cfBootFadeIn 0.35s ease 0.45s forwards;
+      }
+      .cf-boot-card {
+        max-width: 400px;
+        width: 100%;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 20px;
+        padding: 24px 20px;
+        box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.08);
+      }
+      .cf-boot-spinner {
+        width: 26px;
+        height: 26px;
+        margin: 0 auto 12px;
+        border: 2.5px solid #e2e8f0;
+        border-top-color: #18181b;
+        border-radius: 50%;
+        animation: cfSpin 0.8s linear infinite;
+      }
+      @keyframes cfSpin {
+        to { transform: rotate(360deg); }
+      }
+      .cf-boot-retry {
+        display: none;
+        margin-top: 14px;
+        gap: 8px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .cf-boot-btn {
+        padding: 9px 16px;
+        border-radius: 10px;
+        border: 1px solid #18181b;
+        background: #18181b;
+        color: #fff;
+        font-size: 12.5px;
+        font-weight: 700;
+        cursor: pointer;
+        text-decoration: none;
+      }
+      .cf-boot-btn-alt {
+        background: #fff;
+        color: #334155;
+        border-color: #cbd5e1;
+      }
     </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="cf-boot-shell" id="cf-boot-fallback">
+        <div class="cf-boot-card">
+          <div class="cf-boot-spinner" aria-hidden="true"></div>
+          <div id="cf-boot-title" style="font-size:14px;font-weight:700;color:#0f172a;">正在载入 CoreForge 研核空间…</div>
+          <div id="cf-boot-desc" style="font-size:12px;color:#64748b;margin-top:6px;line-height:1.5;">首次加载或云端平滑热更新可能需要数秒，请稍候</div>
+          <div id="cf-boot-actions" class="cf-boot-retry">
+            <button type="button" class="cf-boot-btn" onclick="window.location.reload()">重新连接页面</button>
+            <a href="/_gateway_fallback.html" class="cf-boot-btn cf-boot-btn-alt">查看节点状态与自动重连</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      (function () {
+        setTimeout(function () {
+          var el = document.getElementById('cf-boot-fallback');
+          if (!el) return;
+          var t = document.getElementById('cf-boot-title');
+          var d = document.getElementById('cf-boot-desc');
+          var a = document.getElementById('cf-boot-actions');
+          if (t) t.textContent = '云端服务正在瞬时重连或网络较慢';
+          if (d) d.textContent = '链接有效未失效，您的笔记与错题数据均安全保留，可点击下方按钮重连：';
+          if (a) a.style.display = 'flex';
+        }, 6500);
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
