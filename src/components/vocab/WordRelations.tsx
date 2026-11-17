@@ -390,7 +390,7 @@ function WordRelationsInner() {
 
   const freqRank: Record<string, number> = { 高频: 0, 中频: 1, 低频: 2 }
   const sortedWords = selectedRoot
-    ? [...selectedRoot.words].sort(
+    ? selectedRoot.words.toSorted(
         (a, b) => (freqRank[a.frequency] ?? 3) - (freqRank[b.frequency] ?? 3)
       )
     : []

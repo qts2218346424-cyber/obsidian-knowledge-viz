@@ -696,9 +696,13 @@ export default function AIMemoryModal({
                     placeholder="输入新的行为准则规范..."
                     className="flex-1 min-w-0 px-3 py-2 rounded-xl border border-cream-200 bg-cream-50 text-[13px] sm:text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange"
                     onKeyDown={e => {
-                      if (e.key === 'Enter' && newRuleText.trim()) {
-                        setEditingRules([...editingRules, newRuleText.trim()])
-                        setNewRuleText('')
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        if (e.nativeEvent.isComposing || (e as any).keyCode === 229) return
+                        if (newRuleText.trim()) {
+                          setEditingRules([...editingRules, newRuleText.trim()])
+                          setNewRuleText('')
+                        }
                       }
                     }}
                   />
@@ -800,12 +804,16 @@ export default function AIMemoryModal({
                     placeholder="添加薄弱考点..."
                     className="flex-1 min-w-0 px-3 py-1.5 rounded-xl border border-cream-200 bg-cream-50 text-[13px] sm:text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange"
                     onKeyDown={e => {
-                      if (e.key === 'Enter' && newWeakPointText.trim()) {
-                        setEditingProfile({
-                          ...editingProfile,
-                          weakPoints: [...editingProfile.weakPoints, newWeakPointText.trim()]
-                        })
-                        setNewWeakPointText('')
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        if (e.nativeEvent.isComposing || (e as any).keyCode === 229) return
+                        if (newWeakPointText.trim()) {
+                          setEditingProfile({
+                            ...editingProfile,
+                            weakPoints: [...editingProfile.weakPoints, newWeakPointText.trim()]
+                          })
+                          setNewWeakPointText('')
+                        }
                       }
                     }}
                   />
@@ -852,12 +860,16 @@ export default function AIMemoryModal({
                     placeholder="添加个人习惯..."
                     className="flex-1 min-w-0 px-3 py-1.5 rounded-xl border border-cream-200 bg-cream-50 text-[13px] sm:text-xs text-warm-800 focus:bg-white focus:outline-none focus:border-accent-orange"
                     onKeyDown={e => {
-                      if (e.key === 'Enter' && newPreferenceText.trim()) {
-                        setEditingProfile({
-                          ...editingProfile,
-                          customPreferences: [...editingProfile.customPreferences, newPreferenceText.trim()]
-                        })
-                        setNewPreferenceText('')
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        if (e.nativeEvent.isComposing || (e as any).keyCode === 229) return
+                        if (newPreferenceText.trim()) {
+                          setEditingProfile({
+                            ...editingProfile,
+                            customPreferences: [...editingProfile.customPreferences, newPreferenceText.trim()]
+                          })
+                          setNewPreferenceText('')
+                        }
                       }
                     }}
                   />

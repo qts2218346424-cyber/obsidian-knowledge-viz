@@ -11,6 +11,7 @@ import { matchSyllabusNode } from '../data/syllabus.js'
 import { MasteryEngine } from '../algorithms/mastery.js'
 import { calculateSM2 } from '../algorithms/sm2.js'
 import { normalizeQuestionMathFields } from '../utils/math-normalize.js'
+import { safeJsonParseWithLatex, rescueBalancedQuestionObjects } from '../utils/json-rescue.js'
 
 
 type QuizDomain = 'cs_408' | 'math' | 'english' | 'politics' | 'general'
@@ -68,21 +69,14 @@ function extractTextFromAiContent(content: any): string {
 
 function safeParseJsonArray(raw: string): any[] {
   if (!raw) return []
-  try {
-    const cleaned = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim()
-    const parsed = JSON.parse(cleaned)
+  const parsed = safeJsonParseWithLatex<any>(raw)
+  if (parsed) {
     if (Array.isArray(parsed)) return parsed
-    if (parsed && Array.isArray((parsed as any).questions)) return (parsed as any).questions
-    if (parsed && typeof parsed === 'object') return [parsed]
-  } catch {
-    const match = raw.match(/\[[\s\S]*\]/)
-    if (match) {
-      try {
-        const parsed = JSON.parse(match[0])
-        if (Array.isArray(parsed)) return parsed
-      } catch {}
-    }
+    if (Array.isArray(parsed.questions)) return parsed.questions
+    if (typeof parsed === 'object' && parsed.question) return [parsed]
   }
+  const rescued = rescueBalancedQuestionObjects(raw)
+  if (rescued.length > 0) return rescued
   return []
 }
 
@@ -213,10 +207,10 @@ ${text.slice(0, 5000)}
 """
 
 【输出规则】：
-1. 识别并提取题目、选项（如果是单选题或阅读/政治选择题）、正确答案和详细解析。
-2. 数学或专业课公式必须规范格式化为 KaTeX LaTeX（如 $\\lim_{x \\to 0} \\frac{\\sin x}{x} = 1$）；英语题目保留英文原句与选项，解析中分析长难句语法结构或定位句同义替换；政治题目准确提取题干与选项，解析中说明核心考点与干扰项排除依据。
+1. 识别并提取题目、选项（单选题 type="choice"，多选题 type="multiple" 且 answer 如 "ACD"，填空题 type="blank"，主观/材料大题 type="analysis"）、正确答案和详细解析；若为英语阅读/完形或材料题，将共享原文填入 "passage" 字段。
+2. 数学或专业课公式必须规范格式化为 KaTeX LaTeX（JSON 字符串内反斜杠双写为 \\\\）；英语题目保留英文原句与选项，解析中分析长难句语法结构或定位句同义替换；政治题目准确提取题干与选项（区分单选与多选），解析中说明核心考点与干扰项排除依据。
 3. 如果原文没有解析，请根据题干和答案补充严密规范的分步考研解析。
-4. 如果有多道题目，解析为多个数组元素。
+4. 如果有多道题目，全部解析为数组元素，严禁漏题。
 5. 必须只输出纯 JSON 数组，严禁任何额外解释或 Markdown 格式以外的文本：
 [
   {
@@ -226,6 +220,7 @@ ${text.slice(0, 5000)}
     "chapter": "对应章节",
     "type": "choice",
     "difficulty": "中等",
+    "passage": "若有共享阅读短文或材料则填写，否则省略",
     "question": "题干内容（支持LaTeX）",
     "options": {
       "A": "选项A",
@@ -241,7 +236,7 @@ ${text.slice(0, 5000)}
 
     const aiRes = await createAiQuizCompletion({
       model: config.ai?.model || 'deepseek-v4-pro',
-      max_tokens: 4096,
+      max_tokens: 8192,
       system: '你是一个严格输出纯 JSON 格式题库的考研命题与解析专家。只输出纯 JSON 数组，严禁任何前后缀闲聊。',
       messages: [{ role: 'user', content: prompt }]
     })
@@ -1515,11 +1510,19 @@ function validateAndNormalizeGeneratedQuestions(questions: any[]): any[] {
       }
     }
 
-    // 3. 确保 answer 字段为规范的大写字母 A/B/C/D
-    if (typeof q.answer === 'string') {
+    // 3. 规范化单选/多选 answer 字段（保留多选如 "ACD"，不再将多选题强行截断为单字母 "A"）
+    if (typeof q.answer === 'string' && q.options && typeof q.options === 'object') {
       const trimmed = q.answer.trim().toUpperCase()
-      const match = trimmed.match(/^([A-D])/)
-      if (match) q.answer = match[1]
+      const multiMatch = trimmed.match(/^[A-F](?:[\s,，、/;-]*[A-F]){0,5}$/)
+      if (multiMatch) {
+        const letters = Array.from(new Set(trimmed.match(/[A-F]/g) || [])).sort()
+        if (letters.length > 0) {
+          q.answer = letters.join('')
+          if (letters.length >= 2) {
+            q.type = 'multiple'
+          }
+        }
+      }
     }
 
     return q

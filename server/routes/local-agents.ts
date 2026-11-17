@@ -1,11 +1,13 @@
 import { Router } from 'express'
 import fs from 'fs'
 import path from 'path'
-import { config, anthropic, getAiClientForModel } from '../context.js'
+import { config, anthropic, getAiClientForModel, getUserNotes } from '../context.js'
 import { detectAllLocalAgents, detectLocalAgents, runLocalAgent, type LocalAgentProvider } from '../local-agent-bridge.js'
 import { OpenAICompatibleClient } from '../ai-client.js'
 import { runAgentLoop } from '../agent.js'
 import { scanLocalSkills } from '../local-skill-scanner.js'
+import { loadAgentMemoryConfig } from '../memory-store.js'
+import { getRequestVaultPath } from '../services/user-sandbox.js'
 import {
   addDeletedModel,
   removeDeletedModel,
@@ -15,6 +17,211 @@ import {
 
 import { database } from '../db/database.js'
 export const localAgentsRouter = Router()
+
+const STOP_WORDS = new Set([
+  '什么', '怎么', '如何', '为什么', '请问', '讲解', '分析', '一下', '这个', '那个',
+  '帮我', '详细', '通俗', '举例', '意思', '区别', '联系', '过程', '原理', '请结合',
+  '伴读', '笔记', '核心', '考点', '命题', '陷阱', '用户', '提问', 'the', 'and', 'for', 'with',
+])
+
+/**
+ * 从用户提问中提取高区分度的中英文核心检索词元，用于轻量级本地笔记 RAG 与错题关联匹配
+ */
+function extractQueryKeywords(rawPrompt: string): string[] {
+  const clean = rawPrompt
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/【当前伴读知识库笔记[\s\S]*?】/g, ' ')
+    .slice(-600)
+    .toLowerCase()
+
+  const tokens = new Set<string>()
+  // 1. 提取英文技术术语与缩写 (如 avl, kmp, tcp, cache, tlb, inode, lru)
+  const enMatches = clean.match(/[a-z][a-z0-9_+-]{1,18}/g) || []
+  for (const w of enMatches) {
+    if (!STOP_WORDS.has(w)) tokens.add(w)
+  }
+
+  // 2. 提取连续中文学术短语及 2~4 字切分词元
+  const zhChunks = clean.match(/[\u4e00-\u9fa5]{2,12}/g) || []
+  for (const chunk of zhChunks) {
+    if (!STOP_WORDS.has(chunk) && chunk.length <= 6) {
+      tokens.add(chunk)
+    }
+    if (chunk.length >= 4) {
+      for (let i = 0; i <= chunk.length - 2; i += 2) {
+        const sub = chunk.slice(i, i + 2)
+        if (!STOP_WORDS.has(sub)) tokens.add(sub)
+      }
+    }
+  }
+
+  return Array.from(tokens).slice(0, 14)
+}
+
+/**
+ * 构建千人千面的个人考情画像、近期真实错题预警与个人 Vault 笔记轻量 RAG 上下文
+ */
+function buildPersonalizedStudyContext(params: {
+  userId?: string
+  userVaultPath: string
+  userPromptText: string
+  isPsychology?: boolean
+}): {
+  promptBlock: string
+  citedNotes: { title: string; path: string; excerpt: string; tags: string[] }[]
+  matchedWeakPoints: string[]
+  relatedErrorsCount: number
+  targetExam?: string
+  profileApplied: boolean
+} {
+  const { userId, userVaultPath, userPromptText, isPsychology } = params
+  if (isPsychology || userPromptText.includes('【用户指令：请继续往下写】')) {
+    return {
+      promptBlock: '',
+      citedNotes: [],
+      matchedWeakPoints: [],
+      relatedErrorsCount: 0,
+      profileApplied: false,
+    }
+  }
+
+  const keywords = extractQueryKeywords(userPromptText)
+  const blocks: string[] = []
+  let targetExam: string | undefined
+  const matchedWeakPoints: string[] = []
+  let profileApplied = false
+
+  // 1. 读取考生个人档案与偏好 (agent.md)
+  try {
+    const mem = loadAgentMemoryConfig(userVaultPath)?.config
+    if (mem?.userProfile) {
+      const up = mem.userProfile
+      targetExam = up.targetExam
+      profileApplied = true
+      const profileLines: string[] = [
+        '【🧠 考生专属个性化档案（请量身定制讲解深度、侧重点与举例方式）】：',
+        `- 目标考向：${up.targetExam || '408 计算机综合 + 考研数学'}（阶段：${up.currentStage || '强化冲刺'}）`,
+      ]
+      if (up.userBackground) {
+        profileLines.push(`- 考生背景：${up.userBackground}`)
+      }
+      if (Array.isArray(up.customPreferences) && up.customPreferences.length > 0) {
+        profileLines.push(`- 学习偏好：${up.customPreferences.slice(0, 3).join('；')}`)
+      }
+      if (Array.isArray(up.weakPoints) && up.weakPoints.length > 0) {
+        for (const wp of up.weakPoints) {
+          const wpLower = wp.toLowerCase()
+          if (keywords.some(kw => kw.length >= 2 && wpLower.includes(kw))) {
+            matchedWeakPoints.push(wp)
+          }
+        }
+        if (matchedWeakPoints.length > 0) {
+          profileLines.push(
+            `- ⚠️ 命中该考生登记的重点薄弱项：${matchedWeakPoints.join('；')}（请务必放慢节奏拆解透彻，重点点破其易混淆盲区！）`
+          )
+        } else {
+          profileLines.push(`- 考生关注薄弱项参考：${up.weakPoints.slice(0, 4).join('；')}`)
+        }
+      }
+      const enabledDirs = (mem.directives || []).filter(d => d.enabled).slice(0, 4)
+      if (enabledDirs.length > 0) {
+        profileLines.push(`- 专属教学指令：${enabledDirs.map(d => d.content).join(' ')}`)
+      }
+      blocks.push(profileLines.join('\n'))
+    }
+  } catch {}
+
+  // 2. 匹配考生错题本中与本次提问相关的未攻克错题（靶向防重犯预警）
+  let relatedErrorsCount = 0
+  if (keywords.length > 0) {
+    try {
+      const activeErrors = database.getErrorQuestions({
+        userId: userId || undefined,
+        status: 'active',
+      })
+      const scoredErrors = activeErrors
+        .map(err => {
+          const qText = `${err.subject || ''} ${err.chapter || ''} ${err.question || ''}`.toLowerCase()
+          let score = 0
+          for (const kw of keywords) {
+            if (kw.length >= 2 && qText.includes(kw)) {
+              score += kw.length >= 3 ? 3 : 1
+            }
+          }
+          return { err, score }
+        })
+        .filter(item => item.score >= 2)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 2)
+
+      if (scoredErrors.length > 0) {
+        relatedErrorsCount = scoredErrors.length
+        const errLines = scoredErrors.map(({ err }, idx) => {
+          const eType = err.errorType || (err as any).error_type || '概念/审题易错'
+          const stem = String(err.question || '').replace(/\s+/g, ' ').slice(0, 110)
+          return `  ${idx + 1}) [${err.subject || '考研真题'} · 历史错因：${eType}] ${stem}...`
+        })
+        blocks.push(
+          `【🎯 考生过往同类真实错题记录（讲解时请自然穿插提醒，帮考生避开曾栽过的坑）】：\n${errLines.join('\n')}`
+        )
+      }
+    } catch {}
+  }
+
+  // 3. 个人 Obsidian Vault 相关笔记自动轻量检索 (Auto-RAG)
+  const citedNotes: { title: string; path: string; excerpt: string; tags: string[] }[] = []
+  if (keywords.length > 0 && !userPromptText.includes('【当前伴读知识库笔记：')) {
+    try {
+      const notes = getUserNotes(userId, userVaultPath)
+      const scoredNotes = notes
+        .map(note => {
+          const titleLower = (note.title || '').toLowerCase()
+          const tagsLower = (note.tags || []).map(t => t.toLowerCase())
+          const contentSample = (note.content || '').slice(0, 3000).toLowerCase()
+          let score = 0
+          for (const kw of keywords) {
+            if (kw.length < 2) continue
+            if (titleLower.includes(kw)) score += 6
+            if (tagsLower.some(t => t.includes(kw))) score += 4
+            if (contentSample.includes(kw)) score += 1.5
+          }
+          return { note, score }
+        })
+        .filter(x => x.score >= 4 && (x.note.content || '').trim().length >= 30)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3)
+
+      if (scoredNotes.length > 0) {
+        const ragSnippets: string[] = []
+        for (const { note } of scoredNotes) {
+          const cleanBody = note.content
+            .replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '')
+            .trim()
+          const excerpt = cleanBody.slice(0, 420)
+          citedNotes.push({
+            title: note.title,
+            path: note.path,
+            excerpt: cleanBody.slice(0, 140),
+            tags: (note.tags || []).slice(0, 4),
+          })
+          ragSnippets.push(`- 笔记《[[${note.title}]]》(路径: ${note.path})：\n${excerpt}`)
+        }
+        blocks.push(
+          `【📚 自动检索到的考生个人知识库相关笔记（可自然引用 [[笔记名]] 并与考生既有笔记体系呼应）】：\n${ragSnippets.join('\n\n')}`
+        )
+      }
+    } catch {}
+  }
+
+  return {
+    promptBlock: blocks.join('\n\n'),
+    citedNotes,
+    matchedWeakPoints,
+    relatedErrorsCount,
+    targetExam,
+    profileApplied,
+  }
+}
 
 localAgentsRouter.get('/local-agents/status', async (req, res) => {
   try {
@@ -202,10 +409,21 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
       }
     }
 
-    const requestedCwd = body.cwd || config.localAgents?.defaultCwd || config.vaultPath
+    const userVaultPath = getRequestVaultPath(req)
+    const requestedCwd = body.cwd || config.localAgents?.defaultCwd || userVaultPath
     const cwd = fs.existsSync(requestedCwd) && fs.statSync(requestedCwd).isDirectory()
       ? path.resolve(requestedCwd)
-      : path.resolve(config.vaultPath)
+      : path.resolve(userVaultPath)
+
+    const isPsychologyAgent = Boolean(
+      body.agentPrompt?.includes('心灵疗愈') || body.agentPrompt?.includes('心理聊天师')
+    )
+    const personalizedCtx = buildPersonalizedStudyContext({
+      userId: req.user?.id,
+      userVaultPath,
+      userPromptText,
+      isPsychology: isPsychologyAgent,
+    })
 
     // 格式化多轮历史摘要（用于本地 CLI 引擎或跨模型无缝继承）
     let historySummary = ''
@@ -221,6 +439,14 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
       `项目说明：${body.projectDescription || '当前 Obsidian 知识库项目'}`,
       `工作目录：${cwd}`,
       body.agentPrompt ? `【当前研学智能体定位与人设要求】：\n${body.agentPrompt}` : '',
+      personalizedCtx.promptBlock,
+      body.mode === 'socratic'
+        ? '【🧭 苏格拉底启发式导学模式（强制执行）】：\n' +
+          '1. 严禁直接把最终完整答案和全盘推导一次性端给学生，避免学生产生“看懂了但自己不会做”的假性掌握！\n' +
+          '2. 破题点拨：先用 1~2 句话一针见血点明本题考察的核心考点与题眼信号（为什么看到这个条件要往这个方向想）；\n' +
+          '3. 搭建第一级台阶：给出破局的第 1 步关键定理/辅助构造或核心状态方程，并在最关键的推导转折处刻意留白；\n' +
+          '4. 互动发问引导：在结尾向考生提出一个具体、低门槛、可立即动笔回答的“下一步小问题”（例如：“提示到这里，你能试着写出它的特征方程 / 下一步指针修改语句吗？”），等考生回答后再推进下一步！'
+        : '',
       (body.mode === 'followup' || body.isFollowUp || body.agentPrompt?.includes('追问模式'))
         ? '【🎯 针对性追问模式核心铁律（强制执行）】：\n' +
           '1. 靶向解惑：用户当前处于追问模式，提出的问题是针对前文推导或特定考点的具体疑问、认知卡壳点或困惑细节！\n' +
@@ -229,14 +455,14 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
           '4. 微观拆解：针对该疑问所涉步骤进行显微镜式的深入推演，步步有据，严谨闭环；\n' +
           '5. 针对性自测：解答完该疑问后，给出一个极小粒度的针对性微自测问题，检验用户是否真正弄懂。'
         : '',
-      (body.agentPrompt?.includes('心灵疗愈') || body.agentPrompt?.includes('心理聊天师'))
+      isPsychologyAgent
         ? '【心理聊天师对话与语言铁律】：\n' +
           '★ 全程纯中文温和共情对话：请以温柔、接纳、有安全感的纯简体中文倾听并陪伴用户，严禁英文夹生与冷漠说教；\n' +
           '★ 自然交谈排版：使用标准中文全角标点，段落自然紧凑，先接住情绪、再轻量认知重构、最后给出 1~2 个微步建议，无需套用生硬的做题表格或应试口诀。'
         : '【母语习惯与语言交付绝对铁律（最高优先级）】：\n' +
           '★ 全程纯中文作答：必须全程使用规范、严谨、通顺、地道的简体中文进行深度解析推导，严格符合中文母语考生的思维与阅读习惯！除专业技术原语、C/C++代码段与专有英文缩写（如 TCP/IP, TLB, Cache, O(n)）保留外，所有问题剖析、原理解释、步骤推演、设坑分析与总结一律采用纯中文表达，严禁出现整句英文或中英夹生翻译腔！\n' +
           '【排版交付强制准则】：\n' +
-          '1. 结论先行：首句直击答案，严禁“同学你好/我是XX导师/根据历年命题规律”等客套废话；\n' +
+          '1. 结论先行：首句直击答案（启发式导学模式除外），严禁“同学你好/我是XX导师/根据历年命题规律”等客套废话；\n' +
           '2. 严控垂直篇幅：正文紧凑精炼，杜绝过度拉长页面；段落之间最多 1 个空行，严禁连续多空行；严禁一句话一换行的诗歌体，同一要点需在同一段内自然连续书写；列表项之间严禁空行；\n' +
           '3. 中文标点规范：必须使用标准全角中文标点（，。、！？：；“”），严禁中英文标点混杂；标点紧随文字，严禁在标点后强行断行；序号与内容必须同行；\n' +
           '4. 结构清晰：使用 ### 小标题、加粗清单（- **要点**：...）、对比表格与 > ⚠️ 避坑引用块，末尾附 1~2 句速记口诀。',
@@ -366,13 +592,28 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
     emitRawEvent(event)
   }
 
-  // 初始向前端下发当前积分状态（不扣费）
+  // 初始向前端下发当前积分状态与个性化考情增强徽章（不扣费）
   if (req.user) {
     const curPts = database.getUserPoints(req.user.id)?.points ?? req.user.points ?? 0
     emitRawEvent({
       type: 'points_updated',
       points: curPts,
       deducted: 0,
+    })
+  }
+  if (
+    personalizedCtx.citedNotes.length > 0 ||
+    personalizedCtx.matchedWeakPoints.length > 0 ||
+    personalizedCtx.relatedErrorsCount > 0 ||
+    personalizedCtx.profileApplied
+  ) {
+    emitRawEvent({
+      type: 'context_enriched',
+      citedNotes: personalizedCtx.citedNotes,
+      matchedWeakPoints: personalizedCtx.matchedWeakPoints,
+      relatedErrorsCount: personalizedCtx.relatedErrorsCount,
+      targetExam: personalizedCtx.targetExam,
+      profileApplied: personalizedCtx.profileApplied,
     })
   }
 
@@ -459,7 +700,7 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
         client,
         model,
         conversationMessages,
-        config.vaultPath,
+        userVaultPath,
         localAgentPrompt
       )) {
         sendEvent(event)
@@ -515,7 +756,7 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
         client,
         model,
         conversationMessages,
-        config.vaultPath,
+        userVaultPath,
         antigravityPrompt
       )) {
         sendEvent(event)
@@ -531,7 +772,7 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
             fallbackTarget.client,
             fallbackTarget.model,
             conversationMessages,
-            config.vaultPath,
+            userVaultPath,
             antigravityPrompt
           )) {
             sendEvent(fbEvent)
@@ -621,7 +862,7 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
         client,
         model,
         conversationMessages,
-        config.vaultPath,
+        userVaultPath,
         codexPrompt
       )) {
         sendEvent(event)
@@ -660,7 +901,7 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
         client,
         model,
         conversationMessages,
-        config.vaultPath,
+        userVaultPath,
         webPrompt
       )) {
         sendEvent(event)
@@ -746,7 +987,7 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
         client,
         model,
         conversationMessages,
-        config.vaultPath,
+        userVaultPath,
         claudePrompt
       )) {
         if (event.type === 'text' && event.content) hasProducedContent = true

@@ -5,7 +5,7 @@ import SuspenseTimeoutFallback from '../components/ui/SuspenseTimeoutFallback'
 import { createPortal } from 'react-dom'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { BookOpen, Code2, XCircle, Plus, Search, RefreshCw, Loader2, Sparkles, Edit3, Network, Flame, Layers, FileText, Target } from 'lucide-react'
-import { api, type BookItem } from '../services/api'
+import { api, type BookItem, type BookScope } from '../services/api'
 import { getAuthHeaders } from '../services/auth'
 import { useAuth } from '../contexts/AuthContext'
 import { CURATED_HANDOUTS, type HandoutItem } from '../data/handoutsData'
@@ -464,6 +464,20 @@ export default function Study() {
 
     }
 
+    const handoutParam = searchParams.get('handout')
+
+    if (handoutParam) {
+
+      const targetHandout = CURATED_HANDOUTS.find(h => h.id === handoutParam)
+
+      if (targetHandout) {
+
+        setActiveHandout(targetHandout)
+
+      }
+
+    }
+
   }, [searchParams])
 
 
@@ -478,12 +492,13 @@ export default function Study() {
 
 
 
-  // Custom user handouts from raw-sources/ or uploaded
+  // Custom user handouts from raw-sources/ or uploaded (.md, .markdown, .txt, .docx)
 
   const customHandouts = useMemo(() => {
-
-    return books.filter(b => b.ext === '.md' && !b.isPdf && !b.isHtml)
-
+    const allowedExts = new Set(['.md', '.markdown', '.txt', '.docx'])
+    return books.filter(
+      b => allowedExts.has((b.ext || '').toLowerCase()) && !b.isPdf && !b.isHtml
+    )
   }, [books])
 
 
@@ -497,14 +512,15 @@ export default function Study() {
     // Add custom handouts from raw-sources if any
 
     customHandouts.forEach(b => {
+      const scopedId = b.id || `${b.scope || 'shared'}:${b.relativePath}`
 
-      if (!list.some(h => h.id === b.relativePath)) {
+      if (!list.some(h => h.id === scopedId)) {
 
         list.push({
 
-          id: b.relativePath,
+          id: scopedId,
 
-          title: b.name.replace(/\.md$/, ''),
+          title: b.name.replace(/\.(md|markdown|txt|docx)$/i, ''),
 
           domain: b.domain,
 
@@ -533,9 +549,10 @@ export default function Study() {
                     ? '专业课'
                     : '数学',
             b.category,
+            b.ext.replace('.', '').toUpperCase(),
           ],
 
-          summary: `用户导入讲义：《${b.name}》，归档于 ${b.relativePath}`,
+          summary: `用户导入讲义：《${b.name}》（${b.scope === 'personal' ? '个人独享' : '公共共享'}），归档于 ${b.relativePath}`,
 
           keyTheorems: ['来自用户知识库自定义讲义', '支持即刻随堂测验与大模型精析'],
 
@@ -689,11 +706,24 @@ export default function Study() {
 
     } else {
 
-      // Custom handout, load content from server
+      // Custom handout, resolve correct relativePath & scope (e.g. personal:raw-sources/...)
+      const matchedBook = customHandouts.find(
+        b => b.id === handout.id || b.relativePath === handout.id
+      )
+      let targetRelPath = matchedBook?.relativePath || handout.id
+      let targetScope: BookScope | undefined = matchedBook?.scope
+
+      if (!matchedBook) {
+        const prefixMatch = handout.id.match(/^(personal|shared):(.+)$/)
+        if (prefixMatch) {
+          targetScope = prefixMatch[1] as BookScope
+          targetRelPath = prefixMatch[2]
+        }
+      }
 
       try {
 
-        const res = await api.readBook(handout.id)
+        const res = await api.readBook(targetRelPath, targetScope)
 
         setActiveHandout({
 
@@ -705,7 +735,7 @@ export default function Study() {
 
       } catch (err: any) {
 
-        alert('读取讲义失败: ' + err.message)
+        setBatchResultMsg('读取讲义失败: ' + (err.message || String(err)))
 
       }
 
@@ -734,13 +764,15 @@ export default function Study() {
 
     setActiveHandout(null)
 
+    const cleanNotePath = handout.id.replace(/^(personal|shared):/, '')
+
     setPracticeNote({
 
       title: handout.title,
 
       content: handout.content || handout.summary,
 
-      path: handout.id
+      path: cleanNotePath
 
     })
 
@@ -1090,6 +1122,19 @@ export default function Study() {
       </div>
 
 
+
+      {batchResultMsg && tab !== 'pdfs' && (
+        <div className="px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between gap-2 shrink-0">
+          <span className="truncate">{batchResultMsg}</span>
+          <button
+            type="button"
+            onClick={() => setBatchResultMsg(null)}
+            className="text-amber-700 hover:text-amber-900 underline shrink-0 cursor-pointer"
+          >
+            关闭
+          </button>
+        </div>
+      )}
 
       {/* Main Tab Content */}
 
@@ -1537,7 +1582,11 @@ export default function Study() {
 
                   onKeyDown={e => {
 
-                    if (e.key === 'Enter') handleConfirmRename()
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      if (e.nativeEvent.isComposing || (e as any).keyCode === 229) return
+                      handleConfirmRename()
+                    }
 
                     if (e.key === 'Escape') setRenamingBook(null)
 

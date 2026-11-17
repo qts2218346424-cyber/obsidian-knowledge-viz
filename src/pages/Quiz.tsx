@@ -28,8 +28,6 @@ import {
   RotateCcw,
   Clock,
   Play,
-  Pause,
-  History,
   LayoutGrid,
   PenLine,
   Loader2,
@@ -55,8 +53,6 @@ import {
   classifyQuestionTopicId,
   type ActiveQuizQuestion,
   type AllSubject,
-  type QuizQuestionType as QuestionType,
-  type CsChapterModuleItem,
 } from '../features/quiz/utils/questionTopics'
 
 export type { ActiveQuizQuestion, AllSubject }
@@ -77,9 +73,17 @@ import type {
   ViewMode,
   QuizMode,
   SubjectInfo,
-  QuizResult,
+  QuizResult as BaseQuizResult,
 } from '../features/quiz/types'
-import { ALL_SUBJECTS, ERROR_REASONS, SCRATCHPAD_MATH_SYMBOLS } from '../features/quiz/constants'
+
+type QuizResult = Omit<BaseQuizResult, 'wrongQuestions'> & {
+  wrongQuestions: Array<{
+    question: ActiveQuizQuestion
+    userAnswer: string
+    errorReason?: string
+  }>
+}
+import { ALL_SUBJECTS, ERROR_REASONS } from '../features/quiz/constants'
 import { shuffleArray, formatTime, playExamAlertSound } from '../features/quiz/utils'
 import QuizTimerControl from '../features/quiz/components/QuizTimerControl'
 
@@ -94,7 +98,27 @@ function formatMathInline(raw?: string): string {
   return s
 }
 
-/** 统一校验客观题与自评掌握度的作答正误 */
+/** 规范化选择题选项字母串（如 "C, A, D" -> "ACD"） */
+function normalizeChoiceLetters(raw?: string): string {
+  const s = (raw || '').trim()
+  if (!s) return ''
+  if (!/^[A-Fa-f](?:[\s,，、/]*[A-Fa-f])*$/.test(s)) return ''
+  const uniqueSorted = Array.from(new Set(s.toUpperCase().match(/[A-F]/g) || [])).sort()
+  return uniqueSorted.join('')
+}
+
+/** 判定是否为多选题（type === 'multiple' 或存在选项且标准答案包含 >=2 个选项字母如 "ACD"） */
+function isMultipleChoiceQuestion(q: ActiveQuizQuestion): boolean {
+  if (q.type === 'multiple') return true
+  const hasOpts = Boolean(q.options && Object.values(q.options).some(Boolean))
+  if (hasOpts) {
+    const stdLetters = normalizeChoiceLetters(q.answer)
+    if (stdLetters.length >= 2) return true
+  }
+  return false
+}
+
+/** 统一校验客观题（单选/多选/填空）与自评掌握度的作答正误 */
 function isQuestionAnswerCorrect(q: ActiveQuizQuestion, rawAns?: string): boolean {
   const userAns = typeof rawAns === 'string' ? rawAns.trim() : ''
   if (!userAns) return false
@@ -102,6 +126,13 @@ function isQuestionAnswerCorrect(q: ActiveQuizQuestion, rawAns?: string): boolea
   if (userAns === 'unmastered' || userAns === 'partial' || userAns === 'completed') return false
   const std = (q.answer || '').trim()
   if (!std) return false
+  if (isMultipleChoiceQuestion(q)) {
+    const uLetters = normalizeChoiceLetters(userAns)
+    const sLetters = normalizeChoiceLetters(std)
+    if (uLetters && sLetters) {
+      return uLetters === sLetters
+    }
+  }
   return (
     userAns.toUpperCase() === std.toUpperCase() ||
     userAns === std.replace(/[\$\s]/g, '')
@@ -216,6 +247,9 @@ export default function Quiz() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [selectedOption, setSelectedOption] = useState<string | null>(null)
+  const [multiDraft, setMultiDraft] = useState<string[]>([])
+  const [passageExpanded, setPassageExpanded] = useState<boolean>(true)
+  const [resultExpandedPassages, setResultExpandedPassages] = useState<Set<string>>(new Set())
   const [blankInput, setBlankInput] = useState('')
   const [showFeedback, setShowFeedback] = useState(false)
   const [showSteps, setShowSteps] = useState(false)
@@ -229,17 +263,16 @@ export default function Quiz() {
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false)
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const scratchpadRef = useRef<HTMLTextAreaElement>(null)
 
   // ── 全真模拟考场倒计时与计时器状态 ───────────────────────────────────────────
   const [timerMode, setTimerMode] = useState<'countdown' | 'elapsed'>('countdown')
   const [timeLimitMinutes, setTimeLimitMinutes] = useState<number>(180)
   const [isTimerPaused, setIsTimerPaused] = useState<boolean>(false)
   const [isTimeUpModalOpen, setIsTimeUpModalOpen] = useState<boolean>(false)
-  const [hasOvertimeAcknowledged, setHasOvertimeAcknowledged] = useState<boolean>(false)
-  const [hasTriggered15MinAlert, setHasTriggered15MinAlert] = useState<boolean>(false)
-  const [hasTriggered5MinAlert, setHasTriggered5MinAlert] = useState<boolean>(false)
-  const [hasTriggeredTimeUpAlert, setHasTriggeredTimeUpAlert] = useState<boolean>(false)
+  const [, setHasOvertimeAcknowledged] = useState<boolean>(false)
+  const [, setHasTriggered15MinAlert] = useState<boolean>(false)
+  const [, setHasTriggered5MinAlert] = useState<boolean>(false)
+  const [, setHasTriggeredTimeUpAlert] = useState<boolean>(false)
   const [examToast, setExamToast] = useState<{ message: string; type: 'warn' | 'error' | 'info' } | null>(null)
   const [examCustomDuration, setExamCustomDuration] = useState<number>(60)
   const examToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -320,21 +353,28 @@ export default function Quiz() {
       const res = await fetch('/api/quiz/custom', { headers: getAuthHeaders() })
       const data = await res.json()
       if (data.questions && Array.isArray(data.questions)) {
-        const mapped: ActiveQuizQuestion[] = data.questions.map((q: any) => ({
-          id: q.id,
-          domain: q.domain || 'math',
-          subject: q.subject,
-          chapter: q.chapter,
-          type: q.type || 'choice',
-          difficulty: q.difficulty || '中等',
-          question: q.question,
-          options: q.options,
-          answer: q.answer,
-          explanation: q.explanation,
-          tags: q.tags || ['用户导入'],
-          sourceKind: 'custom',
-          isCustom: true,
-        }))
+        const mapped: ActiveQuizQuestion[] = data.questions.map((q: any) => {
+          const ansStr = String(q.answer || '').trim()
+          const inferredMulti =
+            q.type === 'multiple' ||
+            (q.options && normalizeChoiceLetters(ansStr).length >= 2)
+          return {
+            id: q.id,
+            domain: q.domain || 'math',
+            subject: q.subject,
+            chapter: q.chapter,
+            type: inferredMulti ? 'multiple' : (q.type || 'choice'),
+            difficulty: q.difficulty || '中等',
+            passage: q.passage,
+            question: q.question,
+            options: q.options,
+            answer: ansStr,
+            explanation: q.explanation,
+            tags: q.tags || ['用户导入'],
+            sourceKind: 'custom',
+            isCustom: true,
+          }
+        })
         setCustomQuestions(mapped)
         cachedCustomQuestionsList = mapped
         // 确保自定义导入的科目默认处于选中状态，方便用户直接在做题中心开刷
@@ -844,6 +884,8 @@ export default function Quiz() {
     setCurrentIndex(0)
     setAnswers({})
     setSelectedOption(null)
+    setMultiDraft([])
+    setPassageExpanded(true)
     setBlankInput('')
     setShowFeedback(false)
     setShowSteps(false)
@@ -886,6 +928,8 @@ export default function Quiz() {
     setCurrentIndex(0)
     setAnswers({})
     setSelectedOption(null)
+    setMultiDraft([])
+    setPassageExpanded(true)
     setBlankInput('')
     setShowFeedback(false)
     setShowSteps(false)
@@ -923,6 +967,8 @@ export default function Quiz() {
     setCurrentIndex(0)
     setAnswers({})
     setSelectedOption(null)
+    setMultiDraft([])
+    setPassageExpanded(true)
     setBlankInput('')
     setShowFeedback(false)
     setShowSteps(false)
@@ -949,6 +995,8 @@ export default function Quiz() {
     setCurrentIndex(0)
     setAnswers({})
     setSelectedOption(null)
+    setMultiDraft([])
+    setPassageExpanded(true)
     setBlankInput('')
     setShowFeedback(false)
     setShowSteps(false)
@@ -968,15 +1016,44 @@ export default function Quiz() {
     setCurrentIndex(index)
     setMobileDrawerOpen(false)
     const q = questions[index]
-    setSelectedOption(answers[q.id] || null)
-    setBlankInput(answers[q.id] || '')
-    setShowFeedback(mode === 'practice' && Boolean(answers[q.id]))
+    const savedAns = answers[q.id] || ''
+    setSelectedOption(savedAns || null)
+    if (isMultipleChoiceQuestion(q) && savedAns) {
+      setMultiDraft(normalizeChoiceLetters(savedAns).split('').filter(Boolean))
+    } else {
+      setMultiDraft([])
+    }
+    setPassageExpanded(true)
+    setBlankInput(savedAns)
+    setShowFeedback(mode === 'practice' && Boolean(savedAns.trim()))
     setShowSteps(false)
   }, [questions, answers, mode])
 
   const handleOptionSelect = useCallback((option: string) => {
     if (view !== 'quiz' || questions.length === 0) return
     const q = questions[currentIndex]
+    const isMulti = isMultipleChoiceQuestion(q)
+
+    if (isMulti) {
+      // 练习模式下已提交判分后锁定选项修改
+      if (mode === 'practice' && showFeedback && Boolean(answers[q.id])) return
+      setMultiDraft(prev => {
+        const exists = prev.includes(option)
+        const next = exists ? prev.filter(k => k !== option) : [...prev, option].sort()
+        if (mode !== 'practice') {
+          const joined = next.join('')
+          setSelectedOption(joined || null)
+          setAnswers(prevAns => {
+            const copy = { ...prevAns }
+            if (joined) copy[q.id] = joined
+            else delete copy[q.id]
+            return copy
+          })
+        }
+        return next
+      })
+      return
+    }
 
     if (mode === 'practice') {
       if (showFeedback) return
@@ -990,6 +1067,18 @@ export default function Quiz() {
       setAnswers(newAnswers)
     }
   }, [view, questions, currentIndex, mode, showFeedback, answers])
+
+  const handleMultiSubmit = useCallback(() => {
+    if (view !== 'quiz' || questions.length === 0) return
+    const q = questions[currentIndex]
+    if (!q || multiDraft.length === 0) return
+    const joined = multiDraft.toSorted().join('')
+    setSelectedOption(joined)
+    setAnswers(prev => ({ ...prev, [q.id]: joined }))
+    if (mode === 'practice') {
+      setShowFeedback(true)
+    }
+  }, [view, questions, currentIndex, multiDraft, mode])
 
   const handleBlankSubmit = () => {
     const trimmed = blankInput.trim()
@@ -1016,21 +1105,6 @@ export default function Quiz() {
     setErrorReasons(prev => ({ ...prev, [q.id]: reason }))
   }
 
-  const insertScratchpadSymbol = (symbolCode: string) => {
-    const el = scratchpadRef.current
-    if (!el) return
-    const q = questions[currentIndex]
-    const currentText = scratchpads[q.id] || ''
-    const start = el.selectionStart
-    const end = el.selectionEnd
-    const nextText = currentText.substring(0, start) + ` ${symbolCode} ` + currentText.substring(end)
-    setScratchpads(prev => ({ ...prev, [q.id]: nextText }))
-    setTimeout(() => {
-      el.focus()
-      el.setSelectionRange(start + symbolCode.length + 2, start + symbolCode.length + 2)
-    }, 0)
-  }
-
   const finishQuizRef = useRef<() => void>(() => {})
   const advanceQuestion = useCallback(() => {
     if (currentIndex < questions.length - 1) {
@@ -1044,6 +1118,7 @@ export default function Quiz() {
   const handleAskAI = useCallback((q: ActiveQuizQuestion) => {
     const userAns = answers[q.id]
     const subjectInfo = ALL_SUBJECTS.find(s => s.key === q.subject)?.key || q.subject || '考研真题'
+    const isMulti = isMultipleChoiceQuestion(q)
     
     let optionsText = ''
     if (q.options) {
@@ -1055,7 +1130,8 @@ export default function Quiz() {
     
     const contextPrompt = [
       `【当前考研科目与考点】：${subjectInfo} · ${q.chapter || '考点演练'}`,
-      `【题型与题号】：${q.type === 'blank' ? '填空/计算题' : '单项选择题'} (题号 #${q.id})`,
+      `【题型与题号】：${isMulti ? '多项选择题' : q.type === 'blank' ? '填空/计算题' : q.type === 'analysis' ? '综合解答题' : '单项选择题'} (题号 #${q.id})`,
+      q.passage ? `【关联阅读原文/分析材料】：\n${q.passage}` : null,
       `【完整题干】：\n${q.question}`,
       optionsText ? `【题目选项】：\n${optionsText}` : null,
       `【我的作答】：${userAns ? userAns : '（尚未作答 / 存在疑惑）'}`,
@@ -1064,8 +1140,8 @@ export default function Quiz() {
       `【语言与表达习惯强制要求】：必须全程使用符合中文母语考生阅读习惯的简体中文进行深度解析与逻辑推导！即使题目包含英文术语、代码或英文缩写，除专业英文缩写保留外，所有解析推导、破题思路、易错陷阱与技巧必须使用纯正中文阐述，严禁整句英文回答。`
     ].filter(Boolean).join('\n\n')
 
-    const defaultInput = userAns && q.answer && userAns.toUpperCase() !== q.answer.toUpperCase()
-      ? `为什么我的选项 ${userAns} 不对？请用纯中文结合考研考纲定理与命题陷阱为我详细剖析：`
+    const defaultInput = userAns && q.answer && !isQuestionAnswerCorrect(q, userAns)
+      ? `为什么我的选择 ${userAns} 不完全正确（标准答案为 ${q.answer}）？请用纯中文结合考研考纲定理与选项设坑方式为我逐项详细剖析：`
       : `请用纯正中文针对这道题的核心考点与解题突破口，为我详细拆解思维推导过程（符合中文考生理解习惯）：`
 
     window.dispatchEvent(new CustomEvent('open-ai-assistant', {
@@ -1078,7 +1154,6 @@ export default function Quiz() {
   }, [answers])
 
   // UI/UX Pro Max · 全面补齐键盘快捷键流 (Keyboard-First 体验)
-  // 支持 ⌘J / Ctrl+J 携本题直呼 AI 伴学、A/B/C/D 或 1/2/3/4 直接选答案、←/→ 翻题、Enter 展开/收起解析
   useEffect(() => {
     if (view !== 'quiz' || questions.length === 0) return
 
@@ -1093,10 +1168,8 @@ export default function Quiz() {
         }
       }
 
-      // 遇到其余系统级修饰键 (Ctrl/Cmd/Alt) 时不拦截
       if (e.ctrlKey || e.metaKey || e.altKey) return
 
-      // 如果焦点在输入框、文本域或可编辑区域，不劫持
       const activeEl = document.activeElement as HTMLElement | null
       const isInput = activeEl instanceof HTMLInputElement || 
                       activeEl instanceof HTMLTextAreaElement || 
@@ -1107,8 +1180,8 @@ export default function Quiz() {
       if (!curQ) return
 
       const upperKey = e.key.toUpperCase()
-      // 1. A / B / C / D 直接选答案
-      if (['A', 'B', 'C', 'D'].includes(upperKey)) {
+      // 1. A / B / C / D / E / F 直接选答案（多选题自动切换勾选）
+      if (['A', 'B', 'C', 'D', 'E', 'F'].includes(upperKey)) {
         if (curQ.options && (curQ.options as any)[upperKey]) {
           e.preventDefault()
           handleOptionSelect(upperKey)
@@ -1135,16 +1208,22 @@ export default function Quiz() {
         e.preventDefault()
         advanceQuestion()
       }
-      // 5. Enter 展开 / 收起解析 (仅练习模式且当前题已作答后有效，严防未作答泄题)
-      else if (e.key === 'Enter' && mode === 'practice' && Boolean(answers[curQ.id] && String(answers[curQ.id]).trim())) {
-        e.preventDefault()
-        setShowFeedback(prev => !prev)
+      // 5. Enter：若多选题尚未确认提交且已勾选草稿，则确认提交；若已作答则展开/收起解析
+      else if (e.key === 'Enter' && mode === 'practice') {
+        const hasSavedAns = Boolean(answers[curQ.id] && String(answers[curQ.id]).trim())
+        if (!hasSavedAns && isMultipleChoiceQuestion(curQ) && multiDraft.length > 0) {
+          e.preventDefault()
+          handleMultiSubmit()
+        } else if (hasSavedAns) {
+          e.preventDefault()
+          setShowFeedback(prev => !prev)
+        }
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [view, mode, currentIndex, questions, answers, handleOptionSelect, advanceQuestion, goToQuestion, handleAskAI])
+  }, [view, mode, currentIndex, questions, answers, multiDraft, handleOptionSelect, handleMultiSubmit, advanceQuestion, goToQuestion, handleAskAI])
 
 
   const handleExitWithOption = useCallback((option: 'save' | 'clear') => {
@@ -1166,10 +1245,6 @@ export default function Quiz() {
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch {}
   }, [persistCurrentProgress])
-
-  const handleExitQuiz = useCallback(() => {
-    handleExitWithOption('save')
-  }, [handleExitWithOption])
 
   const handleResumeSavedProgress = useCallback(() => {
     if (!savedProgress || !savedProgress.questions || savedProgress.questions.length === 0) return
@@ -1200,10 +1275,18 @@ export default function Quiz() {
     if (curQ) {
       const curAns = savedProgress.answers?.[curQ.id]
       setSelectedOption(curAns || null)
+      if (isMultipleChoiceQuestion(curQ) && curAns) {
+        setMultiDraft(normalizeChoiceLetters(curAns).split('').filter(Boolean))
+      } else {
+        setMultiDraft([])
+      }
+      setPassageExpanded(true)
       setBlankInput(curAns || '')
       setShowFeedback(resolvedMode === 'practice' && Boolean(curAns && String(curAns).trim()))
     } else {
       setSelectedOption(null)
+      setMultiDraft([])
+      setPassageExpanded(true)
       setBlankInput('')
       setShowFeedback(false)
     }
@@ -1334,6 +1417,7 @@ export default function Quiz() {
             chapter: q.chapter,
             type: q.type,
             difficulty: q.difficulty,
+            passage: q.passage,
             question: q.question,
             options: q.options,
             answer: q.answer,
@@ -2696,8 +2780,11 @@ export default function Quiz() {
 
   if (view === 'quiz' && questions.length > 0) {
     const currentQ = questions[currentIndex]
-    const optionKeys = ['A', 'B', 'C', 'D'] as const
-    const hasOptions = Boolean(currentQ.options && currentQ.options.A)
+    const activeOptionEntries = currentQ.options
+      ? Object.entries(currentQ.options).filter(([_, val]) => Boolean(val && String(val).trim()))
+      : []
+    const hasOptions = activeOptionEntries.length > 0
+    const isMultiChoice = isMultipleChoiceQuestion(currentQ)
     const isBookmarked = bookmarkedIds.has(currentQ.id)
     const isCurrentAnswered = Boolean(answers[currentQ.id] && String(answers[currentQ.id]).trim())
     const isExamMode = mode !== 'practice'
@@ -2923,9 +3010,15 @@ export default function Quiz() {
                     {currentQ.difficulty}
                   </span>
 
-                  <span className="text-2xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                    {currentQ.type === 'blank' ? '填空题' : currentQ.type === 'analysis' ? '解答题' : '单选题'}
-                  </span>
+                  {isMultiChoice ? (
+                    <span className="text-2xs font-bold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">
+                      多选题
+                    </span>
+                  ) : (
+                    <span className="text-2xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                      {currentQ.type === 'blank' ? '填空题' : currentQ.type === 'analysis' ? '解答题' : '单选题'}
+                    </span>
+                  )}
 
                   {(() => {
                     const topicId = classifyQuestionTopicId(currentQ)
@@ -2979,6 +3072,36 @@ export default function Quiz() {
                 </div>
               </div>
 
+              {/* 关联阅读原文 / 分析材料可折叠框（支持考研英语阅读 Part A 与政治材料题） */}
+              {currentQ.passage && (
+                <div className="rounded-2xl border border-indigo-200/80 bg-indigo-50/35 overflow-hidden shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={() => setPassageExpanded(prev => !prev)}
+                    className="w-full px-3.5 py-2.5 flex items-center justify-between gap-2 text-left bg-indigo-50/75 hover:bg-indigo-100/60 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <BookOpen size={14} className="text-indigo-600 shrink-0" />
+                      <span className="text-xs font-bold text-indigo-900">
+                        📖 关联阅读原文 / 材料背景
+                      </span>
+                      <span className="text-[11px] text-indigo-600/80 font-mono hidden sm:inline">
+                        ({currentQ.passage.length} 字符)
+                      </span>
+                    </div>
+                    <span className="text-2xs font-semibold text-indigo-700 flex items-center gap-1 shrink-0">
+                      <span>{passageExpanded ? '折叠材料' : '展开阅读材料'}</span>
+                      {passageExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                    </span>
+                  </button>
+                  {passageExpanded && (
+                    <div className="px-4 py-3.5 border-t border-indigo-200/60 bg-white/95 max-h-72 sm:max-h-96 overflow-y-auto text-sm text-slate-800 leading-[1.82] academic-body">
+                      <MarkdownRenderer content={currentQ.passage} />
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Question Text (KaTeX Rendered) */}
               <div className="text-[15px] sm:text-base font-medium text-slate-900 leading-[1.78] min-h-[4rem] academic-body min-w-0 max-w-full quiz-stem-scroll">
                 <MarkdownRenderer content={currentQ.question} />
@@ -2986,44 +3109,84 @@ export default function Quiz() {
 
               {/* Answering Area */}
               {hasOptions ? (
-                /* Choice Options (选择题选项) */
+                /* Choice Options (单选 & 多选题选项交互区) */
                 <div className="space-y-2 sm:space-y-3 pt-1.5 min-w-0 max-w-full">
-                  {optionKeys.map((key) => {
-                    const optionText = currentQ.options![key]
+                  {isMultiChoice && (
+                    <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-purple-50/80 border border-purple-200/80 text-xs text-purple-900">
+                      <span className="font-semibold">
+                        ✨ 本题为【多选题】：请勾选所有正确选项{isExamMode ? '（已自动暂存选择）' : '后点击下方「确认提交答案」判分'}
+                      </span>
+                      <span className="text-2xs font-mono text-purple-700">
+                        当前已选：{multiDraft.length > 0 ? multiDraft.join('') : '未选'}
+                      </span>
+                    </div>
+                  )}
+
+                  {activeOptionEntries.map(([rawKey, rawVal]) => {
+                    const key = rawKey.trim().toUpperCase()
+                    const optionText = String(rawVal || '')
                     if (!optionText) return null
-                    const isSelected = selectedOption === key
-                    const isCorrectAnswer = key.toUpperCase() === currentQ.answer.toUpperCase()
-                    const hasSelectedOption = Boolean(selectedOption && String(selectedOption).trim())
-                    const showResult = mode === 'practice' && showFeedback && hasSelectedOption
+
+                    const submittedAns = answers[currentQ.id] || ''
+                    const hasSubmitted = Boolean(submittedAns && String(submittedAns).trim())
+                    const showResult = mode === 'practice' && showFeedback && hasSubmitted
+
+                    const stdLetters = isMultiChoice
+                      ? normalizeChoiceLetters(currentQ.answer)
+                      : currentQ.answer.trim().toUpperCase()
+                    const userSubmittedLetters = isMultiChoice
+                      ? normalizeChoiceLetters(submittedAns)
+                      : (selectedOption || '').trim().toUpperCase()
+
+                    const isSelected = isMultiChoice
+                      ? (showResult ? userSubmittedLetters.includes(key) : multiDraft.includes(key))
+                      : selectedOption === key
+
+                    const isCorrectAnswer = isMultiChoice
+                      ? stdLetters.includes(key)
+                      : key === stdLetters
+
+                    const isMissedCorrect = showResult && isMultiChoice && isCorrectAnswer && !isSelected
 
                     let btnStyle = 'border-slate-200/85 bg-white hover:border-slate-300 hover:bg-slate-50/60 text-slate-800'
                     if (isSelected && !showResult) {
-                      btnStyle = 'border-slate-900 bg-slate-50/90 ring-1 ring-slate-900 text-slate-900 font-semibold shadow-xs'
+                      btnStyle = isMultiChoice
+                        ? 'border-purple-600 bg-purple-50/75 ring-1 ring-purple-500 text-purple-950 font-semibold shadow-xs'
+                        : 'border-slate-900 bg-slate-50/90 ring-1 ring-slate-900 text-slate-900 font-semibold shadow-xs'
                     }
-                    if (showResult && isCorrectAnswer) {
+                    if (showResult && isCorrectAnswer && isSelected) {
+                      btnStyle = 'border-emerald-500 bg-emerald-50/65 text-emerald-900 font-semibold ring-1 ring-emerald-400 shadow-xs'
+                    } else if (isMissedCorrect) {
+                      btnStyle = 'border-amber-400 border-dashed bg-amber-50/65 text-amber-950 font-semibold ring-1 ring-amber-300 shadow-xs'
+                    } else if (showResult && isCorrectAnswer && !isMultiChoice) {
                       btnStyle = 'border-emerald-500 bg-emerald-50/60 text-emerald-900 font-semibold ring-1 ring-emerald-400 shadow-xs'
-                    }
-                    if (showResult && isSelected && !isCorrectAnswer) {
+                    } else if (showResult && isSelected && !isCorrectAnswer) {
                       btnStyle = 'border-rose-400 bg-rose-50/60 text-rose-900 ring-1 ring-rose-300 shadow-xs'
                     }
 
                     return (
                       <button
                         key={key}
+                        type="button"
                         onClick={() => handleOptionSelect(key)}
-                        disabled={mode === 'practice' && showFeedback && hasSelectedOption}
+                        disabled={mode === 'practice' && showFeedback && hasSubmitted}
                         aria-label={`选项 ${key}: ${optionText}`}
                         className={`w-full min-w-0 max-w-full overflow-hidden text-left rounded-xl sm:rounded-2xl border px-3 py-2.5 sm:px-4 sm:py-3.5 transition-all duration-150 group flex items-start gap-2.5 sm:gap-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 ${btnStyle} ${
-                          mode === 'practice' && showFeedback && hasSelectedOption
+                          mode === 'practice' && showFeedback && hasSubmitted
                             ? 'cursor-default'
                             : 'cursor-pointer hover:scale-[1.006] active:scale-[0.99] hover:shadow-sm'
                         }`}
                       >
                         <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-semibold shrink-0 transition-colors shadow-xs ${
-                          isSelected && !showResult ? 'bg-slate-900 text-white' :
-                          showResult && isCorrectAnswer ? 'bg-emerald-600 text-white' :
-                          showResult && isSelected && !isCorrectAnswer ? 'bg-rose-600 text-white' :
-                          'bg-slate-100 text-slate-600 group-hover:bg-slate-200/80'
+                          isSelected && !showResult
+                            ? (isMultiChoice ? 'bg-purple-600 text-white' : 'bg-slate-900 text-white')
+                            : showResult && isCorrectAnswer && (isSelected || !isMultiChoice)
+                              ? 'bg-emerald-600 text-white'
+                              : isMissedCorrect
+                                ? 'bg-amber-500 text-white'
+                                : showResult && isSelected && !isCorrectAnswer
+                                  ? 'bg-rose-600 text-white'
+                                  : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200/80'
                         }`}>
                           {key}
                         </span>
@@ -3032,23 +3195,110 @@ export default function Quiz() {
                           <MarkdownRenderer content={optionText} inline />
                         </div>
 
-                        {/* 键盘快捷键提示徽章 */}
-                        <kbd className="hidden sm:inline-flex items-center gap-0.5 text-2xs font-mono px-1.5 py-0.5 rounded border border-slate-200/80 bg-slate-50 text-slate-400 group-hover:text-slate-600 group-hover:border-slate-300 transition-colors shrink-0 mt-0.5">
-                          <span>{key}</span>
-                          <span className="text-slate-300">/</span>
-                          <span>{key === 'A' ? '1' : key === 'B' ? '2' : key === 'C' ? '3' : '4'}</span>
-                        </kbd>
+                        {/* 多选题揭晓答案时的精细正误徽章（选对 / 漏选 / 错选） */}
+                        {showResult && isMultiChoice && (
+                          <span
+                            className={`text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0 mt-0.5 ${
+                              isCorrectAnswer && isSelected
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : isMissedCorrect
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : isSelected && !isCorrectAnswer
+                                    ? 'bg-rose-100 text-rose-700'
+                                    : 'hidden'
+                            }`}
+                          >
+                            {isCorrectAnswer && isSelected
+                              ? '✓ 选对'
+                              : isMissedCorrect
+                                ? '⚠️ 漏选'
+                                : isSelected && !isCorrectAnswer
+                                  ? '✕ 错选'
+                                  : ''}
+                          </span>
+                        )}
 
-                        {showResult && isCorrectAnswer && (
+                        {/* 键盘快捷键提示徽章 */}
+                        {!showResult && ['A', 'B', 'C', 'D'].includes(key) && (
+                          <kbd className="hidden sm:inline-flex items-center gap-0.5 text-2xs font-mono px-1.5 py-0.5 rounded border border-slate-200/80 bg-slate-50 text-slate-400 group-hover:text-slate-600 group-hover:border-slate-300 transition-colors shrink-0 mt-0.5">
+                            <span>{key}</span>
+                            <span className="text-slate-300">/</span>
+                            <span>{key === 'A' ? '1' : key === 'B' ? '2' : key === 'C' ? '3' : '4'}</span>
+                          </kbd>
+                        )}
+
+                        {showResult && !isMultiChoice && isCorrectAnswer && (
                           <CheckCircle2 size={18} className="text-emerald-600 shrink-0 mt-0.5" />
                         )}
-                        {showResult && isSelected && !isCorrectAnswer && (
+                        {showResult && !isMultiChoice && isSelected && !isCorrectAnswer && (
                           <XCircle size={18} className="text-rose-500 shrink-0 mt-0.5" />
                         )}
                       </button>
                     )
-
                   })}
+
+                  {/* 多选题专属确认提交答案按钮与判分对比栏 */}
+                  {isMultiChoice && !isExamMode && (
+                    !isCurrentAnswered || !showFeedback ? (
+                      <div className="pt-2 flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-xs text-slate-500">
+                          {multiDraft.length === 0
+                            ? '请点击上方选项（可多选），选定后确认提交'
+                            : `已勾选 ${multiDraft.length} 项（${multiDraft.join('、')}），支持按 Enter 快捷提交`}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleMultiSubmit}
+                          disabled={multiDraft.length === 0}
+                          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:opacity-40 text-white text-xs font-bold shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
+                        >
+                          <CheckCircle2 size={14} />
+                          <span>确认提交答案{multiDraft.length > 0 ? ` (${multiDraft.join('')})` : ''}</span>
+                        </button>
+                      </div>
+                    ) : (
+                      (() => {
+                        const userNorm = normalizeChoiceLetters(answers[currentQ.id])
+                        const stdNorm = normalizeChoiceLetters(currentQ.answer)
+                        const allRight = userNorm === stdNorm
+                        const missed = stdNorm.split('').filter(ch => !userNorm.includes(ch))
+                        const wrongPicked = userNorm.split('').filter(ch => !stdNorm.includes(ch))
+                        return (
+                          <div
+                            className={`p-3 rounded-xl border text-xs flex flex-wrap items-center justify-between gap-2 ${
+                              allRight
+                                ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                                : 'bg-rose-50/80 border-rose-200 text-rose-900'
+                            }`}
+                          >
+                            <div className="font-bold flex items-center gap-1.5">
+                              {allRight ? (
+                                <span>🎉 全部选对，多选题满分！</span>
+                              ) : (
+                                <span>
+                                  ✕ 多选题未全对（你的选择：<b>{userNorm}</b> · 标准答案：<b>{stdNorm}</b>）
+                                </span>
+                              )}
+                            </div>
+                            {!allRight && (
+                              <div className="text-2xs font-semibold flex items-center gap-2">
+                                {missed.length > 0 && (
+                                  <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800">
+                                    漏选：{missed.join('、')}
+                                  </span>
+                                )}
+                                {wrongPicked.length > 0 && (
+                                  <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-700">
+                                    错选：{wrongPicked.join('、')}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })()
+                    )
+                  )}
                 </div>
               ) : currentQ.type === 'analysis' ? (
                 /* Comprehensive Analysis / Proof Question Area (综合解答与大题专练) */
@@ -3262,6 +3512,13 @@ export default function Quiz() {
                             else delete next[currentQ.id]
                             return next
                           })
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          if (e.nativeEvent.isComposing || (e as any).keyCode === 229) return
+                          handleBlankSubmit()
                         }
                       }}
                       placeholder="在此键入你的计算结果..."
@@ -4215,10 +4472,15 @@ export default function Quiz() {
                 return (
                   <div key={q.id} className="rounded-2xl border border-rose-200/80 bg-rose-50/30 p-3.5 sm:p-5 space-y-3 min-w-0 max-w-full overflow-hidden">
                     <div className="flex flex-wrap items-center justify-between gap-2 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">
                           {q.subject}
                         </span>
+                        {isMultipleChoiceQuestion(q) && (
+                          <span className="text-2xs font-bold px-2 py-0.5 rounded-md bg-purple-100 text-purple-700 border border-purple-200">
+                            多选题
+                          </span>
+                        )}
                         {q.chapter && (
                           <span className="text-2xs text-slate-500">
                             {q.chapter}
@@ -4236,6 +4498,32 @@ export default function Quiz() {
                         </span>
                       </div>
                     </div>
+
+                    {q.passage && (
+                      <div className="rounded-xl border border-indigo-200/70 bg-white/80 overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setResultExpandedPassages(prev => {
+                              const next = new Set(prev)
+                              const k = `wrong-${q.id}`
+                              if (next.has(k)) next.delete(k)
+                              else next.add(k)
+                              return next
+                            })
+                          }}
+                          className="w-full px-3 py-1.5 flex items-center justify-between text-left text-2xs font-semibold text-indigo-700 hover:bg-indigo-50 cursor-pointer"
+                        >
+                          <span>📖 关联阅读原文 / 材料背景</span>
+                          {resultExpandedPassages.has(`wrong-${q.id}`) ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                        </button>
+                        {resultExpandedPassages.has(`wrong-${q.id}`) && (
+                          <div className="px-3 py-2.5 border-t border-indigo-100 text-xs text-slate-700 max-h-56 overflow-y-auto leading-relaxed">
+                            <MarkdownRenderer content={q.passage} />
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     <div className="text-sm font-medium text-slate-900 leading-relaxed min-w-0 max-w-full quiz-stem-scroll">
                       <MarkdownRenderer content={q.question} />
@@ -4378,11 +4666,16 @@ export default function Quiz() {
                     className="rounded-xl border border-slate-200/90 bg-slate-50/40 p-3 sm:p-4 space-y-2.5"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 text-xs">
+                      <div className="flex items-center gap-2 text-xs flex-wrap">
                         <span className="font-mono font-bold text-slate-500">第 {idx + 1} 题</span>
                         <span className="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 font-semibold">
                           {q.subject}
                         </span>
+                        {isMultipleChoiceQuestion(q) && (
+                          <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-700 border border-purple-200 font-bold">
+                            多选题
+                          </span>
+                        )}
                         <span
                           className={`px-2 py-0.5 rounded-md font-bold ${
                             !isAnswered

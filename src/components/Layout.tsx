@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense, type ReactNode } from 'react'
+import { useEffect, useState, useRef, lazy, Suspense, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import {
@@ -165,12 +165,23 @@ export default function Layout({ children }: LayoutProps) {
   const rawVaultName = stats?.vaultPath?.split(/[\\/]/).filter(Boolean).pop() || '研核知识库'
   const vaultName = /opt|coreforge|root|data|users/i.test(rawVaultName) ? '我的专属研学沙盒' : rawVaultName
 
+  // 按需建立 SSE 长连接：仅非只读用户进入知识库/编辑工作区时监听外部笔记变动，大幅降低 Nginx/Node 连接池占用
+  const shouldEnableVaultSse = Boolean(
+    user &&
+      !isStudent &&
+      ['/dashboard', '/editor', '/graph', '/study', '/workflow'].includes(location.pathname)
+  )
+
   useVaultEvents((event) => {
     const action = event.type === 'file-changed' ? '文件已更新' : event.type === 'file-added' ? '新笔记加入' : '文件已删除'
     setSyncNotice(`${action}：${event.path.split('/').pop()}`)
     setTimeout(() => setSyncNotice(null), 3000)
     reloadStats()
-  })
+  }, shouldEnableVaultSse)
+
+  // 使用稳定 Ref 读取实时模态框状态，避免每次打开/关闭任意弹窗都解绑重绑 9 个全局 window 监听器并误重触发新手引导定时器
+  const modalStateRef = useRef({ activeModals, assistantOpen })
+  modalStateRef.current = { activeModals, assistantOpen }
 
   useEffect(() => {
     const onOpenQuickNote = () => openModal('quick-note')
@@ -219,7 +230,7 @@ export default function Layout({ children }: LayoutProps) {
     window.addEventListener('vault-notes-updated', onNotesUpdated)
     window.addEventListener('vault-stats-updated', onNotesUpdated)
 
-    // 新用户首次登录智能唤起指引（避免提前 return 导致后续快捷键与事件监听器失效）
+    // 新用户首次登录智能唤起指引（仅在首次挂载时检查一次）
     let onboardingTimer: ReturnType<typeof setTimeout> | undefined
     try {
       const dismissed = localStorage.getItem('coreforge_onboarding_dismissed')
@@ -228,10 +239,11 @@ export default function Layout({ children }: LayoutProps) {
       }
     } catch {}
     const handler = (event: KeyboardEvent) => {
+      const { activeModals: currModals, assistantOpen: currAssistantOpen } = modalStateRef.current
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault()
         setSearchOpen(prev => !prev)
-        if (activeModals['search']) {
+        if (currModals['search']) {
           closeModal('search')
         } else {
           openModal('search')
@@ -239,7 +251,7 @@ export default function Layout({ children }: LayoutProps) {
       }
       if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'a') {
         event.preventDefault()
-        if (activeModals['ai-assistant'] || assistantOpen) {
+        if (currModals['ai-assistant'] || currAssistantOpen) {
           setAssistantOpen(false)
           closeModal('ai-assistant')
         } else {
@@ -249,7 +261,7 @@ export default function Layout({ children }: LayoutProps) {
       }
       if (!event.defaultPrevented && (event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === 'j') {
         event.preventDefault()
-        if (activeModals['ai-assistant'] || assistantOpen) {
+        if (currModals['ai-assistant'] || currAssistantOpen) {
           setAssistantOpen(false)
           closeModal('ai-assistant')
         } else {
@@ -271,7 +283,7 @@ export default function Layout({ children }: LayoutProps) {
       window.removeEventListener('vault-notes-updated', onNotesUpdated)
       window.removeEventListener('vault-stats-updated', onNotesUpdated)
     }
-  }, [openModal, closeModal, activeModals, assistantOpen])
+  }, [openModal, closeModal, reloadStats])
 
   useEffect(() => {
     const ROUTE_PAGE_TITLES: Record<string, string> = {
@@ -298,19 +310,22 @@ export default function Layout({ children }: LayoutProps) {
     setUserMenuOpen(false)
     setMobileUserMenuOpen(false)
 
-    // 核心研学空间后台闲时预取 (Idle Route Prefetching)
-    // 利用空闲网络带宽提前将「做题中心」与「学习中心」缓存到浏览器，消除点击等待
+    // 核心研学空间后台闲时预取 (Idle Route Prefetching) + 弱网/省流自适应保护
+    const conn = (navigator as any)?.connection
+    const isSlowOrSaveData = Boolean(
+      conn?.saveData || (typeof conn?.effectiveType === 'string' && /2g/.test(conn.effectiveType))
+    )
+    if (isSlowOrSaveData) return
+
     const ric = (window as any).requestIdleCallback as undefined | ((cb: (d: { timeRemaining: () => number }) => void, opts?: { timeout: number }) => number)
     const runPrefetch = (deadline?: { timeRemaining: () => number }) => {
-      prefetchRoute('/quiz')
       prefetchRoute('/study')
-      if (!deadline || deadline.timeRemaining() > 10) {
+      if (!deadline || deadline.timeRemaining() > 12) {
         prefetchRoute('/editor')
       }
     }
-    // 修复：原实现无法区分 requestIdleCallback 与 setTimeout 的句柄，清理时可能调用错误的取消函数
-    const idleId = ric ? ric(runPrefetch, { timeout: 2000 }) : null
-    const timeoutId = ric ? null : setTimeout(() => runPrefetch(), 700)
+    const idleId = ric ? ric(runPrefetch, { timeout: 2500 }) : null
+    const timeoutId = ric ? null : setTimeout(() => runPrefetch(), 1200)
 
     return () => {
       if (idleId !== null) (window as any).cancelIdleCallback?.(idleId)

@@ -1,5 +1,5 @@
 import { avlTreeCourseware } from '../data/coursewares/avlTree'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
@@ -49,6 +49,7 @@ import { MobilePreviewModal } from './landing/MobilePreviewModal'
 import { TrustAndTestimonialsSection } from './landing/TrustAndTestimonialsSection'
 import { getSecurityQuestion, resetPassword, getStoredUser } from '../services/auth'
 import { useExamCountdown } from '../utils/examDate'
+import { prefetchRoute } from '../app/routes'
 import {
   getTrialActivitySummary,
   inheritTrialDataToUserWorkspace,
@@ -144,6 +145,8 @@ export default function LandingPage() {
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('')
   const [shareSiteUrl, setShareSiteUrl] = useState<string>(OFFICIAL_DOMAIN)
   const [copiedUrl, setCopiedUrl] = useState(false)
+  const downloadSectionRef = useRef<HTMLElement | null>(null)
+  const downloadInfoFetchedRef = useRef(false)
 
   // 双栏高转化认证弹窗控制与意图路由记忆
   const [authModalOpen, setAuthModalOpen] = useState(false)
@@ -221,7 +224,9 @@ export default function LandingPage() {
     }
   }, [fullScreenSandbox, authModalOpen, registeredWelcome])
 
-  useEffect(() => {
+  const loadDownloadInfo = useCallback(() => {
+    if (downloadInfoFetchedRef.current) return
+    downloadInfoFetchedRef.current = true
     fetch('/api/downloads/info')
       .then((res) => res.json())
       .then((data) => {
@@ -240,7 +245,9 @@ export default function LandingPage() {
           web: { available: true, version: '1.4.0' },
         })
       })
+  }, [])
 
+  useEffect(() => {
     // 若在公网或 IP 访问，优先使用官方域名生成扫码链接，本地 localhost 调试则保留当前地址以便局域网联调
     const origin = window.location.origin
     const isLocalDev = /localhost|127\.0\.0\.1/.test(origin)
@@ -258,12 +265,49 @@ export default function LandingPage() {
       .catch(() => {})
   }, [])
 
+  // 按需懒加载下载信息：仅当用户滚动接近 #download 区域时才请求 /api/downloads/info，消除首屏不必要回源
+  useEffect(() => {
+    const targetEl = downloadSectionRef.current
+    if (!targetEl) return
+    if (typeof IntersectionObserver === 'undefined') {
+      loadDownloadInfo()
+      return
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          loadDownloadInfo()
+          observer.disconnect()
+        }
+      },
+      { rootMargin: '400px 0px' }
+    )
+    observer.observe(targetEl)
+    return () => observer.disconnect()
+  }, [loadDownloadInfo])
+
+  // 浏览器空闲预热：已登录用户在首屏渲染完成后空闲预热工作台入口，实现秒开跳转
+  useEffect(() => {
+    if (!isAuthenticated) return
+    const win = window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number
+      cancelIdleCallback?: (id: number) => void
+    }
+    if (typeof win.requestIdleCallback === 'function') {
+      const id = win.requestIdleCallback(() => prefetchRoute('/dashboard'), { timeout: 2500 })
+      return () => win.cancelIdleCallback?.(id)
+    }
+    const timer = window.setTimeout(() => prefetchRoute('/dashboard'), 1500)
+    return () => window.clearTimeout(timer)
+  }, [isAuthenticated])
+
   // 统一打开认证弹窗辅助函数（支持目标路由记忆与试玩成果自动继承提示）
   const openAuthWithIntent = (
     tab: 'login' | 'register',
     target: PendingTarget = { path: '/dashboard', label: '研核全景工作台' },
     hint?: string
   ) => {
+    prefetchRoute(target.path)
     const footprints = getTrialActivitySummary().totalFootprints
     const defaultHint =
       footprints > 0
@@ -1236,6 +1280,7 @@ export default function LandingPage() {
          ===================================================================== */}
       <section
         id="download"
+        ref={downloadSectionRef}
         className="w-full min-w-0 py-16 sm:py-22 border-t border-slate-200/80 bg-[#f1f2f6]/80 relative overflow-hidden"
       >
         <div className="w-full max-w-[1280px] mx-auto px-3.5 sm:px-8 min-w-0">
@@ -2211,8 +2256,10 @@ export default function LandingPage() {
                 <div className="pt-4 border-t border-white/10 flex items-center justify-between text-2xs text-slate-400">
                   <div className="flex items-center gap-2">
                     <img
-                      src="/pets/nailong_happy.png"
+                      src="/pets/nailong_happy.webp"
                       alt="伴学桌宠"
+                      loading="lazy"
+                      decoding="async"
                       className="w-7 h-7 object-contain"
                     />
                     <span className="text-slate-300 font-medium">官方认证域名：{OFFICIAL_DOMAIN_HOST}</span>

@@ -268,7 +268,7 @@ export default function FlashcardsTab() {
     }
 
     // 打乱顺序提升记忆提取效果
-    const shuffled = [...queue].sort(() => Math.random() - 0.5)
+    const shuffled = queue.toSorted(() => Math.random() - 0.5)
     setReviewQueue(shuffled)
     setCurrentReviewIdx(0)
     setIsReviewFlipped(false)

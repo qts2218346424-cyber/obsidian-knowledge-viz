@@ -1513,8 +1513,48 @@ html {
   border-color: #e2e8f0 !important;
 }
 
+/* 极简模式：收敛高饱和霓虹渐变与彩色主按钮为克制石墨黑 */
+.theme-minimal :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)):is(
+  .from-indigo-600,
+  .from-indigo-500,
+  .from-violet-600,
+  .from-purple-600,
+  .from-rose-600,
+  .from-pink-600,
+  .from-blue-600
+) {
+  background-image: none !important;
+  background-color: #18181b !important;
+  border-color: #18181b !important;
+  color: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12) !important;
+}
+
+.theme-minimal :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)):is(
+  .bg-indigo-600,
+  .bg-violet-600,
+  .bg-purple-600,
+  .bg-rose-600,
+  .bg-pink-600,
+  .bg-blue-600
+) {
+  background-color: #18181b !important;
+  border-color: #18181b !important;
+  color: #ffffff !important;
+}
+
+.theme-minimal :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)):is(
+  .bg-amber-400,
+  .bg-yellow-400
+) {
+  background-color: #e4e4e7 !important;
+  color: #18181b !important;
+}
+
 /* ==========================================================================
    🍃 温润纸质护眼风全局增强规则 (Eyecare Theme Global Rules)
+   全站统一：温润豆沙宣纸底 (#f5f6f2 / #fafbf8) + 苍竹墨绿 (#2d6a4f / #243329) + 古籍松茶褐
+   注：带 .cinema-dark-lock 的主动沉浸暗屏视窗予以豁免保留
    ========================================================================== */
 .theme-eyecare {
   --color-brand-primary: #2d6a4f;
@@ -1537,11 +1577,47 @@ html {
     radial-gradient(at 0% 100%, rgba(116, 198, 157, 0.04) 0px, transparent 60%) !important;
 }
 
-/* 护眼卡片与微光 */
+/* 1. 护眼卡片、纯白与各阶半透明白底统一宣纸化 */
 .theme-eyecare .bento-card,
-.theme-eyecare .bg-white {
+.theme-eyecare :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)):is(
+  .bg-white,
+  .bg-white\/98,
+  .bg-white\/95,
+  .bg-white\/90,
+  .bg-white\/85,
+  .bg-white\/80,
+  .bg-white\/75,
+  .bg-white\/70,
+  .bg-white\/60
+) {
   background-color: #fafbf8 !important;
-  border-color: #e2e9df !important;
+  border-color: #dce6d8 !important;
+}
+
+/* 消除卡片顶栏泛冷白紫的浅色背景渐变（如 from-white via-indigo-50/25 to-slate-50） */
+.theme-eyecare :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)):is(
+  .from-white,
+  .from-slate-50,
+  .from-indigo-50,
+  .from-indigo-50\/80,
+  .from-indigo-50\/70,
+  .from-indigo-50\/60,
+  .from-indigo-50\/50,
+  .from-purple-50,
+  .from-purple-50\/80,
+  .from-violet-50,
+  .from-rose-50,
+  .from-rose-50\/80,
+  .from-blue-50,
+  .from-sky-50,
+  .from-sky-400\/15,
+  .from-amber-400\/15,
+  .from-amber-50,
+  .from-amber-50\/90,
+  .from-amber-50\/80,
+  .from-emerald-50
+) {
+  background-image: linear-gradient(135deg, #fafbf8 0%, #f2f7ef 58%, #eaf2e6 100%) !important;
 }
 
 .theme-eyecare .bento-card {
@@ -1556,60 +1632,442 @@ html {
 .theme-eyecare .glass-header,
 .theme-eyecare header {
   background-color: rgba(244, 247, 242, 0.94) !important;
-  border-color: #e1e9df !important;
+  border-color: #dce6d8 !important;
 }
 
-/* 文本墨绿色阶调和，舒缓阅读视觉压力 */
-.theme-eyecare .text-slate-900,
-.theme-eyecare .text-neutral-900,
-.theme-eyecare .text-zinc-900,
-.theme-eyecare .text-slate-800,
-.theme-eyecare .text-neutral-800 {
+/* 2. 文本墨绿色阶调和，舒缓阅读视觉压力 */
+.theme-eyecare :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)):is(
+  .text-slate-950,
+  .text-slate-900,
+  .text-neutral-900,
+  .text-zinc-900,
+  .text-gray-900,
+  .text-slate-800,
+  .text-neutral-800,
+  .text-zinc-800
+) {
   color: #243329 !important;
 }
 
-.theme-eyecare .text-slate-700,
-.theme-eyecare .text-neutral-700,
-.theme-eyecare .text-zinc-700,
-.theme-eyecare .text-slate-600,
-.theme-eyecare .text-neutral-600 {
-  color: #4a5d50 !important;
+.theme-eyecare :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)):is(
+  .text-slate-700,
+  .text-neutral-700,
+  .text-zinc-700,
+  .text-slate-600,
+  .text-neutral-600,
+  .text-zinc-600
+) {
+  color: #465a4c !important;
 }
 
-.theme-eyecare .text-slate-500,
-.theme-eyecare .text-neutral-500,
-.theme-eyecare .text-zinc-500 {
-  color: #6e8274 !important;
+.theme-eyecare :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)):is(
+  .text-slate-500,
+  .text-neutral-500,
+  .text-zinc-500,
+  .text-slate-400
+) {
+  color: #687d6e !important;
 }
 
-/* 边框柔化 */
-.theme-eyecare .border-slate-200,
-.theme-eyecare .border-neutral-200,
-.theme-eyecare .border-zinc-200,
-.theme-eyecare .border-slate-100 {
-  border-color: #e2e9df !important;
+/* 3. 高饱和彩色文字降噪（蓝紫 -> 深竹青，玫红 -> 古籍赭褐，琥珀橙 -> 松茶褐） */
+.theme-eyecare :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)):is(
+  .text-indigo-500,
+  .text-indigo-600,
+  .text-indigo-700,
+  .text-indigo-800,
+  .text-indigo-900,
+  .text-violet-500,
+  .text-violet-600,
+  .text-violet-700,
+  .text-violet-800,
+  .text-purple-500,
+  .text-purple-600,
+  .text-purple-700,
+  .text-purple-800,
+  .text-fuchsia-600,
+  .text-blue-500,
+  .text-blue-600,
+  .text-blue-700,
+  .text-sky-600,
+  .text-sky-700,
+  .text-cyan-600,
+  .text-cyan-700
+) {
+  color: #2d6a4f !important;
 }
 
-/* 次级与浅底背景 */
-.theme-eyecare .bg-slate-50,
-.theme-eyecare .bg-neutral-50,
-.theme-eyecare .bg-zinc-50,
-.theme-eyecare .bg-slate-100,
-.theme-eyecare .bg-neutral-100 {
+.theme-eyecare :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)):is(
+  .text-rose-500,
+  .text-rose-600,
+  .text-rose-700,
+  .text-rose-800,
+  .text-rose-900,
+  .text-pink-500,
+  .text-pink-600,
+  .text-pink-700,
+  .text-red-600,
+  .text-red-700
+) {
+  color: #84433a !important;
+}
+
+.theme-eyecare :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)):is(
+  .text-amber-500,
+  .text-amber-600,
+  .text-amber-700,
+  .text-amber-800,
+  .text-amber-900,
+  .text-orange-500,
+  .text-orange-600,
+  .text-orange-700,
+  .text-yellow-600,
+  .text-yellow-700
+) {
+  color: #755c34 !important;
+}
+
+.theme-eyecare :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)).text-amber-400 {
+  color: #52796f !important;
+}
+
+/* 4. 浅色背景与语义底框全面草木宣纸化 */
+.theme-eyecare :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)):is(
+  .bg-slate-50,
+  .bg-slate-50\/90,
+  .bg-slate-50\/80,
+  .bg-slate-50\/70,
+  .bg-slate-50\/60,
+  .bg-neutral-50,
+  .bg-zinc-50,
+  .bg-slate-100,
+  .bg-slate-100\/90,
+  .bg-slate-100\/80,
+  .bg-neutral-100,
+  .bg-zinc-100
+) {
   background-color: #ebf1e8 !important;
+}
+
+.theme-eyecare :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)):is(
+  .bg-slate-200,
+  .bg-slate-200\/80,
+  .bg-slate-200\/70
+) {
+  background-color: #dce7d8 !important;
+}
+
+/* 蓝紫青浅底色块 -> 清雅嫩竹豆沙底 */
+.theme-eyecare :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)):is(
+  .bg-indigo-50,
+  .bg-indigo-50\/90,
+  .bg-indigo-50\/80,
+  .bg-indigo-50\/70,
+  .bg-indigo-50\/60,
+  .bg-indigo-50\/50,
+  .bg-indigo-50\/40,
+  .bg-indigo-100,
+  .bg-indigo-100\/80,
+  .bg-violet-50,
+  .bg-violet-50\/80,
+  .bg-violet-100,
+  .bg-purple-50,
+  .bg-purple-50\/80,
+  .bg-purple-50\/60,
+  .bg-purple-100,
+  .bg-fuchsia-50,
+  .bg-blue-50,
+  .bg-blue-50\/80,
+  .bg-blue-100,
+  .bg-sky-50,
+  .bg-sky-100,
+  .bg-cyan-50,
+  .bg-cyan-100,
+  .bg-indigo-500\/10,
+  .bg-indigo-500\/15,
+  .bg-indigo-500\/20,
+  .bg-purple-500\/10,
+  .bg-purple-500\/15,
+  .bg-blue-500\/10,
+  .bg-sky-500\/10,
+  .bg-cyan-500\/10,
+  .bg-cyan-500\/15
+) {
+  background-color: #e8f1e5 !important;
+}
+
+/* 玫红浅底色块（如命题陷阱排雷/错题框） -> 低饱和温润茶粉宣纸 */
+.theme-eyecare :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)):is(
+  .bg-rose-50,
+  .bg-rose-50\/90,
+  .bg-rose-50\/80,
+  .bg-rose-50\/70,
+  .bg-rose-50\/60,
+  .bg-rose-100,
+  .bg-pink-50,
+  .bg-red-50,
+  .bg-rose-500\/10,
+  .bg-rose-500\/15
+) {
+  background-color: #f3eae6 !important;
+}
+
+/* 琥珀明黄浅底色块（如一字千金定性框） -> 温润古籍暖米宣纸 */
+.theme-eyecare :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)):is(
+  .bg-amber-50,
+  .bg-amber-50\/90,
+  .bg-amber-50\/80,
+  .bg-amber-50\/70,
+  .bg-amber-50\/60,
+  .bg-amber-50\/50,
+  .bg-amber-100,
+  .bg-amber-100\/80,
+  .bg-yellow-50,
+  .bg-orange-50,
+  .bg-orange-50\/80,
+  .bg-amber-500\/10,
+  .bg-amber-500\/15
+) {
+  background-color: #f3efe1 !important;
+}
+
+/* 5. 边框与焦点光环全面柔化 */
+.theme-eyecare :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)):is(
+  .border-slate-200,
+  .border-slate-200\/90,
+  .border-slate-200\/80,
+  .border-slate-200\/70,
+  .border-slate-300,
+  .border-neutral-200,
+  .border-zinc-200,
+  .border-slate-100,
+  .border-indigo-100,
+  .border-indigo-200,
+  .border-indigo-200\/80,
+  .border-indigo-200\/70,
+  .border-indigo-200\/60,
+  .border-indigo-300,
+  .border-indigo-400,
+  .border-indigo-400\/60,
+  .border-indigo-500,
+  .border-violet-200,
+  .border-violet-300,
+  .border-purple-200,
+  .border-purple-200\/80,
+  .border-purple-300,
+  .border-blue-200,
+  .border-blue-300,
+  .border-sky-200,
+  .border-cyan-200
+) {
+  border-color: #cfe0c9 !important;
+}
+
+.theme-eyecare :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)):is(
+  .border-rose-200,
+  .border-rose-200\/80,
+  .border-rose-200\/70,
+  .border-rose-300,
+  .border-pink-200,
+  .border-red-200
+) {
+  border-color: #e0ccc5 !important;
+}
+
+.theme-eyecare :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)):is(
+  .border-amber-200,
+  .border-amber-200\/80,
+  .border-amber-200\/70,
+  .border-amber-300,
+  .border-amber-300\/80,
+  .border-orange-200,
+  .border-yellow-200
+) {
+  border-color: #ded6bd !important;
+}
+
+.theme-eyecare :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)):is(
+  .ring-indigo-500,
+  .ring-indigo-500\/20,
+  .ring-indigo-400,
+  .ring-purple-500,
+  .ring-rose-500,
+  .ring-amber-400,
+  .ring-amber-400\/70,
+  .ring-amber-500
+) {
+  --tw-ring-color: rgba(45, 106, 79, 0.26) !important;
+}
+
+/* 6. 根治高饱和霓虹渐变按钮/图标块（电光紫、玫红紫、亮蓝 -> 温润深竹翡翠渐变） */
+.theme-eyecare :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)):is(
+  .from-indigo-600,
+  .from-indigo-500,
+  .from-violet-600,
+  .from-violet-500,
+  .from-purple-600,
+  .from-purple-500,
+  .from-fuchsia-600,
+  .from-blue-600,
+  .from-blue-500,
+  .from-sky-600,
+  .from-sky-500,
+  .from-cyan-600,
+  .from-cyan-500,
+  .from-rose-600,
+  .from-rose-500,
+  .from-pink-600,
+  .from-pink-500,
+  .from-emerald-600,
+  .from-teal-600
+) {
+  background-image: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%) !important;
+  background-color: #2d6a4f !important;
+  border-color: rgba(45, 106, 79, 0.35) !important;
+  color: #f8faf7 !important;
+  box-shadow: 0 3px 10px rgba(45, 106, 79, 0.16) !important;
+}
+
+/* 暖橙红高饱和渐变（如周年胶囊、橙色行动条） -> 沉稳松茶琥珀渐变 */
+.theme-eyecare :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)):is(
+  .from-amber-500,
+  .from-amber-600,
+  .from-orange-500,
+  .from-orange-600,
+  .from-red-500,
+  .from-red-600
+) {
+  background-image: linear-gradient(135deg, #6e5a3a 0%, #877049 100%) !important;
+  background-color: #6e5a3a !important;
+  border-color: rgba(110, 90, 58, 0.35) !important;
+  color: #fcfbf7 !important;
+  box-shadow: 0 2px 8px rgba(110, 90, 58, 0.15) !important;
+}
+
+/* 7. 根治高饱和实心主按钮与激活态 Tab（电光蓝紫、荧光玫红 -> 温润深竹绿 #2d6a4f） */
+.theme-eyecare :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)):is(
+  .bg-indigo-600,
+  .bg-indigo-500,
+  .bg-indigo-700,
+  .bg-violet-600,
+  .bg-violet-500,
+  .bg-purple-600,
+  .bg-purple-500,
+  .bg-fuchsia-600,
+  .bg-blue-600,
+  .bg-blue-500,
+  .bg-sky-600,
+  .bg-sky-500,
+  .bg-cyan-600,
+  .bg-rose-600,
+  .bg-rose-500,
+  .bg-rose-700,
+  .bg-pink-600,
+  .bg-pink-500,
+  .bg-emerald-600,
+  .bg-teal-600
+) {
+  background-color: #2d6a4f !important;
+  background-image: none !important;
+  border-color: #245740 !important;
+  color: #f8faf7 !important;
+  box-shadow: 0 2px 8px rgba(45, 106, 79, 0.16) !important;
+}
+
+.theme-eyecare :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)):is(
+  button.bg-indigo-600:hover,
+  button.bg-violet-600:hover,
+  button.bg-purple-600:hover,
+  button.bg-blue-600:hover,
+  button.bg-rose-600:hover,
+  button.bg-emerald-600:hover
+) {
+  background-color: #22523c !important;
+}
+
+/* 8. 消除页面内突兀纯黑块（ENGLISH MASTER、切换模考、筛选黑胶囊等）-> 苍松深墨绿 */
+.theme-eyecare :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)):is(
+  .bg-slate-950,
+  .bg-slate-900,
+  .bg-slate-800,
+  .bg-zinc-900,
+  .bg-zinc-800,
+  .bg-neutral-900,
+  .bg-neutral-800,
+  .bg-gray-900
+) {
+  background-color: #264a39 !important;
+  border-color: #1e3c2e !important;
+  color: #f5f9f3 !important;
+}
+
+/* 9. 根治刺眼亮明黄角标（每日必刷、专项突破、外刊精读、三核精批） -> 温润麦穗青米色 */
+.theme-eyecare :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)):is(
+  .bg-amber-400,
+  .bg-amber-300,
+  .bg-yellow-400,
+  .bg-yellow-300,
+  .bg-amber-500,
+  .bg-orange-500
+) {
+  background-color: #e3ecda !important;
+  background-image: none !important;
+  color: #284736 !important;
+  border-color: #cadac0 !important;
+}
+
+/* 当角标或子元素处于已激活深竹绿父按钮内部时，保持高对比柔和半透明白 */
+.theme-eyecare :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)):is(
+  [aria-selected="true"],
+  .bg-indigo-600,
+  .bg-violet-600,
+  .bg-purple-600,
+  .bg-rose-600,
+  .bg-blue-600,
+  .bg-slate-900,
+  .from-indigo-600,
+  .from-rose-600
+) :is(.bg-amber-400, .bg-yellow-400, .bg-amber-500, .bg-white\/20, .bg-indigo-500) {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+  color: #f8faf7 !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+}
+
+.theme-eyecare :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)):is(
+  [aria-selected="true"],
+  .bg-indigo-600,
+  .bg-violet-600,
+  .bg-purple-600,
+  .bg-rose-600,
+  .bg-blue-600,
+  .bg-slate-900,
+  .from-indigo-600,
+  .from-rose-600
+) :is(.text-amber-300, .text-amber-400, .text-yellow-300, .text-indigo-200, .text-rose-200, .text-white) {
+  color: #f4fbf6 !important;
+}
+
+/* 10. 滑块与表单控件统一竹青强调色 */
+.theme-eyecare :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)) input[type="range"] {
+  accent-color: #2d6a4f !important;
+}
+
+/* Markdown 代码块在护眼模式下柔和深苔藓墨绿底，告别生硬纯黑反差 */
+.theme-eyecare :where(:not(.cinema-dark-lock):not(.cinema-dark-lock *)) pre {
+  background-color: #1f2e25 !important;
+  border-color: #2f4638 !important;
 }
 
 /* 护眼模式核心行动按钮：温润翡翠渐变 */
 .theme-eyecare .subframe-btn-black {
   background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%) !important;
   color: #ffffff !important;
-  box-shadow: 0 4px 14px 0 rgba(45, 106, 79, 0.25) !important;
+  box-shadow: 0 4px 14px 0 rgba(45, 106, 79, 0.22) !important;
   border: 1px solid rgba(255, 255, 255, 0.15) !important;
 }
 
 .theme-eyecare .subframe-btn-black:hover {
   background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 100%) !important;
-  box-shadow: 0 6px 20px 0 rgba(45, 106, 79, 0.35) !important;
+  box-shadow: 0 6px 20px 0 rgba(45, 106, 79, 0.3) !important;
 }
 
 /* 次级按钮：清雅豆沙白微绿光泽 */
@@ -1631,7 +2089,7 @@ html {
 .theme-eyecare nav button.bg-slate-900,
 .theme-eyecare nav a.bg-neutral-900 {
   background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%) !important;
-  box-shadow: 0 2px 8px rgba(45, 106, 79, 0.25) !important;
+  box-shadow: 0 2px 8px rgba(45, 106, 79, 0.22) !important;
 }
 
 /* 护眼模式首页 Hero 竹韵宣纸展台 */

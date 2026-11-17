@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import matter from 'gray-matter'
+import { readTextFileAutoEncoding } from './utils/text-encoding.js'
 
 export interface VaultNote {
   path: string
@@ -51,18 +52,40 @@ function extractTags(content: string, frontmatter: Record<string, any>): string[
   return [...new Set(tags)]
 }
 
+// 基于文件路径 + mtimeMs + size 的单文件增量解析缓存，避免 TTL 过期时对全库数百篇未改动 Markdown 重复执行磁盘读取与正则解析
+interface ParsedNoteCacheItem {
+  mtimeMs: number
+  size: number
+  vaultRoot: string
+  note: VaultNote
+}
+const parsedFileCache = new Map<string, ParsedNoteCacheItem>()
+
 /**
- * Parse a single markdown file into a VaultNote.
+ * Parse a single markdown file into a VaultNote (with mtimeMs + size incremental cache).
  */
-function parseFile(filePath: string, vaultPath: string): VaultNote | null {
+function parseFile(filePath: string, vaultPath: string, forceRefresh = false): VaultNote | null {
   try {
-    const raw = fs.readFileSync(filePath, 'utf-8')
+    const stat = fs.statSync(filePath)
+    const normalizedRoot = path.resolve(vaultPath)
+    if (!forceRefresh) {
+      const cached = parsedFileCache.get(filePath)
+      if (
+        cached &&
+        cached.vaultRoot === normalizedRoot &&
+        cached.mtimeMs === stat.mtimeMs &&
+        cached.size === stat.size
+      ) {
+        return cached.note
+      }
+    }
+
+    const raw = readTextFileAutoEncoding(filePath)
     const { data: frontmatter, content } = matter(raw)
     const relativePath = path.relative(vaultPath, filePath).replace(/\\/g, '/')
     const title = frontmatter.title || path.basename(filePath, '.md')
-    const stat = fs.statSync(filePath)
 
-    return {
+    const note: VaultNote = {
       path: relativePath,
       title,
       frontmatter,
@@ -71,12 +94,22 @@ function parseFile(filePath: string, vaultPath: string): VaultNote | null {
       tags: extractTags(content, frontmatter),
       modified: stat.mtime,
       wordCount: (() => {
-      if (!content) return 0
-      const clean = content.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '')
-      return clean.replace(/\s+/g, '').length
-    })(),
+        if (!content) return 0
+        const clean = content.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '')
+        return clean.replace(/\s+/g, '').length
+      })(),
     }
+
+    parsedFileCache.set(filePath, {
+      mtimeMs: stat.mtimeMs,
+      size: stat.size,
+      vaultRoot: normalizedRoot,
+      note,
+    })
+
+    return note
   } catch {
+    parsedFileCache.delete(filePath)
     return null
   }
 }
@@ -114,7 +147,9 @@ export function scanVault(vaultPath: string): VaultNote[] {
     return []
   }
 
+  const normalizedRoot = path.resolve(vaultPath)
   const files = walkDir(vaultPath)
+  const activeSet = new Set(files)
   const notes: VaultNote[] = []
 
   for (const filePath of files) {
@@ -124,7 +159,13 @@ export function scanVault(vaultPath: string): VaultNote[] {
     }
   }
 
-  console.log(`Scanned ${notes.length} notes from ${vaultPath}`)
+  // 自动回收该 Vault 下已被删除文件的陈旧缓存条目
+  for (const [cachedPath, item] of parsedFileCache.entries()) {
+    if (item.vaultRoot === normalizedRoot && !activeSet.has(cachedPath)) {
+      parsedFileCache.delete(cachedPath)
+    }
+  }
+
   return notes
 }
 
@@ -300,7 +341,7 @@ export function updateFile(
   const fileContent = buildFileContent(content, frontmatter)
   fs.writeFileSync(fullPath, fileContent, 'utf-8')
 
-  const note = parseFile(fullPath, vaultPath)
+  const note = parseFile(fullPath, vaultPath, true)
   if (!note) throw new Error('Failed to parse updated file')
   return note
 }
@@ -373,6 +414,8 @@ export function renameFile(
 
   // Move the file
   fs.renameSync(fullOld, fullNew)
+  parsedFileCache.delete(fullOld)
+  parsedFileCache.delete(fullNew)
 
   // Compute old and new link names (without .md extension)
   const oldName = path.basename(oldPath, '.md')
@@ -385,7 +428,7 @@ export function renameFile(
     const linkPattern = new RegExp(`\\[\\[${escapeRegex(oldName)}([\\]|#])`, 'g')
     for (const filePath of allFiles) {
       try {
-        const raw = fs.readFileSync(filePath, 'utf-8')
+        const raw = readTextFileAutoEncoding(filePath)
         if (linkPattern.test(raw)) {
           const updated = raw.replace(linkPattern, `[[${newName}$1`)
           fs.writeFileSync(filePath, updated, 'utf-8')
@@ -399,7 +442,7 @@ export function renameFile(
     const linkPatternExact = new RegExp(`\\[\\[${escapeRegex(oldName)}\\]\\]`, 'g')
     for (const filePath of walkDir(vaultPath)) {
       try {
-        const raw = fs.readFileSync(filePath, 'utf-8')
+        const raw = readTextFileAutoEncoding(filePath)
         if (linkPatternExact.test(raw)) {
           const updated = raw.replace(linkPatternExact, `[[${newName}]]`)
           fs.writeFileSync(filePath, updated, 'utf-8')

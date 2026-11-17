@@ -178,76 +178,107 @@ def analyze_pdf_chapters(pdf_path):
     }
 
 
-def parse_questions_from_text(raw_text, max_questions=12, chapter_title="", source_book=""):
+def parse_questions_from_text(raw_text, max_questions=25, chapter_title="", source_book=""):
     """
-    智能解析题目文本，识别真实的单选、多选、填空题
+    智能解析题目文本，识别真实的单选、多选、填空与解答题（支持 1~4 位数题号、同行多选项、真实答案/解析提取，杜绝硬编码假答案 "A"）
     """
-    # 过滤明显的广告杂音
     clean_lines = []
     for line in raw_text.splitlines():
         l = line.strip()
-        if not l or any(ad in l for ad in ["公众号", "QQ群", "扫码", "做题本集结地", "微信"]):
+        if not l or any(ad in l for ad in ["公众号", "QQ群", "扫码关注", "做题本集结地", "微信群", "淘宝店铺"]):
             continue
         clean_lines.append(l)
-    
+
     unified_text = "\n".join(clean_lines)
-    
-    # 按照题号标记切分：例如 01. 02. 1. 2. (1) (2) 【例1】
-    raw_blocks = re.split(r'\n(?=(?:0\d|\d{1,2})\.|\(\d{1,2}\)|【\d{1,2}】)', unified_text)
-    
+
+    # 按照规范题号标记切分（支持 1.~1999.、01.、【例1】、【真题1】，避免误切题干内的子条件 (1)(2)）
+    raw_blocks = re.split(
+        r'\n(?=(?:0?\d{1,4})[\.、．]\s*\S|【(?:真题|例题|单选|多选|习题)?\s*\d{1,4}\s*】)',
+        unified_text
+    )
+
     questions = []
     for b_idx, block in enumerate(raw_blocks):
         block = block.strip()
-        if len(block) < 20:
+        if len(block) < 18:
             continue
-            
-        # 寻找选项 A. B. C. D. 或 A B C D
-        # 匹配单选格式
-        opt_matches = list(re.finditer(r'(?:^|\s|\n)([A-D])[\.、\s]\s*', block))
-        
-        q_stem = block
+
+        ans_match = re.search(
+            r'(?:【\s*(?:参考)?答案\s*】|参考答案|正确答案|标准答案|Answer)\s*[:：]?\s*([A-F](?:[\s,，、/]*[A-F]){0,5}|[^\n]{1,60})',
+            block,
+            re.IGNORECASE
+        )
+        exp_match = re.search(
+            r'(?:【\s*(?:名师|参考|试题)?解析\s*】|解析\s*[:：]|详解\s*[:：]|Explanation\s*[:：])\s*([\s\S]+)$',
+            block,
+            re.IGNORECASE
+        )
+
+        extracted_ans = "待核对"
+        is_multiple = False
+        if ans_match:
+            raw_ans_str = ans_match.group(1).strip()
+            pure_letters = re.match(r'^([A-Fa-f](?:[\s,，、/]*[A-Fa-f]){0,5})(?:\s|$|[。，；])', raw_ans_str)
+            if pure_letters:
+                letters = sorted(list(set(re.findall(r'[A-F]', pure_letters.group(1).upper()))))
+                if letters:
+                    extracted_ans = "".join(letters)
+                    is_multiple = len(letters) >= 2
+            else:
+                extracted_ans = raw_ans_str[:60]
+
+        extracted_exp = ""
+        body_without_exp = block
+        if exp_match:
+            extracted_exp = exp_match.group(1).strip()
+            body_without_exp = block[:exp_match.start()].strip()
+        if ans_match and ans_match.start() < len(body_without_exp):
+            body_without_exp = body_without_exp[:ans_match.start()].strip()
+
+        opt_matches = list(
+            re.finditer(r'(?:^|[\s\n])(?:[\(（]([A-F])[\)）]|([A-F])[\.、．\):：])\s*', body_without_exp)
+        )
+
+        q_stem = body_without_exp
         options = {}
         if len(opt_matches) >= 2:
-            q_stem = block[:opt_matches[0].start()].strip()
+            q_stem = body_without_exp[:opt_matches[0].start()].strip()
             for i in range(len(opt_matches)):
-                opt_key = opt_matches[i].group(1)
+                opt_key = (opt_matches[i].group(1) or opt_matches[i].group(2) or "").upper()
                 start_p = opt_matches[i].end()
-                end_p = opt_matches[i+1].start() if i + 1 < len(opt_matches) else len(block)
-                opt_val = block[start_p:end_p].strip().replace('\n', ' ')
-                # 去除页脚杂质
-                opt_val = re.sub(r'·第\s*\d+\s*页.*', '', opt_val).strip()
-                options[opt_key] = opt_val
-                
-        # 整理题干：去除首行多余题号但保留原题语义
-        q_stem_clean = re.sub(r'^(?:0\d|\d{1,2})[\.、]\s*|^\(\d{1,2}\)\s*', '', q_stem).strip()
-        q_stem_clean = q_stem_clean.replace('\n', ' ')
-        
-        if len(q_stem_clean) >= 10:
-            # 识别真题年份标记（如【2018统考真题】）
-            tag_list = ["教材原题", "考研真题"]
-            year_match = re.search(r'【(\d{4}统考真题|\d{4}年真题)】', q_stem_clean)
-            if year_match:
-                tag_list.append(year_match.group(1))
+                end_p = opt_matches[i + 1].start() if i + 1 < len(opt_matches) else len(body_without_exp)
+                opt_val = body_without_exp[start_p:end_p].strip().replace('\n', ' ')
+                opt_val = re.sub(r'·?第\s*\d+\s*页.*', '', opt_val).strip()
+                if opt_key and opt_val:
+                    options[opt_key] = opt_val
 
-            # 默认答案推断与标准解析
-            default_ans = "A" if "A" in options else ("B" if "B" in options else "A")
-            
+        q_stem_clean = re.sub(r'^(?:0?\d{1,4})[\.、．]\s*|^【[^】]{1,12}】\s*', '', q_stem).strip()
+        q_stem_clean = re.sub(r'\s*\n\s*', ' ', q_stem_clean)
+
+        if len(q_stem_clean) >= 8 and (len(options) >= 2 or "？" in q_stem_clean or "?" in q_stem_clean or "求" in q_stem_clean or "证明" in q_stem_clean or "试述" in q_stem_clean):
+            tag_list = ["教材原题"]
+            year_match = re.search(r'(\d{4}\s*(?:统考真题|年真题|考研真题))', q_stem_clean)
+            if year_match:
+                tag_list.append(year_match.group(1).replace(" ", ""))
+
+            q_type = "multiple" if (options and (is_multiple or "多项" in block or "多选" in block)) else ("choice" if options else "analysis")
+
             questions.append({
                 "id": f"real-q-{int(time.time())}-{b_idx + 1}",
                 "chapter": chapter_title,
-                "type": "choice" if options else "comprehensive",
-                "difficulty": "困难" if ("综合" in block or "拓展" in block) else "中等",
+                "type": q_type,
+                "difficulty": "困难" if ("综合" in block or "拓展" in block or "证明" in block) else "中等",
                 "question": q_stem_clean,
-                "options": options if options else None,
-                "answer": default_ans,
-                "explanation": f"【考研原书名师深度分步解析】：本题选自《{source_book}》{chapter_title}。核心考查对该考点底层定义、边界条件与状态转移的精确把握。解题时紧扣统考规范与概念约束，即可迅速秒杀。",
+                "options": options if len(options) >= 2 else None,
+                "answer": extracted_ans,
+                "explanation": extracted_exp if extracted_exp else f"摘自《{source_book}》{chapter_title}原书习题，请结合章节正文或卷末答案解析核对。",
                 "tags": tag_list,
                 "source": f"{source_book} ({chapter_title})"
             })
-            
+
             if len(questions) >= max_questions:
                 break
-                
+
     return questions
 
 

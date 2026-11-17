@@ -3,14 +3,29 @@ import type { VaultEvent } from '../services/api'
 
 type EventHandler = (event: VaultEvent) => void
 
-export function useVaultEvents(onEvent?: EventHandler) {
+export function useVaultEvents(onEvent?: EventHandler, enabled = true) {
   const [connected, setConnected] = useState(false)
   const [lastEvent, setLastEvent] = useState<VaultEvent | null>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const reconnectDelayRef = useRef(1000)
+  const onEventRef = useRef(onEvent)
+  onEventRef.current = onEvent
+
+  const disconnect = useCallback(() => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current)
+      reconnectTimeoutRef.current = undefined
+    }
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close()
+      eventSourceRef.current = null
+    }
+    setConnected(false)
+  }, [])
 
   const connect = useCallback(() => {
+    if (!enabled) return
     if (eventSourceRef.current) {
       eventSourceRef.current.close()
     }
@@ -27,7 +42,7 @@ export function useVaultEvents(onEvent?: EventHandler) {
       try {
         const data: VaultEvent = JSON.parse(event.data)
         setLastEvent(data)
-        onEvent?.(data)
+        onEventRef.current?.(data)
       } catch {
         // ignore parse errors (keepalive messages)
       }
@@ -45,21 +60,19 @@ export function useVaultEvents(onEvent?: EventHandler) {
         connect()
       }, delay)
     }
-  }, [onEvent])
+  }, [enabled])
 
   useEffect(() => {
+    if (!enabled) {
+      disconnect()
+      return
+    }
     connect()
 
     return () => {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close()
-        eventSourceRef.current = null
-      }
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current)
-      }
+      disconnect()
     }
-  }, [connect])
+  }, [enabled, connect, disconnect])
 
   return { connected, lastEvent }
 }

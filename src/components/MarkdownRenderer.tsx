@@ -928,6 +928,55 @@ function getHeadingAnchorProps(children: any) {
   return { id, 'data-heading-text': cleanText }
 }
 
+// 模块级稳定插件配置与预处理 LRU 缓存：消除每次渲染重建 unified 插件链与重复执行多轮 LaTeX 正则扫描的开销
+const REMARK_PLUGINS: any[] = [remarkGfm, [remarkMath, { singleDollarTextMath: true }]]
+const REHYPE_PLUGINS: any[] = [rehypeHighlight, [rehypeKatex, { strict: false, throwOnError: false }]]
+const NORMALIZED_MD_CACHE_LIMIT = 600
+const normalizedMdCache = new Map<string, string>()
+
+function getCachedNormalizedMarkdown(mainContent: string, inline: boolean): string {
+  const cacheKey = `${inline ? '1' : '0'}:${mainContent}`
+  const hit = normalizedMdCache.get(cacheKey)
+  if (hit !== undefined) {
+    // 刷新 LRU 顺序
+    normalizedMdCache.delete(cacheKey)
+    normalizedMdCache.set(cacheKey, hit)
+    return hit
+  }
+
+  let processed = normalizeMathSegments(mainContent)
+    .replace(
+      /!\[\[(.*?\.(?:png|jpg|jpeg|gif|webp|svg|bmp))\]\]/gi,
+      (_match, filename) => `![${filename}](/api/vault/attachment?path=${encodeURIComponent(filename)})`
+    )
+    .replace(
+      /\[\[([^\]\|]+)\|([^\]]+)\]\]/g,
+      (_match, note, alias) => `[${alias}](#wikilink:${encodeURIComponent(note.trim())})`
+    )
+    .replace(
+      /\[\[([^\]]+)\]\]/g,
+      (_match, note) => `[${note.trim()}](#wikilink:${encodeURIComponent(note.trim())})`
+    )
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n([，。！？；：、])/g, '$1')
+    .replace(/([，。！？；：、”《》]) +/g, '$1')
+    .replace(/([\u4e00-\u9fa5，。！？；：、”《》])((?<!\$)\$(?!\$)[^\$\n]+?(?<!\$)\$(?!\$))/g, '$1 $2')
+    .replace(/((?<!\$)\$(?!\$)[^\$\n]+?(?<!\$)\$(?!\$))([\u4e00-\u9fa5，。！？；：、”《》])/g, '$1 $2')
+
+  processed = normalizeReadableLayout(processed, inline).replace(/\n{3,}/g, '\n\n')
+
+  if (mainContent.length <= 16_000) {
+    if (normalizedMdCache.size >= NORMALIZED_MD_CACHE_LIMIT) {
+      const oldestKey = normalizedMdCache.keys().next().value
+      if (oldestKey !== undefined) normalizedMdCache.delete(oldestKey)
+    }
+    normalizedMdCache.set(cacheKey, processed)
+  }
+
+  return processed
+}
+
 export const MarkdownRenderer = memo(function MarkdownRenderer({
 
   content,
@@ -956,55 +1005,20 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
 
 
 
-  // 1.1 自动规整 Obsidian 双链图片 ![[xxx.png]] -> ![](/api/vault/attachment?path=xxx.png)
-
-  // 并在流式输出期间平滑闭合未完成的块级公式 $$，防止公式源码闪烁跳动
+  // 1.1 自动规整 Obsidian 双链图片与 LaTeX 公式（非流式状态命中模块级 O(1) LRU 缓存，切题/翻卡 0 延迟）
 
   const normalizedContent = useMemo(() => {
 
     if (!mainContent) return ''
 
-    let processed = normalizeMathSegments(mainContent)
-      // 1. 规整图片双链 ![[xxx.png]] -> ![](/api/vault/attachment?path=xxx.png)
-      .replace(
-        /!\[\[(.*?\.(?:png|jpg|jpeg|gif|webp|svg|bmp))\]\]/gi,
-        (_match, filename) => `![${filename}](/api/vault/attachment?path=${encodeURIComponent(filename)})`
-      )
-      // 2. 规整普通带别名双链 [[笔记名|显示别名]] -> [显示别名](#wikilink:笔记名)
-      .replace(
-        /\[\[([^\]\|]+)\|([^\]]+)\]\]/g,
-        (_match, note, alias) => `[${alias}](#wikilink:${encodeURIComponent(note.trim())})`
-      )
-      // 3. 规整普通单向双链 [[笔记名]] -> [笔记名](#wikilink:笔记名)
-      .replace(
-        /\[\[([^\]]+)\]\]/g,
-        (_match, note) => `[${note.trim()}](#wikilink:${encodeURIComponent(note.trim())})`
-      )
-      // 4. 规整连续多余空行：防止上下被拉得太长（至多允许 1 个空行，即 2 个 \n）
-      .replace(/\n{3,}/g, '\n\n')
-      // 5. 清理每行行尾多余的空白字符
-      .replace(/[ \t]+\n/g, '\n')
-      // 6. 中文排版避头尾规整：修复孤立掉落在行首的标点符号（，。！？；：、）将其上移贴回上一行行末
-      .replace(/\n([，。！？；：、])/g, '$1')
-      // 7. 规整中文全角标点后紧随的多余普通空格（符合中文观察阅读习惯）
-      .replace(/([，。！？；：、”《》]) +/g, '$1')
-      // 8. 确保中文字符与行内公式 $ 之间拥有清晰边界，防止 remark-math 将 $...$ 误判为普通文本
-      .replace(/([\u4e00-\u9fa5，。！？；：、”《》])((?<!\$)\$(?!\$)[^\$\n]+?(?<!\$)\$(?!\$))/g, '$1 $2')
-      .replace(/((?<!\$)\$(?!\$)[^\$\n]+?(?<!\$)\$(?!\$))([\u4e00-\u9fa5，。！？；：、”《》])/g, '$1 $2')
+    if (!isStreaming) {
+      return getCachedNormalizedMarkdown(mainContent, inline)
+    }
 
-    processed = normalizeReadableLayout(processed, inline)
-      .replace(/\n{3,}/g, '\n\n')
-
-    if (isStreaming) {
-
-      const blockMathMatches = processed.match(/\$\$/g)
-
-      if (blockMathMatches && blockMathMatches.length % 2 === 1) {
-
-        processed += '\n$$'
-
-      }
-
+    let processed = getCachedNormalizedMarkdown(mainContent, inline)
+    const blockMathMatches = processed.match(/\$\$/g)
+    if (blockMathMatches && blockMathMatches.length % 2 === 1) {
+      processed += '\n$$'
     }
 
     return processed
@@ -1406,8 +1420,8 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
       {/* 渲染正文内容 */}
       {normalizedContent && (
         <ReactMarkdown
-          remarkPlugins={[remarkGfm, [remarkMath, { singleDollarTextMath: true }]]}
-          rehypePlugins={[rehypeHighlight, [rehypeKatex, { strict: false, throwOnError: false }]]}
+          remarkPlugins={REMARK_PLUGINS}
+          rehypePlugins={REHYPE_PLUGINS}
           components={components}
         >
           {normalizedContent}

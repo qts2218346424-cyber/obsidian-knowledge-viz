@@ -35,7 +35,7 @@ export function getQuestionsByTag(tag: string) {
 
 /** 获取随机 N 道题目 */
 export function getRandomQuestions(count: number, subject?: '数据结构' | '计算机组成原理' | '操作系统' | '计算机网络') {
-  const pool = subject ? getQuestionsBySubject(subject) : [...QUESTION_BANK]
-  const shuffled = [...pool].sort(() => Math.random() - 0.5)
+  const pool = subject ? getQuestionsBySubject(subject) : QUESTION_BANK
+  const shuffled = pool.toSorted(() => Math.random() - 0.5)
   return shuffled.slice(0, count)
 }

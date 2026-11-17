@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { api, type VaultStats } from '../services/api'
 import { useAuth } from '../contexts/AuthContext'
+import { useThemeStyle } from '../hooks/useThemeStyle'
 
 interface ObsidianSyncModalProps {
   isOpen: boolean
@@ -20,6 +21,7 @@ export default function ObsidianSyncModal({
   onRefresh,
 }: ObsidianSyncModalProps) {
   const { user } = useAuth()
+  const { isDark } = useThemeStyle()
   const isAdmin = user?.role === 'admin'
   const [stats, setStats] = useState<VaultStats | null>(null)
   const [, setLoading] = useState(false)
@@ -127,25 +129,31 @@ export default function ObsidianSyncModal({
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="dark bg-[#121622] border border-white/15 rounded-3xl w-full max-w-xl max-h-[88dvh] shadow-xl overflow-hidden text-slate-100 flex flex-col">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/55 backdrop-blur-xs animate-in fade-in duration-200">
+      <div
+        className={`${
+          isDark
+            ? 'dark bg-[#121622] border-white/15 text-slate-100'
+            : 'bg-white border-slate-200/90 text-slate-900'
+        } border rounded-3xl w-full max-w-xl max-h-[88dvh] shadow-xl overflow-hidden flex flex-col`}
+      >
         {/* Header */}
-        <div className="px-5 sm:px-6 py-3.5 sm:py-4 border-b border-white/10 flex items-center justify-between bg-white/[0.02] shrink-0">
+        <div className="px-5 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between bg-slate-50/80 dark:bg-white/[0.02] shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-purple-500/15 text-purple-400 border border-purple-500/30">
-              {isAdmin ? <Folder className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5 text-emerald-400" />}
+            <div className="p-2.5 rounded-2xl bg-indigo-50 dark:bg-purple-500/15 text-indigo-600 dark:text-purple-400 border border-indigo-200/80 dark:border-purple-500/30">
+              {isAdmin ? <Folder className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />}
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-white">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">
                   {isAdmin ? 'Obsidian 本地同步中心 (系统管理员)' : '云端专属研学沙盒与导出'}
                 </h3>
-                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-bold bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
                   {isAdmin ? '双向实时监听已生效' : '多租户物理沙箱隔离就绪'}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 {isAdmin
                   ? 'CoreForge 与电脑本地 Obsidian 共用同一知识库物理目录，毫秒级直接落盘'
                   : '每位考生独享独立数据沙盒，绝不泄露云端主机目录，支持一键导出离线 Obsidian 知识库'}
@@ -154,7 +162,7 @@ export default function ObsidianSyncModal({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+            className="p-1.5 rounded-xl hover:bg-slate-200/70 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -163,24 +171,24 @@ export default function ObsidianSyncModal({
         {/* Content */}
         <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 flex-1 overflow-y-auto overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
           {/* Path Card */}
-          <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-2">
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200/90 dark:border-slate-800 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                {isAdmin ? <Folder className="w-3.5 h-3.5 text-purple-400" /> : <Lock className="w-3.5 h-3.5 text-emerald-400" />}
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                {isAdmin ? <Folder className="w-3.5 h-3.5 text-indigo-600 dark:text-purple-400" /> : <Lock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
                 {isAdmin ? '当前绑定的本地 Obsidian 路径 (绝对物理路径)' : '个人存储位置 (云端独立沙箱空间)'}
               </span>
               <button
                 onClick={handleCopyPath}
-                className="flex items-center gap-1 text-2xs text-slate-400 hover:text-white transition-colors cursor-pointer"
+                className="flex items-center gap-1 text-2xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
               >
-                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                {copied ? <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                 <span>{copied ? '已复制' : '复制标识'}</span>
               </button>
             </div>
-            <div className="p-3 rounded-xl bg-black/40 border border-slate-800 font-mono text-xs text-purple-300 break-all select-all flex items-center justify-between">
+            <div className="p-3 rounded-xl bg-white dark:bg-black/40 border border-slate-200 dark:border-slate-800 font-mono text-xs text-indigo-700 dark:text-purple-300 break-all select-all flex items-center justify-between">
               <span>{displayVaultPath}</span>
               {!isAdmin && (
-                <span className="text-2xs text-emerald-400 font-sans ml-2 shrink-0">
+                <span className="text-2xs text-emerald-700 dark:text-emerald-400 font-sans ml-2 shrink-0">
                   仅您本人私有
                 </span>
               )}
@@ -189,44 +197,44 @@ export default function ObsidianSyncModal({
 
           {/* Stats Grid */}
           <div className="grid grid-cols-3 gap-3">
-            <div className="p-3 rounded-2xl bg-slate-900/60 border border-slate-800 text-center">
-              <div className="flex items-center justify-center gap-1 text-slate-400 text-xs mb-1">
-                <FileText className="w-3.5 h-3.5 text-blue-400" />
+            <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/90 dark:border-slate-800 text-center">
+              <div className="flex items-center justify-center gap-1 text-slate-500 dark:text-slate-400 text-xs mb-1">
+                <FileText className="w-3.5 h-3.5 text-indigo-600 dark:text-blue-400" />
                 <span>总笔记篇数</span>
               </div>
-              <div className="text-lg font-bold text-white">
+              <div className="text-lg font-bold text-slate-900 dark:text-white">
                 {stats?.totalNotes || 386}
               </div>
             </div>
 
-            <div className="p-3 rounded-2xl bg-slate-900/60 border border-slate-800 text-center">
-              <div className="flex items-center justify-center gap-1 text-slate-400 text-xs mb-1">
-                <Hash className="w-3.5 h-3.5 text-amber-400" />
+            <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/90 dark:border-slate-800 text-center">
+              <div className="flex items-center justify-center gap-1 text-slate-500 dark:text-slate-400 text-xs mb-1">
+                <Hash className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                 <span>知识标签数</span>
               </div>
-              <div className="text-lg font-bold text-white">
+              <div className="text-lg font-bold text-slate-900 dark:text-white">
                 {stats?.totalTags || 458}
               </div>
             </div>
 
-            <div className="p-3 rounded-2xl bg-slate-900/60 border border-slate-800 text-center">
-              <div className="flex items-center justify-center gap-1 text-slate-400 text-xs mb-1">
-                <Link2 className="w-3.5 h-3.5 text-emerald-400" />
+            <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/90 dark:border-slate-800 text-center">
+              <div className="flex items-center justify-center gap-1 text-slate-500 dark:text-slate-400 text-xs mb-1">
+                <Link2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                 <span>关联双链数</span>
               </div>
-              <div className="text-lg font-bold text-white">
+              <div className="text-lg font-bold text-slate-900 dark:text-white">
                 {stats?.totalLinks || 376}
               </div>
             </div>
           </div>
 
           {/* Explanation Banner */}
-          <div className="p-4 rounded-2xl bg-indigo-950/20 border border-indigo-900/40 text-xs text-slate-300 space-y-2">
-            <div className="font-bold text-indigo-300 flex items-center gap-1.5">
-              <Activity className="w-4 h-4 text-indigo-400" />
+          <div className="p-4 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/20 border border-indigo-200/80 dark:border-indigo-900/40 text-xs text-slate-700 dark:text-slate-300 space-y-2">
+            <div className="font-bold text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5">
+              <Activity className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
               <span>{isAdmin ? '本地物理同步机制' : '考生沙盒安全与 Obsidian 离线掌握保障'}</span>
             </div>
-            <p className="text-2xs leading-relaxed text-slate-400">
+            <p className="text-2xs leading-relaxed text-slate-600 dark:text-slate-400">
               {isAdmin ? (
                 <>
                   1. <b>零延迟本地读写</b>：在软件内创建、编辑的任何笔记，均直接写入本地物理目录中真实存在的 .md 文件。<br />
@@ -245,10 +253,10 @@ export default function ObsidianSyncModal({
           {testStatus && (
             <div className={`p-3.5 rounded-2xl text-xs leading-relaxed border ${
               testStatus.startsWith('🎉') || testStatus.startsWith('✅')
-                ? 'bg-emerald-950/30 border-emerald-800/60 text-emerald-300'
+                ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300'
                 : testStatus.startsWith('❌')
-                ? 'bg-rose-950/30 border-rose-800/60 text-rose-300'
-                : 'bg-blue-950/30 border-blue-800/60 text-blue-300'
+                ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800/60 text-rose-800 dark:text-rose-300'
+                : 'bg-indigo-50 dark:bg-blue-950/30 border-indigo-200 dark:border-blue-800/60 text-indigo-800 dark:text-blue-300'
             }`}>
               {testStatus}
             </div>
@@ -281,7 +289,7 @@ export default function ObsidianSyncModal({
             <button
               onClick={handleRefreshVault}
               disabled={refreshing}
-              className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold text-xs transition-all active:scale-95 cursor-pointer"
+              className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs transition-all active:scale-95 cursor-pointer"
               title="重新扫描沙箱笔记并刷新统计"
             >
               <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
@@ -290,21 +298,21 @@ export default function ObsidianSyncModal({
 
             <button
               onClick={handleRunSyncTest}
-              className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-semibold text-xs transition-all active:scale-95 cursor-pointer"
+              className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-600/20 hover:bg-emerald-100 dark:hover:bg-emerald-600/30 border border-emerald-200 dark:border-emerald-500/40 text-emerald-700 dark:text-emerald-300 font-semibold text-xs transition-all active:scale-95 cursor-pointer"
               title="往个人沙盒中写入一篇测试笔记验证连通性"
             >
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               <span>写入沙箱测试</span>
             </button>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="px-5 sm:px-6 py-3 border-t border-white/10 bg-white/[0.02] flex items-center justify-between text-xs text-slate-400 shrink-0">
+        <div className="px-5 sm:px-6 py-3 border-t border-slate-200/80 dark:border-white/10 bg-slate-50/80 dark:bg-white/[0.02] flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 shrink-0">
           <span>{isAdmin ? '文件监听状态：正常监听中' : '沙盒隔离状态：个人独享安全沙箱'}</span>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors cursor-pointer"
+            className="px-4 py-1.5 rounded-xl bg-slate-200/80 dark:bg-slate-800 hover:bg-slate-300/80 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold transition-colors cursor-pointer"
           >
             完成
           </button>

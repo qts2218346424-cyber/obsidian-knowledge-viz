@@ -8,10 +8,12 @@ export function NailongChibiHead({
   className = 'w-5 h-5',
   withWhiteRim = false,
   title = '奶龙',
+  decorative = false,
 }: {
   className?: string
   withWhiteRim?: boolean
   title?: string
+  decorative?: boolean
 }) {
   const uid = useId().replace(/:/g, '')
   const bodyGradId = `nl-head-body-${uid}`
@@ -25,8 +27,9 @@ export function NailongChibiHead({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
-      role="img"
-      aria-label={title}
+      role={decorative ? undefined : 'img'}
+      aria-label={decorative ? undefined : title}
+      aria-hidden={decorative ? 'true' : undefined}
     >
       <defs>
         <radialGradient id={bodyGradId} cx="42%" cy="32%" r="68%">
@@ -126,7 +129,19 @@ export function NailongChibiHead({
 // 1. 类型与常量定义
 // ============================================================================
 
-export type PetMood = 'idle' | 'happy' | 'derp' | 'eating' | 'focus' | 'sleepy' | 'thinking'
+export type PetMood =
+  | 'idle'
+  | 'happy'
+  | 'derp'
+  | 'eating'
+  | 'focus'
+  | 'sleepy'
+  | 'thinking'
+  | 'walking'
+  | 'busy'
+  | 'begging'
+  | 'dancing'
+  | 'dizzy'
 export type HitZone = 'head' | 'belly' | 'leftArm' | 'rightArm' | null
 
 export interface FloatingParticle {
@@ -143,6 +158,7 @@ export interface DialogueLine {
   mood: PetMood
   text: string
   subtext?: string
+  audio?: string
 }
 
 export const NAILONG_DIALOGUES: Record<string, DialogueLine[]> = {
@@ -194,13 +210,51 @@ export const NAILONG_DIALOGUES: Record<string, DialogueLine[]> = {
       subtext: '视力充能完毕 · 状态拉满 ✨',
     },
   ],
+  walk: [
+    {
+      mood: 'walking',
+      text: '哒哒哒~ 俺迈开小短腿在桌面上巡逻一圈，看看你有没有偷偷走神哟！🐾',
+      subtext: '奶龙巡山散步中 · 肚皮一颠一颠',
+    },
+  ],
+  dance: [
+    {
+      mood: 'dancing',
+      text: '芜湖~ 左扭扭右扭扭！奶龙给你跳支上岸庆功扭屁股舞，考神附体冲鸭！💃🎶',
+      subtext: '魔性扭臀应援舞开启！',
+    },
+  ],
+  busy: [
+    {
+      mood: 'busy',
+      text: '哎呀别狂戳啦！奶龙的小脑瓜CPU要冒烟咯，快拿一根大烤鸡腿来降温！⏳🍗',
+      subtext: '连戳过载 · 肚皮抗议罢工中',
+    },
+  ],
+  beg: [
+    {
+      mood: 'begging',
+      text: '咕噜噜……听到俺肚皮响了吗？好久没啃大烤鸡腿啦，赏一口嘛~ 🥺🍗',
+      subtext: '可怜巴巴捂着扁肚皮讨食中',
+    },
+  ],
+  dizzy: [
+    {
+      mood: 'dizzy',
+      text: '哇啊啊别晃啦 @_@！俺眼珠子都转成蚊香啦，满屏幕都是飞舞的大鸡腿！💫',
+      subtext: '天旋地转 · 晕乎乎站不稳咯',
+    },
+  ],
 }
 
 // ============================================================================
 // 2. Web Audio 零依赖软萌合成音效引擎 (与真实原声音频双轨并发)
 // ============================================================================
 
-export function playPetSynthSound(type: 'boing' | 'pat' | 'nom' | 'lift' | 'land' | 'cheer', muted: boolean) {
+export function playPetSynthSound(
+  type: 'boing' | 'pat' | 'nom' | 'lift' | 'land' | 'cheer' | 'dance' | 'dizzy' | 'overload',
+  muted: boolean
+) {
   if (muted || typeof window === 'undefined') return
   try {
     const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
@@ -269,6 +323,35 @@ export function playPetSynthSound(type: 'boing' | 'pat' | 'nom' | 'lift' | 'land
       gain.gain.exponentialRampToValueAtTime(0.005, now + 0.42)
       osc.start(now)
       osc.stop(now + 0.42)
+    } else if (type === 'dance') {
+      osc.type = 'triangle'
+      osc.frequency.setValueAtTime(523.25, now)
+      osc.frequency.setValueAtTime(659.25, now + 0.09)
+      osc.frequency.setValueAtTime(783.99, now + 0.18)
+      osc.frequency.setValueAtTime(1046.5, now + 0.27)
+      osc.frequency.setValueAtTime(783.99, now + 0.36)
+      gain.gain.setValueAtTime(0.14, now)
+      gain.gain.exponentialRampToValueAtTime(0.005, now + 0.48)
+      osc.start(now)
+      osc.stop(now + 0.48)
+    } else if (type === 'dizzy') {
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(620, now)
+      osc.frequency.linearRampToValueAtTime(280, now + 0.12)
+      osc.frequency.linearRampToValueAtTime(540, now + 0.24)
+      osc.frequency.linearRampToValueAtTime(220, now + 0.38)
+      gain.gain.setValueAtTime(0.15, now)
+      gain.gain.exponentialRampToValueAtTime(0.005, now + 0.42)
+      osc.start(now)
+      osc.stop(now + 0.42)
+    } else if (type === 'overload') {
+      osc.type = 'square'
+      osc.frequency.setValueAtTime(330, now)
+      osc.frequency.setValueAtTime(260, now + 0.1)
+      gain.gain.setValueAtTime(0.08, now)
+      gain.gain.exponentialRampToValueAtTime(0.005, now + 0.24)
+      osc.start(now)
+      osc.stop(now + 0.24)
     }
     setTimeout(() => {
       ctx.close().catch(() => {})
@@ -296,6 +379,7 @@ export interface NailongRigProps {
   bellyJiggle?: boolean
   headPatting?: boolean
   landingBounce?: boolean
+  walkDirection?: 'left' | 'right'
   size?: number | string
   className?: string
   onZoneTrigger?: (zone: HitZone, e: React.MouseEvent) => void
@@ -312,42 +396,53 @@ export function NailongRigAvatar({
   bellyJiggle = false,
   headPatting = false,
   landingBounce = false,
+  walkDirection = 'left',
   size = '100%',
   className = '',
   onZoneTrigger,
 }: NailongRigProps) {
-  // 根据情绪状态选择对应的正版 3D 高清免抠贴图
+  // 根据情绪状态选择对应的正版 3D 高清免抠贴图 (WebP 极速加载版)
   const imageSrc = isDragging
-    ? '/pets/nailong_drag.png'
-    : headPatting || mood === 'happy'
-    ? '/pets/nailong_happy.png'
-    : bellyJiggle || mood === 'derp'
-    ? '/pets/nailong_derp.png'
-    : mood === 'focus'
-    ? '/pets/nailong_focus.png'
-    : mood === 'sleepy'
-    ? '/pets/nailong_sleepy.png'
+    ? '/pets/nailong_drag.webp'
+    : mood === 'walking'
+    ? '/pets/nailong_wave.webp'
+    : mood === 'dancing' || headPatting || mood === 'happy'
+    ? '/pets/nailong_happy.webp'
+    : bellyJiggle || mood === 'derp' || mood === 'busy' || mood === 'dizzy'
+    ? '/pets/nailong_derp.webp'
+    : mood === 'focus' || mood === 'thinking'
+    ? '/pets/nailong_focus.webp'
+    : mood === 'sleepy' || mood === 'begging'
+    ? '/pets/nailong_sleepy.webp'
     : mood === 'eating' || holdingDrumstick
-    ? '/pets/nailong_happy.png'
-    : '/pets/nailong.png'
+    ? '/pets/nailong_happy.webp'
+    : '/pets/nailong.webp'
 
   // 视差微倾斜与旋转
   const headShiftX = (eyeOffset?.x ?? 0) * 4
   const headShiftY = (eyeOffset?.y ?? 0) * 2.5
   const headRotate = headPatting ? -4 : (eyeOffset?.x ?? 0) * 5
+  // nailong_wave.webp 原画默认朝左迈步，向右走时水平镜像翻转
+  const flipX = mood === 'walking' && walkDirection === 'right' ? -1 : 1
 
   // 物理动画类名
   const bodyAnimClass = isDragging
     ? 'nl-anim-dragging'
     : landingBounce
     ? 'nl-anim-land'
-    : bellyJiggle
+    : mood === 'dizzy'
+    ? 'nl-anim-dizzy'
+    : mood === 'dancing'
+    ? 'nl-anim-dance'
+    : mood === 'walking'
+    ? 'nl-anim-walk'
+    : bellyJiggle || mood === 'busy'
     ? 'nl-anim-belly-boing'
     : headPatting
     ? 'nl-anim-head-pat'
     : mood === 'happy' || mood === 'eating'
     ? 'nl-anim-happy-bounce'
-    : mood === 'sleepy'
+    : mood === 'sleepy' || mood === 'begging'
     ? 'nl-anim-sleep-breathe'
     : isSpeaking
     ? 'nl-anim-speaking-bop'
@@ -411,6 +506,20 @@ export function NailongRigAvatar({
           0%, 100% { transform: scale(0.55); opacity: 0.75; }
           50% { transform: scale(1.25); opacity: 0.95; }
         }
+        @keyframes nl-walk-step {
+          0%, 100% { transform: translateY(0px) rotate(-3deg); }
+          50% { transform: translateY(-6px) rotate(3deg); }
+        }
+        @keyframes nl-dance-wiggle {
+          0%, 100% { transform: translateY(0px) rotate(-8deg) scale(1.04, 0.96); }
+          25% { transform: translateY(-9px) rotate(0deg) scale(0.96, 1.05); }
+          50% { transform: translateY(0px) rotate(8deg) scale(1.04, 0.96); }
+          75% { transform: translateY(-9px) rotate(0deg) scale(0.96, 1.05); }
+        }
+        @keyframes nl-dizzy-sway {
+          0%, 100% { transform: translateX(-5px) rotate(-9deg); }
+          50% { transform: translateX(5px) rotate(9deg); }
+        }
 
         .nl-anim-idle-breathe { animation: nl-breathe 2.5s ease-in-out infinite; transform-origin: 50% 90%; }
         .nl-anim-sleep-breathe { animation: nl-sleep 3.2s ease-in-out infinite; transform-origin: 50% 90%; }
@@ -420,6 +529,9 @@ export function NailongRigAvatar({
         .nl-anim-head-pat { animation: nl-head-cozy 0.6s ease-in-out; transform-origin: 50% 88%; }
         .nl-anim-dragging { animation: nl-drag-kick 0.32s ease-in-out infinite; transform-origin: 50% 30%; }
         .nl-anim-land { animation: nl-land-squish 0.52s cubic-bezier(0.22, 1, 0.36, 1); transform-origin: 50% 92%; }
+        .nl-anim-walk { animation: nl-walk-step 0.42s ease-in-out infinite; transform-origin: 50% 90%; }
+        .nl-anim-dance { animation: nl-dance-wiggle 0.64s ease-in-out infinite; transform-origin: 50% 88%; }
+        .nl-anim-dizzy { animation: nl-dizzy-sway 0.55s ease-in-out infinite; transform-origin: 50% 88%; }
       `}</style>
 
       {/* 1. 底部柔和立体呼吸投影 */}
@@ -444,6 +556,8 @@ export function NailongRigAvatar({
           src={imageSrc}
           alt="奶龙"
           draggable={false}
+          decoding="async"
+          style={{ transform: flipX === -1 ? 'scaleX(-1)' : undefined }}
           className="w-full h-full object-contain pointer-events-none select-none drop-shadow-[0_8px_16px_rgba(245,158,11,0.28)]"
         />
 

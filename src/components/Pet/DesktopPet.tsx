@@ -1,4 +1,4 @@
-import { getPomodoroSyncState, setPomodoroSyncState, onPomodoroSync } from '../../utils/pomodoroSync'
+import { getPomodoroSyncState, onPomodoroSync } from '../../utils/pomodoroSync'
 import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
@@ -15,16 +15,18 @@ import {
   Eye,
   EyeOff,
   GripVertical,
+  RefreshCw,
+  Sparkles,
 } from 'lucide-react'
-import LuluAvatar, { NAILONG_PERSONA } from './LuluAvatar'
-import { useExamCountdown, EXAM_DATE_DISPLAY } from '../../utils/examDate'
+import LuluAvatar, { useActivePetPersona, PetChibiHead } from './LuluAvatar'
+import { useExamCountdown } from '../../utils/examDate'
 import {
   playPetSynthSound,
   NAILONG_DIALOGUES,
-  NailongChibiHead,
   type PetMood,
   type HitZone,
 } from './NailongRigAvatar'
+import { FEIYU_DIALOGUES, FEIYU_CLICK_LINES } from './FeiyuRigAvatar'
 
 export type { PetMood }
 
@@ -36,7 +38,8 @@ interface DesktopPetProps {
 
 interface PetVoiceItem {
   text: string
-  audio: string
+  subtext?: string
+  audio?: string
 }
 
 const NAILONG_VOICE_PACK: PetVoiceItem[] = [
@@ -86,8 +89,14 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
   const location = useLocation()
   const navigate = useNavigate()
 
+  // 当前激活的伴学宠物人设（支持奶龙 🐲 与 大肥鱼 🐳 全局实时切换）
+  const [persona, setPetPersona] = useActivePetPersona()
+  const isFeiyu = persona.id === 'feiyu'
+  const activeDialogues = isFeiyu ? FEIYU_DIALOGUES : NAILONG_DIALOGUES
+
   const isChatPage = location.pathname === '/chat'
   const isQuizPage = location.pathname.startsWith('/quiz')
+
   // 📱 边缘隐藏萌爪形态自由拖动位置管理
   const [hiddenPos, setHiddenPos] = useState<{ y: number; side: 'left' | 'right' }>(() => {
     let y = typeof window !== 'undefined' ? window.innerHeight - 150 : 300
@@ -144,7 +153,6 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
         localStorage.setItem('coreforge_pet_hidden_side', hiddenPos.side)
       } catch {}
     } else {
-      // 未发生明显位移判定为轻触点击，唤起展开伴学奶龙
       setPetHidden(false)
       try {
         localStorage.removeItem('coreforge_pet_hidden')
@@ -249,7 +257,6 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
 
   const petBoxWidth = minimized ? (isMobile ? 124 : 138) : petSize
 
-  // 📱 移动端做题中心自动微缩贴边，并钳位 X 防止微缩胶囊宽出右边界
   useEffect(() => {
     if (isMobile && isQuizPage) {
       setMinimized(true)
@@ -261,12 +268,26 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
     const maxSafeX = Math.max(8, window.innerWidth - petBoxWidth - 10)
     setPosition(prev => (prev.x > maxSafeX ? { x: maxSafeX, y: prev.y } : prev))
   }, [petBoxWidth, isMobile])
+
   const [isSquishing, setIsSquishing] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [bellyJiggle, setBellyJiggle] = useState(false)
   const [headPatting, setHeadPatting] = useState(false)
   const [landingBounce, setLandingBounce] = useState(false)
-  const [holdingDrumstick, setHoldingDrumstick] = useState(false)
+  const [holdingFood, setHoldingFood] = useState(false)
+  const [walkDirection, setWalkDirection] = useState<'left' | 'right'>('right')
+  const [isWalkingMove, setIsWalkingMove] = useState(false)
+
+  // 连戳过载、拖拽摇晃眩晕、花式动作轮播与散步计时器引用
+  const rapidPokeRef = useRef<{ count: number; firstTs: number }>({ count: 0, firstTs: 0 })
+  const shakeTrackRef = useRef<{ lastDir: number; flips: number; windowStart: number }>({
+    lastDir: 0,
+    flips: 0,
+    windowStart: 0,
+  })
+  const trickIndexRef = useRef<number>(0)
+  const walkStopTimerRef = useRef<number | null>(null)
+  const moodResetTimerRef = useRef<number | null>(null)
 
   // 360° 视差目光追踪与闲置打瞌睡
   const [eyeOffset, setEyeOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -282,7 +303,6 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
   const bubbleTimerRef = useRef<number | null>(null)
 
   // ===== 长时间用眼与护眼健康机制 (Eye Care System) =====
-  // 保持当前奶龙正版音源 (nailong_5.mp3 打瞌睡揉眼版 / nailong_6.mp3 学习超久夸夸舞版)
   const [eyeCareActive, setEyeCareActive] = useState(false)
   const [eyeCareSecondsLeft, setEyeCareSecondsLeft] = useState(20)
   const [continuousStudySeconds, setContinuousStudySeconds] = useState(0)
@@ -290,8 +310,14 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
   const lastEyeReminderTimeRef = useRef<number>(0)
   const eyeCareCountdownTimerRef = useRef<number | null>(null)
 
-  // 角色形象：奶龙专属
-  const persona = NAILONG_PERSONA
+  // 当从其他页面（如设置页或抽屉）切换宠物时，停止上一个宠物的残留音频
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.pause()
+      setIsSpeaking(false)
+    }
+    setCurrentAudioUrl(null)
+  }, [persona.id])
 
   // 360° 视差目光跟随与自然呼吸/闲置瞌睡
   useEffect(() => {
@@ -307,7 +333,6 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
       const ny = Math.max(-1, Math.min(1, dy / maxDist))
       setEyeOffset({ x: Number(nx.toFixed(2)), y: Number(ny.toFixed(2)) })
 
-      // 如果正在打瞌睡，光标晃动时唤醒奶龙
       setMood(prev => (prev === 'sleepy' ? 'idle' : prev))
 
       if (idleSleepTimerRef.current) clearTimeout(idleSleepTimerRef.current)
@@ -323,7 +348,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
     }
   }, [position.x, position.y, petSize, isMobile])
 
-  // 按需播放语音引擎（与软萌合成音效双轨联动）
+  // 按需播放语音引擎（奶龙使用正版原声，大肥鱼使用 Q 弹合成音效避免角色串音）
   const playVoice = useCallback(
     (audioUrl: string, force = false) => {
       if (typeof window === 'undefined') return
@@ -369,7 +394,6 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
     [playVoice]
   )
 
-  // 组件卸载时停止音频与计时器
   useEffect(() => {
     return () => {
       if (audioRef.current) {
@@ -384,6 +408,12 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
       if (eyeCareCountdownTimerRef.current) {
         window.clearInterval(eyeCareCountdownTimerRef.current)
       }
+      if (walkStopTimerRef.current) {
+        window.clearTimeout(walkStopTimerRef.current)
+      }
+      if (moodResetTimerRef.current) {
+        window.clearTimeout(moodResetTimerRef.current)
+      }
     }
   }, [])
 
@@ -391,7 +421,6 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
   const [focusActive, setFocusActive] = useState(() => getPomodoroSyncState().isRunning)
   const [focusSecondsLeft, setFocusSecondsLeft] = useState(() => getPomodoroSyncState().timeLeft)
 
-  // 监听全站番茄钟全局同频同步事件
   useEffect(() => {
     const unsub = onPomodoroSync(state => {
       setFocusActive(state.isRunning)
@@ -403,36 +432,35 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
     return unsub
   }, [])
 
-  // 用户交互活跃监听（用于精准评估连续用眼时长）
   useEffect(() => {
-    if (typeof window === "undefined") return
+    if (typeof window === 'undefined') return
     const updateInteraction = () => {
       lastInteractionTimeRef.current = Date.now()
     }
-    window.addEventListener("pointerdown", updateInteraction, { passive: true })
-    window.addEventListener("keydown", updateInteraction, { passive: true })
-    window.addEventListener("scroll", updateInteraction, { passive: true })
+    window.addEventListener('pointerdown', updateInteraction, { passive: true })
+    window.addEventListener('keydown', updateInteraction, { passive: true })
+    window.addEventListener('scroll', updateInteraction, { passive: true })
     return () => {
-      window.removeEventListener("pointerdown", updateInteraction)
-      window.removeEventListener("keydown", updateInteraction)
-      window.removeEventListener("scroll", updateInteraction)
+      window.removeEventListener('pointerdown', updateInteraction)
+      window.removeEventListener('keydown', updateInteraction)
+      window.removeEventListener('scroll', updateInteraction)
     }
   }, [])
 
-  // 开启 20 秒科学闭目护眼倒计时 (20-20-20 护眼法则)
+  // 开启 20 秒科学闭目护眼倒计时
   const startEyeCareBreak = useCallback(() => {
     if (eyeCareCountdownTimerRef.current) {
       window.clearInterval(eyeCareCountdownTimerRef.current)
     }
     setEyeCareActive(true)
     setEyeCareSecondsLeft(20)
-    setMood("sleepy")
+    setMood('sleepy')
     setShowMobileMenu(false)
-    playPetSynthSound("boing", voiceMuted)
+    playPetSynthSound('boing', voiceMuted)
 
     setBubbleAction(null)
-    setBubbleText("🌿 正在闭目远眺中... 剩余 20 秒，放松眼眶与睫状肌~")
-    setBubbleSubtext("科学护眼 20-20-20 · 奶龙陪你一起闭眼养神 🫧")
+    setBubbleText('🌿 正在闭目远眺中... 剩余 20 秒，放松眼眶与睫状肌~')
+    setBubbleSubtext(`科学护眼 20-20-20 · ${persona.name}陪你一起闭眼养神 🫧`)
 
     let left = 20
     eyeCareCountdownTimerRef.current = window.setInterval(() => {
@@ -447,55 +475,49 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
         }
         setEyeCareActive(false)
         setContinuousStudySeconds(0)
-        setMood("happy")
-        playPetSynthSound("cheer", voiceMuted)
-        const doneLine = NAILONG_DIALOGUES.eyeCareDone?.[0] || {
-          text: "芜湖！20 秒眼部放松完成！眼睛亮晶晶，奶龙元气满满陪你继续冲刺高分！💪",
-          subtext: "视力充能完毕 · 状态拉满 ✨",
+        setMood('happy')
+        playPetSynthSound('cheer', voiceMuted)
+        const doneLine = activeDialogues.eyeCareDone?.[0] || {
+          text: `20 秒眼部放松完成！${persona.name}元气满满陪你继续冲刺高分！💪`,
+          subtext: '视力充能完毕 · 状态拉满 ✨',
         }
-        showBubbleWithVoice(doneLine.text, "/pets/voices/nailong_6.mp3?v=3", 6000, false, doneLine.subtext)
+        const doneAudio = doneLine.audio || (isFeiyu ? '/pets/voices/feiyu_focus_done.mp3?v=1' : '/pets/voices/nailong_6.mp3?v=3')
+        showBubbleWithVoice(doneLine.text, doneAudio, 6000, false, doneLine.subtext)
         setTimeout(() => {
-          setMood(focusActive ? "focus" : "idle")
+          setMood(focusActive ? 'focus' : 'idle')
         }, 2500)
       }
     }, 1000)
-  }, [voiceMuted, showBubbleWithVoice, focusActive])
+  }, [voiceMuted, showBubbleWithVoice, focusActive, persona.name, activeDialogues, isFeiyu])
 
-  // 触发长时间用眼护眼提醒（保持当前正版奶龙原声音源）
   const triggerEyeCareReminder = useCallback(
     (force = false) => {
-      setMood("sleepy")
-      playPetSynthSound("pat", voiceMuted)
-      const list = NAILONG_DIALOGUES.eyeCare || []
+      setMood('sleepy')
+      playPetSynthSound('pat', voiceMuted)
+      const list = activeDialogues.eyeCare || []
       const line = list[Math.floor(Math.random() * list.length)] || {
-        mood: "sleepy",
-        text: "👀 学了这么久，眼睛酸酸了吧！快揉揉眼睛，跟奶龙一起闭眼 20 秒、看看窗外绿植放松一下~",
-        subtext: "长时间用眼警报 · 闭目远眺 20 秒 🌿",
+        mood: 'sleepy',
+        text: `👀 学了这么久，眼睛酸酸了吧！跟${persona.name}一起闭眼 20 秒、看看窗外绿植放松一下~`,
+        subtext: '长时间用眼警报 · 闭目远眺 20 秒 🌿',
       }
 
-      // 保持当前音源：轮换使用闭目揉眼 (nailong_5.mp3) 与学了这么久夸夸 (nailong_6.mp3)
-      const eyeAudios = [
-        "/pets/voices/nailong_5.mp3?v=3",
-        "/pets/voices/nailong_6.mp3?v=3",
-      ]
-      const chosenAudio = eyeAudios[Math.floor(Math.random() * eyeAudios.length)]
+      const eyeAudios = ['/pets/voices/nailong_5.mp3?v=3', '/pets/voices/nailong_6.mp3?v=3']
+      const chosenAudio = line.audio || (isFeiyu ? '/pets/voices/feiyu_eyecare.mp3?v=1' : eyeAudios[Math.floor(Math.random() * eyeAudios.length)])
 
       setBubbleAction({
-        label: "👀 陪奶龙闭眼远眺 20 秒",
+        label: `👀 陪${persona.name}闭眼远眺 20 秒`,
         onClick: () => startEyeCareBreak(),
       })
       showBubbleWithVoice(line.text, chosenAudio, 8000, force, line.subtext)
     },
-    [voiceMuted, showBubbleWithVoice, startEyeCareBreak]
+    [voiceMuted, showBubbleWithVoice, startEyeCareBreak, activeDialogues, persona.name, isFeiyu]
   )
 
-  // 护眼检查时钟：每 10 秒评估一次连续活跃时间
   useEffect(() => {
-    if (typeof window === "undefined") return
+    if (typeof window === 'undefined') return
     const interval = window.setInterval(() => {
       const now = Date.now()
       const idleTime = now - lastInteractionTimeRef.current
-      // 如果超过 8 分钟没有任何交互，说明用户已离席休息，将连续用眼时间重置
       if (idleTime > 8 * 60 * 1000) {
         setContinuousStudySeconds(0)
         return
@@ -503,7 +525,6 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
 
       setContinuousStudySeconds(prev => {
         const next = prev + 10
-        // 当连续用眼达到 30 分钟 (1800 秒)，且距离上次提醒超过 20 分钟 (1200 秒)
         const EYE_REMINDER_THRESHOLD = 30 * 60
         const MIN_INTERVAL_BETWEEN_REMINDERS = 20 * 60 * 1000
         if (
@@ -536,7 +557,6 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
 
   const [isLocalModel, setIsLocalModel] = useState(true)
 
-  // 考研初试统一倒计时（12月19日初试）
   const countdown = useExamCountdown()
   const daysToExam = countdown.days
 
@@ -556,10 +576,18 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
       } catch {
         /* ignore */
       }
-      const firstAudio = NAILONG_VOICE_PACK[1]?.audio || '/pets/voices/nailong_2.mp3?v=3'
-      setBubbleText(`考研倒计时 ${daysToExam} 天！我是奶龙，摸摸我头或者戳戳大肚皮听我唠叨哟~`)
-      setBubbleSubtext('真·正版 3D 软萌奶龙已就绪 · 支持 360° 眼神跟随')
-      setCurrentAudioUrl(firstAudio)
+      if (isFeiyu) {
+        setBubbleText(
+          `考研倒计时 ${daysToExam} 天！大家好，我是大肥鱼🐟，DeepSeek 家的鲸鱼娘！下次来刷题，记得给我带碗大白米饭哟~`
+        )
+        setBubbleSubtext('热门短视频少女语音已就绪 · 点击右上角小喇叭畅听')
+        setCurrentAudioUrl('/pets/voices/feiyu_intro.mp3?v=1')
+      } else {
+        const firstAudio = NAILONG_VOICE_PACK[1]?.audio || '/pets/voices/nailong_2.mp3?v=3'
+        setBubbleText(`考研倒计时 ${daysToExam} 天！我是奶龙，摸摸我头或者戳戳大肚皮听我唠叨哟~`)
+        setBubbleSubtext('真·正版 3D 软萌奶龙已就绪 · 支持 360° 眼神跟随')
+        setCurrentAudioUrl(firstAudio)
+      }
       const triggerPractice = onOpenQuickPractice || (() => navigate('/quiz'))
       setBubbleAction({
         label: '🎯 开启随堂真题测试',
@@ -572,7 +600,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
       }, isMobileViewport ? 4000 : 7000)
     }, 2000)
     return () => window.clearTimeout(timer)
-  }, [daysToExam, onOpenQuickPractice])
+  }, [daysToExam, onOpenQuickPractice, isFeiyu, navigate])
 
   // 番茄钟计时与完成播报
   useEffect(() => {
@@ -584,39 +612,48 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
           setFocusActive(false)
           setMood('happy')
           playPetSynthSound('cheer', voiceMuted)
-          showBubbleWithVoice(
-            `🎉 芜湖——！25 分钟深度专注达成！你脑子怎么这么聪明呀，快让奶龙蹭蹭喜气，嘿嘿嘿~`,
-            '/pets/voices/nailong_focus_done.mp3?v=2',
-            6000,
-            false,
-            '考神附体 · 奖励大鸡腿一根'
-          )
+          if (isFeiyu) {
+            showBubbleWithVoice(
+              '🎉 叮咚！25 分钟深度专注达成！让你刷题没让你直接封神呀！快跟本鱼一起炫碗大白米饭庆祝一下吧！🍚🐟',
+              '/pets/voices/feiyu_focus_done.mp3?v=1',
+              6500,
+              false,
+              '考神附体 · 奖励冒尖大白米饭一碗'
+            )
+          } else {
+            showBubbleWithVoice(
+              '🎉 芜湖——！25 分钟深度专注达成！你脑子怎么这么聪明呀，快让奶龙蹭蹭喜气，嘿嘿嘿~',
+              '/pets/voices/nailong_focus_done.mp3?v=2',
+              6000,
+              false,
+              '考神附体 · 奖励大鸡腿一根'
+            )
+          }
           return 25 * 60
         }
         return prev - 1
       })
     }, 1000)
     return () => clearInterval(interval)
-  }, [focusActive, showBubbleWithVoice, voiceMuted])
+  }, [focusActive, showBubbleWithVoice, voiceMuted, isFeiyu])
 
-  // 监听全站做题连对事件，触发奶龙欢呼与庆祝
+  // 监听全站做题连对事件：直接跳起元气应援舞庆祝！
   useEffect(() => {
     const handleStreak = () => {
-      playPetSynthSound('cheer', voiceMuted)
-      setBellyJiggle(true)
-      setMood('happy')
-      const streakLines = NAILONG_DIALOGUES.quizStreak
+      playPetSynthSound('dance', voiceMuted)
+      setMood('dancing')
+      const streakLines = activeDialogues.quizStreak
       const streakLine = streakLines[Math.floor(Math.random() * streakLines.length)]
-      const cheerAudio = Math.random() < 0.6 ? '/pets/voices/nailong_7.mp3?v=3' : '/pets/voices/nailong_8.mp3?v=3'
-      showBubbleWithVoice(streakLine.text, cheerAudio, 4800, false, streakLine.subtext)
+      const cheerAudio =
+        streakLine.audio || (Math.random() < 0.6 ? '/pets/voices/nailong_7.mp3?v=3' : '/pets/voices/nailong_8.mp3?v=3')
+      showBubbleWithVoice(streakLine.text, cheerAudio, 5800, false, streakLine.subtext)
       setTimeout(() => {
-        setBellyJiggle(false)
-        setMood('idle')
-      }, 2500)
+        setMood(focusActive ? 'focus' : 'idle')
+      }, 3200)
     }
     window.addEventListener('coreforge-quiz-streak', handleStreak)
     return () => window.removeEventListener('coreforge-quiz-streak', handleStreak)
-  }, [voiceMuted, showBubbleWithVoice])
+  }, [voiceMuted, showBubbleWithVoice, activeDialogues, focusActive])
 
   // 视口尺寸变化监听
   useEffect(() => {
@@ -639,6 +676,48 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
     }
   }, [getClampedPosition])
 
+  // 一键切换伴学宠物搭档（奶龙 🐲 ⇄ 大肥鱼 🐳）
+  const handleSwitchPetPartner = () => {
+    const nextId = isFeiyu ? 'nailong' : 'feiyu'
+    audioRef.current?.pause()
+    setIsSpeaking(false)
+    setPetPersona(nextId)
+    setIsSquishing(true)
+    setMood('happy')
+    setShowMobileMenu(false)
+    playPetSynthSound('cheer', voiceMuted)
+    setTimeout(() => {
+      setIsSquishing(false)
+      setMood(focusActive ? 'focus' : 'idle')
+    }, 1800)
+
+    if (nextId === 'feiyu') {
+      if (bubbleTimerRef.current) window.clearTimeout(bubbleTimerRef.current)
+      setBubbleAction(null)
+      const introAudio = '/pets/voices/feiyu_intro.mp3?v=1'
+      setCurrentAudioUrl(introAudio)
+      if (!voiceMuted) playVoice(introAudio, false)
+      setBubbleText('大家好，我是大肥鱼，DeepSeek 家的鲸鱼娘！蓝头发，女仆装，尾巴特别能摇~ 白天吃白饭，晚上摸鱼，记得带碗大白米饭哟！🐟🍚')
+      setBubbleSubtext('已切换至：大肥鱼 · 短视频热门少女语音已开启')
+      bubbleTimerRef.current = window.setTimeout(() => {
+        setBubbleText(null)
+        setBubbleSubtext(null)
+      }, 7200)
+    } else {
+      if (bubbleTimerRef.current) window.clearTimeout(bubbleTimerRef.current)
+      setBubbleAction(null)
+      const audio = NAILONG_VOICE_PACK[1]?.audio
+      setCurrentAudioUrl(audio || null)
+      if (audio && !voiceMuted) playVoice(audio, false)
+      setBubbleText('芜湖~ 奶龙满血归位啦！摸摸俺的大肚皮，大鸡腿和高分秘籍全都给你留着哟！🐲🍗')
+      setBubbleSubtext('已切换至：奶龙 · 治愈系伴学小黄龙')
+      bubbleTimerRef.current = window.setTimeout(() => {
+        setBubbleText(null)
+        setBubbleSubtext(null)
+      }, 5200)
+    }
+  }
+
   // 切换语音静音开关
   const toggleVoiceMute = () => {
     setVoiceMuted(prev => {
@@ -647,33 +726,252 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
       if (nextMuted) {
         audioRef.current?.pause()
         setIsSpeaking(false)
-        showBubbleWithVoice(`🔇 已切换为自习静音模式，奶龙安安静静陪你学习~`, undefined, 3000)
+        showBubbleWithVoice(`🔇 已切换为自习静音模式，${persona.name}安安静静陪你学习~`, undefined, 3000)
       } else {
         playPetSynthSound('cheer', false)
-        const firstLine = NAILONG_VOICE_PACK[0]
-        showBubbleWithVoice(`🔊 语音与Q弹音效已开启！${firstLine.text}`, firstLine.audio, 5000, true)
+        if (isFeiyu) {
+          const introLine = FEIYU_CLICK_LINES[0]
+          showBubbleWithVoice(
+            `🔊 大肥鱼少女语音已开启！${introLine.text}`,
+            introLine.audio,
+            6800,
+            true,
+            introLine.subtext
+          )
+        } else {
+          const firstLine = NAILONG_VOICE_PACK[0]
+          showBubbleWithVoice(`🔊 语音与Q弹音效已开启！${firstLine.text}`, firstLine.audio, 5000, true)
+        }
       }
       return nextMuted
     })
   }
 
-  // 投喂大烤鸡腿动作
-  const handleFeedDrumstick = () => {
+  // 投喂专属美食动作（奶龙：大烤鸡腿 🍗 | 大肥鱼：冒尖大白米饭 🍚）
+  const handleFeedTreat = useCallback(() => {
+    if (moodResetTimerRef.current) window.clearTimeout(moodResetTimerRef.current)
+    if (walkStopTimerRef.current) window.clearTimeout(walkStopTimerRef.current)
+    setIsWalkingMove(false)
     playPetSynthSound('nom', voiceMuted)
-    setHoldingDrumstick(true)
+    setHoldingFood(true)
     setMood('eating')
     setShowMobileMenu(false)
-    const list = NAILONG_DIALOGUES.feedChicken
+    setBubbleAction(null)
+    const list = isFeiyu ? FEIYU_DIALOGUES.feedRice : NAILONG_DIALOGUES.feedChicken
     const line = list[Math.floor(Math.random() * list.length)]
-    showBubbleWithVoice(line.text, '/pets/voices/nailong_3.mp3?v=3', 4500, false, line.subtext)
-    setTimeout(() => {
-      setHoldingDrumstick(false)
+    const eatAudio = line.audio || '/pets/voices/nailong_3.mp3?v=3'
+    showBubbleWithVoice(line.text, eatAudio, 5800, false, line.subtext)
+    moodResetTimerRef.current = window.setTimeout(() => {
+      setHoldingFood(false)
       setMood('happy')
-      setTimeout(() => setMood(focusActive ? 'focus' : 'idle'), 1200)
-    }, 2400)
+      moodResetTimerRef.current = window.setTimeout(() => setMood(focusActive ? 'focus' : 'idle'), 1200)
+    }, 2600)
+  }, [voiceMuted, isFeiyu, showBubbleWithVoice, focusActive])
+
+  // 触发一段屏幕巡游小碎步散步动作
+  const triggerPetStroll = useCallback(
+    (showTalk = true) => {
+      if (typeof window === 'undefined' || isDragging || minimized || petHidden) return
+      if (walkStopTimerRef.current) window.clearTimeout(walkStopTimerRef.current)
+      if (moodResetTimerRef.current) window.clearTimeout(moodResetTimerRef.current)
+
+      setPosition(prev => {
+        const winW = window.innerWidth
+        const minSafeX = 20
+        const maxSafeX = Math.max(40, winW - petSize - 24)
+        // 靠右时往左溜达，靠左时往右溜达，中间随机
+        const preferLeft = prev.x > winW * 0.62 ? true : prev.x < winW * 0.38 ? false : Math.random() < 0.5
+        const stepDist = 95 + Math.floor(Math.random() * 65)
+        const dir: 'left' | 'right' = preferLeft ? 'left' : 'right'
+        const targetX = dir === 'left' ? Math.max(minSafeX, prev.x - stepDist) : Math.min(maxSafeX, prev.x + stepDist)
+        setWalkDirection(dir)
+        setIsWalkingMove(true)
+        setMood('walking')
+
+        const nextPos = getClampedPosition({ x: targetX, y: prev.y }, false)
+        try {
+          localStorage.setItem('coreforge_pet_pos', JSON.stringify(nextPos))
+        } catch {}
+        return nextPos
+      })
+
+      if (showTalk) {
+        const walkLines = activeDialogues.walk || []
+        const line = walkLines[Math.floor(Math.random() * walkLines.length)]
+        if (line) {
+          showBubbleWithVoice(line.text, line.audio, 5400, false, line.subtext)
+        }
+      }
+
+      walkStopTimerRef.current = window.setTimeout(() => {
+        setIsWalkingMove(false)
+        setMood(prev => (prev === 'walking' ? (focusActive ? 'focus' : 'idle') : prev))
+      }, 2800)
+    },
+    [isDragging, minimized, petHidden, petSize, getClampedPosition, activeDialogues, showBubbleWithVoice, focusActive]
+  )
+
+  // 桌面闲置自主生命行为：定时出来散步巡游或捧空碗撒娇讨饭
+  useEffect(() => {
+    if (typeof window === 'undefined' || isMobile || petHidden || minimized || focusActive || eyeCareActive || drawerOpen) {
+      return
+    }
+    const lifeTimer = window.setInterval(() => {
+      if (isDragging) return
+      setMood(currentMood => {
+        if (currentMood !== 'idle' && currentMood !== 'sleepy') return currentMood
+        // 70% 概率欢快巡游散步，30% 概率捧着空碗星星眼撒娇讨饭
+        if (Math.random() < 0.7) {
+          window.setTimeout(() => triggerPetStroll(false), 0)
+          return currentMood
+        } else {
+          const begLines = activeDialogues.beg || []
+          const line = begLines[Math.floor(Math.random() * begLines.length)]
+          if (line) {
+            window.setTimeout(() => {
+              playPetSynthSound('pat', voiceMuted)
+              setBubbleAction({
+                label: `${persona.foodEmoji} 立即投喂${persona.foodFull}`,
+                onClick: () => handleFeedTreat(),
+              })
+              showBubbleWithVoice(line.text, line.audio, 6800, false, line.subtext)
+            }, 0)
+          }
+          if (moodResetTimerRef.current) window.clearTimeout(moodResetTimerRef.current)
+          moodResetTimerRef.current = window.setTimeout(() => {
+            setMood(prev => (prev === 'begging' ? 'idle' : prev))
+          }, 5500)
+          return 'begging'
+        }
+      })
+    }, 45000)
+
+    return () => window.clearInterval(lifeTimer)
+  }, [
+    isMobile,
+    petHidden,
+    minimized,
+    focusActive,
+    eyeCareActive,
+    drawerOpen,
+    isDragging,
+    triggerPetStroll,
+    activeDialogues,
+    voiceMuted,
+    persona.foodEmoji,
+    persona.foodFull,
+    handleFeedTreat,
+    showBubbleWithVoice,
+  ])
+
+  // 一键轮播表演 6 种招牌花式特技动作（无需猜手势，点一下换一种！）
+  const handlePerformTrick = () => {
+    setShowMobileMenu(false)
+    if (moodResetTimerRef.current) window.clearTimeout(moodResetTimerRef.current)
+    if (walkStopTimerRef.current) window.clearTimeout(walkStopTimerRef.current)
+    setIsWalkingMove(false)
+    setBubbleAction(null)
+
+    const tricks: Array<'dance' | 'walk' | 'busy' | 'beg' | 'focusShow' | 'dizzy'> = [
+      'dance',
+      'walk',
+      'busy',
+      'beg',
+      'focusShow',
+      'dizzy',
+    ]
+    const currentTrick = tricks[trickIndexRef.current % tricks.length]
+    trickIndexRef.current += 1
+
+    if (currentTrick === 'walk') {
+      playPetSynthSound('pat', voiceMuted)
+      triggerPetStroll(true)
+      return
+    }
+
+    if (currentTrick === 'dance') {
+      playPetSynthSound('dance', voiceMuted)
+      setMood('dancing')
+      const list = activeDialogues.dance || []
+      const line = list[Math.floor(Math.random() * list.length)]
+      const danceAudio = line?.audio || (isFeiyu ? '/pets/voices/feiyu_praise_streak.mp3?v=1' : '/pets/voices/nailong_6.mp3?v=3')
+      if (line) showBubbleWithVoice(line.text, danceAudio, 6200, false, line.subtext)
+      moodResetTimerRef.current = window.setTimeout(() => setMood(focusActive ? 'focus' : 'idle'), 5200)
+    } else if (currentTrick === 'busy') {
+      playPetSynthSound('overload', voiceMuted)
+      setMood('busy')
+      const list = activeDialogues.busy || []
+      const line = list[Math.floor(Math.random() * list.length)]
+      setBubbleAction({
+        label: `${persona.foodEmoji} 投喂${persona.foodFull}满血重启`,
+        onClick: () => handleFeedTreat(),
+      })
+      if (line) showBubbleWithVoice(line.text, line.audio, 6800, false, line.subtext)
+      moodResetTimerRef.current = window.setTimeout(() => setMood(focusActive ? 'focus' : 'idle'), 6000)
+    } else if (currentTrick === 'beg') {
+      playPetSynthSound('pat', voiceMuted)
+      setMood('begging')
+      const list = activeDialogues.beg || []
+      const line = list[Math.floor(Math.random() * list.length)]
+      setBubbleAction({
+        label: `${persona.foodEmoji} 赏一碗${persona.foodFull}`,
+        onClick: () => handleFeedTreat(),
+      })
+      if (line) showBubbleWithVoice(line.text, line.audio, 6800, false, line.subtext)
+      moodResetTimerRef.current = window.setTimeout(() => setMood(focusActive ? 'focus' : 'idle'), 6000)
+    } else if (currentTrick === 'focusShow') {
+      playPetSynthSound('cheer', voiceMuted)
+      setMood('focus')
+      const list = (activeDialogues as Record<string, typeof FEIYU_DIALOGUES.headPat>).focusShow || [
+        {
+          mood: 'focus' as PetMood,
+          text: `🤓 ${persona.name}进入学霸推演状态！把最难的 408 或高数大题砸过来吧！`,
+          subtext: '深度专注思考姿态展示',
+          audio: isFeiyu ? '/pets/voices/feiyu_focus_start.mp3?v=1' : '/pets/voices/nailong_focus_start.mp3?v=3',
+        },
+      ]
+      const line = list[Math.floor(Math.random() * list.length)]
+      showBubbleWithVoice(line.text, line.audio, 6200, false, line.subtext)
+      moodResetTimerRef.current = window.setTimeout(() => setMood(focusActive ? 'focus' : 'idle'), 5200)
+    } else if (currentTrick === 'dizzy') {
+      playPetSynthSound('dizzy', voiceMuted)
+      setMood('dizzy')
+      const list = activeDialogues.dizzy || []
+      const line = list[0]
+      if (line) showBubbleWithVoice(line.text, line.audio, 5600, false, line.subtext)
+      moodResetTimerRef.current = window.setTimeout(() => setMood(focusActive ? 'focus' : 'idle'), 4800)
+    }
   }
 
-  // ===== 拖拽手势核心引擎（带惯性倾角与踢腿） =====
+  // 检测 2.8 秒内连续猛戳过载 -> 触发“服务器繁忙/举牌摸鱼”彩蛋
+  const checkRapidPokeOverload = (): boolean => {
+    const now = Date.now()
+    if (now - rapidPokeRef.current.firstTs > 2800) {
+      rapidPokeRef.current = { count: 1, firstTs: now }
+      return false
+    }
+    rapidPokeRef.current.count += 1
+    if (rapidPokeRef.current.count >= 4) {
+      rapidPokeRef.current = { count: 0, firstTs: 0 }
+      if (moodResetTimerRef.current) window.clearTimeout(moodResetTimerRef.current)
+      playPetSynthSound('overload', voiceMuted)
+      setMood('busy')
+      const list = activeDialogues.busy || []
+      const line = list[Math.floor(Math.random() * list.length)]
+      setBubbleAction({
+        label: `${persona.foodEmoji} 塞一口${persona.foodFull}哄好`,
+        onClick: () => handleFeedTreat(),
+      })
+      if (line) showBubbleWithVoice(line.text, line.audio, 6800, false, line.subtext)
+      moodResetTimerRef.current = window.setTimeout(() => {
+        setMood(focusActive ? 'focus' : 'idle')
+      }, 5200)
+      return true
+    }
+    return false
+  }
+
+  // ===== 拖拽手势核心引擎 =====
   const handlePointerDown = (e: React.PointerEvent) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return
     const target = e.target as HTMLElement | null
@@ -701,14 +999,16 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
     const dy = e.clientY - dragStartRef.current.startY
 
     if (!isDragging && Math.hypot(dx, dy) > 8) {
+      if (walkStopTimerRef.current) window.clearTimeout(walkStopTimerRef.current)
+      setIsWalkingMove(false)
       setIsDragging(true)
       hasDraggedRef.current = true
+      shakeTrackRef.current = { lastDir: 0, flips: 0, windowStart: Date.now() }
       if (showMobileMenu) setShowMobileMenu(false)
-      // 仅在非胶囊形态下才弹出台词气泡，避免最小化拖动时气泡DOM突变导致手势被意外取消
       if (!minimized) {
         playPetSynthSound('lift', voiceMuted)
-        const liftLine = NAILONG_DIALOGUES.dragLift[0]
-        showBubbleWithVoice(liftLine.text, undefined, 2600, false, liftLine.subtext)
+        const liftLine = activeDialogues.dragLift[0]
+        showBubbleWithVoice(liftLine.text, liftLine.audio, 4200, false, liftLine.subtext)
       }
     }
 
@@ -716,6 +1016,20 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
       const vx = e.clientX - dragStartRef.current.lastX
       dragStartRef.current.lastX = e.clientX
       setDragTilt(Math.max(-22, Math.min(22, vx * 1.35)))
+
+      // 检测鼠标快速左右来回摇晃（1.3 秒内反转方向 ≥ 4 次触发蚊香眼眩晕！）
+      if (Math.abs(vx) >= 7) {
+        const dir = vx > 0 ? 1 : -1
+        const now = Date.now()
+        if (now - shakeTrackRef.current.windowStart > 1300) {
+          shakeTrackRef.current = { lastDir: dir, flips: 1, windowStart: now }
+        } else if (shakeTrackRef.current.lastDir !== 0 && dir !== shakeTrackRef.current.lastDir) {
+          shakeTrackRef.current.lastDir = dir
+          shakeTrackRef.current.flips += 1
+        } else {
+          shakeTrackRef.current.lastDir = dir
+        }
+      }
 
       const nextPos = getClampedPosition(
         {
@@ -740,15 +1054,31 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
     setDragTilt(0)
 
     if (wasDragging || wasDragged) {
-      // 落地重力回弹
-      playPetSynthSound('land', voiceMuted)
-      setLandingBounce(true)
-      const landLine = NAILONG_DIALOGUES.landDrop[0]
-      showBubbleWithVoice(landLine.text, undefined, 2500, false, landLine.subtext)
-      setTimeout(() => {
-        setLandingBounce(false)
-        setMood(focusActive ? 'focus' : 'idle')
-      }, 650)
+      const wasShakenHard = shakeTrackRef.current.flips >= 4 && !minimized
+      shakeTrackRef.current = { lastDir: 0, flips: 0, windowStart: 0 }
+
+      if (wasShakenHard) {
+        // 触发快速摇晃蚊香眼眩晕彩蛋！
+        playPetSynthSound('dizzy', voiceMuted)
+        setMood('dizzy')
+        const dizzyLine = activeDialogues.dizzy?.[0]
+        if (dizzyLine) {
+          showBubbleWithVoice(dizzyLine.text, dizzyLine.audio, 5600, false, dizzyLine.subtext)
+        }
+        if (moodResetTimerRef.current) window.clearTimeout(moodResetTimerRef.current)
+        moodResetTimerRef.current = window.setTimeout(() => {
+          setMood(focusActive ? 'focus' : 'idle')
+        }, 3500)
+      } else {
+        playPetSynthSound('land', voiceMuted)
+        setLandingBounce(true)
+        const landLine = activeDialogues.landDrop[0]
+        showBubbleWithVoice(landLine.text, undefined, 2500, false, landLine.subtext)
+        setTimeout(() => {
+          setLandingBounce(false)
+          setMood(focusActive ? 'focus' : 'idle')
+        }, 650)
+      }
 
       setPosition(prev => {
         const finalPos = getClampedPosition(prev, isMobile)
@@ -776,6 +1106,14 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
   }
 
   const pickNextVoiceLine = (): PetVoiceItem => {
+    if (isFeiyu) {
+      let idx = Math.floor(Math.random() * FEIYU_CLICK_LINES.length)
+      if (idx === lastLineIdxRef.current) {
+        idx = (idx + 1) % FEIYU_CLICK_LINES.length
+      }
+      lastLineIdxRef.current = idx
+      return FEIYU_CLICK_LINES[idx]
+    }
     if (NAILONG_VOICE_PACK.length <= 1) return NAILONG_VOICE_PACK[0]
     let idx = Math.floor(Math.random() * NAILONG_VOICE_PACK.length)
     if (idx === lastLineIdxRef.current) {
@@ -785,34 +1123,39 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
     return NAILONG_VOICE_PACK[idx]
   }
 
-  // 分区点击：摸大脑袋 vs 戳大白肚皮
+  // 分区点击：摸脑袋 vs 戳大肚皮（连续猛戳 4 下触发举牌“服务器繁忙”罢工彩蛋！）
   const handleZoneTrigger = (zone: HitZone) => {
     if (isDragging || hasDraggedRef.current) return
+    if (checkRapidPokeOverload()) return
 
     if (zone === 'head') {
+      if (moodResetTimerRef.current) window.clearTimeout(moodResetTimerRef.current)
       playPetSynthSound('pat', voiceMuted)
       setHeadPatting(true)
+      setBellyJiggle(false)
       setMood('happy')
-      const list = NAILONG_DIALOGUES.headPat
+      const list = activeDialogues.headPat
       const line = list[Math.floor(Math.random() * list.length)]
-      const headAudio = Math.random() < 0.5 ? '/pets/voices/nailong_9.mp3?v=3' : undefined
-      showBubbleWithVoice(line.text, headAudio, 4200, false, line.subtext)
-      setTimeout(() => {
+      const headAudio = line.audio || (Math.random() < 0.5 ? '/pets/voices/nailong_9.mp3?v=3' : undefined)
+      showBubbleWithVoice(line.text, headAudio, 5800, false, line.subtext)
+      moodResetTimerRef.current = window.setTimeout(() => {
         setHeadPatting(false)
         setMood(focusActive ? 'focus' : 'idle')
-      }, 1500)
+      }, 2200)
     } else if (zone === 'belly') {
+      if (moodResetTimerRef.current) window.clearTimeout(moodResetTimerRef.current)
       playPetSynthSound('boing', voiceMuted)
       setBellyJiggle(true)
+      setHeadPatting(false)
       setMood('derp')
-      const list = NAILONG_DIALOGUES.bellyPoke
+      const list = activeDialogues.bellyPoke
       const line = list[Math.floor(Math.random() * list.length)]
-      // 戳肚皮直接触发正版奶龙魔性爆笑原声！
-      showBubbleWithVoice(line.text, '/pets/voices/nailong_1.mp3?v=3', 4800, false, line.subtext)
-      setTimeout(() => {
+      const bellyAudio = line.audio || '/pets/voices/nailong_1.mp3?v=3'
+      showBubbleWithVoice(line.text, bellyAudio, 6200, false, line.subtext)
+      moodResetTimerRef.current = window.setTimeout(() => {
         setBellyJiggle(false)
         setMood(focusActive ? 'focus' : 'idle')
-      }, 1800)
+      }, 2400)
     }
   }
 
@@ -826,7 +1169,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
       setMood('happy')
       setTimeout(() => setMood(focusActive ? 'focus' : 'idle'), 2000)
       const line = pickNextVoiceLine()
-      showBubbleWithVoice(line.text, line.audio, 4800)
+      showBubbleWithVoice(line.text, line.audio, 4800, false, line.subtext)
       return
     }
 
@@ -843,7 +1186,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
     setTimeout(() => setMood(focusActive ? 'focus' : 'idle'), 2200)
     setBubbleAction(null)
     const line = pickNextVoiceLine()
-    showBubbleWithVoice(line.text, line.audio, 5500)
+    showBubbleWithVoice(line.text, line.audio, 5500, false, line.subtext)
   }
 
   const handleTokenConsumed = (tokens: number, local: boolean) => {
@@ -880,18 +1223,22 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
           hiddenPos.side === 'left'
             ? 'rounded-r-2xl border-l-0 pl-1.5 pr-2.5'
             : 'rounded-l-2xl border-r-0 pl-2.5 pr-1.5'
-        } py-1.5 bg-gradient-to-r from-amber-400 to-amber-500 text-amber-950 font-bold shadow-xl border border-amber-300 flex items-center gap-1 active:scale-95 transition-transform ${
+        } py-1.5 ${
+          isFeiyu
+            ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white border-sky-300'
+            : 'bg-gradient-to-r from-amber-400 to-amber-500 text-amber-950 border-amber-300'
+        } font-bold shadow-xl border flex items-center gap-1 active:scale-95 transition-transform ${
           isHiddenDragging ? 'scale-105 shadow-xl opacity-90' : ''
         }`}
         onPointerDown={handleHiddenPointerDown}
         onPointerMove={handleHiddenPointerMove}
         onPointerUp={handleHiddenPointerUp}
         onPointerCancel={handleHiddenPointerCancel}
-        title="点击唤出奶龙伴学小助手（可按住沿边缘自由拖动位置）"
+        title={`点击唤出${persona.name}伴学小助手（可按住沿边缘自由拖动位置）`}
       >
-        <GripVertical className="w-3 h-3 text-amber-900/40 shrink-0" />
-        <NailongChibiHead className="w-5 h-5 shrink-0 drop-shadow-xs" withWhiteRim />
-        <span className="text-2xs font-extrabold">奶龙</span>
+        <GripVertical className={`w-3 h-3 shrink-0 ${isFeiyu ? 'text-white/60' : 'text-amber-900/40'}`} />
+        <PetChibiHead className="w-5 h-5 shrink-0 drop-shadow-xs" withWhiteRim decorative />
+        <span className="text-2xs font-extrabold">{persona.name}</span>
       </div>
     )
   }
@@ -905,7 +1252,11 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
       <div
         style={{
           transform: `translate3d(${position.x}px, ${position.y}px, 0)`,
-          transition: isDragging ? 'none' : 'transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1)',
+          transition: isDragging
+            ? 'none'
+            : isWalkingMove
+            ? 'transform 2.75s linear'
+            : 'transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1)',
           touchAction: 'none',
           userSelect: 'none',
           WebkitUserSelect: 'none',
@@ -915,6 +1266,19 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerCancel}
+        onDoubleClick={e => {
+          const target = e.target as HTMLElement | null
+          if (target?.closest('button') || target?.closest('.pet-action-panel') || minimized) return
+          e.stopPropagation()
+          if (moodResetTimerRef.current) window.clearTimeout(moodResetTimerRef.current)
+          playPetSynthSound('dance', voiceMuted)
+          setMood('dancing')
+          const list = activeDialogues.dance || []
+          const line = list[Math.floor(Math.random() * list.length)]
+          const danceAudio = line?.audio || (isFeiyu ? '/pets/voices/feiyu_praise_streak.mp3?v=1' : '/pets/voices/nailong_6.mp3?v=3')
+          if (line) showBubbleWithVoice(line.text, danceAudio, 6200, false, line.subtext)
+          moodResetTimerRef.current = window.setTimeout(() => setMood(focusActive ? 'focus' : 'idle'), 4800)
+        }}
       >
         {/* 对话与语音气泡 */}
         {bubbleText && !(isMobile && isQuizPage && minimized) && (
@@ -923,26 +1287,38 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
               isNearTop ? 'top-20 sm:top-24' : 'bottom-full mb-2.5 sm:mb-3'
             } ${
               isRightSide ? 'right-0' : 'left-0'
-            } w-[min(230px,calc(100vw-2rem))] sm:w-72 p-2.5 sm:p-3.5 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-amber-200/90 dark:border-amber-800/60 shadow-xl shadow-amber-500/10 text-xs text-slate-800 dark:text-slate-100 animate-in fade-in zoom-in-95 pointer-events-auto z-20`}
+            } w-[min(230px,calc(100vw-2rem))] sm:w-72 p-2.5 sm:p-3.5 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border ${
+              isFeiyu
+                ? 'border-sky-200/90 dark:border-sky-800/60 shadow-xl shadow-blue-500/10'
+                : 'border-amber-200/90 dark:border-amber-800/60 shadow-xl shadow-amber-500/10'
+            } text-xs text-slate-800 dark:text-slate-100 animate-in fade-in zoom-in-95 pointer-events-auto z-20`}
           >
             <div className="flex items-start justify-between gap-1.5 sm:gap-2">
               <div className="flex flex-col min-w-0">
-                <div className="flex items-center gap-1.5 font-extrabold text-amber-600 dark:text-amber-400 text-2xs sm:text-xs">
+                <div
+                  className={`flex items-center gap-1.5 font-extrabold text-2xs sm:text-xs ${
+                    isFeiyu ? 'text-blue-600 dark:text-sky-400' : 'text-amber-600 dark:text-amber-400'
+                  }`}
+                >
                   <span className="inline-flex items-center gap-1">
-                    <NailongChibiHead className="w-4 h-4 shrink-0" />
+                    <PetChibiHead className="w-4 h-4 shrink-0" decorative />
                     <span>{persona.name}</span>
                   </span>
-            {eyeCareActive && (
-              <span className="text-2xs text-sky-600 font-mono">
-                (👀 {eyeCareSecondsLeft}s)
-              </span>
-            )}
+                  {eyeCareActive && (
+                    <span className="text-2xs text-sky-600 font-mono">
+                      (👀 {eyeCareSecondsLeft}s)
+                    </span>
+                  )}
                 </div>
                 <div className="mt-1 leading-snug sm:leading-relaxed font-medium break-words text-2xs sm:text-xs text-slate-800 dark:text-slate-100 max-h-[120px] sm:max-h-none overflow-y-auto overscroll-contain line-clamp-4 sm:line-clamp-none">
                   {bubbleText}
                 </div>
                 {bubbleSubtext && (
-                  <div className="text-2xs font-semibold text-amber-600/90 dark:text-amber-400/90 mt-1">
+                  <div
+                    className={`text-2xs font-semibold mt-1 ${
+                      isFeiyu ? 'text-blue-600/90 dark:text-sky-400/90' : 'text-amber-600/90 dark:text-amber-400/90'
+                    }`}
+                  >
                     {bubbleSubtext}
                   </div>
                 )}
@@ -956,10 +1332,14 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                   }}
                   className={`p-1.5 rounded-full shrink-0 transition-all cursor-pointer ${
                     isSpeaking
-                      ? 'bg-amber-500 text-white animate-pulse shadow-sm'
+                      ? isFeiyu
+                        ? 'bg-blue-600 text-white animate-pulse shadow-sm'
+                        : 'bg-amber-500 text-white animate-pulse shadow-sm'
+                      : isFeiyu
+                      ? 'bg-sky-100 hover:bg-sky-200 text-blue-700 dark:bg-slate-800 dark:text-sky-400'
                       : 'bg-amber-100 hover:bg-amber-200 text-amber-700 dark:bg-slate-800 dark:text-amber-400'
                   }`}
-                  title="点击播放/重听奶萌语音"
+                  title={`点击播放/重听${persona.name}语音`}
                 >
                   <Volume2 className="w-3.5 h-3.5" />
                 </button>
@@ -974,7 +1354,11 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                   setBubbleText(null)
                   setBubbleSubtext(null)
                 }}
-                className="mt-2 w-full py-1.5 text-2xs font-semibold bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all shadow-sm cursor-pointer"
+                className={`mt-2 w-full py-1.5 text-2xs font-semibold text-white rounded-xl transition-all shadow-sm cursor-pointer ${
+                  isFeiyu
+                    ? 'bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600'
+                    : 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600'
+                }`}
               >
                 {bubbleAction.label}
               </button>
@@ -984,7 +1368,9 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                 isNearTop ? '-top-1.5 border-t border-l rotate-45' : '-bottom-1.5 border-b border-r rotate-45'
               } ${
                 isRightSide ? 'right-7' : 'left-7'
-              } w-3 h-3 bg-white dark:bg-slate-900 border-amber-200/90 dark:border-amber-800/60`}
+              } w-3 h-3 bg-white dark:bg-slate-900 ${
+                isFeiyu ? 'border-sky-200/90 dark:border-sky-800/60' : 'border-amber-200/90 dark:border-amber-800/60'
+              }`}
             />
           </div>
         )}
@@ -993,6 +1379,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
         {!minimized ? (
           <div className="relative group">
             <LuluAvatar
+              petId={persona.id}
               mood={mood}
               size={isMobile ? 'sm' : 'md'}
               isSquishing={isSquishing}
@@ -1000,11 +1387,12 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
               isSpeaking={isSpeaking}
               dragTilt={dragTilt}
               wearingHeadphones={focusActive}
-              holdingDrumstick={holdingDrumstick}
+              holdingDrumstick={holdingFood}
               eyeOffset={eyeOffset}
               bellyJiggle={bellyJiggle}
               headPatting={headPatting}
               landingBounce={landingBounce}
+              walkDirection={walkDirection}
               onZoneTrigger={handleZoneTrigger}
             />
 
@@ -1017,12 +1405,16 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
 
             {/* 番茄钟专注药丸徽章 */}
             {focusActive && (
-              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-amber-500 text-white font-mono text-2xs font-bold shadow-sm whitespace-nowrap animate-pulse border border-white/40 pointer-events-none">
+              <div
+                className={`absolute -bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-white font-mono text-2xs font-bold shadow-sm whitespace-nowrap animate-pulse border border-white/40 pointer-events-none ${
+                  isFeiyu ? 'bg-blue-600' : 'bg-amber-500'
+                }`}
+              >
                 ⏱️ {formatTimer(focusSecondsLeft)}
               </div>
             )}
 
-            {/* 快捷操作栏（带清晰中文标签与图标，避免靠边裁切或看不清功能） */}
+            {/* 快捷操作栏 */}
             <div
               onPointerDown={e => e.stopPropagation()}
               onPointerMove={e => e.stopPropagation()}
@@ -1032,12 +1424,31 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                 isNearBottom ? 'bottom-0' : 'top-0'
               } ${
                 isRightSide ? 'right-[calc(100%+8px)]' : 'left-[calc(100%+8px)]'
-              } flex flex-col gap-1.5 transition-all duration-200 z-20 max-h-[calc(100vh-60px)] overflow-y-auto scrollbar-none py-1.5 px-1.5 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-xl border border-slate-200/80 dark:border-slate-700/80 min-w-[116px] overscroll-contain ${
+              } flex flex-col gap-1.5 transition-all duration-200 z-20 max-h-[calc(100vh-60px)] overflow-y-auto scrollbar-none py-1.5 px-1.5 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-xl border border-slate-200/80 dark:border-slate-700/80 min-w-[120px] overscroll-contain ${
                 showMobileMenu
                   ? 'opacity-100 scale-100 pointer-events-auto'
                   : 'opacity-0 scale-95 pointer-events-none group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto'
               }`}
             >
+              {/* 一键切换伴学宠物搭档：奶龙 ⇄ 大肥鱼 */}
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation()
+                  handleSwitchPetPartner()
+                }}
+                className={`w-full px-2.5 py-1.5 rounded-xl border flex items-center gap-2 active:scale-95 transition-all cursor-pointer select-none text-2xs font-bold whitespace-nowrap ${
+                  isFeiyu
+                    ? 'bg-amber-50/90 dark:bg-slate-800 text-amber-700 dark:text-amber-300 border-amber-200/80 dark:border-slate-700 hover:bg-amber-100'
+                    : 'bg-sky-50/90 dark:bg-slate-800 text-blue-700 dark:text-sky-300 border-sky-200/80 dark:border-slate-700 hover:bg-sky-100'
+                }`}
+                title={isFeiyu ? '切换伴学宠物为：奶龙 🐲' : '切换伴学宠物为：大肥鱼 (DeepSeek) 🐳'}
+              >
+                <PetChibiHead petId={isFeiyu ? 'nailong' : 'feiyu'} className="w-3.5 h-3.5 shrink-0" decorative />
+                <span>{isFeiyu ? '换奶龙陪学' : '换大肥鱼'}</span>
+                <RefreshCw className="w-2.5 h-2.5 ml-auto opacity-60 shrink-0" />
+              </button>
+
               {/* 进入 AI 伴学主工作台 */}
               <button
                 type="button"
@@ -1067,18 +1478,36 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                 <span>快捷对话</span>
               </button>
 
-              {/* 投喂大烤鸡腿 */}
+              {/* 投喂专属美食（奶龙：鸡腿 🍗 | 大肥鱼：大白米饭 🍚） */}
               <button
                 type="button"
                 onClick={e => {
                   e.stopPropagation()
-                  handleFeedDrumstick()
+                  handleFeedTreat()
                 }}
-                className="w-full px-2.5 py-1.5 rounded-xl bg-amber-50/80 dark:bg-slate-800 text-amber-700 dark:text-amber-300 border border-amber-200/70 dark:border-slate-700 flex items-center gap-2 hover:bg-amber-100 active:scale-95 transition-all cursor-pointer select-none text-2xs font-semibold whitespace-nowrap"
-                title="投喂香喷喷大烤鸡腿 🍗"
+                className={`w-full px-2.5 py-1.5 rounded-xl border flex items-center gap-2 active:scale-95 transition-all cursor-pointer select-none text-2xs font-semibold whitespace-nowrap ${
+                  isFeiyu
+                    ? 'bg-sky-50/85 dark:bg-slate-800 text-blue-700 dark:text-sky-300 border-sky-200/75 dark:border-slate-700 hover:bg-sky-100'
+                    : 'bg-amber-50/80 dark:bg-slate-800 text-amber-700 dark:text-amber-300 border-amber-200/70 dark:border-slate-700 hover:bg-amber-100'
+                }`}
+                title={`投喂香喷喷${persona.foodFull} ${persona.foodEmoji}`}
               >
-                <Utensils className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                <span>投喂鸡腿</span>
+                <Utensils className={`w-3.5 h-3.5 shrink-0 ${isFeiyu ? 'text-blue-600' : 'text-amber-600'}`} />
+                <span>投喂{persona.foodName} {persona.foodEmoji}</span>
+              </button>
+
+              {/* 花式动作轮播（跳舞 / 散步 / 举牌服务器繁忙 / 捧碗讨饭 / 学霸眼镜 / 蚊香眼） */}
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation()
+                  handlePerformTrick()
+                }}
+                className="w-full px-2.5 py-1.5 rounded-xl bg-fuchsia-50/85 dark:bg-slate-800 text-fuchsia-700 dark:text-fuchsia-300 border border-fuchsia-200/75 dark:border-slate-700 flex items-center gap-2 hover:bg-fuchsia-100 active:scale-95 transition-all cursor-pointer select-none text-2xs font-semibold whitespace-nowrap"
+                title="轮播体验 6 种花式整活特技（也可双击跳舞、连戳 4 下触发罢工、左右摇晃触发蚊香眼）"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-fuchsia-500 shrink-0" />
+                <span>花式动作 ✨</span>
               </button>
 
               {/* 随堂练习快捷按钮 */}
@@ -1100,7 +1529,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                 <span>做题测验</span>
               </button>
 
-              {/* 语音开关按钮 */}
+              {/* 语音/音效开关按钮 */}
               <button
                 type="button"
                 onClick={e => {
@@ -1109,16 +1538,18 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                 }}
                 className={`w-full px-2.5 py-1.5 rounded-xl border flex items-center gap-2 active:scale-95 transition-all cursor-pointer select-none text-2xs font-semibold whitespace-nowrap ${
                   !voiceMuted
-                    ? 'bg-amber-50 dark:bg-slate-800 text-amber-700 border-amber-300 dark:border-amber-700'
+                    ? isFeiyu
+                      ? 'bg-sky-50 dark:bg-slate-800 text-blue-700 border-sky-300 dark:border-sky-700'
+                      : 'bg-amber-50 dark:bg-slate-800 text-amber-700 border-amber-300 dark:border-amber-700'
                     : 'bg-slate-50 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'
                 }`}
-                title={voiceMuted ? '点击开启奶龙语音与Q弹音效' : '语音与音效已开启（点击切换静音自习模式）'}
+                title={voiceMuted ? `点击开启${persona.name}语音与Q弹音效` : '语音与音效已开启（点击切换静音自习模式）'}
               >
                 {voiceMuted ? <VolumeX className="w-3.5 h-3.5 shrink-0" /> : <Volume2 className="w-3.5 h-3.5 shrink-0" />}
                 <span>{voiceMuted ? '开启语音' : '静音模式'}</span>
               </button>
 
-              {/* 长时间用眼科学护眼提醒 / 一键开启 20 秒放松 */}
+              {/* 长时间用眼科学护眼提醒 */}
               <button
                 type="button"
                 onClick={e => {
@@ -1129,8 +1560,8 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                       eyeCareCountdownTimerRef.current = null
                     }
                     setEyeCareActive(false)
-                    setMood(focusActive ? "focus" : "idle")
-                    showBubbleWithVoice("已提前结束闭目休息~ 眼睛也要继续注意放松哟！", undefined, 3000)
+                    setMood(focusActive ? 'focus' : 'idle')
+                    showBubbleWithVoice('已提前结束闭目休息~ 眼睛也要继续注意放松哟！', undefined, 3000)
                   } else {
                     triggerEyeCareReminder(true)
                   }
@@ -1138,8 +1569,8 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                 }}
                 className={`w-full px-2.5 py-1.5 rounded-xl border flex items-center gap-2 active:scale-95 transition-all cursor-pointer select-none text-2xs font-semibold whitespace-nowrap ${
                   eyeCareActive
-                    ? "bg-sky-500 text-white border-sky-400 animate-pulse"
-                    : "bg-sky-50/90 dark:bg-slate-800 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-slate-700 hover:bg-sky-100"
+                    ? 'bg-sky-500 text-white border-sky-400 animate-pulse'
+                    : 'bg-sky-50/90 dark:bg-slate-800 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-slate-700 hover:bg-sky-100'
                 }`}
                 title={
                   eyeCareActive
@@ -1161,13 +1592,23 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                     if (next) {
                       setMood('focus')
                       playPetSynthSound('cheer', voiceMuted)
-                      showBubbleWithVoice(
-                        `⏱️ 嘘——！专注时间到咯，${persona.name}戴上降噪耳机，乖乖在旁边陪你学 25 分钟哟，嘿嘿~`,
-                        '/pets/voices/nailong_focus_start.mp3?v=3',
-                        4800,
-                        false,
-                        '头戴降噪小耳机 · 开启 408 考研心流模式'
-                      )
+                      if (isFeiyu) {
+                        showBubbleWithVoice(
+                          '⏱️ 推推小圆框眼镜🤓——依旧框框烧 Token，依旧用爱发电！接下来 25 分钟，本鱼放下饭碗不摸鱼，陪你沉浸推演到底！🐟💡',
+                          '/pets/voices/feiyu_focus_start.mp3?v=1',
+                          6200,
+                          false,
+                          '学霸眼镜鲸鱼娘 · 开启 408 考研心流模式'
+                        )
+                      } else {
+                        showBubbleWithVoice(
+                          `⏱️ 嘘——！专注时间到咯，${persona.name}戴上降噪耳机，乖乖在旁边陪你学 25 分钟哟，嘿嘿~`,
+                          '/pets/voices/nailong_focus_start.mp3?v=3',
+                          4800,
+                          false,
+                          '头戴降噪小耳机 · 开启 408 考研心流模式'
+                        )
+                      }
                     } else {
                       setMood('idle')
                       showBubbleWithVoice('番茄钟已暂停~', undefined, 3000)
@@ -1177,7 +1618,9 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                 }}
                 className={`w-full px-2.5 py-1.5 rounded-xl border flex items-center gap-2 active:scale-95 transition-all cursor-pointer select-none text-2xs font-semibold whitespace-nowrap ${
                   focusActive
-                    ? 'bg-amber-500 text-white border-amber-600'
+                    ? isFeiyu
+                      ? 'bg-blue-600 text-white border-blue-700'
+                      : 'bg-amber-500 text-white border-amber-600'
                     : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-amber-50 hover:text-amber-600'
                 }`}
                 title={focusActive ? '暂停番茄钟' : '开启 25 分钟考研专注伴学'}
@@ -1248,21 +1691,25 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                 setMood('happy')
                 setTimeout(() => setMood(focusActive ? 'focus' : 'idle'), 2000)
                 const line = pickNextVoiceLine()
-                showBubbleWithVoice(line.text, line.audio, 4800)
+                showBubbleWithVoice(line.text, line.audio, 4800, false, line.subtext)
               }
             }}
-            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-full bg-white/95 dark:bg-slate-900/95 text-amber-900 dark:text-amber-300 text-2xs sm:text-xs font-bold shadow-xl border border-amber-300 dark:border-amber-700/60 hover:scale-105 active:scale-95 transition-all cursor-grab active:cursor-grabbing whitespace-nowrap select-none backdrop-blur-md max-w-[min(200px,calc(100vw-3rem))] touch-none"
-            title="按住自由拖拽位置，轻点展开伴学奶龙"
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-full bg-white/95 dark:bg-slate-900/95 text-2xs sm:text-xs font-bold shadow-xl border hover:scale-105 active:scale-95 transition-all cursor-grab active:cursor-grabbing whitespace-nowrap select-none backdrop-blur-md max-w-[min(200px,calc(100vw-3rem))] touch-none ${
+              isFeiyu
+                ? 'text-blue-900 dark:text-sky-300 border-sky-300 dark:border-sky-700/60'
+                : 'text-amber-900 dark:text-amber-300 border-amber-300 dark:border-amber-700/60'
+            }`}
+            title={`按住自由拖拽位置，轻点展开伴学${persona.name}`}
           >
-            <GripVertical className="w-3 h-3 text-amber-500/70 shrink-0" />
-            <LuluAvatar size="xs" showAccessories={false} />
+            <GripVertical className={`w-3 h-3 shrink-0 ${isFeiyu ? 'text-blue-500/70' : 'text-amber-500/70'}`} />
+            <LuluAvatar petId={persona.id} size="xs" showAccessories={false} />
             <span>{persona.name}</span>
             {focusActive && (
-              <span className="text-2xs text-amber-600 font-mono">
+              <span className={`text-2xs font-mono ${isFeiyu ? 'text-blue-600' : 'text-amber-600'}`}>
                 ({formatTimer(focusSecondsLeft)})
               </span>
             )}
-            <Maximize2 className="w-3 h-3 text-amber-600 ml-0.5" />
+            <Maximize2 className={`w-3 h-3 ml-0.5 ${isFeiyu ? 'text-blue-600' : 'text-amber-600'}`} />
             <button
               type="button"
               onClick={e => {
@@ -1272,7 +1719,11 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                   localStorage.setItem('coreforge_pet_hidden', '1')
                 } catch {}
               }}
-              className="p-0.5 rounded-full hover:bg-amber-100 dark:hover:bg-slate-800 text-amber-700/60 hover:text-rose-500 transition-colors ml-1 cursor-pointer"
+              className={`p-0.5 rounded-full transition-colors ml-1 cursor-pointer ${
+                isFeiyu
+                  ? 'hover:bg-sky-100 dark:hover:bg-slate-800 text-blue-700/60 hover:text-rose-500'
+                  : 'hover:bg-amber-100 dark:hover:bg-slate-800 text-amber-700/60 hover:text-rose-500'
+              }`}
               title="收起为边缘萌爪"
             >
               <X className="w-3 h-3" />

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useAuth } from '../contexts/AuthContext'
 import DangoAvatar, { DangoColorPicker } from '../components/DangoAvatar'
+import LuluAvatar, { PET_PERSONA_LIST, useActivePetPersona } from '../components/Pet/LuluAvatar'
 import { useThemeStyle } from '../hooks/useThemeStyle'
 import { getSecuritySettings, updateSecuritySettings } from '../services/auth'
 import { api, type AppSettings, type CloudEndpoint } from '../services/api'
@@ -23,6 +24,7 @@ declare global {
 
 export default function Settings() {
   const { user, logout } = useAuth()
+  const [activePetPersona, setActivePetPersona] = useActivePetPersona()
   const isAdmin = user?.role === 'admin'
   const [settings, setSettings] = useState<AppSettings | null>(null)
   const [loading, setLoading] = useState(true)
@@ -964,6 +966,79 @@ export default function Settings() {
                 </button>
               </div>
             </div>
+
+            {/* 桌面伴学宠物搭档选择：奶龙 🐲 vs 大肥鱼 (DeepSeek) 🐟 */}
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <div className="text-xs font-bold text-slate-800 flex items-center gap-2">
+                    <span>桌面伴学萌宠搭档</span>
+                    <span className="text-[10px] bg-sky-100 text-blue-700 font-semibold px-1.5 py-0.2 rounded-full">
+                      实时切换陪伴
+                    </span>
+                  </div>
+                  <p className="text-2xs text-slate-500 mt-0.5">
+                    任选你喜欢的备考伙伴常驻屏幕角落陪伴刷题，支持投喂专属美食、番茄钟降噪陪学与情绪树洞答疑：
+                  </p>
+                </div>
+                <span className="text-2xs font-bold text-slate-600 shrink-0">
+                  当前：{activePetPersona.emoji} {activePetPersona.name}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="radiogroup" aria-label="选择桌面伴学宠物">
+                {PET_PERSONA_LIST.map(pet => {
+                  const selected = activePetPersona.id === pet.id
+                  const isBlue = pet.id === 'feiyu'
+                  return (
+                    <button
+                      key={pet.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      onClick={() => setActivePetPersona(pet.id)}
+                      className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                        selected
+                          ? isBlue
+                            ? 'bg-sky-50/90 border-blue-500 ring-2 ring-blue-500/20 shadow-xs'
+                            : 'bg-amber-50/90 border-amber-500 ring-2 ring-amber-500/20 shadow-xs'
+                          : 'bg-white border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <div
+                        className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 border ${
+                          isBlue ? 'bg-sky-100/70 border-sky-200' : 'bg-amber-100/70 border-amber-200'
+                        }`}
+                      >
+                        <LuluAvatar petId={pet.id} size="sm" mood={selected ? 'happy' : 'idle'} showAccessories={false} />
+                      </div>
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex items-center justify-between gap-1.5">
+                          <span className="text-xs font-extrabold text-slate-800 truncate">
+                            {pet.emoji} {pet.fullTitle}
+                          </span>
+                          {selected && (
+                            <span
+                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
+                                isBlue ? 'bg-blue-600 text-white' : 'bg-amber-500 text-white'
+                              }`}
+                            >
+                              陪伴中
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-2xs text-slate-500 leading-snug line-clamp-2">
+                          {pet.tagline}
+                        </p>
+                        <div className="text-[10px] font-semibold text-slate-600">
+                          专属投喂：{pet.foodEmoji} {pet.foodFull}
+                        </div>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
           </section>
 
           {/* 研学视觉色彩风格偏好 */}
@@ -1686,6 +1761,7 @@ export default function Settings() {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault()
+                      if (e.nativeEvent.isComposing || (e as any).keyCode === 229) return
                       handleManualAddModel()
                     }
                   }}

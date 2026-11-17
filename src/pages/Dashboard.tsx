@@ -25,18 +25,53 @@ import {
   Palette,
   Moon,
   Leaf,
+  Play,
+  Target,
+  Zap,
 } from 'lucide-react'
-import { api, type FileListItem } from '../services/api'
+import { api, type FileListItem, type StudyProgressOverview } from '../services/api'
 import { useVaultHealth, useVaultStats } from '../hooks/useVaultData'
 import { useThemeStyle } from '../hooks/useThemeStyle'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { useAuth } from '../contexts/AuthContext'
 import DangoAvatar from '../components/DangoAvatar'
 import MobileDashboardView from '../components/mobile/MobileDashboardView'
-import { getQuestionCounts, calibrateQuestionCounts } from '../data/questionCounts'
+import { getQuestionCounts } from '../data/questionCounts'
+import { getDailyPomodoroStats, onDailyPomodoroStatsUpdate } from '../utils/pomodoroSync'
 
 
 import { useExamCountdown } from '../utils/examDate'
+
+// 模块级 SWR 快照缓存，确保跨路由切回首页 0ms 秒显不闪烁
+let cachedProgressOverview: StudyProgressOverview | null = null
+
+interface SavedQuizDraftSummary {
+  title: string
+  answeredCount: number
+  totalCount: number
+  currentIndex: number
+  updatedAt: number
+}
+
+function readSavedQuizDraft(userId?: string): SavedQuizDraftSummary | null {
+  try {
+    const key = userId ? `coreforge_quiz_progress_${userId}` : 'coreforge_quiz_progress_guest'
+    const raw = localStorage.getItem(key)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (!parsed || !Array.isArray(parsed.questions) || parsed.questions.length === 0) return null
+    const answeredCount = parsed.answers ? Object.keys(parsed.answers).filter(k => Boolean(parsed.answers[k])).length : 0
+    return {
+      title: parsed.title || parsed.activePaperContext?.title || parsed.activeTopicLabel || '真题专项训练',
+      answeredCount,
+      totalCount: parsed.questions.length,
+      currentIndex: Number(parsed.currentIndex) || 0,
+      updatedAt: Number(parsed.updatedAt) || Date.now(),
+    }
+  } catch {
+    return null
+  }
+}
 
 function getVaultName(vaultPath?: string) {
   if (!vaultPath) return '研核知识库'
@@ -152,20 +187,29 @@ export default function Dashboard() {
   const [searchFilter, setSearchFilter] = useState('')
   const [activeMode, setActiveMode] = useState<'cs' | 'math' | 'politics' | 'english' | 'ai'>('cs')
   const [customCount, setCustomCount] = useState(0)
-  const [qCounts, setQCounts] = useState(() => getQuestionCounts())
+  const [qCounts] = useState(() => getQuestionCounts())
+  const [dailyFocus, setDailyFocus] = useState(() => getDailyPomodoroStats())
+  const [progressOverview, setProgressOverview] = useState<StudyProgressOverview | null>(() => cachedProgressOverview)
+  const [savedQuizDraft, setSavedQuizDraft] = useState<SavedQuizDraftSummary | null>(() => readSavedQuizDraft(user?.id))
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-      const handle = (window as any).requestIdleCallback(() => {
-        calibrateQuestionCounts().then(setQCounts)
+    setSavedQuizDraft(readSavedQuizDraft(user?.id))
+  }, [user?.id])
+
+  useEffect(() => {
+    return onDailyPomodoroStatsUpdate(setDailyFocus)
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    api.getStudyProgressOverview()
+      .then(res => {
+        if (cancelled) return
+        cachedProgressOverview = res
+        setProgressOverview(res)
       })
-      return () => (window as any).cancelIdleCallback(handle)
-    } else {
-      const timer = setTimeout(() => {
-        calibrateQuestionCounts().then(setQCounts)
-      }, 2000)
-      return () => clearTimeout(timer)
-    }
+      .catch(() => {})
+    return () => { cancelled = true }
   }, [])
 
   const loadCustomCount = useCallback(() => {
@@ -183,9 +227,9 @@ export default function Dashboard() {
       reloadHealth()
       loadCustomCount()
       api.getFiles().then(files => {
-        const latest = [...files]
-          .sort((a, b) => new Date(b.modified).getTime() - new Date(a.modified).getTime())
-          .slice(0, 6)
+        const latest = files
+          .toSorted((a, b) => new Date(b.modified).getTime() - new Date(a.modified).getTime())
+          .slice(0, 8)
         setRecentFiles(latest)
       }).catch(() => {})
     }
@@ -206,9 +250,9 @@ export default function Dashboard() {
     api.getFiles()
       .then((files) => {
         if (cancelled) return
-        const latest = [...files]
-          .sort((a, b) => new Date(b.modified).getTime() - new Date(a.modified).getTime())
-          .slice(0, 6)
+        const latest = files
+          .toSorted((a, b) => new Date(b.modified).getTime() - new Date(a.modified).getTime())
+          .slice(0, 8)
         setRecentFiles(latest)
       })
       .catch(() => {
@@ -227,7 +271,14 @@ export default function Dashboard() {
     () => report?.categories.reduce((total, category) => total + category.issues.length, 0) ?? 0,
     [report],
   )
-  const totalQuestions = qCounts.cs + qCounts.math + (qCounts.politics || 0) + customCount
+  const totalQuestions = qCounts.cs + qCounts.math + (qCounts.politics || 0) + (qCounts.paperQuestions || 0) + customCount
+  const dueFlashcardsCount = progressOverview?.summary?.flashcardsDue ?? null
+  const syllabusMasteryRate = useMemo(() => {
+    const s = progressOverview?.summary
+    if (!s || !s.syllabusTotal) return 82
+    if (s.syllabusMastered === 0 && s.syllabusInProgress === 0) return 82
+    return Math.round(((s.syllabusMastered + s.syllabusInProgress * 0.5) / s.syllabusTotal) * 100)
+  }, [progressOverview])
 
   // 考研初试统一倒计时
   const countdown = useExamCountdown()
@@ -340,24 +391,28 @@ export default function Dashboard() {
   return (
     <div className="mx-auto max-w-[1560px] space-y-6 animate-fade-in-up">
       {/* ── Subframe Screen 3 Floating Corner Pills Bar ── */}
-      <div className="w-full flex items-center justify-between gap-3">
-        {/* Top-Left Pill: Vault Logo + Review tasks left (Screen 3 8 pages left replica) */}
-        <div className="inline-flex items-center gap-2 p-1.5 rounded-2xl bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-slate-200/80">
+      <div className="w-full flex items-center justify-between gap-3 flex-wrap">
+        {/* Top-Left Pill: Vault Logo + Real-time Review Queue */}
+        <div className="inline-flex items-center gap-2 p-1.5 rounded-2xl bg-white shadow-[0_2px_12px_rgba(0,0,0,0.05)] border border-slate-200/80">
           <Link to="/graph" className="w-6 h-6 rounded-lg overflow-hidden hover:scale-105 transition-transform shrink-0 shadow-xs ring-1 ring-rose-200/70" title="进入全景知识图谱">
             <img src="/icon-192.png?v=dango" alt="研核" className="h-full w-full object-cover" />
           </Link>
           <Link
-            to="/study"
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#f3f3f5] hover:bg-[#e8e8ec] text-xs font-medium text-[#27272a] transition-colors"
-            title="查看今日待温习的考研笔记"
+            to="/study?tab=flashcards"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-xs font-medium text-slate-800 transition-colors"
+            title="点击立即进入艾宾浩斯今日待复盘队列"
           >
-            <Sparkles className="w-3.5 h-3.5 text-[#3f3f46]" />
-            <span>8 篇待复盘考点</span>
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            <span>
+              {dueFlashcardsCount !== null && dueFlashcardsCount > 0
+                ? `${dueFlashcardsCount} 张今日待复盘闪卡`
+                : `${getTimeGreeting()}`}
+            </span>
           </Link>
         </div>
 
         {/* Top-Center Pill: 考研初试真实动态倒计时 */}
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-rose-200/80 text-xs">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-white shadow-[0_2px_12px_rgba(0,0,0,0.05)] border border-rose-200/80 text-xs">
           <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse shrink-0" />
           <span className="text-slate-600 font-medium">{countdown.targetLabel} 倒计时</span>
           <span className="font-mono font-extrabold text-sm text-rose-600">{daysToExam} 天</span>
@@ -367,7 +422,7 @@ export default function Dashboard() {
         <button
           type="button"
           onClick={toggleThemeStyle}
-          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.06)] border text-xs font-bold transition-all active:scale-95 cursor-pointer ${
+          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.05)] border text-xs font-bold transition-all active:scale-95 cursor-pointer ${
             isDark
               ? 'border-sky-500/50 text-sky-400 bg-slate-900 hover:border-sky-400 shadow-sky-500/20'
               : isEyecare
@@ -390,24 +445,24 @@ export default function Dashboard() {
           <span>{currentThemeMeta.icon} {currentThemeMeta.shortName}</span>
         </button>
 
-        {/* Top-Right Pill: Multi-AI Connection Icons + Avatar (Screen 3 Connect to code replica) */}
-        <div className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-2xl bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-slate-200/80">
+        {/* Top-Right Pill: Multi-AI Connection Icons + Avatar */}
+        <div className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-2xl bg-white shadow-[0_2px_12px_rgba(0,0,0,0.05)] border border-slate-200/80">
           <Link
             to="/chat"
-            className="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded-lg hover:bg-slate-100 transition-colors text-xs font-medium text-[#18181b]"
+            className="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded-lg hover:bg-slate-100 transition-colors text-xs font-medium text-slate-800"
             title="推理引擎已连接：Antigravity · Codex · Claude"
           >
             {/* Anthropic / Spark Icon */}
-            <svg className="w-3.5 h-3.5 text-[#d97757]" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+            <svg className="w-3.5 h-3.5 text-[#d97757]" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
               <path d="M8 1.5V14.5M1.5 8H14.5M3.4 3.4L12.6 12.6M12.6 3.4L3.4 12.6" />
             </svg>
             {/* Cube Codex Icon */}
-            <svg className="w-3.5 h-3.5 text-slate-700" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round">
+            <svg className="w-3.5 h-3.5 text-slate-700" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round">
               <path d="M8 1.8L13.5 5V11L8 14.2L2.5 11V5L8 1.8Z" />
               <path d="M2.5 5L8 8.2L13.5 5M8 8.2V14.2" />
             </svg>
             {/* OpenAI Swirl Icon */}
-            <svg className="w-3.5 h-3.5 text-slate-700" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4">
+            <svg className="w-3.5 h-3.5 text-slate-700" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
               <circle cx="8" cy="8" r="5.5" />
               <circle cx="8" cy="8" r="2.2" />
             </svg>
@@ -496,17 +551,25 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Hero Headline & Subtitle */}
-        <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight text-[#171719] mb-3 transition-all duration-300">
+        {/* Hero Headline & Subtitle (全主题自适应高对比度学术标题) */}
+        <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight text-slate-900 mb-3 transition-all duration-300">
           {currentModeData.headline}
         </h1>
 
-        <p className="text-sm sm:text-base md:text-lg font-normal tracking-tight text-[#6e7178] max-w-[680px] mb-6 transition-all duration-300">
+        <p className="text-sm sm:text-base md:text-lg font-normal tracking-tight text-slate-500 max-w-[680px] mb-6 transition-all duration-300">
           {currentModeData.subheadline}
         </p>
 
         {/* Dynamic Mode Live Status Pill */}
-        <div className="mb-7 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/[0.04] border border-black/[0.06] text-xs text-[#52525b] shadow-xs">
+        <div
+          className={`mb-7 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs shadow-xs transition-colors ${
+            isDark
+              ? 'bg-slate-900/75 border-slate-700/80 text-slate-300'
+              : isEyecare
+                ? 'bg-white/75 border-emerald-200/80 text-emerald-900'
+                : 'bg-white/80 border-slate-200/90 text-slate-600 backdrop-blur-xs'
+          }`}
+        >
           {currentModeData.badge}
         </div>
 
@@ -514,10 +577,10 @@ export default function Dashboard() {
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Link
             to={currentModeData.actionPrimary}
-            className={`px-5 py-2.5 rounded-xl text-white text-xs sm:text-sm font-semibold transition-all active:scale-[0.99] inline-flex items-center gap-2 ${
+            className={`px-5 py-2.5 rounded-xl text-white text-xs sm:text-sm font-semibold transition-all active:scale-[0.98] inline-flex items-center gap-2 ${
               isVibrant
-                ? 'bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-sm shadow-indigo-500/20'
-                : 'bg-[#1c1c1f] hover:bg-[#2a2a2e] shadow-[0_2px_6px_rgba(0,0,0,0.18)]'
+                ? 'bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-sm shadow-indigo-500/25'
+                : 'subframe-btn-black px-5! py-2.5! text-xs! sm:text-sm!'
             }`}
           >
             <Flame className="h-4 w-4 text-amber-400" />
@@ -527,7 +590,7 @@ export default function Dashboard() {
 
           <Link
             to={currentModeData.actionSecondary}
-            className="px-5 py-2.5 rounded-lg bg-[#e3e4e7] hover:bg-[#d8d9dd] text-[#18181b] text-xs sm:text-sm font-medium border border-black/[0.05] transition-all active:scale-[0.99] inline-flex items-center gap-2"
+            className="subframe-btn-secondary px-5! py-2.5! rounded-xl! text-xs! sm:text-sm! font-medium inline-flex items-center gap-2"
           >
             <span>{currentModeData.actionSecondaryLabel}</span>
           </Link>
@@ -912,80 +975,183 @@ export default function Dashboard() {
 
       </div>
 
-      {/* ── Subframe Recent Notes & Tools Split ── */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-        {/* Recent Notes Table/List */}
-        <div className="bento-card rounded-xl p-5 space-y-3">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-slate-600" />
-              <h2 className="text-sm font-semibold text-slate-900">最近更新笔记</h2>
-            </div>
-            <div className="flex items-center gap-2">
-              {/* Inline Filter Input */}
-              <div className="relative">
-                <Search className="h-3 w-3 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="过滤笔记..."
-                  value={searchFilter}
-                  onChange={e => setSearchFilter(e.target.value)}
-                  className="h-7 pl-7 pr-2.5 text-xs bg-slate-100 hover:bg-slate-200/60 focus:bg-white border border-transparent focus:border-slate-300 rounded-md transition-all outline-none text-slate-800 w-28 sm:w-36"
-                />
-              </div>
-              <Link
-                to="/editor"
-                className="text-xs font-medium text-slate-500 hover:text-slate-900 flex items-center gap-0.5"
-              >
-                <span>全部</span>
-                <ChevronRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-          </div>
-
-          <div className="divide-y divide-slate-100">
-            {filesLoading ? (
-              <div className="py-8 text-center text-xs text-slate-400">正在加载最近笔记…</div>
-            ) : filteredRecentFiles.length > 0 ? (
-              filteredRecentFiles.map(file => (
-                <Link
-                  key={file.path}
-                  to={`/editor?path=${encodeURIComponent(file.path)}`}
-                  className="flex items-center gap-3 py-2.5 rounded-lg px-2 transition-colors hover:bg-slate-50 group"
-                >
-                  <div className="w-7 h-7 rounded-md bg-slate-100 border border-slate-200/60 flex items-center justify-center text-slate-500 group-hover:text-slate-900 transition-colors shrink-0">
-                    <FileText className="h-3.5 w-3.5" />
+      {/* ── Subframe Symmetric Bento Workspace Split (修复双栏栅格错位并融合断点续做真题舱) ── */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_0.8fr] items-start">
+        {/* Left Column: Resume Quiz Hub + Today Action + Recent Notes */}
+        <div className="space-y-4">
+          {/* 断点续练直通车 / 今日冲刺焦点舱 */}
+          {savedQuizDraft ? (
+            <div
+              className={`bento-card bento-card-hover rounded-xl p-4 sm:p-5 relative overflow-hidden ${
+                isVibrant
+                  ? 'border-indigo-200/90 bg-gradient-to-r from-indigo-50/70 via-white to-blue-50/50'
+                  : ''
+              }`}
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-bold bg-indigo-600 text-white shadow-2xs">
+                      <Zap className="w-3 h-3" />
+                      <span>断点续做</span>
+                    </span>
+                    <span className="text-2xs font-mono text-slate-400">
+                      上次停留第 {savedQuizDraft.currentIndex + 1} 题
+                    </span>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs font-semibold text-slate-800 truncate group-hover:text-slate-900">
-                      {file.title || file.path.split('/').pop()}
+                  <h3 className="text-sm sm:text-[15px] font-bold text-slate-900 truncate">
+                    {savedQuizDraft.title}
+                  </h3>
+                  <div className="flex items-center gap-3 pt-0.5">
+                    <div className="flex-1 max-w-[220px] h-1.5 rounded-full bg-slate-200/80 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-indigo-600 transition-all duration-500"
+                        style={{
+                          width: `${Math.max(
+                            6,
+                            Math.round((savedQuizDraft.answeredCount / Math.max(1, savedQuizDraft.totalCount)) * 100)
+                          )}%`,
+                        }}
+                      />
                     </div>
-                    <div className="text-2xs text-slate-400 truncate mt-0.5 font-mono">{file.path}</div>
+                    <span className="text-2xs font-mono font-semibold text-slate-600">
+                      已答 {savedQuizDraft.answeredCount} / {savedQuizDraft.totalCount} 题
+                    </span>
                   </div>
-                  <div className="flex items-center gap-1 text-2xs font-mono text-slate-400 shrink-0">
-                    <span>{formatModifiedDate(file.modified)}</span>
-                    <ChevronRight className="h-3.5 w-3.5 text-slate-300 group-hover:text-slate-600" />
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={openQuickNote}
+                    className="subframe-btn-secondary h-9 px-3 text-xs whitespace-nowrap cursor-pointer"
+                  >
+                    <PenLine className="w-3.5 h-3.5" />
+                    <span>随手记</span>
+                  </button>
+                  <Link
+                    to="/quiz"
+                    className={`h-9 px-4 rounded-xl text-xs font-semibold text-white inline-flex items-center gap-1.5 transition-all active:scale-95 ${
+                      isVibrant
+                        ? 'bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 shadow-sm shadow-indigo-500/25'
+                        : 'subframe-btn-black'
+                    }`}
+                  >
+                    <Play className="w-3.5 h-3.5 fill-current" />
+                    <span>继续刷题</span>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="bento-card rounded-xl p-4 sm:px-5 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200/70 text-amber-600 flex items-center justify-center shrink-0">
+                  <Target className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                    {progressOverview?.todayActions?.[0]?.title || '今日高效冲刺闭环：真题演练 + 错题归因 + 闪卡复盘'}
                   </div>
-                </Link>
-              ))
-            ) : (
-              <div className="py-8 text-center space-y-2">
-                <div className="text-xs text-slate-400">暂无匹配笔记</div>
-                <Link to="/editor" className="inline-flex items-center gap-1 text-xs font-medium text-slate-900 underline underline-offset-2">
-                  <FilePlus2 className="h-3.5 w-3.5" />
-                  <span>新建笔记</span>
+                  <div className="text-2xs text-slate-500 truncate mt-0.5">
+                    {progressOverview?.todayActions?.[0]?.description || '随时按下 Ctrl+K 呼出全局命令中心，秒搜笔记、讲义与动态仿真课件'}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={openQuickNote}
+                  className="subframe-btn-secondary h-8 px-3 text-xs whitespace-nowrap cursor-pointer"
+                >
+                  <PenLine className="w-3.5 h-3.5" />
+                  <span>极速随手记</span>
+                </button>
+                <Link
+                  to={progressOverview?.todayActions?.[0]?.targetType === 'route' ? progressOverview.todayActions[0].target : '/quiz'}
+                  className="subframe-btn-black h-8 px-3.5 text-xs whitespace-nowrap"
+                >
+                  <span>{progressOverview?.todayActions?.[0]?.actionLabel || '开启今日真题'}</span>
+                  <ArrowRight className="w-3 h-3" />
                 </Link>
               </div>
-            )}
+            </div>
+          )}
+
+          {/* Recent Notes Table/List */}
+          <div className="bento-card rounded-xl p-5 space-y-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-slate-600" />
+                <h2 className="text-sm font-semibold text-slate-900">最近更新笔记</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                {/* Inline Filter Input */}
+                <div className="relative">
+                  <Search className="h-3 w-3 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="过滤笔记..."
+                    value={searchFilter}
+                    onChange={e => setSearchFilter(e.target.value)}
+                    className="h-7 pl-7 pr-2.5 text-xs bg-slate-100 hover:bg-slate-200/60 focus:bg-white border border-transparent focus:border-slate-300 rounded-md transition-all outline-none text-slate-800 w-28 sm:w-36"
+                  />
+                </div>
+                <Link
+                  to="/editor"
+                  className="text-xs font-medium text-slate-500 hover:text-slate-900 flex items-center gap-0.5"
+                >
+                  <span>全部</span>
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            </div>
+
+            <div className="divide-y divide-slate-100">
+              {filesLoading ? (
+                <div className="py-8 text-center text-xs text-slate-400">正在加载最近笔记…</div>
+              ) : filteredRecentFiles.length > 0 ? (
+                filteredRecentFiles.map(file => (
+                  <Link
+                    key={file.path}
+                    to={`/editor?path=${encodeURIComponent(file.path)}`}
+                    className="flex items-center gap-3 py-2.5 rounded-lg px-2 transition-colors hover:bg-slate-50 group"
+                  >
+                    <div className="w-7 h-7 rounded-md bg-slate-100 border border-slate-200/60 flex items-center justify-center text-slate-500 group-hover:text-slate-900 transition-colors shrink-0">
+                      <FileText className="h-3.5 w-3.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-semibold text-slate-800 truncate group-hover:text-slate-900">
+                        {file.title || file.path.split('/').pop()}
+                      </div>
+                      <div className="text-2xs text-slate-400 truncate mt-0.5 font-mono">{file.path}</div>
+                    </div>
+                    <div className="flex items-center gap-1 text-2xs font-mono text-slate-400 shrink-0">
+                      <span>{formatModifiedDate(file.modified)}</span>
+                      <ChevronRight className="h-3.5 w-3.5 text-slate-300 group-hover:text-slate-600" />
+                    </div>
+                  </Link>
+                ))
+              ) : (
+                <div className="py-8 text-center space-y-2">
+                  <div className="text-xs text-slate-400">暂无匹配笔记</div>
+                  <Link to="/editor" className="inline-flex items-center gap-1 text-xs font-medium text-slate-900 underline underline-offset-2">
+                    <FilePlus2 className="h-3.5 w-3.5" />
+                    <span>新建笔记</span>
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Right Column: Tools & Health */}
+        {/* Right Column: Practice Heatmap + Quick Tools + Vault Health */}
+        <div className="space-y-4">
           {/* 练题热力图 & 专注学习统计 (Practice Heatmap & Focus Statistics) */}
           <div className="bento-card rounded-xl p-5 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-                <Flame className="h-4 w-4 text-accent-orange" />
+                <Flame className="h-4 w-4 text-amber-500" />
                 <span>练题热力图 & 专注统计</span>
               </h2>
               <Link
@@ -997,7 +1163,7 @@ export default function Dashboard() {
               </Link>
             </div>
 
-            {/* 16周练题热力色块矩阵 (类似 GitHub 贡献热力网格) */}
+            {/* 16周练题热力色块矩阵 */}
             <div>
               <div className="flex items-center justify-between text-2xs text-slate-400 mb-2">
                 <span>近 16 周刷题与复盘活跃度</span>
@@ -1010,9 +1176,23 @@ export default function Dashboard() {
                   <span>多</span>
                 </span>
               </div>
-              <div className="grid grid-flow-col grid-rows-7 gap-1 overflow-x-auto py-1">
+              <div className="grid grid-flow-col grid-rows-7 gap-1 overflow-x-auto py-1 no-scrollbar">
                 {Array.from({ length: 112 }).map((_, i) => {
-                  const intensity = (i * 17 + 23) % 11
+                  // 最近 7 天优先叠加后端真实做题活跃度
+                  const recentOffset = 111 - i
+                  const trendDay =
+                    recentOffset >= 0 && recentOffset < (progressOverview?.weeklyTrend?.length ?? 0)
+                      ? progressOverview!.weeklyTrend[progressOverview!.weeklyTrend.length - 1 - recentOffset]
+                      : null
+                  const intensity = trendDay
+                    ? trendDay.attempted === 0
+                      ? 0
+                      : trendDay.attempted < 10
+                        ? 3
+                        : trendDay.attempted < 25
+                          ? 6
+                          : 9
+                    : (i * 17 + 23) % 11
                   const bg = intensity === 0
                     ? 'bg-slate-100 border-slate-200/60'
                     : intensity < 4
@@ -1024,31 +1204,33 @@ export default function Dashboard() {
                     <div
                       key={i}
                       className={`w-2.5 h-2.5 rounded-xs border ${bg} transition-transform hover:scale-125 cursor-pointer`}
-                      title={`做题活跃节点 · 累计完成模拟与复盘`}
+                      title={
+                        trendDay
+                          ? `${trendDay.date}：作答 ${trendDay.attempted} 题（正确率 ${trendDay.accuracy}%）`
+                          : '研学复盘活跃节点'
+                      }
                     />
                   )
                 })}
               </div>
             </div>
 
-            {/* 专注统计指标行 */}
+            {/* 专注统计指标行（实时联动番茄钟与考纲掌握度） */}
             <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-100 text-center">
-              <div className="bg-slate-50/80 rounded-lg p-2 border border-slate-200/50">
+              <Link to="/pomodoro" className="bg-slate-50/80 hover:bg-slate-100/80 transition-colors rounded-lg p-2 border border-slate-200/50 block">
                 <div className="text-2xs text-slate-400 font-medium">今日专注</div>
-                <div className="text-xs font-bold font-mono text-slate-800 mt-0.5">45 分钟</div>
-              </div>
-              <div className="bg-slate-50/80 rounded-lg p-2 border border-slate-200/50">
-                <div className="text-2xs text-slate-400 font-medium">番茄钟</div>
-                <div className="text-xs font-bold font-mono text-slate-800 mt-0.5">3 轮完成</div>
-              </div>
-              <div className="bg-slate-50/80 rounded-lg p-2 border border-slate-200/50">
+                <div className="text-xs font-bold font-mono text-slate-800 mt-0.5">{dailyFocus.minutes} 分钟</div>
+              </Link>
+              <Link to="/pomodoro" className="bg-slate-50/80 hover:bg-slate-100/80 transition-colors rounded-lg p-2 border border-slate-200/50 block">
+                <div className="text-2xs text-slate-400 font-medium">今日番茄</div>
+                <div className="text-xs font-bold font-mono text-slate-800 mt-0.5">{dailyFocus.count} 轮完成</div>
+              </Link>
+              <Link to="/study?tab=progress" className="bg-slate-50/80 hover:bg-slate-100/80 transition-colors rounded-lg p-2 border border-slate-200/50 block">
                 <div className="text-2xs text-slate-400 font-medium">考点掌握度</div>
-                <div className="text-xs font-bold font-mono text-accent-sage mt-0.5">82% 达标</div>
-              </div>
+                <div className="text-xs font-bold font-mono text-emerald-600 mt-0.5">{syllabusMasteryRate}% 达标</div>
+              </Link>
             </div>
           </div>
-
-        <div className="space-y-4">
           {/* Quick Tools Grid */}
           <div className="bento-card rounded-xl p-5">
             <h2 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">

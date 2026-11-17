@@ -19,6 +19,7 @@ import {
   type ScanExtractMode
 } from '../services/book-scan-queue.js'
 import { normalizeQuestionMathFields } from '../utils/math-normalize.js'
+import { safeJsonParseWithLatex, rescueBalancedQuestionObjects } from '../utils/json-rescue.js'
 import { ensureRawSourcesInitialized } from '../services/raw-sources-seed.js'
 import { parseOutlineIntoChapters, runBookContentExtractor, type BookChapter } from '../services/book-outline.js'
 
@@ -247,27 +248,38 @@ function extractQuizQuestionsFromRawText(text: string, filename: string, domain:
     const line = lines[i].trim()
     if (!line) continue
 
-    // 匹配选项
-    const optMatch = line.match(/^([A-D])[.、\s\):：](.+)$/i)
-    if (optMatch) {
-      if (currentQ) {
-        const optKey = optMatch[1].toUpperCase()
-        currentQ.options[optKey] = optMatch[2].trim()
-        state = 'options'
-        continue
+    // 匹配同行或单行选项（支持 A. xxx  B. xxx 或 （A）xxx）
+    const inlineOptMatches = Array.from(
+      line.matchAll(/(?:^|\s+)(?:[\(（]([A-F])[\)）]|([A-F])[.、．\):：])\s*(.+?)(?=(?:\s+(?:[\(（][A-F][\)）]|[A-F][.、．\):：])\s*)|$)/gi)
+    )
+    if (inlineOptMatches.length >= 1 && currentQ) {
+      for (const m of inlineOptMatches) {
+        const optKey = (m[1] || m[2] || '').toUpperCase()
+        const optVal = (m[3] || '').trim()
+        if (optKey && optVal) {
+          currentQ.options[optKey] = optVal
+        }
       }
+      state = 'options'
+      continue
     }
 
-    // 匹配答案
-    const ansMatch = line.match(/(?:【?答案】?|参考答案|正确答案|Answer)[:：\s]*([A-D])/i)
+    // 匹配单选或多选答案（如 A、ACD、A,C,D）
+    const ansMatch = line.match(/(?:【?答案】?|参考答案|正确答案|标准答案|Answer)[:：\s]*([A-F](?:[\s,，、/]*[A-F]){0,5})/i)
     if (ansMatch && currentQ) {
-      currentQ.answer = ansMatch[1].toUpperCase()
+      const letters = Array.from(new Set(ansMatch[1].toUpperCase().match(/[A-F]/g) || [])).sort()
+      if (letters.length > 0) {
+        currentQ.answer = letters.join('')
+        if (letters.length >= 2) {
+          currentQ.type = 'multiple'
+        }
+      }
       state = 'answer'
       continue
     }
 
     // 匹配解析
-    const expMatch = line.match(/(?:【?解析】?|分步解析|Explanation)[:：\s]*(.*)$/i)
+    const expMatch = line.match(/(?:【?解析】?|分步解析|详解|Explanation)[:：\s]*(.*)$/i)
     if (expMatch && currentQ) {
       currentQ.explanation = expMatch[1].trim()
       state = 'explanation'
@@ -275,13 +287,13 @@ function extractQuizQuestionsFromRawText(text: string, filename: string, domain:
     }
 
     // 若处于解析状态，追加解析正文
-    if (state === 'explanation' && currentQ && !line.match(/^(?:第?\s*\d+[\.、题\s]|【[0-9]+】)/)) {
+    if (state === 'explanation' && currentQ && !line.match(/^(?:第?\s*\d{1,4}[\.、题\s]|【[0-9]+】)/)) {
       currentQ.explanation += '\n' + line
       continue
     }
 
-    // 探测新题目起始 (如 "1.", "【真题】", "下列关于...")
-    const isNewQ = line.match(/^(?:第?\s*\d+[\.、题\s]|【(?:真题|单选|选择题|\d+)】|下列关于|在.*系统中|关于.*说法)/)
+    // 探测新题目起始 (支持 1~4 位数题号)
+    const isNewQ = line.match(/^(?:第?\s*\d{1,4}[\.、．题\s]|【(?:真题|单选|多选|选择题|\d+)】|下列关于|在.*系统中|关于.*说法)/)
     if (isNewQ || (!currentQ && (line.includes('下列') || line.includes('？') || line.includes('?')))) {
       if (currentQ && Object.keys(currentQ.options).length >= 2) {
         questions.push(currentQ)
@@ -291,11 +303,11 @@ function extractQuizQuestionsFromRawText(text: string, filename: string, domain:
         domain,
         subject,
         chapter: `${subject}真题精粹`,
-        type: 'choice',
+        type: /多选|多项/.test(line) ? 'multiple' : 'choice',
         difficulty: '中等',
-        question: line.replace(/^(?:第?\s*\d+[\.、题\s]|【[^】]+】)/, '').trim(),
+        question: line.replace(/^(?:第?\s*\d{1,4}[\.、．题\s]|【[^】]+】)/, '').trim(),
         options: {},
-        answer: 'A',
+        answer: '待核对',
         explanation: '详见原题解析与考点归因。',
         tags: ['导入真题', subject, filename.replace(/\.[^.]+$/, '')]
       }
@@ -437,34 +449,16 @@ async function extractContentFromMaterial(fullPath: string): Promise<{
 }
 
 function robustParseAiJson(rawText: string): any {
-  let text = rawText.replace(/```json\s*/gi, '').replace(/```\s*$/gi, '').trim()
-  try {
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
-    if (jsonMatch) return JSON.parse(jsonMatch[0])
-  } catch {}
+  const parsed = safeJsonParseWithLatex<any>(rawText)
+  if (parsed && typeof parsed === 'object') {
+    if (Array.isArray(parsed)) return { note: {}, questions: parsed }
+    return parsed
+  }
 
-  const result: any = { note: {}, questions: [] }
+  const rescuedQuestions = rescueBalancedQuestionObjects(rawText)
+  const result: any = { note: {}, questions: rescuedQuestions }
+  const text = rawText.replace(/```json\s*/gi, '').replace(/```\s*$/gi, '').trim()
 
-  // 1. Extract questions block
-  try {
-    const qBlockMatch = text.match(/"questions"\s*:\s*\[([\s\S]*?)(?:\]|\n\s*"note")/i)
-    const block = qBlockMatch ? qBlockMatch[1] : text
-    const qMatches = block.match(/\{[^{}]*"question"[\s\S]*?\}/gi)
-    if (qMatches) {
-      for (const qm of qMatches) {
-        try {
-          result.questions.push(JSON.parse(qm))
-        } catch {
-          try {
-            const cleanQm = qm.replace(/\n/g, '\\n').replace(/\r/g, '')
-            result.questions.push(JSON.parse(cleanQm))
-          } catch {}
-        }
-      }
-    }
-  } catch {}
-
-  // 2. Extract note block
   try {
     const titleMatch = text.match(/"title"\s*:\s*"([^"]+)"/)
     if (titleMatch) result.note.title = titleMatch[1]
@@ -654,15 +648,23 @@ const storage = multer.diskStorage({
       return
     }
 
-    let domain = normalizeResourceDomain(req.body?.domain as string)
+    const rawClientDomain = typeof req.body?.domain === 'string' ? req.body.domain.trim() : ''
+    const hasExplicitDomain = ['cs_408', 'math', 'english', 'politics', 'general'].includes(rawClientDomain)
+    let domain = normalizeResourceDomain(rawClientDomain)
     const originalName = file.originalname || ''
     const lowerName = originalName.toLowerCase()
 
-    // 智能校准：基于上传文件的真实名称纠错学科领域（杜绝默认“考研数学”导致 408 资料误存）
-    if (/408|操作系统|进程|虚拟内存|死锁|分页|计算机组成|计组|指令|微程序|流水线|cache|数据结构|二叉树|哈夫曼|图论|计网|网络|tcp|udp|ip/.test(lowerName)) {
-      domain = 'cs_408'
-    } else if (/数学|高数|微积分|极限|导数|积分|级数|线代|矩阵|行列式|概率|随机变量|分布/.test(lowerName)) {
-      domain = 'math'
+    // 仅当客户端未显式指定有效学科域时，基于文件名智能推断（绝不强行篡改用户手选的考研政治或考研英语！）
+    if (!hasExplicitDomain) {
+      if (/政治|马原|毛中特|习思想|新思想|史纲|思修|肖秀荣|肖四|肖八|腿姐|徐涛/.test(lowerName)) {
+        domain = 'politics'
+      } else if (/英语|阅读理解|完形|新题型|长难句|黄皮书|红宝书|恋练有词|english|vocab/.test(lowerName)) {
+        domain = 'english'
+      } else if (/408|操作系统|进程|虚拟内存|死锁|分页|计算机组成|计组|指令|微程序|流水线|cache|数据结构|二叉树|哈夫曼|计网/.test(lowerName)) {
+        domain = 'cs_408'
+      } else if (/数学|高数|微积分|极限|导数|积分|级数|线代|矩阵|行列式|概率|随机变量/.test(lowerName)) {
+        domain = 'math'
+      }
     }
 
     let category = (req.body?.category as string) || '经典教材'
@@ -748,7 +750,7 @@ booksRouter.get('/books/list', (req, res) => {
 
     const recordVaultRoot = isLoggedInRegular ? getUserVaultDir(user!.id) : config.vaultPath
     const extractionsRecord = loadExtractionsRecord(recordVaultRoot)
-    const readableExts = new Set(['.md', '.txt', '.markdown'])
+    const readableExts = new Set(['.md', '.txt', '.markdown', '.docx', '.pptx', '.xlsx', '.epub', '.rtf'])
     const books: BookItem[] = []
 
     function scanScope(
@@ -758,7 +760,7 @@ booksRouter.get('/books/list', (req, res) => {
       canManage: boolean,
       ownerName: string
     ) {
-      const seenNames = new Set<string>()
+      const seenRelPaths = new Set<string>()
       const scopeBooks: BookItem[] = []
 
       function scan(dir: string) {
@@ -770,12 +772,12 @@ booksRouter.get('/books/list', (req, res) => {
             scan(fullPath)
           } else if (entry.isFile()) {
             if (entry.name.startsWith('.')) continue
-            if (seenNames.has(entry.name)) continue
-            seenNames.add(entry.name)
 
             const ext = path.extname(entry.name).toLowerCase()
             const stat = fs.statSync(fullPath)
             const relPath = path.relative(vaultRoot, fullPath).replace(/\\/g, '/')
+            if (seenRelPaths.has(relPath)) continue
+            seenRelPaths.add(relPath)
 
             const domain: ResourceDomain = inferDomainFromPathOrName(relPath)
 
@@ -796,7 +798,7 @@ booksRouter.get('/books/list', (req, res) => {
             let fileType: 'pdf' | 'html' | 'handout' | 'paper' | 'text' = 'text'
             if (isPdf) fileType = 'pdf'
             else if (isHtml) fileType = 'html'
-            else if (ext === '.md') fileType = 'handout'
+            else if (ext === '.md' || ext === '.docx' || ext === '.txt' || ext === '.markdown') fileType = 'handout'
 
             const savedExtracted = getExtractionRecordForBook(extractionsRecord, scope, relPath)
 
@@ -1012,42 +1014,30 @@ booksRouter.post('/books/upload', (req, res, next) => {
     const vaultRoot = isAdmin ? config.vaultPath : getUserVaultDir(req.user.id)
     const safeName = getSafeUploadFilename(req.file.originalname)
     const relPath = path.relative(vaultRoot, req.file.path).replace(/\\/g, '/')
+    const uploadedSize = req.file.size
 
-    // 智能后台线性化优化：若是 PDF 且服务端有 qpdf，转换为 Fast Web View 线性化结构实现首屏秒开
-    if (req.file.path.toLowerCase().endsWith('.pdf')) {
-      const savedPdfPath = req.file.path
-      const tmpLinearized = savedPdfPath + '.linearized.tmp'
-      execFile('qpdf', ['--linearize', savedPdfPath, tmpLinearized], (qpdfErr) => {
-        if (!qpdfErr && fs.existsSync(tmpLinearized)) {
-          try {
-            fs.renameSync(tmpLinearized, savedPdfPath)
-            console.log(`[QPDF Linearized OK]: ${path.basename(savedPdfPath)}`)
-          } catch {}
-        } else if (fs.existsSync(tmpLinearized)) {
-          try { fs.unlinkSync(tmpLinearized) } catch {}
-        }
-      })
-    }
-
-    // 同名文件异地清理去重（防止同一文件此前因学科误判在其他分类下留有旧副本）
+    // 仅清理完全相同字节数且同名的历史误存重复副本（严禁误删不同科目下同名但内容不同的真题汇编，同时移除 Windows 下异步 qpdf 覆盖文件锁竞态）
     try {
       const rawSourcesRoot = path.join(vaultRoot, 'raw-sources')
       if (fs.existsSync(rawSourcesRoot)) {
-        const findAndRemoveDuplicate = (dir: string) => {
+        const findAndRemoveIdenticalDuplicate = (dir: string) => {
           const entries = fs.readdirSync(dir, { withFileTypes: true })
           for (const entry of entries) {
             const entryPath = path.join(dir, entry.name)
             if (entry.isDirectory()) {
-              findAndRemoveDuplicate(entryPath)
+              findAndRemoveIdenticalDuplicate(entryPath)
             } else if (entry.isFile() && entry.name === safeName && entryPath !== req.file!.path) {
               try {
-                fs.unlinkSync(entryPath)
-                console.log(`[Deduplicate]: 清理旧重复源文件 -> ${entryPath}`)
+                const st = fs.statSync(entryPath)
+                if (st.size === uploadedSize) {
+                  fs.unlinkSync(entryPath)
+                  console.log(`[Deduplicate]: 清理相同字节旧副本 -> ${entryPath}`)
+                }
               } catch {}
             }
           }
         }
-        findAndRemoveDuplicate(rawSourcesRoot)
+        findAndRemoveIdenticalDuplicate(rawSourcesRoot)
       }
     } catch (dedupErr: any) {
       console.warn('[Deduplicate Warning]:', dedupErr.message)
@@ -2073,7 +2063,7 @@ ${chapter.rawContent}
       markSelfWrite(destPath)
       createdNotes.push({ title: noteTitle, path: destPath, chapterTitle: chapter.title })
 
-      // 2. 将真实提取出的书本习题加入成套真题池
+      // 2. 将真实提取出的书本习题加入成套真题池（严禁凭空捏造八股假题或硬编码默认答案 'A'）
       const chapterShortName = chapter.title.split(/\s+/)[0] || `${subject}重点`
       if (extractedQuestions.length > 0) {
         for (const eq of extractedQuestions) {
@@ -2082,38 +2072,17 @@ ${chapter.rawContent}
             domain,
             subject,
             chapter: chapter.title,
-            type: eq.type || 'choice',
+            type: eq.type === 'comprehensive' ? 'analysis' : (eq.type || (eq.options ? 'choice' : 'analysis')),
             difficulty: eq.difficulty || '中等',
             question: eq.question,
-            options: eq.options,
-            answer: eq.answer || 'A',
-            explanation: eq.explanation || `【考研深度解析】：考查《${chapter.title}》核心考点。`,
+            ...(eq.options ? { options: eq.options } : {}),
+            answer: eq.answer || '待核对',
+            explanation: eq.explanation || `摘自《${bookName}》（${chapter.title}）原书习题。`,
             tags: eq.tags || ['教材原题', subject, chapterShortName],
+            sourceBook: bookName,
             source: eq.source || `${bookName} (${chapter.title})`
           })
         }
-      } else {
-        // 保底命制 2~3 道考研经典模型题
-        const q1 = {
-          id: `gen-${Date.now()}-${idx}-1`,
-          domain,
-          subject,
-          chapter: chapter.title,
-          type: 'choice',
-          difficulty: '中等',
-          question: `关于《${bookName}》【${chapter.title}】涉及的核心考点与原理机制，下列说法中正确的是（ ）`,
-          options: {
-            A: `该考点的逻辑结构与具体实现相互独立，核心机理符合统考大纲规范定义`,
-            B: `所有相关算法的时间与空间复杂度在最坏情况下均保持恒定`,
-            C: `相关系统状态转移过程中无需借助底层硬件机构提供状态寄存器支持`,
-            D: `本章涉及的连续空间分配机制必定无法通过动态重定位方式实现`
-          },
-          answer: 'A',
-          explanation: `【考研深度名师解析】：考查《${chapter.title}》核心机制。根据统考大纲规范，算法与逻辑架构面向问题本身，与底层实现相互解耦抽象，故选项 A 正确。`,
-          tags: ['考研真题', subject, chapterShortName, '核心考点'],
-          source: `${bookName} (${chapter.title})`
-        }
-        allGeneratedQuestions.push(q1)
       }
     }
 

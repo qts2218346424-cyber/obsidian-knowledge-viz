@@ -5,11 +5,13 @@ import { createFile } from '../vault-parser.js'
 import {
   extractFullMaterialContent,
   buildTextChunksForScan,
-  extractAnswerKeySnippet,
+  buildAnswerKeyIndex,
+  getAnswerSnippetForChunk,
   normalizeAndDeduplicateQuestions,
   type ResourceDomain,
   type TextScanChunk
 } from './pdf-extractor.js'
+import { safeJsonParseWithLatex, rescueBalancedQuestionObjects } from '../utils/json-rescue.js'
 
 export type ScanBookScope = 'shared' | 'personal'
 export type ScanExtractMode = 'question' | 'concept' | 'dual'
@@ -85,13 +87,25 @@ function getCustomQuestionsPath(vaultRoot: string): string {
   return path.join(quizDir, 'custom-questions.json')
 }
 
-function normalizeFp(qText: string): string {
-  return String(qText || '')
+function normalizeFp(q: any): string {
+  const qText = typeof q === 'string' ? q : String(q?.question || '')
+  const clean = qText
     .replace(/^(?:第?\s*\d+\s*[.、题\s\)]+|【(?:真题|单选|多选|填空|解答|例题|习题)?\s*\d*\s*】)/, '')
     .replace(/\s+/g, '')
     .replace(/[，。！？：；、“”‘’（）()【】\[\]]/g, '')
     .toLowerCase()
-    .slice(0, 80)
+  if (!clean) return ''
+  const head = clean.slice(0, 56)
+  const tail = clean.length > 56 ? clean.slice(-56) : ''
+  const opts =
+    q && typeof q === 'object' && q.options && typeof q.options === 'object'
+      ? Object.entries(q.options)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([k, v]) => `${k}:${String(v || '').trim().slice(0, 14)}`)
+          .join('|')
+          .toLowerCase()
+      : ''
+  return `${head}#${tail}#${opts}`
 }
 
 export function appendUniqueCustomQuestions(vaultRoot: string, newQuestions: any[]): number {
@@ -105,13 +119,13 @@ export function appendUniqueCustomQuestions(vaultRoot: string, newQuestions: any
     }
 
     const existingIds = new Set(list.map((q: any) => String(q?.id || '')))
-    const existingFps = new Set(list.map((q: any) => normalizeFp(String(q?.question || ''))).filter(Boolean))
+    const existingFps = new Set(list.map((q: any) => normalizeFp(q)).filter(Boolean))
 
     let added = 0
     for (const q of newQuestions) {
       if (!q || !q.question) continue
       const qId = String(q.id || '')
-      const fp = normalizeFp(String(q.question || ''))
+      const fp = normalizeFp(q)
       if ((qId && existingIds.has(qId)) || (fp && existingFps.has(fp))) {
         continue
       }
@@ -186,8 +200,8 @@ function parseQuestionsAndNotesFromRaw(rawText: string): {
   summaryMarkdown: string
   chapterHints: string[]
 } {
-  const cleaned = rawText.replace(/```json\s*/gi, '').replace(/```\s*$/gi, '').trim()
   const emptyResult = { questions: [] as any[], summaryMarkdown: '', chapterHints: [] as string[] }
+  if (!rawText || !rawText.trim()) return emptyResult
 
   const extractFromObj = (obj: any) => {
     if (!obj) return emptyResult
@@ -205,41 +219,18 @@ function parseQuestionsAndNotesFromRaw(rawText: string): {
     }
   }
 
-  const tryParseJson = (src: string) => {
-    try {
-      return JSON.parse(src)
-    } catch {
-      // 容错处理 LaTeX 公式未双写反斜杠导致的语法失败
-      const repaired = src.replace(/\\(?![\\"\/bfnrtu])/g, '\\\\')
-      return JSON.parse(repaired)
+  const parsed = safeJsonParseWithLatex<any>(rawText)
+  if (parsed) {
+    const res = extractFromObj(parsed)
+    if (res.questions.length > 0 || res.summaryMarkdown || res.chapterHints.length > 0) {
+      return res
     }
   }
 
-  try {
-    const objMatch = cleaned.match(/\{[\s\S]*\}/)
-    if (objMatch) {
-      return extractFromObj(tryParseJson(objMatch[0]))
-    }
-    const arrMatch = cleaned.match(/\[[\s\S]*\]/)
-    if (arrMatch) {
-      return extractFromObj(tryParseJson(arrMatch[0]))
-    }
-  } catch {
-    // 容错逐个挽救 JSON 内的独立题目对象
-    const rescued: any[] = []
-    const qMatches = cleaned.match(/\{[^{}]*"question"\s*:\s*"[\s\S]*?\}(?=\s*,|\s*\]|$)/gi) || []
-    for (const qm of qMatches) {
-      try {
-        rescued.push(JSON.parse(qm))
-      } catch {
-        try {
-          rescued.push(JSON.parse(qm.replace(/\r?\n/g, '\\n')))
-        } catch {}
-      }
-    }
-    if (rescued.length > 0) {
-      return { questions: rescued, summaryMarkdown: '', chapterHints: [] }
-    }
+  // 当大模型输出因 max_tokens 截断导致尾部未闭合时，通过括号深度平衡栈无损救回前面已闭合的所有题目对象
+  const rescued = rescueBalancedQuestionObjects(rawText)
+  if (rescued.length > 0) {
+    return { questions: rescued, summaryMarkdown: '', chapterHints: [] }
   }
 
   return emptyResult
@@ -263,27 +254,31 @@ async function callAiForChunkExtraction(params: {
 
   const modePrompt =
     params.mode === 'question'
-      ? `【核心提取规则 — 全量真实题目提取（不限数量）】
-1. 请仔细通读本分片文本（第 ${params.chunk.startPage}~${params.chunk.endPage} 页），**完整、逐题提取本分片中出现的所有真实题目**（包括单选题、多选题、填空题、计算题、解答大题、证明题）。
+      ? `【核心提取规则 — 全量真实题目提取（单选/多选/阅读共享原文/大题全兼容）】
+1. 请仔细通读本分片文本（第 ${params.chunk.startPage}~${params.chunk.endPage} 页），**完整、逐题提取本分片【本片待提取正文】中出现的所有真实题目**（单选题、多选题、英语阅读/完形/新题型、填空题、计算题、材料分析大题）。
 2. **本分片出现几道完整或可识别的题目，就全部提取几道（哪怕有 8~20 道也必须全部列出），严禁只抽 4~5 道敷衍了事！**
-3. **绝对禁止编造或臆测文本里没有出现过的题目**；如果本分片纯属目录、前言或纯知识点讲解而没有具体题目，questions 应返回空数组 []。
-4. 保留原题题号信息在 chapter 或题干前，所有数学公式/代码/符号必须使用标准 KaTeX LaTeX（行内 $...$，独立公式 $$...$$）。若原文因 PDF 字体映射混入残缺符号（例如 \`f x  \`、\` \`、\`\`、\`\`），请结合数学上下文精准还原为标准 LaTeX（如 \`$f(x)$\`、\`$|\\dots|$\` 等）。
-5. 选择题放 options: {"A":"...","B":"...","C":"...","D":"..."}，type="choice"；填空或大题不强制 options，type="blank" 或 "analysis"。
-6. 若本分片本身带有答案与解析，请原样高保真整理进 answer 与 explanation；若仅在下方“卷尾答案摘要”能匹配到答案，请匹配填入；若文本确实未附带答案，请根据专业知识精准作答并给出详尽分步推导解析（并在解析开头标注“【参考解析】”）。`
+3. **绝对禁止编造或臆测文本里没有出现过的题目**；如果本分片纯属目录、前言或纯知识点讲解而没有具体题目，questions 必须返回空数组 []。
+4. 题型与选项规范：
+   - 单选题：type="choice"，answer 为单个大写字母如 "A"，options 为 {"A":"...","B":"...","C":"...","D":"..."}；
+   - **多选题（尤其是考研政治第17~33题或明确含2个及以上正确选项的选择题）**：type="multiple"，answer 为紧凑大写字母组合如 "ACD" 或 "ABCD"，严禁截断成单字母！
+   - **英语阅读/完形/新题型或政治材料分析题**：若多道小题围绕同一篇英文短文或背景材料展开，请将该关联原文填入每道题的 "passage" 字段（简明完整保留相关段落），并用相同的 "groupId" 标记同组题目！
+   - 填空或解答/分析大题：不强制 options，type="blank" 或 "analysis"。
+5. 所有数学公式/代码/符号必须使用标准 KaTeX LaTeX（行内 $...$，独立公式 $$...$$），JSON 字符串内的反斜杠请务必双写（例如 "\\\\frac{a}{b}"）。
+6. 若本分片或下方“参考答案摘录”中能找到原题答案与解析，请高保真回填；若确无附带答案，请严谨推算作答并在解析前标注“【AI推导解析】”。`
       : params.mode === 'concept'
         ? `【核心提取规则 — 知识点考点梳理 + 真实练习题】
-1. 提炼本分片（第 ${params.chunk.startPage}~${params.chunk.endPage} 页）的核心知识框架、定理公式（用 LaTeX）和易错考点，写入 summaryMarkdown。
-2. 若本分片包含例题或课后题，请完整提取真实题目放入 questions（有多少提取多少，无题目则返回 [] 或针对关键公式提炼 1~2 道辨析题）。`
+1. 提炼本分片（第 ${params.chunk.startPage}~${params.chunk.endPage} 页）的核心知识框架、定理公式（用 LaTeX）、易混辨析和必背要点，写入 summaryMarkdown。
+2. 若本分片包含例题或课后题，请完整提取真实题目放入 questions（区分单选 choice / 多选 multiple / 大题 analysis，无题目则返回 []，绝不凭空编造八股假题）。`
         : `【核心提取规则 — 双轨全量提取（真实题目全收 + 核心考点总结）】
-1. **题目全量提取（最高优先级）**：扫描本分片（第 ${params.chunk.startPage}~${params.chunk.endPage} 页）中出现的所有真实题目（单选/填空/计算/解答/例题），**有多少提多少，不设 4~5 道数量上限**；跨页衔接片段中已属于上一片的残缺尾部无需重复。
-2. 若文本仅为纯知识点无题目，请归纳核心知识点写入 keyPoints 与 summaryMarkdown，questions 可仅在确有例题或明确考点时输出，绝不滥造假题。
-3. 所有数学和专业课公式必须用标准 $...$ LaTeX 规范排版。`
+1. **题目全量提取（最高优先级）**：扫描本分片（第 ${params.chunk.startPage}~${params.chunk.endPage} 页）中出现的所有真实题目（单选 choice / 多选 multiple / 英语阅读带 passage / 填空 blank / 解答与材料分析 analysis），有多少提多少；跨页衔接头中已在上一片提取过的完整题不要重复。
+2. 同步归纳本分片核心考点写入 keyPoints 与 summaryMarkdown；纯讲义页无题目时 questions 返回 []，严禁编造假题。
+3. 所有数学和专业课公式必须用标准 $...$ LaTeX 规范排版（JSON 内反斜杠双写为 \\\\）。`
 
   const answerContextBlock = params.answerKeySnippet
-    ? `\n【附：资料后部提取到的参考答案/解析区摘录（供对应题号核对答案）】\n"""\n${params.answerKeySnippet.slice(0, 2600)}\n"""\n`
+    ? `\n【附：按题号匹配的书末参考答案/解析区摘录（请严格按题号对齐回填）】\n"""\n${params.answerKeySnippet.slice(0, 3400)}\n"""\n`
     : ''
 
-  const prompt = `你是精通全国硕士研究生考试（${domainLabel} - ${params.subject}）的真题与教材结构化解析引擎。
+  const prompt = `你是精通全国硕士研究生考试（${domainLabel} - ${params.subject}）的真题与讲义结构化解析引擎。
 正在扫描资料《${params.bookName}》的第 ${params.chunk.chunkIndex + 1}/${params.totalChunks} 分片（对应第 ${params.chunk.startPage}~${params.chunk.endPage} 页）。
 
 ${modePrompt}
@@ -299,10 +294,11 @@ ${params.chunk.text}
     {
       "domain": "${params.domain}",
       "subject": "${params.subject}",
-      "chapter": "对应章节或年份/题型（如 2024超越卷一·第1~2页）",
+      "chapter": "对应章节或年份/题型（如 2025真题·第${params.chunk.startPage}页）",
       "type": "choice",
       "difficulty": "中等",
       "sourcePage": ${params.chunk.startPage},
+      "passage": "若为英语阅读/完形或材料题，填入共享原文（否则省略此字段）",
       "question": "完整题干（公式用 $...$）",
       "options": {
         "A": "选项A",
@@ -310,13 +306,13 @@ ${params.chunk.text}
         "C": "选项C",
         "D": "选项D"
       },
-      "answer": "正确答案（如 A 或完整答案文本）",
-      "explanation": "清晰详实的分步解析",
+      "answer": "正确答案（单选如 A，多选如 ACD，大题写核心答案要点）",
+      "explanation": "清晰详实的分步解析与干扰项辨析",
       "tags": ["${params.subject}", "PDF扫描"]
     }
   ],
   "keyPoints": ["本页段核心考点1", "本页段核心考点2"],
-  "summaryMarkdown": "本分片核心知识点/解题方法简明总结（Markdown，150~500字即可）"
+  "summaryMarkdown": "本分片核心知识点/解题方法结构化总结（Markdown，150~500字）"
 }`
 
   let lastErr: any = null
@@ -490,14 +486,14 @@ export async function executeBookScanJob(
     }
   }
 
-  const maxChunks = Math.max(1, Math.min(input.maxChunks || 24, 80))
-  const chunks = buildTextChunksForScan(extracted.pages, 4200, maxChunks, 10)
+  const maxChunks = Math.max(1, Math.min(input.maxChunks || 32, 80))
+  const chunks = buildTextChunksForScan(extracted.pages, 4600, maxChunks, 10)
 
   if (chunks.length === 0) {
     throw new Error('该资料有效文字内容为空，无法进行扫描提取')
   }
 
-  // 跨学科全科综合探测：同时校准 domain 与 subject（彻底解决前端默认 math 导致 408 资料被归到高等数学）
+  // 全科综合智能探测：覆盖 408 / 数学 / 考研政治 / 考研英语 / 通用专业课，严格尊重用户已选学科域，杜绝将政治/英语篡改为高等数学！
   const refineSubjectAndDomainFromText = (
     sampleText: string,
     bookName: string,
@@ -524,23 +520,72 @@ export async function executeBookScanJob(
     mathScores.sort((a, b) => b[1] - a[1])
     const maxMathScore = mathScores[0][1]
 
-    if (maxCsScore > maxMathScore && maxCsScore >= 1) {
-      return { effectiveDomain: 'cs_408', effectiveSubject: csScores[0][0] }
-    } else if (maxMathScore > maxCsScore && maxMathScore >= 1) {
-      return { effectiveDomain: 'math', effectiveSubject: mathScores[0][0] }
+    const politicsScores: Array<[string, number]> = [
+      ['马克思主义基本原理', ['马原', '唯物论', '辩证法', '矛盾的普遍性', '实践与认识', '唯物史观', '剩余价值', '商品二因素', '不变资本', '可变资本', '科学社会主义', '垄断资本主义'].filter(k => combined.includes(k)).length],
+      ['中国近现代史纲要', ['史纲', '鸦片战争', '洋务运动', '辛亥革命', '五四运动', '遵义会议', '延安整风', '抗日战争', '新民主主义', '中共七大', '十一届三中全会'].filter(k => combined.includes(k)).length],
+      ['毛泽东思想和中国特色社会主义理论体系概论', ['毛中特', '毛泽东思想', '实事求是', '三大改造', '新民主主义革命总路线', '邓小平理论', '三个代表', '科学发展观'].filter(k => combined.includes(k)).length],
+      ['习近平新时代中国特色社会主义思想概论', ['习思想', '新思想', '中国式现代化', '新发展理念', '新质生产力', '全过程人民民主', '人类命运共同体', '两个确立', '总体国家安全观'].filter(k => combined.includes(k)).length],
+      ['思想道德与法治', ['思修', '思想道德', '人生价值', '社会主义核心价值观', '全面依法治国', '宪法', '法治体系', '道德规范'].filter(k => combined.includes(k)).length],
+      ['形势与政策', ['形势与政策', '时政', '肖秀荣', '肖四', '肖八', '腿姐', '徐涛', '政治真题'].filter(k => combined.includes(k)).length],
+    ]
+    politicsScores.sort((a, b) => b[1] - a[1])
+    const maxPoliticsScore = politicsScores[0][1]
+
+    const englishScores: Array<[string, number]> = [
+      ['阅读理解', ['reading comprehension', 'text 1', 'text 2', 'text 3', 'text 4', 'passage', '阅读理解', '英语一', '英语二', '黄皮书', '长难句'].filter(k => combined.includes(k)).length],
+      ['完形填空', ['use of english', 'cloze', '完形填空', '完型填空'].filter(k => combined.includes(k)).length],
+      ['新题型', ['七选五', '新题型', '段落排序', '小标题匹配'].filter(k => combined.includes(k)).length],
+      ['英译汉翻译', ['translation', '英译汉', '划线句子翻译'].filter(k => combined.includes(k)).length],
+      ['英语写作', ['writing', 'essay', '大作文', '小作文', '图画作文', '图表作文'].filter(k => combined.includes(k)).length],
+    ]
+    englishScores.sort((a, b) => b[1] - a[1])
+    const maxEnglishScore = englishScores[0][1]
+
+    // 1. 若用户显式选定了 politics / english / general，优先在该学科域内细分二级科目，绝不强行篡改！
+    if (inputDomain === 'politics') {
+      return {
+        effectiveDomain: 'politics',
+        effectiveSubject: maxPoliticsScore > 0 ? politicsScores[0][0] : (curSubject || '考研政治综合'),
+      }
+    }
+    if (inputDomain === 'english') {
+      return {
+        effectiveDomain: 'english',
+        effectiveSubject: maxEnglishScore > 0 ? englishScores[0][0] : (curSubject || '阅读理解'),
+      }
+    }
+    if (inputDomain === 'general') {
+      return {
+        effectiveDomain: 'general',
+        effectiveSubject: curSubject || '综合专业课',
+      }
+    }
+
+    // 2. 若文本呈现出鲜明的政治或英语特征（例如用户在默认 math 下直接拖入了肖秀荣或英语真题）
+    const topDomainCandidates: Array<{ domain: ResourceDomain; score: number; subject: string }> = [
+      { domain: 'cs_408', score: maxCsScore, subject: csScores[0][0] },
+      { domain: 'math', score: maxMathScore, subject: mathScores[0][0] },
+      { domain: 'politics', score: maxPoliticsScore, subject: politicsScores[0][0] },
+      { domain: 'english', score: maxEnglishScore, subject: englishScores[0][0] },
+    ].sort((a, b) => b.score - a.score)
+
+    if (topDomainCandidates[0].score >= 2 && topDomainCandidates[0].score > topDomainCandidates[1].score) {
+      return {
+        effectiveDomain: topDomainCandidates[0].domain,
+        effectiveSubject: topDomainCandidates[0].subject,
+      }
     }
 
     if (inputDomain === 'cs_408') {
       return { effectiveDomain: 'cs_408', effectiveSubject: maxCsScore > 0 ? csScores[0][0] : (curSubject || '数据结构') }
-    } else {
-      return { effectiveDomain: 'math', effectiveSubject: maxMathScore > 0 ? mathScores[0][0] : (curSubject || '高等数学') }
     }
+    return { effectiveDomain: 'math', effectiveSubject: maxMathScore > 0 ? mathScores[0][0] : (curSubject || '高等数学') }
   }
 
   const sampleTextForSubject = chunks.slice(0, 2).map(c => c.text).join('\n')
   const { effectiveDomain, effectiveSubject } = refineSubjectAndDomainFromText(sampleTextForSubject, input.bookName, input.relativePath, input.domain, input.subject)
 
-  const answerKeySnippet = extractAnswerKeySnippet(extracted.pages)
+  const answerKeyIndex = buildAnswerKeyIndex(extracted.pages)
 
   onProgress?.({
     status: 'scanning',
@@ -574,14 +619,15 @@ export async function executeBookScanJob(
     })
 
     try {
+      const chunkAnswerSnippet = getAnswerSnippetForChunk(chunk.text, answerKeyIndex)
       const chunkRes = await callAiForChunkExtraction({
         chunk,
         totalChunks: chunks.length,
         bookName: input.bookName,
-        domain: input.domain,
+        domain: effectiveDomain,
         subject: effectiveSubject,
         mode: input.mode,
-        answerKeySnippet
+        answerKeySnippet: chunkAnswerSnippet
       })
 
       if (chunkRes.summaryMarkdown) {
@@ -593,7 +639,7 @@ export async function executeBookScanJob(
 
       if (chunkRes.questions.length > 0) {
         const normalizedBatch = normalizeAndDeduplicateQuestions(chunkRes.questions, {
-          domain: input.domain,
+          domain: effectiveDomain,
           subject: effectiveSubject,
           bookName: input.bookName,
           defaultChapter: `${input.bookName.replace(/\.[^.]+$/, '')} · ${pageTag}`

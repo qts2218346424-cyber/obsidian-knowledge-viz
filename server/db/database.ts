@@ -198,9 +198,17 @@ class CoreForgeDatabase {
 
     try {
       this.db = new DatabaseSync(this.dbPath)
+      // 开启 WAL 预写日志模式与并发性能调优，消除高并发读写互相阻塞与事件循环卡顿
+      this.db.exec(`
+        PRAGMA journal_mode = WAL;
+        PRAGMA synchronous = NORMAL;
+        PRAGMA busy_timeout = 5000;
+        PRAGMA temp_store = MEMORY;
+        PRAGMA cache_size = -16000;
+      `)
       this.migrate()
       this.isInitialized = true
-      console.log(`[Database] SQLite 数据库已成功挂载: ${this.dbPath}`)
+      console.log(`[Database] SQLite 数据库已成功挂载 (WAL 模式): ${this.dbPath}`)
     } catch (err: any) {
       console.error('[Database] SQLite 初始化异常:', err.message)
     }

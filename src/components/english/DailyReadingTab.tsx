@@ -1,49 +1,47 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import {
-  BookOpen,
   Maximize2,
   Minimize2,
   Minus,
-  ChevronUp,
   Sparkles,
   Bot,
   Send,
   CheckCircle2,
   Bookmark,
   BookmarkCheck,
-  ChevronRight,
-  HelpCircle,
   AlertTriangle,
   Flame,
   Volume2,
-  Layers,
   FileText,
-  Clock,
-  TrendingUp,
-  RefreshCw,
   Eye,
   EyeOff,
   PlusCircle,
-  Copy,
-  Check,
-  MessageSquare,
-  Award,
   X,
+  Loader2,
+  BookOpen,
+  Trash2,
 } from 'lucide-react'
 import {
   DAILY_READING_ARTICLES,
   type DailyReadingArticle,
   type ReadingSentence,
-  type SourceJournal,
-  type ReadingTopicCategory,
-  generateAiCompanionReply,
+  type ReadingParagraph,
   analyzeSentenceGrammarTree,
 } from '../../data/dailyReadingData'
-import { api } from '../../services/api'
+import { api, type BookItem } from '../../services/api'
+import { authService } from '../../services/auth'
+import MarkdownRenderer from '../MarkdownRenderer'
+import WordLookupPopover, {
+  useEnglishWordLookup,
+  saveWordToEbbinghaus,
+  speakEnglishText,
+  generateLemmaCandidates,
+} from './WordLookupPopover'
 
 const STORAGE_KEY_READING_CHECKIN = 'coreforge_english_reading_checkin_v1'
 const STORAGE_KEY_SAVED_WORDS = 'coreforge_english_saved_reading_words_v1'
+const STORAGE_KEY_CUSTOM_ARTICLES = 'coreforge_english_custom_articles_v1'
 
 interface ChatMessage {
   id: string
@@ -52,45 +50,140 @@ interface ChatMessage {
   timestamp: string
 }
 
+/**
+ * 将用户粘贴的任意英文段落精准切分为结构化段落与句子，生成可挂载至左侧主阅读器的动态 Article
+ */
+function buildDynamicArticleFromText(
+  rawText: string,
+  customTitle?: string
+): DailyReadingArticle {
+  const cleaned = rawText.replace(/\r\n/g, '\n').trim()
+  const rawParas = cleaned
+    .split(/\n\s*\n|\n/)
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0)
+
+  let globalSentenceIdx = 1
+  const paragraphs: ReadingParagraph[] = rawParas.map((paraEn, idx) => {
+    // 保护常见缩写点号后按句末标点切句
+    const protectedText = paraEn.replace(
+      /\b(Mr|Mrs|Ms|Dr|Prof|Sr|Jr|vs|etc|e\.g|i\.e|U\.S|U\.K)\./gi,
+      '$1∯'
+    )
+    const rawSentences = protectedText
+      .split(/(?<=[.!?])\s+(?=[A-Z"“'])/)
+      .map((s) => s.replace(/∯/g, '.').trim())
+      .filter(Boolean)
+
+    const sentenceList = rawSentences.length > 0 ? rawSentences : [paraEn]
+    const sentences: ReadingSentence[] = sentenceList.map((senEn) => {
+      const wordsInSen = senEn.match(/[a-zA-Z'-]+/g) || []
+      const hasComplexConnector =
+        /\b(which|that|although|though|whereas|while|despite|because|whether|whereby|through which|in which)\b/i.test(
+          senEn
+        )
+      const isHard = wordsInSen.length >= 22 || (wordsInSen.length >= 16 && hasComplexConnector)
+      const sObj: ReadingSentence = {
+        sentenceIndex: globalSentenceIdx++,
+        en: senEn,
+        zh: '（点击右侧 AI 伴读获取逐句精译与命题剖析，或点击任意单词即点即查）',
+        isHardLongSentence: isHard,
+        treeAnalysis: isHard ? analyzeSentenceGrammarTree(senEn) : undefined,
+      }
+      return sObj
+    })
+
+    return {
+      index: idx + 1,
+      en: paraEn,
+      zh: '',
+      corePoint: `自选外刊第 ${idx + 1} 段（共 ${sentences.length} 句）`,
+      sentences,
+    }
+  })
+
+  const totalWords = (cleaned.match(/[a-zA-Z'-]+/g) || []).length
+  const firstSentenceWords = (paragraphs[0]?.sentences[0]?.en || 'Custom Reading Passage')
+    .split(/\s+/)
+    .slice(0, 9)
+    .join(' ')
+  const derivedTitle =
+    customTitle?.trim() ||
+    (firstSentenceWords.length > 56 ? firstSentenceWords.slice(0, 56) + '...' : firstSentenceWords)
+
+  return {
+    id: `custom_art_${Date.now()}`,
+    title: derivedTitle,
+    sourceJournal: 'The Economist',
+    sourceDate: '自选外刊精读 · 实时导入',
+    topicCategory: '文化社会',
+    lexileLevel: totalWords > 260 ? '1280L' : '1180L',
+    wordCount: totalWords,
+    recommendedMinutes: Math.max(5, Math.round(totalWords / 35)),
+    examRelevance: '用户自选外刊源文 · 支持即点即查与流式 AI 长难句精析',
+    abstractZh: '正在为您流式生成本篇自选外刊的中文核心导读、考研生词提取与长难句剖析...',
+    authorAttitude: '结合上下文动态研判中',
+    keyVocab: [],
+    paragraphs,
+    mockQuestions: [],
+  }
+}
+
 export default function DailyReadingTab() {
-  // 1. 当前选中的文献
-  const [selectedArticleId, setSelectedArticleId] = useState<string>(DAILY_READING_ARTICLES[0].id)
-  const [categoryFilter, setCategoryFilter] = useState<ReadingTopicCategory | 'all'>('all')
-  const [journalFilter, setJournalFilter] = useState<SourceJournal | 'all'>('all')
+  // 自定义导入的外刊文章列表（持久化保存）
+  const [customArticles, setCustomArticles] = useState<DailyReadingArticle[]>(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY_CUSTOM_ARTICLES)
+      return raw ? JSON.parse(raw) : []
+    } catch {
+      return []
+    }
+  })
 
-  // 2. 自定义输入/粘贴文献模式
-  const [isCustomMode, setIsCustomMode] = useState(false)
+  const allArticles = useMemo(
+    () => [...customArticles, ...DAILY_READING_ARTICLES],
+    [customArticles]
+  )
+
+  const [selectedArticleId, setSelectedArticleId] = useState<string>(
+    () => allArticles[0]?.id || DAILY_READING_ARTICLES[0].id
+  )
+
+  // 自定义贴入抽屉状态与英语书架讲义导入支持
+  const [isCustomDrawerOpen, setIsCustomDrawerOpen] = useState(false)
+  const [customTitleInput, setCustomTitleInput] = useState('')
   const [customInputText, setCustomInputText] = useState('')
+  const [englishTextBooks, setEnglishTextBooks] = useState<BookItem[]>([])
+  const [loadingBookSnippet, setLoadingBookSnippet] = useState<string | null>(null)
 
-  // 3. 句子交互状态：当前点击的句子与高亮
+  // 阅读交互状态
   const [activeSentence, setActiveSentence] = useState<ReadingSentence | null>(null)
   const [showBilingual, setShowBilingual] = useState(true)
   const [highlightHardOnly, setHighlightHardOnly] = useState(false)
   const [mobileCompanionOpen, setMobileCompanionOpen] = useState(false)
   const [windowMode, setWindowMode] = useState<'half' | 'full' | 'minimized'>('half')
-
-  // 4. 右侧 AI 伴读侧边栏选项卡：'companion' | 'vocab' | 'quiz'
   const [sideTab, setSideTab] = useState<'companion' | 'vocab' | 'quiz'>('companion')
 
-  // 5. AI 伴读对话记录
+  // AI 伴读流式对话记录
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: 'init-msg',
       role: 'assistant',
       content:
-        '👋 你好！我是你的 **考研英语文献精读 AI 伴读导师**。\n\n本篇选自英国著名严肃外刊，文章包含多处考研真题级别的复杂从句与熟词生义。你可以随时点击左侧任意句子让我为你进行长难句解剖，或者直接在下方点击快捷问答！',
+        '👋 你好！我是你的 **考研英语文献精读 AI 伴读导师**。\n\n你可以点击左侧任意英文单词**即点即查并写入艾宾浩斯生词库**，点击任意句子进行长难句主干解剖，或者点击顶栏 **「贴入自选外刊」** 导入你自己的英文材料进行流式深度精读！',
       timestamp: '刚刚',
     },
   ])
   const [inputQuestion, setInputQuestion] = useState('')
   const [isAiReplying, setIsAiReplying] = useState(false)
+  const [vocabToast, setVocabToast] = useState<string | null>(null)
   const chatBottomRef = useRef<HTMLDivElement | null>(null)
 
-  // 6. 配套测试题作答状态
+  // 配套测试题作答状态
   const [userAnswers, setUserAnswers] = useState<Record<string, 'A' | 'B' | 'C' | 'D'>>({})
   const [showAnalysis, setShowAnalysis] = useState<Record<string, boolean>>({})
 
-  // 7. 打卡状态与生词收藏持久化
+  // 打卡状态与生词收藏持久化
   const [checkinMap, setCheckinMap] = useState<Record<string, boolean>>(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY_READING_CHECKIN)
@@ -109,55 +202,346 @@ export default function DailyReadingTab() {
     }
   })
 
+  // 正文即点即查 Hook
+  const {
+    lookupState,
+    closeLookup,
+    handleWordLookupClick,
+    handleWordLookupDoubleClick,
+  } = useEnglishWordLookup()
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_CUSTOM_ARTICLES, JSON.stringify(customArticles))
+    } catch {
+      // ignore
+    }
+  }, [customArticles])
+
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_READING_CHECKIN, JSON.stringify(checkinMap))
-    } catch {}
+    } catch {
+      // ignore
+    }
   }, [checkinMap])
 
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_SAVED_WORDS, JSON.stringify(savedWords))
-    } catch {}
+    } catch {
+      // ignore
+    }
   }, [savedWords])
 
-  // 当前文献实体
+  // 监听来自 WordLookupPopover 的生词收藏广播，保持计数与星标同步
+  useEffect(() => {
+    const onSaved = (ev: Event) => {
+      const word = (ev as CustomEvent<{ word?: string }>).detail?.word
+      if (word) {
+        setSavedWords((prev) => ({ ...prev, [word]: true, [word.toLowerCase()]: true }))
+      }
+    }
+    window.addEventListener('english-vocab-saved', onSaved)
+    return () => window.removeEventListener('english-vocab-saved', onSaved)
+  }, [])
+
+  // 当打开自定义贴入抽屉时，加载已上传的可读英语讲义供一键导入段落
+  useEffect(() => {
+    if (!isCustomDrawerOpen) return
+    api
+      .getBooks()
+      .then((res) => {
+        const list = (res.books || []).filter(
+          (b) => b.domain === 'english' && (b.isTextReadable || !b.isPdf)
+        )
+        setEnglishTextBooks(list.slice(0, 8))
+      })
+      .catch(() => {})
+  }, [isCustomDrawerOpen])
+
   const currentArticle = useMemo(() => {
-    return DAILY_READING_ARTICLES.find((a) => a.id === selectedArticleId) || DAILY_READING_ARTICLES[0]
-  }, [selectedArticleId])
+    return allArticles.find((a) => a.id === selectedArticleId) || allArticles[0]
+  }, [allArticles, selectedArticleId])
 
-  // 筛选文章列表
-  const filteredArticles = useMemo(() => {
-    return DAILY_READING_ARTICLES.filter((a) => {
-      if (categoryFilter !== 'all' && a.topicCategory !== categoryFilter) return false
-      if (journalFilter !== 'all' && a.sourceJournal !== journalFilter) return false
-      return true
-    })
-  }, [categoryFilter, journalFilter])
+  const isCurrentCustom = currentArticle.id.startsWith('custom_art_')
 
-  // 自动滚动聊天到底部
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatMessages])
 
-  // 切换文章时重置部分状态
+  // 为动态外刊从本地大纲词库扫描提取真实出现在该篇正文中的核心考研词汇（杜绝任何旧文章词表串台！）
+  const populateVocabFromLocalPool = useCallback(async (articleId: string, fullText: string) => {
+    try {
+      const mod = await import('@shared/data/vocabulary')
+      const pool = (mod.VOCAB_POOL || []) as Array<{
+        word: string
+        phonetic: string
+        definition: string
+        frequency?: string
+      }>
+      const poolMap = new Map(pool.map((item) => [item.word.toLowerCase(), item]))
+      const rawTokens = fullText.match(/[a-zA-Z]{4,}/g) || []
+      const seen = new Set<string>()
+      const matchedVocab: DailyReadingArticle['keyVocab'] = []
+
+      for (const tok of rawTokens) {
+        const cands = generateLemmaCandidates(tok)
+        for (const cand of cands) {
+          const hit = poolMap.get(cand)
+          if (hit && !seen.has(hit.word.toLowerCase())) {
+            seen.add(hit.word.toLowerCase())
+            matchedVocab.push({
+              word: hit.word,
+              phonetic: hit.phonetic || '',
+              meaning: hit.definition,
+              isKaoYanCrucial: hit.frequency === '高频',
+            })
+            break
+          }
+        }
+        if (matchedVocab.length >= 15) break
+      }
+
+      if (matchedVocab.length > 0) {
+        setCustomArticles((prev) =>
+          prev.map((a) => (a.id === articleId ? { ...a, keyVocab: matchedVocab } : a))
+        )
+      }
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  // 核心流式 SSE AI 伴读引擎（调用 /api/local-agents/chat，彻底废除 2.5s 硬编码超时与旧文章串台回退！）
+  const streamAiCompanionResponse = useCallback(
+    async (
+      userDisplayText: string,
+      systemPromptText: string,
+      targetArticle: DailyReadingArticle,
+      onCompleteText?: (finalText: string) => void
+    ) => {
+      if (isAiReplying) return
+      const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      const userMsgId = `u-${Date.now()}`
+      const assistantMsgId = `a-${Date.now() + 1}`
+
+      setChatMessages((prev) => [
+        ...prev,
+        { id: userMsgId, role: 'user', content: userDisplayText, timestamp: nowStr },
+        { id: assistantMsgId, role: 'assistant', content: '', timestamp: nowStr },
+      ])
+      setIsAiReplying(true)
+
+      const fullArticleContent = targetArticle.paragraphs.map((p) => p.en).join('\n\n')
+      const finalMessage = `【考研英语外刊精读真实原文上下文】
+篇目：《${targetArticle.title}》
+当前聚焦句：${activeSentence ? activeSentence.en : '通读全篇'}
+
+【英文原文全文】：
+"""
+${fullArticleContent.slice(0, 4500)}
+"""
+
+【学生指令/提问】：
+${systemPromptText}
+
+请以考研英语阅卷组名师与外刊精读导师身份，严格基于上方提供的【英文原文全文】（严禁脱离本文编造无关内容），用清晰结构化的简体中文给出深度精析。`
+
+      try {
+        const res = await fetch('/api/local-agents/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authService.getAuthHeaders(),
+          },
+          body: JSON.stringify({
+            message: finalMessage,
+            agentId: 'mojuan',
+            history: chatMessages
+              .slice(-4)
+              .filter((m) => m.content.trim().length > 0)
+              .map((m) => ({ role: m.role, content: m.content })),
+            projectName: '考研英语研学中枢 · 每日外刊精读',
+            pageContext: '外刊精读流式导读、生词提取与长难句语法精析',
+          }),
+        })
+
+        if (!res.ok) {
+          if (res.status === 402) {
+            throw new Error('伴学积分不足（单次精析消耗 0.1 积分），请签到领取积分后重试。')
+          }
+          throw new Error(`AI 伴读服务响应异常 (HTTP ${res.status})`)
+        }
+
+        const reader = res.body?.getReader()
+        if (!reader) throw new Error('流式读取器不可用')
+        const decoder = new TextDecoder()
+        let buffer = ''
+        let accumulated = ''
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+          const chunks = buffer.split('\n\n')
+          buffer = chunks.pop() || ''
+
+          for (const chunk of chunks) {
+            const trimmed = chunk.trim()
+            if (!trimmed.startsWith('data:')) continue
+            try {
+              const payload = JSON.parse(trimmed.replace(/^data:\s*/, ''))
+              if (payload.type === 'delta' && payload.text) {
+                accumulated += payload.text
+                setChatMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantMsgId ? { ...m, content: accumulated } : m
+                  )
+                )
+              } else if (payload.type === 'error') {
+                throw new Error(payload.message || 'AI 流式输出中断')
+              }
+            } catch (innerErr: any) {
+              if (innerErr?.message && !innerErr.message.includes('JSON')) {
+                throw innerErr
+              }
+            }
+          }
+        }
+
+        if (accumulated.trim()) {
+          onCompleteText?.(accumulated)
+        } else {
+          setChatMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantMsgId
+                ? { ...m, content: '⚠️ AI 未返回有效文本，请稍后点击重试。' }
+                : m
+            )
+          )
+        }
+      } catch (err: any) {
+        setChatMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantMsgId
+              ? {
+                  ...m,
+                  content: `⚠️ AI 伴读请求未能完成：${err?.message || '网络连接异常'}。\n\n💡 您仍可直接点击左侧任意英文单词呼出**即点即查词典**，或点击长难句查看本地语法骨架树！`,
+                }
+              : m
+          )
+        )
+      } finally {
+        setIsAiReplying(false)
+      }
+    },
+    [activeSentence, chatMessages, isAiReplying]
+  )
+
   const handleSelectArticle = (art: DailyReadingArticle) => {
     setSelectedArticleId(art.id)
     setActiveSentence(null)
     setUserAnswers({})
     setShowAnalysis({})
-    setIsCustomMode(false)
+    setIsCustomDrawerOpen(false)
     setChatMessages([
       {
         id: `init-${art.id}-${Date.now()}`,
         role: 'assistant',
-        content: `📖 切换至精读文献 **《${art.title}》**！\n\n本篇来自 **${art.sourceJournal}**，蓝思难度 **${art.lexileLevel}**。建议先通读抓取核心论点，遇到长难句点击即可呼出语法树拆解。`,
+        content: `📖 已切换至精读文献 **《${art.title}》**！\n\n点击左侧任意单词可即点即查入库艾宾浩斯，点击任意句子可聚焦拆解语法骨架，或在下方发起流式提问。`,
         timestamp: '刚刚',
       },
     ])
   }
 
-  // 切换打卡
+  const handleDeleteCustomArticle = (artId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    const remaining = customArticles.filter((a) => a.id !== artId)
+    setCustomArticles(remaining)
+    if (selectedArticleId === artId) {
+      setSelectedArticleId(remaining[0]?.id || DAILY_READING_ARTICLES[0].id)
+    }
+  }
+
+  // 从用户已上传的英语讲义/资料中读取英文段落填入自选输入框
+  const handleImportFromBook = async (book: BookItem) => {
+    setLoadingBookSnippet(book.id)
+    try {
+      const res = await api.readBook(book.relativePath, book.scope)
+      const raw = (res.content || '').trim()
+      // 提取其中英文占比较高的连续段落
+      const blocks = raw
+        .split(/\n{2,}/)
+        .map((b) => b.replace(/^[#>*\-\s]+/gm, '').trim())
+        .filter((b) => (b.match(/[a-zA-Z]{3,}/g) || []).length >= 18)
+      const snippet = blocks.slice(0, 4).join('\n\n') || raw.slice(0, 1500)
+      setCustomTitleInput(book.name.replace(/\.[^.]+$/, ''))
+      setCustomInputText(snippet)
+    } catch (err: any) {
+      alert('读取讲义文本失败：' + (err?.message || '请确认该文档支持文本读取'))
+    } finally {
+      setLoadingBookSnippet(null)
+    }
+  }
+
+  // 挂载用户贴入的自选外刊至左侧主阅读器，并立即启动流式 AI 导读 + 核心生词 + 长难句精析
+  const handleMountCustomArticleAndAnalyze = async () => {
+    const trimmed = customInputText.trim()
+    if (!trimmed) return
+    const englishWordCount = (trimmed.match(/[a-zA-Z]+/g) || []).length
+    if (englishWordCount < 8) {
+      alert('请粘贴至少包含一个完整英文句子的外刊或真题段落。')
+      return
+    }
+
+    const dynamicArt = buildDynamicArticleFromText(trimmed, customTitleInput)
+    setCustomArticles((prev) => [dynamicArt, ...prev.slice(0, 9)])
+    setSelectedArticleId(dynamicArt.id)
+    setActiveSentence(null)
+    setIsCustomDrawerOpen(false)
+    setSideTab('companion')
+    setCustomInputText('')
+    setCustomTitleInput('')
+
+    // 1. 立即用本地 2000+ 大纲词库扫描这篇新外刊提取真实生词
+    populateVocabFromLocalPool(dynamicArt.id, trimmed)
+
+    // 2. 启动流式 SSE 深度导读与长难句精析，并在完成后回填导读摘要
+    await streamAiCompanionResponse(
+      `📖 已载入自选外刊《${dynamicArt.title}》，请生成全文导读、核心考研生词与长难句精析`,
+      `请针对我刚贴入的这篇英文外刊完成以下三项深度精析：
+1. **【全文主旨导读与作者态度】**：用 2~3 句话精准概括本文核心论点、行文脉络及作者态度倾向；
+2. **【考研核心生词与熟词生义】**：提取文中 5~8 个最具考研命题价值的高级词汇或熟词生义短语（给出音标、在本文中的精准词义及记忆法）；
+3. **【重点长难句语法树与译文对照】**：挑选文中结构最复杂的 2~3 个长难句，拆解【主句主干】与【修饰从句】，并给出地道流畅的中文参考译文。`,
+      dynamicArt,
+      (finalText) => {
+        // 提取首段导读更新到顶部文章摘要栏
+        const summaryClean = finalText
+          .replace(/[#*>`]/g, '')
+          .split('\n')
+          .map((l) => l.trim())
+          .find((l) => l.length >= 24 && !l.startsWith('1.') && !l.includes('全文主旨导读'))
+        if (summaryClean) {
+          setCustomArticles((prev) =>
+            prev.map((a) =>
+              a.id === dynamicArt.id
+                ? {
+                    ...a,
+                    abstractZh:
+                      summaryClean.length > 160
+                        ? summaryClean.slice(0, 158) + '...'
+                        : summaryClean,
+                    authorAttitude: 'AI 已完成全文精析（详见右侧伴读面板）',
+                  }
+                : a
+            )
+          )
+        }
+      }
+    )
+  }
+
   const toggleCheckin = () => {
     setCheckinMap((prev) => ({
       ...prev,
@@ -165,154 +549,128 @@ export default function DailyReadingTab() {
     }))
   }
 
-  // 收藏生词
-  const toggleSaveWord = (word: string) => {
+  // 修复侧边栏生词“假收藏”：同步真实写入后端艾宾浩斯背单词词库！
+  const handleRealSaveSideWord = async (v: {
+    word: string
+    phonetic: string
+    meaning: string
+    familiarMeaningDifferent?: string
+  }) => {
+    const alreadySaved = Boolean(savedWords[v.word] || savedWords[v.word.toLowerCase()])
     setSavedWords((prev) => ({
       ...prev,
-      [word]: !prev[word],
+      [v.word]: true,
+      [v.word.toLowerCase()]: true,
     }))
+
+    try {
+      // 从当前文章中寻找包含该词的原句作为真实记忆例句
+      let exampleSentence = ''
+      for (const p of currentArticle.paragraphs) {
+        const hitSen = p.sentences.find((s) =>
+          s.en.toLowerCase().includes(v.word.toLowerCase())
+        )
+        if (hitSen) {
+          exampleSentence = hitSen.en
+          break
+        }
+      }
+
+      await saveWordToEbbinghaus({
+        word: v.word,
+        phonetic: v.phonetic,
+        definition: v.familiarMeaningDifferent
+          ? `${v.meaning}（${v.familiarMeaningDifferent}）`
+          : v.meaning,
+        example: exampleSentence || `From "${currentArticle.title}"`,
+      })
+
+      setVocabToast(
+        alreadySaved
+          ? `「${v.word}」已更新同步至艾宾浩斯复习库`
+          : `⭐「${v.word}」已真实加入艾宾浩斯背单词队列！`
+      )
+      setTimeout(() => setVocabToast(null), 2600)
+    } catch (err: any) {
+      setVocabToast(err?.message || '同步词库失败，已暂存本地')
+      setTimeout(() => setVocabToast(null), 2600)
+    }
   }
 
-  // 发送 AI 伴读消息
+  // 发送伴读提问（全面走流式 /api/local-agents/chat，零硬编码短超时，零跨篇串台）
   const handleSendMessage = async (textToSend?: string) => {
     const q = (textToSend || inputQuestion).trim()
     if (!q || isAiReplying) return
-
-    const userMsg: ChatMessage = {
-      id: `u-${Date.now()}`,
-      role: 'user',
-      content: q,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    }
-
-    setChatMessages((prev) => [...prev, userMsg])
     setInputQuestion('')
-    setIsAiReplying(true)
-
-    // 快捷探针直接调用名师启发式知识库（极速秒回），自定义提问优先尝试远程 AI 并设 2 秒超时
-    const isQuickPrompt = [
-      '总结核心论点与作者态度',
-      '提炼考研熟词生义清单',
-      '预测这篇出题的同义替换点',
-      '解析当前选中的长难句',
-    ].includes(q)
-
-    if (isQuickPrompt) {
-      setTimeout(() => {
-        const replyText = generateAiCompanionReply(q, currentArticle, undefined, activeSentence?.en)
-        setChatMessages((prev) => [
-          ...prev,
-          {
-            id: `a-${Date.now()}`,
-            role: 'assistant',
-            content: replyText,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          },
-        ])
-        setIsAiReplying(false)
-      }, 350)
-      return
-    }
-
-    // 远程 AI 接口调用（带 2.5 秒超时控制）
-    try {
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('AI response timeout')), 2500)
-      )
-
-      const apiCall = api.sendMessage(
-        `【考研英语文献伴读上下文】
-文章标题：《${currentArticle.title}》
-外刊来源：${currentArticle.sourceJournal}
-当前焦点长难句：${activeSentence ? activeSentence.en : '全文阅读中'}
-学生提问：${q}
-请以考研英语阅卷组名师兼伴读导师身份，给出深入浅出、切中考研命题点与长难句语法的详细中文解答。`,
-        chatMessages.slice(-4).map((m) => ({ role: m.role, content: m.content }))
-      )
-
-      const response = await Promise.race([apiCall, timeoutPromise])
-
-      if (response && response.reply) {
-        setChatMessages((prev) => [
-          ...prev,
-          {
-            id: `a-${Date.now()}`,
-            role: 'assistant',
-            content: response.reply,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          },
-        ])
-        setIsAiReplying(false)
-        return
-      }
-    } catch {
-      // 优雅降级至本地专属考研伴读知识库
-    }
-
-    setTimeout(() => {
-      const replyText = generateAiCompanionReply(q, currentArticle, undefined, activeSentence?.en)
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          id: `a-${Date.now()}`,
-          role: 'assistant',
-          content: replyText,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        },
-      ])
-      setIsAiReplying(false)
-    }, 400)
+    await streamAiCompanionResponse(q, q, currentArticle)
   }
 
-  // 点击句子高亮并触发 AI 解构
   const handleSentenceClick = (sen: ReadingSentence) => {
     setActiveSentence(sen)
-    // 自动在 AI 对话中加入提示
     if (sen.isHardLongSentence && sideTab === 'companion') {
       const analysis = sen.treeAnalysis || analyzeSentenceGrammarTree(sen.en)
+      const zhLine =
+        sen.zh && !sen.zh.startsWith('（点击右侧')
+          ? `\n💡 **译文参考**：${sen.zh}`
+          : ''
       setChatMessages((prev) => [
         ...prev,
         {
           id: `sen-${Date.now()}`,
           role: 'assistant',
-          content: `🔍 **【长难句解构提示】**\n> *"${sen.en}"*\n\n🌳 **主干骨架**：${analysis.mainTrunk}\n📌 **从句解析**：${analysis.clauseInfo}\n💡 **译文参考**：${sen.zh}`,
+          content: `🔍 **【长难句结构速览】**\n> *"${sen.en}"*\n\n🌳 **主句主干**：${analysis.mainTrunk}\n📌 **从句层级**：${analysis.clauseInfo}${zhLine}`,
           timestamp: '刚刚',
         },
       ])
     }
   }
 
-  // 统计指标
   const totalCheckedIn = Object.values(checkinMap).filter(Boolean).length
-  const totalSavedWordsCount = Object.values(savedWords).filter(Boolean).length
+  // 去重统计真实已收藏单词数（避免大小写重复计数）
+  const totalSavedWordsCount = useMemo(() => {
+    const uniqueLower = new Set(
+      Object.entries(savedWords)
+        .filter(([, val]) => Boolean(val))
+        .map(([k]) => k.toLowerCase())
+    )
+    return uniqueLower.size
+  }, [savedWords])
 
-  // 渲染 AI 伴读导师核心工作卡片 (支持桌面端右栏固定与移动端全屏抽屉复用)
   const renderCompanionCard = (isModal = false) => {
     return (
-      <div className={`space-y-4 ${isModal ? '' : 'bento-card rounded-3xl p-4 sm:p-5 bg-white border border-slate-200/90 shadow-sm'}`}>
-        {/* 仅在桌面端独立卡片模式下渲染顶栏切页，移动端弹窗已由顶层控制条统一接管 */}
+      <div
+        className={`space-y-4 ${
+          isModal
+            ? ''
+            : 'bento-card rounded-3xl p-4 sm:p-5 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs'
+        }`}
+      >
         {!isModal && (
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-2">
-              <span className="flex h-3 w-3 relative">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="flex h-3 w-3 relative shrink-0">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
               </span>
-              <div className="flex flex-col">
-                <div className="text-xs font-black text-slate-900 flex items-center gap-1">
-                  <Bot className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>考研英语 AI 伴读导师</span>
+              <div className="flex flex-col min-w-0">
+                <div className="text-xs font-black text-slate-900 dark:text-slate-100 flex items-center gap-1">
+                  <Bot className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                  <span className="truncate">考研英语 AI 伴读导师</span>
                 </div>
-                <span className="text-2xs text-slate-400">实时交互 · 答疑长难句与同义替换</span>
+                <span className="text-2xs text-slate-400 truncate">
+                  流式深度精析 · 真实同步艾宾浩斯词库
+                </span>
               </div>
             </div>
 
-            <div className="inline-flex rounded-xl bg-slate-100 p-0.5 text-xs font-bold">
+            <div className="inline-flex rounded-xl bg-slate-100 dark:bg-slate-800 p-0.5 text-xs font-bold shrink-0">
               <button
                 type="button"
                 onClick={() => setSideTab('companion')}
                 className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                  sideTab === 'companion' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'
+                  sideTab === 'companion'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-xs'
+                    : 'text-slate-500 dark:text-slate-400'
                 }`}
               >
                 伴读对话
@@ -321,29 +679,40 @@ export default function DailyReadingTab() {
                 type="button"
                 onClick={() => setSideTab('vocab')}
                 className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                  sideTab === 'vocab' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'
+                  sideTab === 'vocab'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-xs'
+                    : 'text-slate-500 dark:text-slate-400'
                 }`}
               >
-                生词速查
+                生词({currentArticle.keyVocab.length})
               </button>
-              <button
-                type="button"
-                onClick={() => setSideTab('quiz')}
-                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
-                  sideTab === 'quiz' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'
-                }`}
-              >
-                真题模考
-              </button>
+              {currentArticle.mockQuestions.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSideTab('quiz')}
+                  className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                    sideTab === 'quiz'
+                      ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-xs'
+                      : 'text-slate-500 dark:text-slate-400'
+                  }`}
+                >
+                  模考
+                </button>
+              )}
             </div>
           </div>
         )}
 
-        {/* TAB 1: AI 伴读对话互动流 */}
+        {/* TAB 1: AI 伴读流式对话流 */}
         {sideTab === 'companion' && (
           <div className="space-y-3">
-            {/* 对话消息区 */}
-            <div className={`${isModal ? 'space-y-3 p-2.5 rounded-2xl bg-slate-50/80 border border-slate-100 text-xs' : 'h-[360px] overflow-y-auto space-y-3 p-2.5 rounded-2xl bg-slate-50/80 border border-slate-100 text-xs no-scrollbar'}`}>
+            <div
+              className={`${
+                isModal
+                  ? 'space-y-3 p-2.5 rounded-2xl bg-slate-50/80 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-xs'
+                  : 'h-[390px] overflow-y-auto space-y-3 p-3 rounded-2xl bg-slate-50/80 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-xs no-scrollbar'
+              }`}
+            >
               {chatMessages.map((msg) => {
                 const isUser = msg.role === 'user'
                 return (
@@ -352,13 +721,22 @@ export default function DailyReadingTab() {
                     className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} space-y-1`}
                   >
                     <div
-                      className={`max-w-[90%] p-3 rounded-2xl leading-relaxed whitespace-pre-wrap ${
+                      className={`max-w-[94%] p-3 rounded-2xl leading-relaxed ${
                         isUser
-                          ? 'bg-slate-900 text-white rounded-tr-none'
-                          : 'bg-white text-slate-800 border border-slate-200/80 shadow-xs rounded-tl-none'
+                          ? 'bg-indigo-600 text-white rounded-tr-none whitespace-pre-wrap'
+                          : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 border border-slate-200/80 dark:border-slate-700 shadow-xs rounded-tl-none'
                       }`}
                     >
-                      {msg.content}
+                      {isUser ? (
+                        msg.content
+                      ) : msg.content ? (
+                        <MarkdownRenderer content={msg.content} />
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-indigo-600 dark:text-indigo-300 animate-pulse">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>正在结合当前外刊原文推演...</span>
+                        </span>
+                      )}
                     </div>
                     <span className="text-2xs text-slate-400 font-mono px-1">
                       {msg.timestamp}
@@ -366,33 +744,30 @@ export default function DailyReadingTab() {
                   </div>
                 )
               })}
-              {isAiReplying && (
-                <div className="flex items-center gap-2 p-3 bg-white rounded-2xl border border-slate-200/80 text-xs text-indigo-600 animate-pulse">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>考研英语 AI 伴读导师正在解析长难句与命题点...</span>
-                </div>
-              )}
               <div ref={chatBottomRef} />
             </div>
 
-            {/* 快捷提问提词器 */}
+            {/* 快捷提问探针 */}
             <div className="space-y-1.5">
-              <div className="text-2xs font-bold text-slate-500 flex items-center gap-1">
+              <div className="text-2xs font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
                 <Sparkles className="w-3 h-3 text-amber-500" />
-                <span>伴读快捷探针：</span>
+                <span>针对本篇外刊一键提问：</span>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {[
-                  '总结核心论点与作者态度',
-                  '提炼考研熟词生义清单',
-                  '预测这篇出题的同义替换点',
-                  '解析当前选中的长难句',
+                  '总结本文核心论点与作者态度',
+                  '提取本文考研熟词生义清单',
+                  '预测本篇真题同义替换命题点',
+                  activeSentence
+                    ? `深度拆解并翻译当前选中的第 ${activeSentence.sentenceIndex} 句`
+                    : '挑选本文最难长难句做语法树拆解',
                 ].map((promptText) => (
                   <button
                     key={promptText}
                     type="button"
+                    disabled={isAiReplying}
                     onClick={() => handleSendMessage(promptText)}
-                    className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-2xs font-bold transition-all cursor-pointer"
+                    className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 text-slate-700 dark:text-slate-200 text-2xs font-bold transition-all cursor-pointer disabled:opacity-50"
                   >
                     {promptText}
                   </button>
@@ -412,13 +787,13 @@ export default function DailyReadingTab() {
                 type="text"
                 value={inputQuestion}
                 onChange={(e) => setInputQuestion(e.target.value)}
-                placeholder="向 AI 伴读提问（如：这段为什么用这个词？怎么同义替换？）..."
-                className="flex-1 py-2 px-3 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="向 AI 伴读提问本篇词汇、语法或翻译..."
+                className="flex-1 py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
               <button
                 type="submit"
                 disabled={!inputQuestion.trim() || isAiReplying}
-                className="p-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-40 transition-all cursor-pointer shadow-xs"
+                className="p-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-40 transition-all cursor-pointer shadow-xs"
               >
                 <Send className="w-3.5 h-3.5" />
               </button>
@@ -426,61 +801,92 @@ export default function DailyReadingTab() {
           </div>
         )}
 
-        {/* TAB 2: 生词与熟词生义速查本 */}
+        {/* TAB 2: 生词与熟词生义速查本（真实接入艾宾浩斯复习词库） */}
         {sideTab === 'vocab' && (
           <div className={`space-y-3 ${isModal ? '' : 'max-h-[460px] overflow-y-auto no-scrollbar'}`}>
-            <div className="text-xs text-slate-500">
-              收录本篇文献中出现的考研核心真题词汇与熟词生义警告，点击右侧可一键加入生词本：
+            <div className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              点击右侧收藏按钮，生词将**真实写入艾宾浩斯背单词词库**并进入今日复习队列（同时您也可直接点击左侧英文正文任意单词即点即查）：
             </div>
-            <div className="space-y-2">
-              {currentArticle.keyVocab.map((v) => {
-                const isSaved = savedWords[v.word]
-                return (
-                  <div
-                    key={v.word}
-                    className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start justify-between gap-2"
-                  >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-black text-slate-900">{v.word}</span>
-                        <span className="text-2xs font-mono text-slate-400">{v.phonetic}</span>
-                        {v.isKaoYanCrucial && (
-                          <span className="px-1.5 py-0.2 rounded text-2xs font-bold bg-amber-500/15 text-amber-800">
-                            核心考词
+
+            {vocabToast && (
+              <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-xs font-bold text-emerald-700 dark:text-emerald-300 animate-fade-in">
+                {vocabToast}
+              </div>
+            )}
+
+            {currentArticle.keyVocab.length > 0 ? (
+              <div className="space-y-2">
+                {currentArticle.keyVocab.map((v) => {
+                  const isSaved = Boolean(savedWords[v.word] || savedWords[v.word.toLowerCase()])
+                  return (
+                    <div
+                      key={v.word}
+                      className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700 flex items-start justify-between gap-2"
+                    >
+                      <div className="space-y-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-black font-serif text-slate-900 dark:text-slate-100">
+                            {v.word}
                           </span>
+                          <span className="text-2xs font-mono text-slate-400">{v.phonetic}</span>
+                          {v.isKaoYanCrucial && (
+                            <span className="px-1.5 py-0.2 rounded text-2xs font-bold bg-amber-500/15 text-amber-800 dark:text-amber-300">
+                              核心考词
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed">
+                          {v.meaning}
+                        </div>
+                        {v.familiarMeaningDifferent && (
+                          <div className="text-2xs font-bold text-rose-600 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 p-1.5 rounded-lg border border-rose-200 dark:border-rose-800/60">
+                            {v.familiarMeaningDifferent}
+                          </div>
                         )}
                       </div>
-                      <div className="text-xs text-slate-700 leading-relaxed">{v.meaning}</div>
-                      {v.familiarMeaningDifferent && (
-                        <div className="text-2xs font-bold text-rose-600 bg-rose-50 p-1.5 rounded-lg border border-rose-200">
-                          {v.familiarMeaningDifferent}
-                        </div>
-                      )}
-                    </div>
 
-                    <button
-                      type="button"
-                      onClick={() => toggleSaveWord(v.word)}
-                      className={`p-1.5 rounded-xl transition-all cursor-pointer ${
-                        isSaved
-                          ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                          : 'bg-white text-slate-400 hover:text-slate-700 border border-slate-200'
-                      }`}
-                      title={isSaved ? '已收藏在生词本' : '加入生词本'}
-                    >
-                      {isSaved ? <BookmarkCheck className="w-4 h-4 text-amber-600" /> : <Bookmark className="w-4 h-4" />}
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => speakEnglishText(v.word, 'en-US')}
+                          className="p-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 hover:text-indigo-600 cursor-pointer"
+                          title="美音朗读"
+                        >
+                          <Volume2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRealSaveSideWord(v)}
+                          className={`p-1.5 rounded-xl transition-all cursor-pointer border ${
+                            isSaved
+                              ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700'
+                              : 'bg-white dark:bg-slate-800 text-slate-400 hover:text-amber-600 border-slate-200 dark:border-slate-700'
+                          }`}
+                          title={isSaved ? '已同步至艾宾浩斯词库' : '加入艾宾浩斯背单词词库'}
+                        >
+                          {isSaved ? (
+                            <BookmarkCheck className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                          ) : (
+                            <Bookmark className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="p-6 text-center text-xs text-slate-400 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                可直接点击左侧外刊正文任意英文单词即点即查并收藏入库，或在伴读对话点击「提取本文考研熟词生义清单」。
+              </div>
+            )}
           </div>
         )}
 
         {/* TAB 3: 真题级配套模考题 */}
-        {sideTab === 'quiz' && (
+        {sideTab === 'quiz' && currentArticle.mockQuestions.length > 0 && (
           <div className={`space-y-4 ${isModal ? '' : 'max-h-[460px] overflow-y-auto no-scrollbar'}`}>
-            <div className="text-xs font-bold text-slate-500">
+            <div className="text-xs font-bold text-slate-500 dark:text-slate-400">
               基于本篇外刊命制的考研真题同源模考题 (共 {currentArticle.mockQuestions.length} 题)：
             </div>
             {currentArticle.mockQuestions.map((q, idx) => {
@@ -491,23 +897,24 @@ export default function DailyReadingTab() {
               return (
                 <div
                   key={q.id}
-                  className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-2.5"
+                  className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/90 dark:border-slate-700 space-y-2.5"
                 >
-                  <div className="flex items-center justify-between text-xs font-bold text-slate-500">
-                    <span>第 {idx + 1} 题 · {q.type}</span>
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
+                    <span>
+                      第 {idx + 1} 题 · {q.type}
+                    </span>
                     {isSubmitted && (
-                      <span className={`font-black ${isCorrect ? 'text-emerald-600' : 'text-rose-600'}`}>
-                        {isCorrect ? '✓ 回答正确' : `✗ 回答错误 (正确答案: ${q.answer})`}
+                      <span className={`font-black ${isCorrect ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                        {isCorrect ? '✓ 回答正确' : `✗ 回答错误 (答案: ${q.answer})`}
                       </span>
                     )}
                   </div>
 
-                  <div className="text-xs sm:text-[13px] font-extrabold text-slate-900 leading-snug">
+                  <div className="font-serif text-sm font-bold text-slate-900 dark:text-slate-100 leading-snug">
                     {q.stem}
                   </div>
 
-                  {/* 选项组 */}
-                  <div className="space-y-1.5 font-sans">
+                  <div className="space-y-1.5">
                     {(['A', 'B', 'C', 'D'] as const).map((optKey) => {
                       const isPicked = chosen === optKey
                       return (
@@ -518,15 +925,15 @@ export default function DailyReadingTab() {
                             setUserAnswers((prev) => ({ ...prev, [q.id]: optKey }))
                             setShowAnalysis((prev) => ({ ...prev, [q.id]: true }))
                           }}
-                          className={`w-full text-left p-2.5 rounded-xl text-xs font-medium border transition-all cursor-pointer flex items-center gap-2 ${
+                          className={`w-full text-left p-2.5 rounded-xl font-serif text-[13.5px] border transition-all cursor-pointer flex items-center gap-2 ${
                             isPicked
                               ? isCorrect
-                                ? 'bg-emerald-50 border-emerald-400 text-emerald-950 font-bold'
-                                : 'bg-rose-50 border-rose-400 text-rose-950 font-bold'
-                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                                ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-400 text-emerald-950 dark:text-emerald-100 font-bold'
+                                : 'bg-rose-50 dark:bg-rose-950/50 border-rose-400 text-rose-950 dark:text-rose-100 font-bold'
+                              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
                           }`}
                         >
-                          <span className="w-5 h-5 rounded-lg bg-slate-100 text-slate-700 font-bold flex items-center justify-center shrink-0">
+                          <span className="w-5 h-5 rounded-lg bg-slate-100 dark:bg-slate-800 font-mono text-xs text-slate-700 dark:text-slate-300 font-bold flex items-center justify-center shrink-0">
                             {optKey}
                           </span>
                           <span className="leading-relaxed">{q.options[optKey]}</span>
@@ -535,12 +942,15 @@ export default function DailyReadingTab() {
                     })}
                   </div>
 
-                  {/* 考研名师解析与同义替换 */}
                   {showAnalysis[q.id] && (
-                    <div className="p-3 rounded-xl bg-white border border-slate-200 text-xs space-y-1.5">
-                      <div className="font-bold text-slate-800">📋 考研真题命题解析：</div>
-                      <p className="text-slate-600 leading-relaxed">{q.analysis}</p>
-                      <div className="text-2xs font-bold text-indigo-700 bg-indigo-50 p-2 rounded-lg">
+                    <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs space-y-1.5">
+                      <div className="font-bold text-slate-800 dark:text-slate-100">
+                        📋 考研真题命题解析：
+                      </div>
+                      <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+                        {q.analysis}
+                      </p>
+                      <div className="text-2xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 p-2 rounded-lg">
                         🔍 考点同义替换还原：{q.paraphrasePoint}
                       </div>
                     </div>
@@ -555,7 +965,9 @@ export default function DailyReadingTab() {
   }
 
   return (
-    <div className="space-y-4 animate-fade-in-up text-slate-900">
+    <div className="space-y-4 animate-fade-in-up text-slate-900 dark:text-slate-100">
+      <WordLookupPopover state={lookupState} onClose={closeLookup} />
+
       {/* ── 顶部仪表盘：外刊源刊档案与今日精读打卡 ── */}
       <div className="rounded-3xl p-4 sm:p-5 bg-gradient-to-r from-slate-950 via-indigo-950 to-slate-900 text-white relative overflow-hidden shadow-xl border border-slate-800">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 relative z-10">
@@ -563,10 +975,10 @@ export default function DailyReadingTab() {
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 text-2xs font-black shadow-xs">
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>考研外刊真题同源精读</span>
+                <span>{isCurrentCustom ? '自选外刊动态精读舱' : '考研外刊真题同源精读'}</span>
               </span>
               <span className="px-2 py-0.5 rounded-full bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 text-2xs font-mono font-bold">
-                {currentArticle.sourceJournal}
+                {isCurrentCustom ? 'Custom Source' : currentArticle.sourceJournal}
               </span>
               <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-2xs font-mono">
                 蓝思难度 {currentArticle.lexileLevel}
@@ -584,16 +996,17 @@ export default function DailyReadingTab() {
             </p>
           </div>
 
-          {/* 打卡与数据统计徽章 */}
           <div className="flex flex-wrap items-center gap-3 shrink-0">
             <div className="flex items-center gap-3 px-3.5 py-2 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
               <div className="text-center">
                 <div className="text-xs text-slate-400">已打卡文献</div>
-                <div className="text-base font-black text-amber-300">{totalCheckedIn} / {DAILY_READING_ARTICLES.length}</div>
+                <div className="text-base font-black text-amber-300">
+                  {totalCheckedIn} / {allArticles.length}
+                </div>
               </div>
               <div className="w-px h-7 bg-white/10" />
               <div className="text-center">
-                <div className="text-xs text-slate-400">生词收藏</div>
+                <div className="text-xs text-slate-400">入库生词</div>
                 <div className="text-base font-black text-sky-300">{totalSavedWordsCount} 词</div>
               </div>
             </div>
@@ -614,12 +1027,39 @@ export default function DailyReadingTab() {
         </div>
       </div>
 
-      {/* ── 筛选栏：主题选择、中英对照开关、长难句过滤、自定义输入 ── */}
-      <div className="bento-card rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3 bg-white/90 border border-slate-200/80 shadow-xs">
-        {/* 文献切换药丸列表 */}
+      {/* ── 筛选栏：内置与自选文献切换、贴入自选外刊、中英对照开关 ── */}
+      <div className="bento-card rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3 bg-white/95 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          {/* 用户自定义导入的外刊胶囊 */}
+          {customArticles.map((art) => {
+            const isSelected = art.id === currentArticle.id && !isCustomDrawerOpen
+            return (
+              <div
+                key={art.id}
+                onClick={() => handleSelectArticle(art)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer border ${
+                  isSelected
+                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-xs'
+                    : 'bg-indigo-50/70 dark:bg-indigo-950/50 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100'
+                }`}
+              >
+                <span>📝</span>
+                <span className="max-w-[130px] truncate">{art.title}</span>
+                <button
+                  type="button"
+                  onClick={(e) => handleDeleteCustomArticle(art.id, e)}
+                  className="p-0.5 rounded hover:bg-black/15 opacity-75 hover:opacity-100 cursor-pointer"
+                  title="移除此自选篇章"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+            )
+          })}
+
+          {/* 内置权威外刊列表 */}
           {DAILY_READING_ARTICLES.map((art) => {
-            const isSelected = art.id === currentArticle.id && !isCustomMode
+            const isSelected = art.id === currentArticle.id && !isCustomDrawerOpen
             return (
               <button
                 key={art.id}
@@ -627,24 +1067,32 @@ export default function DailyReadingTab() {
                 onClick={() => handleSelectArticle(art)}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                   isSelected
-                    ? 'bg-slate-900 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80'
+                    ? 'bg-slate-900 dark:bg-indigo-600 text-white shadow-xs'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200/80 dark:hover:bg-slate-700'
                 }`}
               >
-                <span>{art.sourceJournal === 'The Economist' ? '📊' : art.sourceJournal === 'Harvard Business Review' ? '💼' : '🧠'}</span>
+                <span>
+                  {art.sourceJournal === 'The Economist'
+                    ? '📊'
+                    : art.sourceJournal === 'Harvard Business Review'
+                    ? '💼'
+                    : '🧠'}
+                </span>
                 <span>{art.topicCategory}</span>
-                <span className="opacity-70 text-2xs font-mono">({art.sourceJournal.split(' ')[0]})</span>
+                <span className="opacity-70 text-2xs font-mono">
+                  ({art.sourceJournal.split(' ')[0]})
+                </span>
               </button>
             )
           })}
 
           <button
             type="button"
-            onClick={() => setIsCustomMode((v) => !v)}
+            onClick={() => setIsCustomDrawerOpen((v) => !v)}
             className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer border ${
-              isCustomMode
+              isCustomDrawerOpen
                 ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
-                : 'bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50'
+                : 'bg-white dark:bg-slate-900 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40'
             }`}
           >
             <PlusCircle className="w-3.5 h-3.5" />
@@ -654,7 +1102,6 @@ export default function DailyReadingTab() {
 
         {/* 视图调节工具 */}
         <div className="flex items-center gap-2">
-          {/* 移动端快速呼出 AI 伴读导师胶囊 */}
           <button
             type="button"
             onClick={() => setMobileCompanionOpen(true)}
@@ -667,13 +1114,17 @@ export default function DailyReadingTab() {
           <button
             type="button"
             onClick={() => setShowBilingual((v) => !v)}
-            className={`inline-flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer shrink-0 ${
+            className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer shrink-0 ${
               showBilingual
-                ? 'bg-slate-100 text-slate-800 border-slate-300'
-                : 'bg-white text-slate-500 border-slate-200'
+                ? 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 border-slate-300 dark:border-slate-700'
+                : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800'
             }`}
           >
-            {showBilingual ? <Eye className="w-3.5 h-3.5 text-indigo-600 shrink-0" /> : <EyeOff className="w-3.5 h-3.5 shrink-0" />}
+            {showBilingual ? (
+              <Eye className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+            ) : (
+              <EyeOff className="w-3.5 h-3.5 shrink-0" />
+            )}
             <span className="sm:hidden">{showBilingual ? '中英' : '纯英'}</span>
             <span className="hidden sm:inline">{showBilingual ? '中英对照' : '纯英沉浸'}</span>
           </button>
@@ -681,83 +1132,133 @@ export default function DailyReadingTab() {
           <button
             type="button"
             onClick={() => setHighlightHardOnly((v) => !v)}
-            className={`inline-flex items-center gap-1 px-2 sm:px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer shrink-0 ${
+            className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer shrink-0 ${
               highlightHardOnly
-                ? 'bg-amber-500 text-white border-amber-500 shadow-xs'
-                : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
+                ? 'bg-amber-500 text-slate-950 border-amber-500 shadow-xs'
+                : 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/50'
             }`}
           >
             <Flame className="w-3.5 h-3.5 shrink-0" />
             <span className="sm:hidden">长难句</span>
-            <span className="hidden sm:inline">高亮长难句</span>
+            <span className="hidden sm:inline">只看长难句</span>
           </button>
         </div>
       </div>
 
-      {/* ── 自定义外刊输入抽屉 ── */}
-      {isCustomMode && (
-        <div className="bento-card rounded-3xl p-4 sm:p-5 bg-indigo-50/50 border border-indigo-200/80 space-y-3">
-          <div className="flex items-center justify-between">
+      {/* ── 自定义外刊输入与讲义段落导入抽屉 ── */}
+      {isCustomDrawerOpen && (
+        <div className="bento-card rounded-3xl p-5 bg-gradient-to-br from-indigo-50/70 via-white to-slate-50 dark:from-slate-900 dark:via-slate-900/95 dark:to-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/70 space-y-3.5 animate-fade-in">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-indigo-600" />
-              <h3 className="text-sm font-extrabold text-slate-900">贴入自定义英文文献或长难句段落</h3>
+              <FileText className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <h3 className="text-sm font-extrabold text-slate-900 dark:text-slate-100">
+                贴入自选英文外刊 / 从已上传英语讲义导入段落
+              </h3>
             </div>
-            <span className="text-xs text-indigo-600 font-medium">AI 伴读引擎将自动进行长难句语法树拆解与命题点挖掘</span>
+            <span className="text-xs text-indigo-600 dark:text-indigo-300 font-medium">
+              载入后将挂载至左侧主阅读器（支持逐句聚焦、点词即查入库与流式 AI 全文精析）
+            </span>
           </div>
+
+          {/* 若书架中有已上传的英语讲义，支持一键抽取段落 */}
+          {englishTextBooks.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1">
+                <BookOpen className="w-3.5 h-3.5 text-indigo-500" />
+                <span>从书架英语讲义导入：</span>
+              </span>
+              {englishTextBooks.map((b) => (
+                <button
+                  key={b.id}
+                  type="button"
+                  disabled={loadingBookSnippet === b.id}
+                  onClick={() => handleImportFromBook(b)}
+                  className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/50 text-[11px] font-semibold transition-colors cursor-pointer"
+                >
+                  {loadingBookSnippet === b.id ? '读取中...' : `📄 ${b.name}`}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <input
+            type="text"
+            value={customTitleInput}
+            onChange={(e) => setCustomTitleInput(e.target.value)}
+            placeholder="可选：输入外刊标题（留空将自动取首句提炼标题）..."
+            className="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+
           <textarea
-            rows={4}
+            rows={5}
             value={customInputText}
             onChange={(e) => setCustomInputText(e.target.value)}
-            placeholder="请在此粘贴任意英文段落（例如来自《经济学人》、《卫报》、历年模拟题），点击开始精读..."
-            className="w-full p-3 rounded-2xl bg-white border border-slate-200 text-xs sm:text-[13px] text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed"
+            placeholder="请在此粘贴任意英文外刊段落或真题原文（如 The Economist, The Guardian, Scientific American 等），点击下方按钮直接载入左侧主精读阅读器..."
+            className="w-full p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-serif text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 leading-relaxed"
           />
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                if (customInputText.trim()) {
-                  handleSendMessage(`请对以下这段英文进行长难句语法树拆解并标出考研重点生词：\n\n"${customInputText.trim()}"`)
-                  setSideTab('companion')
-                }
-              }}
-              className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-all cursor-pointer shadow-sm"
-            >
-              让 AI 伴读精析此段
-            </button>
+
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+              已输入 {(customInputText.match(/[a-zA-Z]+/g) || []).length} 个英文词
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsCustomDrawerOpen(false)}
+                className="px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+              >
+                收起
+              </button>
+              <button
+                type="button"
+                disabled={!customInputText.trim() || isAiReplying}
+                onClick={handleMountCustomArticleAndAnalyze}
+                className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-500 disabled:opacity-50 transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span>载入左侧主阅读器并流式精析</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* ── 主体双栏：左侧段落句句精读 + 右侧 AI 伴读导师舱 ── */}
+      {/* ── 主体双栏：左侧段落句句精读（支持点词即查） + 右侧 AI 伴读导师舱 ── */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-        {/* 左侧：文献段落交互区 (md及以上占 7 列，移动端占满) */}
-        <div className="md:col-span-7 space-y-4">
+        <div
+          onClick={handleWordLookupClick}
+          onDoubleClick={handleWordLookupDoubleClick}
+          className="md:col-span-7 space-y-4"
+        >
           {currentArticle.paragraphs.map((p) => {
             return (
               <div
                 key={p.index}
-                className="bento-card rounded-3xl p-4 sm:p-6 bg-white border border-slate-200/90 shadow-sm space-y-3 transition-all hover:border-slate-300"
+                className="bento-card rounded-3xl p-4 sm:p-6 bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-xs space-y-3.5 transition-all hover:border-slate-300 dark:hover:border-slate-700"
               >
-                {/* 段首主旨徽章 */}
-                <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100 text-xs">
+                <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800 text-xs">
                   <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-slate-900 text-white text-2xs font-black flex items-center justify-center">
+                    <span className="w-5 h-5 rounded-full bg-slate-900 dark:bg-indigo-600 text-white text-2xs font-black flex items-center justify-center">
                       P{p.index}
                     </span>
-                    <span className="font-extrabold text-slate-700">段落核心：{p.corePoint}</span>
+                    <span className="font-extrabold text-slate-700 dark:text-slate-200">
+                      {p.corePoint}
+                    </span>
                   </div>
                   {p.examTrapAlert && (
-                    <span className="hidden sm:inline-flex items-center gap-1 text-2xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                      <AlertTriangle className="w-3 h-3 text-amber-600" />
+                    <span className="hidden sm:inline-flex items-center gap-1 text-2xs font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
+                      <AlertTriangle className="w-3 h-3 text-amber-600 dark:text-amber-400" />
                       <span>题眼探针</span>
                     </span>
                   )}
                 </div>
 
-                {/* 句句精读区 */}
-                <div className="space-y-3 font-serif">
+                {/* 句句学术衬线精读区 */}
+                <div className="space-y-3.5 font-serif">
                   {p.sentences.map((sen) => {
-                    const isSelected = activeSentence?.sentenceIndex === sen.sentenceIndex && activeSentence?.en === sen.en
+                    const isSelected =
+                      activeSentence?.sentenceIndex === sen.sentenceIndex &&
+                      activeSentence?.en === sen.en
                     const isHard = sen.isHardLongSentence
 
                     if (highlightHardOnly && !isHard) {
@@ -768,73 +1269,80 @@ export default function DailyReadingTab() {
                       <div
                         key={sen.sentenceIndex}
                         onClick={() => handleSentenceClick(sen)}
-                        className={`p-3 rounded-2xl transition-all cursor-pointer border ${
+                        className={`p-3.5 rounded-2xl transition-all cursor-pointer border ${
                           isSelected
-                            ? 'bg-amber-50/80 border-amber-400 shadow-sm'
+                            ? 'bg-amber-50/80 dark:bg-amber-950/35 border-amber-400 dark:border-amber-600 shadow-xs'
                             : isHard
-                            ? 'bg-slate-50/70 border-slate-200/90 hover:bg-slate-100/70'
-                            : 'bg-transparent border-transparent hover:bg-slate-50'
+                            ? 'bg-slate-50/70 dark:bg-slate-800/45 border-slate-200/90 dark:border-slate-700 hover:bg-slate-100/70 dark:hover:bg-slate-800/70'
+                            : 'bg-transparent border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/40'
                         }`}
                       >
-                        {/* 英文原句 */}
-                        <div className="text-sm sm:text-[15px] text-slate-900 leading-relaxed font-normal flex items-start gap-2">
+                        <div className="text-[15.5px] sm:text-[16.5px] text-slate-900 dark:text-slate-100 leading-[1.85] tracking-[0.01em] font-normal flex items-start gap-2">
                           {isHard && (
-                            <span className="mt-0.5 shrink-0 px-1.5 py-0.2 rounded text-2xs font-sans font-bold bg-amber-500 text-white">
+                            <span className="mt-1 shrink-0 px-1.5 py-0.2 rounded text-2xs font-sans font-bold bg-amber-500 text-slate-950">
                               长难句
                             </span>
                           )}
-                          <span className={`${isSelected ? 'font-medium text-slate-950' : ''}`}>
+                          <span className={`${isSelected ? 'font-medium' : ''} select-text`}>
                             {sen.en}
                           </span>
                         </div>
 
-                        {/* 中文翻译对照 */}
-                        {showBilingual && (
-                          <div className="text-xs sm:text-[13px] text-slate-500 mt-1.5 font-sans leading-relaxed">
+                        {showBilingual && sen.zh && (
+                          <div className="text-xs sm:text-[13px] text-slate-500 dark:text-slate-400 mt-1.5 font-sans leading-relaxed">
                             {sen.zh}
                           </div>
                         )}
 
-                        {/* 若当前句子为长难句且被激活，展现语法树卡片 */}
                         {isSelected && sen.treeAnalysis && (
-                          <div className="mt-3 p-3 rounded-xl bg-white border border-amber-300/80 text-xs font-sans space-y-1.5 shadow-xs">
-                            <div className="font-bold text-amber-800 flex items-center gap-1">
-                              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                              <span>AI 语法树骨架解析：</span>
+                          <div
+                            data-no-word-lookup="true"
+                            className="mt-3 p-3.5 rounded-xl bg-white dark:bg-slate-900 border border-amber-300/80 dark:border-amber-700 text-xs font-sans space-y-1.5 shadow-xs"
+                          >
+                            <div className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1">
+                              <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                              <span>语法树骨架层次解析：</span>
                             </div>
-                            <div className="text-slate-800 font-mono text-2xs bg-amber-50/60 p-2 rounded-lg">
+                            <div className="text-slate-800 dark:text-slate-100 font-serif text-xs bg-amber-50/60 dark:bg-amber-950/40 p-2 rounded-lg">
                               {sen.treeAnalysis.mainTrunk}
                             </div>
-                            <div className="text-slate-600">
-                              <strong className="text-indigo-700">从句层级：</strong> {sen.treeAnalysis.clauseInfo}
+                            <div className="text-slate-600 dark:text-slate-300">
+                              <strong className="text-indigo-700 dark:text-indigo-300">
+                                从句层级：
+                              </strong>{' '}
+                              {sen.treeAnalysis.clauseInfo}
                             </div>
-                            <div className="text-slate-600">
-                              <strong className="text-slate-700">修饰成分：</strong> {sen.treeAnalysis.modifierInfo}
+                            <div className="text-slate-600 dark:text-slate-300">
+                              <strong className="text-slate-800 dark:text-slate-200">
+                                修饰成分：
+                              </strong>{' '}
+                              {sen.treeAnalysis.modifierInfo}
                             </div>
                             {sen.kaoyanNote && (
-                              <div className="text-rose-700 pt-1 border-t border-slate-100 font-medium">
+                              <div className="text-rose-700 dark:text-rose-300 pt-1 border-t border-slate-100 dark:border-slate-800 font-medium">
                                 💡 {sen.kaoyanNote}
                               </div>
                             )}
 
-                            {/* 一键呼出伴读对话并深度剖析 */}
                             <button
                               type="button"
+                              disabled={isAiReplying}
                               onClick={(e) => {
                                 e.stopPropagation()
-                                handleSendMessage(`请对当前这个考研长难句做深入语法解剖与同义替换考点推演：\n"${sen.en}"`)
+                                handleSendMessage(
+                                  `请对当前这个长难句做深入语法树解剖、精准翻译与考研同义替换推演：\n"${sen.en}"`
+                                )
                                 setSideTab('companion')
                                 setMobileCompanionOpen(true)
                               }}
-                              className="mt-2 w-full py-2 px-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-98"
+                              className="mt-2 w-full py-2 px-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-98 disabled:opacity-50"
                             >
                               <Bot className="w-3.5 h-3.5" />
-                              <span>呼出 AI 伴读：深度解构此句与命题点 →</span>
+                              <span>呼出 AI 伴读：流式精讲此句与中文精译 →</span>
                             </button>
                           </div>
                         )}
 
-                        {/* 句子包含的考研核心生词标签 */}
                         {sen.keyWords && sen.keyWords.length > 0 && (
                           <div className="flex flex-wrap items-center gap-1.5 mt-2 font-sans">
                             {sen.keyWords.map((kw, i) => (
@@ -842,8 +1350,8 @@ export default function DailyReadingTab() {
                                 key={i}
                                 className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-2xs font-medium border ${
                                   kw.isFamiliarDifferent
-                                    ? 'bg-rose-50 text-rose-800 border-rose-200'
-                                    : 'bg-slate-100 text-slate-700 border-slate-200'
+                                    ? 'bg-rose-50 dark:bg-rose-950/50 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
                                 }`}
                               >
                                 <strong className="font-bold">{kw.word}</strong>
@@ -861,13 +1369,13 @@ export default function DailyReadingTab() {
           })}
         </div>
 
-        {/* 右侧：AI 伴读导师工作舱 (在 md 及以上宽屏固定在右侧文章旁边，移动端通过悬浮与抽屉呈现) */}
+        {/* 右侧：AI 伴读导师工作舱 */}
         <div className="hidden md:block md:col-span-5 space-y-3.5 sticky top-20">
           {renderCompanionCard(false)}
         </div>
       </div>
 
-      {/* ── 📱 移动端专属：常驻灵动 AI 伴读悬浮胶囊 (未打开或最小化时呈现，随时一键恢复) ── */}
+      {/* 移动端常驻灵动 AI 伴读悬浮胶囊 */}
       {(!mobileCompanionOpen || windowMode === 'minimized') && (
         <div className="md:hidden fixed right-3 bottom-20 z-40 animate-fade-in">
           <button
@@ -877,7 +1385,6 @@ export default function DailyReadingTab() {
               setWindowMode('half')
             }}
             className="flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 text-white shadow-[0_4px_24px_rgba(79,70,229,0.45)] border border-indigo-400/50 active:scale-95 transition-all cursor-pointer"
-            title="展开 AI 伴读工作舱"
           >
             <span className="flex h-2.5 w-2.5 relative">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -894,118 +1401,116 @@ export default function DailyReadingTab() {
         </div>
       )}
 
-      {/* ── 📱 移动端 AI 伴读可放大缩小交互式弹窗 (消除双重滚动锁死与屏幕溢出) ── */}
-      {mobileCompanionOpen && windowMode !== 'minimized' && typeof document !== 'undefined' && createPortal(
-        <div
-          className="fixed inset-0 z-50 flex flex-col justify-end md:hidden bg-slate-950/45 backdrop-blur-xs transition-opacity duration-200"
-          onClick={() => setWindowMode('minimized')}
-        >
+      {/* 移动端 AI 伴读抽屉 */}
+      {mobileCompanionOpen &&
+        windowMode !== 'minimized' &&
+        typeof document !== 'undefined' &&
+        createPortal(
           <div
-            onClick={(e) => e.stopPropagation()}
-            className={`w-full bg-white rounded-t-3xl shadow-xl border-t border-slate-200 flex flex-col transition-all duration-300 ease-out overflow-hidden ${
-              windowMode === 'full' ? 'h-[92dvh]' : 'h-[58dvh]'
-            }`}
+            className="fixed inset-0 z-50 flex flex-col justify-end md:hidden bg-slate-950/45 backdrop-blur-xs transition-opacity duration-200"
+            onClick={() => setWindowMode('minimized')}
           >
-            {/* 顶栏控制条：拖拽小手柄 + 标题 + 放大缩小控制 */}
-            <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/90 rounded-t-3xl">
-              <div className="flex items-center gap-2 min-w-0">
-                <Bot className="w-4 h-4 text-indigo-600 shrink-0" />
-                <span className="text-xs font-black text-slate-900 truncate">考研英语 AI 伴读</span>
-                {activeSentence && (
-                  <span className="text-2xs text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full font-mono shrink-0">
-                    第{activeSentence.sentenceIndex}句
-                  </span>
-                )}
-                <span className="text-2xs text-slate-400 font-medium">
-                  {windowMode === 'full' ? '全屏沉浸' : '半屏伴读'}
-                </span>
-              </div>
-
-              {/* 窗口多态控制按钮群 */}
-              <div className="flex items-center gap-1 shrink-0">
-                {/* 最小化按钮 */}
-                <button
-                  type="button"
-                  onClick={() => setWindowMode('minimized')}
-                  className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200/80 active:scale-95 transition-all cursor-pointer"
-                  title="最小化为右下角胶囊"
-                  aria-label="最小化伴读"
-                >
-                  <Minus className="w-4 h-4" />
-                </button>
-
-                {/* 放大/缩小按钮 */}
-                <button
-                  type="button"
-                  onClick={() => setWindowMode(windowMode === 'full' ? 'half' : 'full')}
-                  className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200/80 active:scale-95 transition-all cursor-pointer"
-                  title={windowMode === 'full' ? '缩小为半屏' : '放大为全屏'}
-                  aria-label={windowMode === 'full' ? '缩小为半屏' : '放大为全屏'}
-                >
-                  {windowMode === 'full' ? (
-                    <Minimize2 className="w-4 h-4 text-indigo-600" />
-                  ) : (
-                    <Maximize2 className="w-4 h-4 text-indigo-600" />
-                  )}
-                </button>
-
-                {/* 关闭按钮 */}
-                <button
-                  type="button"
-                  onClick={() => setMobileCompanionOpen(false)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-200/80 active:scale-95 transition-all cursor-pointer"
-                  title="关闭伴读"
-                  aria-label="关闭伴读"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* 顶栏 Tab 切换按钮 */}
-            <div className="px-3.5 py-2 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
-              <div className="inline-flex w-full rounded-xl bg-slate-100 p-0.5 text-xs font-bold">
-                <button
-                  type="button"
-                  onClick={() => setSideTab('companion')}
-                  className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer text-center ${
-                    sideTab === 'companion' ? 'bg-white text-slate-900 shadow-xs font-extrabold' : 'text-slate-500'
-                  }`}
-                >
-                  伴读对话
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSideTab('vocab')}
-                  className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer text-center ${
-                    sideTab === 'vocab' ? 'bg-white text-slate-900 shadow-xs font-extrabold' : 'text-slate-500'
-                  }`}
-                >
-                  生词速查
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSideTab('quiz')}
-                  className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer text-center ${
-                    sideTab === 'quiz' ? 'bg-white text-slate-900 shadow-xs font-extrabold' : 'text-slate-500'
-                  }`}
-                >
-                  真题模考
-                </button>
-              </div>
-            </div>
-
-            {/* 唯一全权滚动区域：消除双重滚动条死锁，顺畅滑动 */}
             <div
-              className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3.5 space-y-3"
-              style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
+              onClick={(e) => e.stopPropagation()}
+              className={`w-full bg-white dark:bg-slate-900 rounded-t-3xl shadow-xl border-t border-slate-200 dark:border-slate-800 flex flex-col transition-all duration-300 ease-out overflow-hidden ${
+                windowMode === 'full' ? 'h-[92dvh]' : 'h-[58dvh]'
+              }`}
             >
-              {renderCompanionCard(true)}
+              <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0 bg-slate-50/90 dark:bg-slate-800/80 rounded-t-3xl">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Bot className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                  <span className="text-xs font-black text-slate-900 dark:text-slate-100 truncate">
+                    考研英语 AI 伴读
+                  </span>
+                  {activeSentence && (
+                    <span className="text-2xs text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/60 px-1.5 py-0.5 rounded-full font-mono shrink-0">
+                      第{activeSentence.sentenceIndex}句
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setWindowMode('minimized')}
+                    className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200/80 dark:hover:bg-slate-700 transition-all cursor-pointer"
+                    aria-label="最小化伴读"
+                  >
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setWindowMode(windowMode === 'full' ? 'half' : 'full')}
+                    className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200/80 dark:hover:bg-slate-700 transition-all cursor-pointer"
+                    aria-label="切换全屏"
+                  >
+                    {windowMode === 'full' ? (
+                      <Minimize2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    ) : (
+                      <Maximize2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMobileCompanionOpen(false)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-all cursor-pointer"
+                    aria-label="关闭伴读"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="px-3.5 py-2 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0 bg-white dark:bg-slate-900">
+                <div className="inline-flex w-full rounded-xl bg-slate-100 dark:bg-slate-800 p-0.5 text-xs font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setSideTab('companion')}
+                    className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer text-center ${
+                      sideTab === 'companion'
+                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-xs font-extrabold'
+                        : 'text-slate-500 dark:text-slate-400'
+                    }`}
+                  >
+                    伴读对话
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSideTab('vocab')}
+                    className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer text-center ${
+                      sideTab === 'vocab'
+                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-xs font-extrabold'
+                        : 'text-slate-500 dark:text-slate-400'
+                    }`}
+                  >
+                    生词({currentArticle.keyVocab.length})
+                  </button>
+                  {currentArticle.mockQuestions.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setSideTab('quiz')}
+                      className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer text-center ${
+                        sideTab === 'quiz'
+                          ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-xs font-extrabold'
+                          : 'text-slate-500 dark:text-slate-400'
+                      }`}
+                    >
+                      真题模考
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div
+                className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3.5 space-y-3"
+                style={{ touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}
+              >
+                {renderCompanionCard(true)}
+              </div>
             </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   )
 }

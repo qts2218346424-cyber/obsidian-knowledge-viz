@@ -23,7 +23,9 @@ import {
   Lock,
   Globe,
   Eye,
-  ExternalLink
+  ExternalLink,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-react'
 import MarkdownRenderer from './MarkdownRenderer'
 import {
@@ -86,27 +88,51 @@ function getDefaultSubjectForDomain(domain?: ResourceDomain): string {
   return list?.[0]?.value || '高等数学'
 }
 
-interface CustomQuestion {
+export interface CustomQuestion {
   id: string
   domain: ResourceDomain
   subject: string
   chapter?: string
-  type: 'choice' | 'blank'
+  type: 'choice' | 'multiple' | 'blank' | 'analysis'
   difficulty: '简单' | '中等' | '困难'
+  passage?: string
   question: string
-  options?: { A: string; B: string; C: string; D: string }
+  options?: Record<string, string>
   answer: string
   explanation: string
   tags: string[]
   importedAt?: string
 }
 
-interface ImportResourceModalProps {
+function isMultipleQuestion(q: { type?: string; options?: Record<string, any>; answer?: string }): boolean {
+  if (q.type === 'multiple') return true
+  if (q.options && Object.keys(q.options).length > 0) {
+    const rawAns = String(q.answer || '').trim()
+    if (/^[A-Fa-f](?:[\s,，、/]*[A-Fa-f])+$/.test(rawAns)) {
+      const letters = new Set(rawAns.toUpperCase().match(/[A-F]/g) || [])
+      if (letters.size >= 2) return true
+    }
+  }
+  return false
+}
+
+function isOptionKeyCorrect(q: { type?: string; options?: Record<string, any>; answer?: string }, key: string): boolean {
+  const ans = String(q.answer || '').trim().toUpperCase()
+  const k = key.trim().toUpperCase()
+  if (!ans || !k) return false
+  if (isMultipleQuestion(q)) {
+    return ans.includes(k)
+  }
+  return ans === k
+}
+
+export interface ImportResourceModalProps {
   isOpen: boolean
   onClose: () => void
   onQuestionsUpdated?: () => void
   onBooksUpdated?: () => void
   defaultTab?: 'books' | 'import_quiz' | 'analytics'
+  defaultDomain?: ResourceDomain
 }
 
 export default function ImportResourceModal({
@@ -115,14 +141,18 @@ export default function ImportResourceModal({
   onQuestionsUpdated,
   onBooksUpdated,
   defaultTab = 'books',
+  defaultDomain,
 }: ImportResourceModalProps) {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
   const isLoggedIn = Boolean(user)
   const [activeTab, setActiveTab] = useState<'books' | 'import_quiz' | 'analytics'>(defaultTab)
   const [scopeFilter, setScopeFilter] = useState<'all' | BookScope>('all')
-  const [domainFilter, setDomainFilter] = useState<'all' | ResourceDomain>('all')
+  const [domainFilter, setDomainFilter] = useState<'all' | ResourceDomain>(defaultDomain || 'all')
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [renameError, setRenameError] = useState<string | null>(null)
+  const [isDraggingFile, setIsDraggingFile] = useState(false)
+  const [expandedPassages, setExpandedPassages] = useState<Record<string, boolean>>({})
 
   // Books shelf state
   const [books, setBooks] = useState<BookItem[]>([])
@@ -130,7 +160,7 @@ export default function ImportResourceModal({
   const [selectedBook, setSelectedBook] = useState<BookItem | null>(null)
   const [, setBookContent] = useState<string>('')
   const [readingBook, setReadingBook] = useState(false)
-  const [uploadDomain, setUploadDomain] = useState<ResourceDomain>('math')
+  const [uploadDomain, setUploadDomain] = useState<ResourceDomain>(defaultDomain || 'math')
   const [uploadSubject, setUploadSubject] = useState<string>('auto')
   const [uploadCategory, setUploadCategory] = useState<string>('经典教材')
   const [isUploading, setIsUploading] = useState(false)
@@ -166,8 +196,8 @@ export default function ImportResourceModal({
 
   // Quiz Import state
   const [rawQuestionText, setRawQuestionText] = useState('')
-  const [importDomain, setImportDomain] = useState<ResourceDomain>('math')
-  const [importSubject, setImportSubject] = useState('高等数学')
+  const [quizDomain, setQuizDomain] = useState<ResourceDomain>(defaultDomain || 'math')
+  const [quizSubject, setQuizSubject] = useState(() => getDefaultSubjectForDomain(defaultDomain || 'math'))
   const [isParsingText, setIsParsingText] = useState(false)
   const [parsedPreviewQuestions, setParsedPreviewQuestions] = useState<CustomQuestion[]>([])
   const [customQuestions, setCustomQuestions] = useState<CustomQuestion[]>([])
@@ -175,6 +205,10 @@ export default function ImportResourceModal({
   const [jsonInput, setJsonInput] = useState('')
   const [importSubTab, setImportSubTab] = useState<'smart_text' | 'json' | 'manage'>('smart_text')
   const [importFeedback, setImportFeedback] = useState<string | null>(null)
+
+  const togglePassageExpand = (key: string) => {
+    setExpandedPassages(prev => ({ ...prev, [key]: !prev[key] }))
+  }
 
   // File input ref
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -200,6 +234,14 @@ export default function ImportResourceModal({
   useEffect(() => {
     if (isOpen) {
       setUploadError(null)
+      setRenameError(null)
+      if (defaultDomain) {
+        setUploadDomain(defaultDomain)
+        setUploadSubject('auto')
+        setQuizDomain(defaultDomain)
+        setQuizSubject(getDefaultSubjectForDomain(defaultDomain))
+        setDomainFilter(defaultDomain)
+      }
       loadBooks()
       loadCustomQuestions()
       // 若有未完成或刚完成的后台扫描任务，自动恢复进度显示
@@ -214,7 +256,7 @@ export default function ImportResourceModal({
     } else {
       stopScanPolling()
     }
-  }, [isOpen, user?.id])
+  }, [isOpen, user?.id, defaultDomain])
 
   useEffect(() => {
     setActiveTab(defaultTab)
@@ -396,15 +438,16 @@ export default function ImportResourceModal({
         onBooksUpdated?.()
         window.dispatchEvent(new CustomEvent('vault-updated'))
       } else {
-        alert(data.error || '删除失败，请稍后重试')
+        setUploadError(data.error || '删除失败，请稍后重试')
       }
     } catch (err: any) {
-      alert('删除异常: ' + (err.message || String(err)))
+      setUploadError('删除异常: ' + (err.message || String(err)))
     }
   }
 
   const handleOpenRename = (book: BookItem, e?: React.MouseEvent) => {
     e?.stopPropagation()
+    setRenameError(null)
     setRenamingBook(book)
     setNewBookName(book.name)
   }
@@ -412,6 +455,7 @@ export default function ImportResourceModal({
   const handleConfirmRename = async () => {
     if (!renamingBook || !newBookName.trim()) return
     setIsRenaming(true)
+    setRenameError(null)
     try {
       const res = await fetch('/api/books/rename', {
         method: 'POST',
@@ -432,14 +476,15 @@ export default function ImportResourceModal({
           })
         }
         setRenamingBook(null)
+        setImportFeedback(`已成功将资料重命名为《${data.newName || newBookName.trim()}》`)
         await loadBooks()
         onBooksUpdated?.()
         window.dispatchEvent(new CustomEvent('vault-updated'))
       } else {
-        alert(data.error || '重命名失败')
+        setRenameError(data.error || '重命名失败')
       }
     } catch (err: any) {
-      alert('重命名异常: ' + (err.message || String(err)))
+      setRenameError('重命名异常: ' + (err.message || String(err)))
     } finally {
       setIsRenaming(false)
     }
@@ -448,6 +493,7 @@ export default function ImportResourceModal({
   const handleSuggestName = async () => {
     if (!renamingBook) return
     setIsSuggestingName(true)
+    setRenameError(null)
     try {
       const res = await fetch('/api/books/suggest-name', {
         method: 'POST',
@@ -458,10 +504,10 @@ export default function ImportResourceModal({
       if (data.success && data.suggestedName) {
         setNewBookName(data.suggestedName)
       } else {
-        alert(data.error || '未能提炼出建议书名')
+        setRenameError(data.error || '未能提炼出建议书名')
       }
     } catch (err: any) {
-      alert('获取建议书名异常: ' + (err.message || String(err)))
+      setRenameError('获取建议书名异常: ' + (err.message || String(err)))
     } finally {
       setIsSuggestingName(false)
     }
@@ -481,10 +527,7 @@ export default function ImportResourceModal({
     setNewBookName(`${cleaned || base}${ext}`)
   }
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
+  const processUploadFile = async (file: File) => {
     setUploadError(null)
     if (!isLoggedIn) {
       setUploadError('请先登录账号后再导入资料（管理员导入全员共享，普通用户导入个人独享）')
@@ -500,36 +543,58 @@ export default function ImportResourceModal({
     let effectiveDomain = uploadDomain
     let effectiveSubject = uploadSubject
 
-    // 智能全科预判：基于文件名纠正领域与二级学科（杜绝默认“考研数学”导致 408 资料被误存入高数）
+    // 智能全科预判：仅当未传入显式 defaultDomain 且文件名有极强学科特征时辅助修正，绝不覆盖用户选定的政治/英语/专业课
     const lowerName = file.name.toLowerCase()
-    if (/408|操作系统|进程|虚拟内存|死锁|分页|计算机组成|计组|指令|微程序|流水线|cache|数据结构|二叉树|哈夫曼|图论|计网|网络|tcp|udp|ip/.test(lowerName)) {
-      effectiveDomain = 'cs_408'
-      setUploadDomain('cs_408')
-      if (/操作系统|进程|虚拟内存|死锁|分页|页面置换|调度算法/.test(lowerName)) {
-        effectiveSubject = '操作系统'
-        setUploadSubject('操作系统')
-      } else if (/计算机组成|计组|指令|流水线|微程序|cache/.test(lowerName)) {
-        effectiveSubject = '计算机组成原理'
-        setUploadSubject('计算机组成原理')
-      } else if (/计算机网络|计网|tcp|udp|ip|路由|子网/.test(lowerName)) {
-        effectiveSubject = '计算机网络'
-        setUploadSubject('计算机网络')
-      } else if (/数据结构|树|图|链表|排序|查找/.test(lowerName)) {
-        effectiveSubject = '数据结构'
-        setUploadSubject('数据结构')
-      }
-    } else if (/数学|高数|微积分|极限|导数|积分|级数|线代|矩阵|行列式|概率|随机变量|分布/.test(lowerName)) {
-      effectiveDomain = 'math'
-      setUploadDomain('math')
-      if (/线代|矩阵|行列式|特征值|二次型/.test(lowerName)) {
-        effectiveSubject = '线性代数'
-        setUploadSubject('线性代数')
-      } else if (/概率|随机变量|分布|期望|方差/.test(lowerName)) {
-        effectiveSubject = '概率论与数理统计'
-        setUploadSubject('概率论与数理统计')
-      } else if (/高数|微积分|极限|导数|定积分|微分方程/.test(lowerName)) {
-        effectiveSubject = '高等数学'
-        setUploadSubject('高等数学')
+    if (!defaultDomain) {
+      if (/政治|马原|毛中特|习思想|新思想|史纲|思修|肖秀荣|肖四|肖八|肖1000|腿姐|徐涛|时政/.test(lowerName)) {
+        effectiveDomain = 'politics'
+        setUploadDomain('politics')
+        if (effectiveSubject === 'auto') {
+          if (/马原|唯物|辩证法|剩余价值/.test(lowerName)) effectiveSubject = '马克思主义基本原理'
+          else if (/史纲|近现代史/.test(lowerName)) effectiveSubject = '中国近现代史纲要'
+          else if (/思修|法治/.test(lowerName)) effectiveSubject = '思想道德与法治'
+          else if (/时政|形势与政策/.test(lowerName)) effectiveSubject = '形势与政策'
+          else if (/新思想|习思想/.test(lowerName)) effectiveSubject = '习近平新时代中国特色社会主义思想'
+        }
+      } else if (/英语|阅读理解|完形|新题型|长难句|黄皮书|红宝书|恋练有词|english|vocab/.test(lowerName)) {
+        effectiveDomain = 'english'
+        setUploadDomain('english')
+        if (effectiveSubject === 'auto') {
+          if (/阅读/.test(lowerName)) effectiveSubject = '阅读理解'
+          else if (/完形|新题型/.test(lowerName)) effectiveSubject = '完形填空与新题型'
+          else if (/长难句|翻译/.test(lowerName)) effectiveSubject = '长难句与翻译'
+          else if (/作文|模板/.test(lowerName)) effectiveSubject = '英语作文'
+          else if (/词汇|单词|红宝书|恋练有词|vocab/.test(lowerName)) effectiveSubject = '核心词汇'
+        }
+      } else if (uploadDomain === 'math' && /408|操作系统|进程|虚拟内存|死锁|分页|计算机组成|计组|指令|微程序|流水线|cache|数据结构|二叉树|哈夫曼|图论|计网|网络|tcp|udp|ip/.test(lowerName)) {
+        effectiveDomain = 'cs_408'
+        setUploadDomain('cs_408')
+        if (/操作系统|进程|虚拟内存|死锁|分页|页面置换|调度算法/.test(lowerName)) {
+          effectiveSubject = '操作系统'
+          setUploadSubject('操作系统')
+        } else if (/计算机组成|计组|指令|流水线|微程序|cache/.test(lowerName)) {
+          effectiveSubject = '计算机组成原理'
+          setUploadSubject('计算机组成原理')
+        } else if (/计算机网络|计网|tcp|udp|ip|路由|子网/.test(lowerName)) {
+          effectiveSubject = '计算机网络'
+          setUploadSubject('计算机网络')
+        } else if (/数据结构|树|图|链表|排序|查找/.test(lowerName)) {
+          effectiveSubject = '数据结构'
+          setUploadSubject('数据结构')
+        }
+      } else if (uploadDomain === 'cs_408' && /数学|高数|微积分|极限|导数|积分|级数|线代|矩阵|行列式|概率|随机变量|分布/.test(lowerName)) {
+        effectiveDomain = 'math'
+        setUploadDomain('math')
+        if (/线代|矩阵|行列式|特征值|二次型/.test(lowerName)) {
+          effectiveSubject = '线性代数'
+          setUploadSubject('线性代数')
+        } else if (/概率|随机变量|分布|期望|方差/.test(lowerName)) {
+          effectiveSubject = '概率论与数理统计'
+          setUploadSubject('概率论与数理统计')
+        } else if (/高数|微积分|极限|导数|定积分|微分方程/.test(lowerName)) {
+          effectiveSubject = '高等数学'
+          setUploadSubject('高等数学')
+        }
       }
     }
 
@@ -615,6 +680,21 @@ export default function ImportResourceModal({
     }
   }
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    await processUploadFile(file)
+  }
+
+  const handleDropUpload = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDraggingFile(false)
+    const file = e.dataTransfer.files?.[0]
+    if (!file) return
+    await processUploadFile(file)
+  }
+
   const handleReadBook = async (book: BookItem) => {
     setSelectedBook(book)
     setExtractResult(null)
@@ -645,9 +725,10 @@ export default function ImportResourceModal({
 
   const handleAIExtract = async () => {
     if (!extractSnippet.trim()) {
-      alert('请输入或选择需要提炼的核心章节文本')
+      setUploadError('请输入或选择需要提炼的核心章节文本')
       return
     }
+    setUploadError(null)
     setIsExtracting(true)
     setExtractResult(null)
     try {
@@ -675,10 +756,10 @@ export default function ImportResourceModal({
           window.dispatchEvent(new CustomEvent('custom-questions-updated'))
         }
       } else {
-        alert(data.error || '提炼失败')
+        setUploadError(data.error || '提炼失败')
       }
     } catch (err: any) {
-      alert('AI 提炼异常: ' + err.message)
+      setUploadError('AI 提炼异常: ' + (err.message || String(err)))
     } finally {
       setIsExtracting(false)
     }
@@ -688,9 +769,10 @@ export default function ImportResourceModal({
 
   const handleSmartTextParse = async () => {
     if (!rawQuestionText.trim()) {
-      alert('请先在输入框粘贴题目内容')
+      setUploadError('请先在输入框粘贴题目内容')
       return
     }
+    setUploadError(null)
     setIsParsingText(true)
     try {
       const res = await fetch('/api/quiz/parse-text', {
@@ -698,18 +780,19 @@ export default function ImportResourceModal({
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({
           text: rawQuestionText,
-          domain: importDomain,
-          subject: importSubject,
+          domain: quizDomain,
+          subject: quizSubject,
         }),
       })
       const data = await res.json()
       if (data.questions && Array.isArray(data.questions)) {
         setParsedPreviewQuestions(data.questions)
+        setImportFeedback(`已成功识别解析 ${data.questions.length} 道题目，请核对右侧预览卡片后点击「确认存入做题中心」`)
       } else {
-        alert(data.error || '解析失败，请检查文本格式')
+        setUploadError(data.error || '解析失败，请检查文本格式')
       }
     } catch (err: any) {
-      alert('解析异常: ' + err.message)
+      setUploadError('解析异常: ' + (err.message || String(err)))
     } finally {
       setIsParsingText(false)
     }
@@ -749,9 +832,10 @@ export default function ImportResourceModal({
 
   const handleOcrParse = async () => {
     if (!pastedImage) {
-      alert('请先通过 Ctrl + V 粘贴截图或上传题目图片')
+      setUploadError('请先通过 Ctrl + V 粘贴截图或上传题目图片')
       return
     }
+    setUploadError(null)
     setIsParsingOcr(true)
     try {
       const res = await fetch('/api/quiz/parse-ocr', {
@@ -760,8 +844,8 @@ export default function ImportResourceModal({
         body: JSON.stringify({
           image: pastedImage,
           text: rawQuestionText.trim() || undefined,
-          domain: importDomain,
-          subject: importSubject,
+          domain: quizDomain,
+          subject: quizSubject,
         }),
       })
       const data = await res.json()
@@ -769,12 +853,14 @@ export default function ImportResourceModal({
         setParsedPreviewQuestions(data.questions)
         if (data.offline) {
           setImportFeedback('当前处于离线模式，已为您生成高保真考研题目模板，支持直接编辑保存。')
+        } else {
+          setImportFeedback(`视觉识别成功！共提取 ${data.questions.length} 道题目，请确认预览后入库。`)
         }
       } else {
-        alert(data.error || '图片识别失败，请确保截图清晰包含考研题干与公式')
+        setUploadError(data.error || '图片识别失败，请确保截图清晰包含考研题干与公式')
       }
     } catch (err: any) {
-      alert('OCR 识别异常: ' + err.message)
+      setUploadError('OCR 识别异常: ' + (err.message || String(err)))
     } finally {
       setIsParsingOcr(false)
     }
@@ -782,6 +868,7 @@ export default function ImportResourceModal({
 
   const handleCommitParsedQuestions = async () => {
     if (parsedPreviewQuestions.length === 0) return
+    setUploadError(null)
     try {
       const count = parsedPreviewQuestions.length
       const data = await api.saveCustomQuestions(parsedPreviewQuestions)
@@ -795,11 +882,12 @@ export default function ImportResourceModal({
         window.dispatchEvent(new CustomEvent('vault-notes-updated'))
       }
     } catch (err: any) {
-      alert('导入失败: ' + err.message)
+      setUploadError('导入失败: ' + (err.message || String(err)))
     }
   }
 
   const handleJsonImport = async () => {
+    setUploadError(null)
     try {
       const parsed = JSON.parse(jsonInput)
       const list = Array.isArray(parsed) ? parsed : [parsed]
@@ -813,7 +901,7 @@ export default function ImportResourceModal({
         window.dispatchEvent(new CustomEvent('vault-notes-updated'))
       }
     } catch (err: any) {
-      alert('JSON 格式有误: ' + err.message)
+      setUploadError('JSON 格式有误: ' + (err.message || String(err)))
     }
   }
   const handleDeleteCustomQuestion = async (id: string) => {
@@ -953,12 +1041,14 @@ export default function ImportResourceModal({
               <div className="lg:col-span-5 flex flex-col gap-4">
                 {/* Upload Card */}
                 <div className="rounded-xl border border-indigo-100 bg-white p-4 shadow-sm">
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex flex-wrap items-center justify-between gap-1 mb-2">
                     <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                       <Upload className="h-4 w-4 text-indigo-600" />
-                      导入新参考书 / 历年真题
+                      导入新参考书 / 历年真题 / 讲义
                     </span>
-                    <span className="text-2xs text-slate-400">支持 PDF, Markdown, TXT</span>
+                    <span className="text-[10px] text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full font-medium">
+                      全科多格式解析
+                    </span>
                   </div>
 
                   {/* 存储空间归属提示 */}
@@ -1012,21 +1102,9 @@ export default function ImportResourceModal({
                         className="w-full text-xs rounded-lg border border-slate-200 px-2.5 py-1.5 bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
                       >
                         <option value="auto">智能识别 (推荐)</option>
-                        {uploadDomain === 'cs_408' && (
-                          <>
-                            <option value="数据结构">数据结构</option>
-                            <option value="计算机组成原理">计算机组成原理</option>
-                            <option value="操作系统">操作系统</option>
-                            <option value="计算机网络">计算机网络</option>
-                          </>
-                        )}
-                        {uploadDomain === 'math' && (
-                          <>
-                            <option value="高等数学">高等数学</option>
-                            <option value="线性代数">线性代数</option>
-                            <option value="概率论与数理统计">概率论与数理统计</option>
-                          </>
-                        )}
+                        {(SUBJECT_OPTIONS_BY_DOMAIN[uploadDomain] || []).map(sub => (
+                          <option key={sub.value} value={sub.value}>{sub.label}</option>
+                        ))}
                       </select>
                     </div>
 
@@ -1076,7 +1154,7 @@ export default function ImportResourceModal({
                             : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300'
                         }`}
                       >
-                        <div className="font-semibold">📄 仅保存原 PDF 预览</div>
+                        <div className="font-semibold">📄 仅保存原件在线精读</div>
                         <div className={`text-[10px] mt-0.5 ${uploadActionMode === 'keep_only' ? 'text-emerald-100' : 'text-slate-400'}`}>
                           秒传留存，稍后按需再扫
                         </div>
@@ -1089,11 +1167,23 @@ export default function ImportResourceModal({
                     ref={fileInputRef}
                     onChange={handleFileUpload}
                     className="hidden"
-                    accept="application/pdf,.pdf,text/markdown,.md,.markdown,text/plain,.txt,text/html,.html,.htm,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    accept="application/pdf,.pdf,text/markdown,.md,.markdown,text/plain,.txt,text/html,.html,.htm,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.ppt,.pptx,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"
                   />
 
-                  <button
+                  <div
+                    onDragOver={e => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      if (!isDraggingFile) setIsDraggingFile(true)
+                    }}
+                    onDragLeave={e => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setIsDraggingFile(false)
+                    }}
+                    onDrop={handleDropUpload}
                     onClick={() => {
+                      if (isUploading) return
                       setUploadError(null)
                       if (!isLoggedIn) {
                         setUploadError('请先登录账号后再导入资料（管理员导入全员共享，普通用户导入个人独享）')
@@ -1101,21 +1191,32 @@ export default function ImportResourceModal({
                       }
                       fileInputRef.current?.click()
                     }}
-                    disabled={isUploading}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-semibold text-xs shadow-sm shadow-indigo-500/20 hover:from-indigo-500 hover:to-blue-500 transition-all disabled:opacity-50 cursor-pointer"
+                    className={`rounded-xl border-2 border-dashed p-3.5 text-center transition-all cursor-pointer ${
+                      isDraggingFile
+                        ? 'border-indigo-500 bg-indigo-50/80 scale-[1.01]'
+                        : 'border-indigo-200/90 bg-indigo-50/30 hover:bg-indigo-50/60 hover:border-indigo-300'
+                    }`}
                   >
-                    {isUploading ? (
-                      <>
-                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                        <span>正在归档导入中...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="h-4 w-4" />
-                        <span>{isAdmin ? '选择文件上传至全员共享资料库' : '选择文件上传至个人独享资料库'}</span>
-                      </>
-                    )}
-                  </button>
+                    <div className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-semibold text-xs shadow-sm shadow-indigo-500/20 hover:from-indigo-500 hover:to-blue-500 transition-all">
+                      {isUploading ? (
+                        <>
+                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                          <span>正在归档导入中...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-4 w-4" />
+                          <span>{isAdmin ? '拖拽或点击选择文件上传至全员共享资料库' : '拖拽或点击选择文件上传至个人独享资料库'}</span>
+                        </>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
+                      支持 <strong className="text-slate-700 font-semibold">PDF / Word (.docx) / PPT (.pptx) / Markdown / TXT / HTML</strong>
+                      <span className="block text-[10px] text-slate-400 mt-0.5">
+                        （自动识别 UTF-8 与 GBK 编码，支持双栏版面重排）
+                      </span>
+                    </p>
+                  </div>
                 </div>
 
                 {/* Books List */}
@@ -1392,6 +1493,15 @@ export default function ImportResourceModal({
                             type="text"
                             value={pageRangeInput}
                             onChange={e => setPageRangeInput(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault()
+                                if (e.nativeEvent.isComposing || (e as any).keyCode === 229) return
+                                if (selectedBook && autoExtractStatus !== 'analyzing') {
+                                  handleAutoExtract(selectedBook.relativePath, selectedBook.domain, selectedBook.name, selectedBook.scope)
+                                }
+                              }
+                            }}
                             placeholder="例如：1-40（留空则从第1页自动扫完）"
                             className="w-full text-xs rounded-lg border border-slate-200 px-2.5 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
                           />
@@ -1419,9 +1529,24 @@ export default function ImportResourceModal({
                               已入库 {activeScanTask.extractedQuestionsCount} 道题
                             </span>
                           </div>
-                          <div className="w-full h-2 rounded-full bg-indigo-100 overflow-hidden">
+                          <progress
+                            value={Math.max(4, activeScanTask.progress)}
+                            max={100}
+                            aria-label="资料全卷扫描进度"
+                            className="sr-only"
+                          >
+                            {activeScanTask.progress}%
+                          </progress>
+                          <div
+                            role="progressbar"
+                            aria-valuenow={activeScanTask.progress}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-label="资料全卷扫描进度"
+                            className="w-full h-2.5 rounded-full bg-indigo-100 overflow-hidden shadow-inner"
+                          >
                             <div
-                              className="h-full bg-gradient-to-r from-indigo-600 to-purple-600 transition-all duration-300"
+                              className="h-full bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 transition-all duration-300 rounded-full"
                               style={{ width: `${Math.max(4, activeScanTask.progress)}%` }}
                             />
                           </div>
@@ -1480,44 +1605,96 @@ export default function ImportResourceModal({
                       {autoExtractResult.questions && autoExtractResult.questions.length > 0 && (
                         <div className="space-y-2">
                           <div className="flex items-center justify-between text-2xs font-semibold text-slate-700">
-                            <span>🎯 自动命制并归入题库真题：</span>
+                            <span>🎯 自动提取并归入题库真题：</span>
                             <span className="text-indigo-600 font-normal">做题中心随时可刷</span>
                           </div>
-                          {autoExtractResult.questions.map((q, idx) => (
-                            <div key={idx} className="p-3 rounded-lg bg-white border border-slate-100 text-xs shadow-xs">
-                              <div className="font-medium text-slate-800 mb-1">
-                                {idx + 1}. <MarkdownRenderer content={q.question} />
-                              </div>
-                              {q.options && (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 my-2 text-2xs text-slate-600 bg-slate-50/70 p-2 rounded">
-                                  {Object.entries(q.options).map(([k, v]) => (
-                                    <div key={k} className="min-w-0 overflow-x-auto flex items-start gap-1">
-                                      <span className="font-semibold shrink-0">{k}.</span>
-                                      <div className="min-w-0 flex-1">
-                                        <MarkdownRenderer content={String(v)} inline />
+                          {autoExtractResult.questions.map((q, idx) => {
+                            const isMulti = isMultipleQuestion(q)
+                            const pKey = `auto-${idx}`
+                            const isPassageOpen = Boolean(expandedPassages[pKey])
+                            return (
+                              <div key={idx} className="p-3 rounded-lg bg-white border border-slate-100 text-xs shadow-xs space-y-2">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <span className="text-2xs font-bold text-slate-500">第 {idx + 1} 题</span>
+                                  {isMulti ? (
+                                    <span className="text-2xs px-2 py-0.5 rounded-full font-bold bg-purple-100 text-purple-700 border border-purple-200">
+                                      【多选题】
+                                    </span>
+                                  ) : q.type === 'analysis' ? (
+                                    <span className="text-2xs px-2 py-0.5 rounded-full font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                                      分析/解答题
+                                    </span>
+                                  ) : q.type === 'blank' ? (
+                                    <span className="text-2xs px-2 py-0.5 rounded-full font-semibold bg-sky-50 text-sky-700 border border-sky-200">
+                                      填空题
+                                    </span>
+                                  ) : (
+                                    <span className="text-2xs px-2 py-0.5 rounded-full font-semibold bg-slate-100 text-slate-600">
+                                      单选题
+                                    </span>
+                                  )}
+                                </div>
+                                {q.passage && (
+                                  <div className="rounded-lg border border-indigo-100 bg-indigo-50/40 overflow-hidden">
+                                    <button
+                                      type="button"
+                                      onClick={() => togglePassageExpand(pKey)}
+                                      className="w-full px-2.5 py-1.5 flex items-center justify-between text-left text-2xs font-semibold text-indigo-700 hover:bg-indigo-50 cursor-pointer"
+                                    >
+                                      <span>📖 关联阅读短文 / 分析材料</span>
+                                      {isPassageOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                                    </button>
+                                    {isPassageOpen && (
+                                      <div className="px-3 py-2 border-t border-indigo-100 bg-white/90 text-xs text-slate-700 max-h-48 overflow-y-auto leading-relaxed">
+                                        <MarkdownRenderer content={String(q.passage)} />
                                       </div>
-                                    </div>
-                                  ))}
+                                    )}
+                                  </div>
+                                )}
+                                <div className="font-medium text-slate-800">
+                                  <MarkdownRenderer content={q.question} />
                                 </div>
-                              )}
-                              <div className="text-2xs text-slate-500 flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-50">
-                                <div className="flex items-center gap-1 min-w-0 overflow-x-auto">
-                                  <span className="shrink-0">正确答案：</span>
-                                  <span className="font-bold text-emerald-600">
-                                    <MarkdownRenderer
-                                      content={
-                                        String(q.answer || '').includes('$') || !/\\/.test(String(q.answer || ''))
-                                          ? String(q.answer || '')
-                                          : `$${q.answer}$`
-                                      }
-                                      inline
-                                    />
-                                  </span>
+                                {q.options && (
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 my-1.5 text-2xs bg-slate-50/70 p-2 rounded">
+                                    {Object.entries(q.options).map(([k, v]) => {
+                                      const correct = isOptionKeyCorrect(q, k)
+                                      return (
+                                        <div
+                                          key={k}
+                                          className={`min-w-0 overflow-x-auto flex items-start gap-1 p-1 rounded ${
+                                            correct
+                                              ? 'bg-emerald-50 text-emerald-900 font-semibold border border-emerald-300'
+                                              : 'text-slate-600'
+                                          }`}
+                                        >
+                                          <span className="font-bold shrink-0">{k}.</span>
+                                          <div className="min-w-0 flex-1">
+                                            <MarkdownRenderer content={String(v)} inline />
+                                          </div>
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                )}
+                                <div className="text-2xs text-slate-500 flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-50">
+                                  <div className="flex items-center gap-1 min-w-0 overflow-x-auto">
+                                    <span className="shrink-0">正确答案：</span>
+                                    <span className={`font-bold ${isMulti ? 'text-purple-700' : 'text-emerald-600'}`}>
+                                      <MarkdownRenderer
+                                        content={
+                                          String(q.answer || '').includes('$') || !/\\/.test(String(q.answer || ''))
+                                            ? String(q.answer || '')
+                                            : `$${q.answer}$`
+                                        }
+                                        inline
+                                      />
+                                    </span>
+                                  </div>
+                                  <div className="text-2xs text-slate-400 truncate max-w-[260px]">考点：{(q.tags || []).join('、')}</div>
                                 </div>
-                                <div className="text-2xs text-slate-400 truncate max-w-[260px]">考点：{(q.tags || []).join('、')}</div>
                               </div>
-                            </div>
-                          ))}
+                            )
+                          })}
                         </div>
                       )}
                     </div>
@@ -1586,26 +1763,78 @@ export default function ImportResourceModal({
                           {extractResult.questions && extractResult.questions.length > 0 && (
                             <div className="space-y-2">
                               <span className="text-2xs font-semibold text-slate-700">配套生成试题预览：</span>
-                              {extractResult.questions.map((q, idx) => (
-                                <div key={idx} className="p-2.5 rounded-lg bg-white border border-slate-100 text-xs">
-                                  <div className="font-medium text-slate-800 mb-1">
-                                    {idx + 1}. <MarkdownRenderer content={q.question} />
+                              {extractResult.questions.map((q, idx) => {
+                                const isMulti = isMultipleQuestion(q)
+                                const pKey = `extract-${idx}`
+                                const isPassageOpen = Boolean(expandedPassages[pKey])
+                                return (
+                                  <div key={idx} className="p-2.5 rounded-lg bg-white border border-slate-100 text-xs space-y-1.5">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-2xs font-bold text-slate-500">第 {idx + 1} 题</span>
+                                      {isMulti && (
+                                        <span className="text-2xs px-2 py-0.5 rounded-full font-bold bg-purple-100 text-purple-700 border border-purple-200">
+                                          【多选题】
+                                        </span>
+                                      )}
+                                    </div>
+                                    {q.passage && (
+                                      <div className="rounded-lg border border-indigo-100 bg-indigo-50/40 overflow-hidden">
+                                        <button
+                                          type="button"
+                                          onClick={() => togglePassageExpand(pKey)}
+                                          className="w-full px-2.5 py-1 flex items-center justify-between text-left text-2xs font-semibold text-indigo-700 hover:bg-indigo-50 cursor-pointer"
+                                        >
+                                          <span>📖 关联阅读短文 / 分析材料</span>
+                                          {isPassageOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                                        </button>
+                                        {isPassageOpen && (
+                                          <div className="px-2.5 py-2 border-t border-indigo-100 bg-white text-xs text-slate-700 max-h-40 overflow-y-auto leading-relaxed">
+                                            <MarkdownRenderer content={String(q.passage)} />
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                    <div className="font-medium text-slate-800">
+                                      <MarkdownRenderer content={q.question} />
+                                    </div>
+                                    {q.options && (
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-2xs">
+                                        {Object.entries(q.options).map(([k, v]) => {
+                                          const correct = isOptionKeyCorrect(q, k)
+                                          return (
+                                            <div
+                                              key={k}
+                                              className={`px-2 py-1 rounded border flex items-start gap-1 ${
+                                                correct
+                                                  ? 'border-emerald-400 bg-emerald-50/60 text-emerald-900 font-semibold'
+                                                  : 'border-slate-100 bg-slate-50/50 text-slate-600'
+                                              }`}
+                                            >
+                                              <span className="font-bold shrink-0">{k}.</span>
+                                              <div className="min-w-0 flex-1">
+                                                <MarkdownRenderer content={String(v)} inline />
+                                              </div>
+                                            </div>
+                                          )
+                                        })}
+                                      </div>
+                                    )}
+                                    <div className="text-2xs text-slate-500 flex items-center gap-1 min-w-0 overflow-x-auto">
+                                      <span className="shrink-0">答案：</span>
+                                      <span className={`font-bold ${isMulti ? 'text-purple-700' : 'text-emerald-600'}`}>
+                                        <MarkdownRenderer
+                                          content={
+                                            String(q.answer || '').includes('$') || !/\\/.test(String(q.answer || ''))
+                                              ? String(q.answer || '')
+                                              : `$${q.answer}$`
+                                          }
+                                          inline
+                                        />
+                                      </span>
+                                    </div>
                                   </div>
-                                  <div className="text-2xs text-slate-500 flex items-center gap-1 min-w-0 overflow-x-auto">
-                                    <span className="shrink-0">答案：</span>
-                                    <span className="font-bold text-emerald-600">
-                                      <MarkdownRenderer
-                                        content={
-                                          String(q.answer || '').includes('$') || !/\\/.test(String(q.answer || ''))
-                                            ? String(q.answer || '')
-                                            : `$${q.answer}$`
-                                        }
-                                        inline
-                                      />
-                                    </span>
-                                  </div>
-                                </div>
-                              ))}
+                                )
+                              })}
                             </div>
                           )}
                         </div>
@@ -1663,11 +1892,11 @@ export default function ImportResourceModal({
                       <div>
                         <label className="block text-xs font-semibold text-slate-700 mb-1">学科领域</label>
                         <select
-                          value={importDomain}
+                          value={quizDomain}
                           onChange={e => {
                             const d = e.target.value as ResourceDomain
-                            setImportDomain(d)
-                            setImportSubject(getDefaultSubjectForDomain(d))
+                            setQuizDomain(d)
+                            setQuizSubject(getDefaultSubjectForDomain(d))
                           }}
                           className="w-full text-xs rounded-xl border border-slate-200 px-3 py-2 bg-white"
                         >
@@ -1680,11 +1909,11 @@ export default function ImportResourceModal({
                       <div>
                         <label className="block text-xs font-semibold text-slate-700 mb-1">科目章节</label>
                         <select
-                          value={importSubject}
-                          onChange={e => setImportSubject(e.target.value)}
+                          value={quizSubject}
+                          onChange={e => setQuizSubject(e.target.value)}
                           className="w-full text-xs rounded-xl border border-slate-200 px-3 py-2 bg-white"
                         >
-                          {(SUBJECT_OPTIONS_BY_DOMAIN[importDomain] || SUBJECT_OPTIONS_BY_DOMAIN.math).map(sub => (
+                          {(SUBJECT_OPTIONS_BY_DOMAIN[quizDomain] || SUBJECT_OPTIONS_BY_DOMAIN.math).map(sub => (
                             <option key={sub.value} value={sub.value}>{sub.label}</option>
                           ))}
                         </select>
@@ -1841,48 +2070,101 @@ D. 5
                           在左侧粘贴题目后点击「AI 智能格式化识别解析」，将在此处生成高质量的公式卡片预览
                         </div>
                       ) : (
-                        parsedPreviewQuestions.map((q, idx) => (
-                          <div key={idx} className="p-3.5 rounded-xl border border-indigo-100 bg-indigo-50/20">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="text-2xs px-2 py-0.5 rounded-full font-bold bg-indigo-100 text-indigo-700">
-                                {q.subject}
-                              </span>
-                              <span className="text-2xs px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                                {q.difficulty}
-                              </span>
-                            </div>
-
-                            <div className="text-xs font-medium text-slate-900 mb-3 min-w-0 max-w-full overflow-x-auto py-0.5 space-y-1">
-                              <div className="font-bold text-slate-700">第 {idx + 1} 题：</div>
-                              <MarkdownRenderer content={q.question} />
-                            </div>
-
-                            {q.options && (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
-                                {Object.entries(q.options).map(([k, v]) => (
-                                  <div
-                                    key={k}
-                                    className={`p-2 rounded-lg text-xs border flex items-start gap-1.5 min-w-0 overflow-x-auto ${
-                                      k === q.answer
-                                        ? 'border-emerald-500 bg-emerald-50/50 text-emerald-900 font-semibold'
-                                        : 'border-slate-200 bg-white text-slate-700'
-                                    }`}
-                                  >
-                                    <span className="font-bold shrink-0">{k}.</span>
-                                    <div className="min-w-0 flex-1">
-                                      <MarkdownRenderer content={String(v)} inline />
-                                    </div>
-                                  </div>
-                                ))}
+                        parsedPreviewQuestions.map((q, idx) => {
+                          const isMulti = isMultipleQuestion(q)
+                          const pKey = `preview-${idx}`
+                          const isPassageOpen = Boolean(expandedPassages[pKey])
+                          return (
+                            <div key={idx} className="p-3.5 rounded-xl border border-indigo-100 bg-indigo-50/20 space-y-2.5">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-2xs px-2 py-0.5 rounded-full font-bold bg-indigo-100 text-indigo-700">
+                                  {q.subject}
+                                </span>
+                                {isMulti ? (
+                                  <span className="text-2xs px-2 py-0.5 rounded-full font-bold bg-purple-100 text-purple-700 border border-purple-200">
+                                    【多选题】
+                                  </span>
+                                ) : q.type === 'analysis' ? (
+                                  <span className="text-2xs px-2 py-0.5 rounded-full font-semibold bg-amber-100 text-amber-700">
+                                    分析/解答题
+                                  </span>
+                                ) : q.type === 'blank' ? (
+                                  <span className="text-2xs px-2 py-0.5 rounded-full font-semibold bg-sky-100 text-sky-700">
+                                    填空题
+                                  </span>
+                                ) : (
+                                  <span className="text-2xs px-2 py-0.5 rounded-full font-semibold bg-slate-100 text-slate-600">
+                                    单选题
+                                  </span>
+                                )}
+                                <span className="text-2xs px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                                  {q.difficulty}
+                                </span>
                               </div>
-                            )}
 
-                            <div className="p-2 rounded-lg bg-white border border-slate-100 text-2xs text-slate-600">
-                              <span className="font-bold text-slate-800">标准解析：</span>
-                              <MarkdownRenderer content={q.explanation} />
+                              {q.passage && (
+                                <div className="rounded-lg border border-indigo-200/80 bg-indigo-50/60 overflow-hidden">
+                                  <button
+                                    type="button"
+                                    onClick={() => togglePassageExpand(pKey)}
+                                    className="w-full px-3 py-1.5 flex items-center justify-between text-left text-2xs font-semibold text-indigo-800 hover:bg-indigo-100/60 cursor-pointer"
+                                  >
+                                    <span>📖 关联阅读短文 / 分析材料</span>
+                                    {isPassageOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                                  </button>
+                                  {isPassageOpen && (
+                                    <div className="px-3 py-2.5 border-t border-indigo-200/60 bg-white text-xs text-slate-700 max-h-52 overflow-y-auto leading-relaxed">
+                                      <MarkdownRenderer content={q.passage} />
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              <div className="text-xs font-medium text-slate-900 min-w-0 max-w-full overflow-x-auto py-0.5 space-y-1">
+                                <div className="font-bold text-slate-700">第 {idx + 1} 题：</div>
+                                <MarkdownRenderer content={q.question} />
+                              </div>
+
+                              {q.options && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                  {Object.entries(q.options).map(([k, v]) => {
+                                    const correct = isOptionKeyCorrect(q, k)
+                                    return (
+                                      <div
+                                        key={k}
+                                        className={`p-2 rounded-lg text-xs border flex items-start gap-1.5 min-w-0 overflow-x-auto ${
+                                          correct
+                                            ? isMulti
+                                              ? 'border-purple-500 bg-purple-50/60 text-purple-950 font-semibold'
+                                              : 'border-emerald-500 bg-emerald-50/50 text-emerald-900 font-semibold'
+                                            : 'border-slate-200 bg-white text-slate-700'
+                                        }`}
+                                      >
+                                        <span className="font-bold shrink-0">{k}.</span>
+                                        <div className="min-w-0 flex-1">
+                                          <MarkdownRenderer content={String(v)} inline />
+                                        </div>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              )}
+
+                              <div className="p-2 rounded-lg bg-white border border-slate-100 text-2xs text-slate-600 space-y-1">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-bold text-slate-800">标准答案：</span>
+                                  <span className={`font-bold ${isMulti ? 'text-purple-700' : 'text-emerald-700'}`}>
+                                    {q.answer}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="font-bold text-slate-800">标准解析：</span>
+                                  <MarkdownRenderer content={q.explanation} />
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        ))
+                          )
+                        })
                       )}
                     </div>
                   </div>
@@ -1934,10 +2216,11 @@ D. 5
                               chapter: '主旨与细节推理',
                               type: 'choice',
                               difficulty: '中等',
+                              passage: 'While remote work offers unprecedented autonomy and eliminates daily commutes, organizational psychologists warn that blurred boundaries between home and office may quietly erode long-term team cohesion.',
                               question: 'According to the passage, the author\'s attitude toward remote work is mainly ________.',
                               options: { A: 'enthusiastic', B: 'cautious', C: 'indifferent', D: 'skeptical' },
                               answer: 'B',
-                              explanation: '原文先肯定了远程办公的灵活性，随后指出其在团队协作与职业边界上的潜在隐忧，整体态度偏向审慎（cautious）。',
+                              explanation: '原文先肯定了远程办公的自主性与免通勤优势，随后指出其在团队凝聚力与职业边界上的潜在隐忧，整体态度偏向审慎（cautious）。',
                               tags: ['态度题', '阅读理解']
                             }
                           ],
@@ -1946,13 +2229,18 @@ D. 5
                               domain: 'politics',
                               subject: '马克思主义基本原理',
                               chapter: '唯物辩证法',
-                              type: 'choice',
+                              type: 'multiple',
                               difficulty: '中等',
-                              question: '“扬弃”是辩证否定观的核心范畴，它的准确含义是指（ ）',
-                              options: { A: '全盘抛弃旧事物', B: '绝对保留旧事物', C: '既克服又保留', D: '单纯的形式改变' },
-                              answer: 'C',
-                              explanation: '辩证的否定是事物发展的环节与联系的环节，实质是“扬弃”，即新事物对旧事物既批判又继承、既克服其消极因素又保留其积极因素。',
-                              tags: ['辩证否定观', '马原']
+                              question: '辩证否定观是唯物辩证法的重要内容，下列关于“扬弃”的表述正确的有（ ）',
+                              options: {
+                                A: '否定是事物的自我否定',
+                                B: '否定是事物发展的环节与联系的环节',
+                                C: '新事物对旧事物全盘抛弃、一刀两断',
+                                D: '既克服旧事物中的消极因素，又保留其积极因素'
+                              },
+                              answer: 'ABD',
+                              explanation: '辩证否定的实质是“扬弃”，即新事物对旧事物既批判又继承、既克服又保留（ABD正确）；全盘抛弃属于形而上学否定观（C错误）。',
+                              tags: ['辩证否定观', '马原多选题']
                             }
                           ],
                           general: [
@@ -1970,7 +2258,7 @@ D. 5
                             }
                           ]
                         }
-                        setJsonInput(JSON.stringify(templates[importDomain] || templates.math, null, 2))
+                        setJsonInput(JSON.stringify(templates[quizDomain] || templates.math, null, 2))
                       }}
                       className="text-xs text-indigo-600 hover:underline cursor-pointer"
                     >
@@ -2020,49 +2308,116 @@ D. 5
                     </div>
                   ) : (
                     <div className="space-y-3 max-h-[460px] overflow-y-auto pr-1">
-                      {customQuestions.map(q => (
-                        <div key={q.id} className="p-3.5 sm:p-4 rounded-xl border border-slate-200 bg-white shadow-xs min-w-0 max-w-full overflow-hidden">
-                          <div className="flex items-start justify-between gap-2 sm:gap-3 min-w-0">
-                            <div className="flex-1 min-w-0 max-w-full">
-                              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1.5">
-                                <span className="text-2xs px-2 py-0.5 rounded-full font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                                  {q.subject}
-                                </span>
-                                <span className="text-2xs px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                                  {q.difficulty}
-                                </span>
-                                {q.chapter && (
-                                  <span className="text-2xs text-slate-400">章节: {q.chapter}</span>
-                                )}
-                              </div>
-                              <div className="text-xs font-semibold text-slate-900 mb-2 min-w-0 max-w-full overflow-x-auto">
-                                <MarkdownRenderer content={q.question} />
-                              </div>
-                              <div className="text-2xs text-slate-500 min-w-0 overflow-x-auto flex items-center gap-1">
-                                <span className="shrink-0">答案：</span>
-                                <span className="font-bold text-emerald-600">
-                                  <MarkdownRenderer
-                                    content={
-                                      String(q.answer || '').includes('$') || !/\\/.test(String(q.answer || ''))
-                                        ? String(q.answer || '')
-                                        : `$${q.answer}$`
-                                    }
-                                    inline
-                                  />
-                                </span>
-                              </div>
-                            </div>
+                      {customQuestions.map(q => {
+                        const isMulti = isMultipleQuestion(q)
+                        const pKey = `manage-${q.id}`
+                        const isPassageOpen = Boolean(expandedPassages[pKey])
+                        return (
+                          <div key={q.id} className="p-3.5 sm:p-4 rounded-xl border border-slate-200 bg-white shadow-xs min-w-0 max-w-full overflow-hidden">
+                            <div className="flex items-start justify-between gap-2 sm:gap-3 min-w-0">
+                              <div className="flex-1 min-w-0 max-w-full space-y-2">
+                                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                                  <span className="text-2xs px-2 py-0.5 rounded-full font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                                    {q.subject}
+                                  </span>
+                                  {isMulti ? (
+                                    <span className="text-2xs px-2 py-0.5 rounded-full font-bold bg-purple-100 text-purple-700 border border-purple-200">
+                                      【多选题】
+                                    </span>
+                                  ) : q.type === 'analysis' ? (
+                                    <span className="text-2xs px-2 py-0.5 rounded-full font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                                      分析/解答题
+                                    </span>
+                                  ) : q.type === 'blank' ? (
+                                    <span className="text-2xs px-2 py-0.5 rounded-full font-semibold bg-sky-50 text-sky-700 border border-sky-200">
+                                      填空题
+                                    </span>
+                                  ) : (
+                                    <span className="text-2xs px-2 py-0.5 rounded-full font-semibold bg-slate-100 text-slate-600">
+                                      单选题
+                                    </span>
+                                  )}
+                                  <span className="text-2xs px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                                    {q.difficulty}
+                                  </span>
+                                  {q.chapter && (
+                                    <span className="text-2xs text-slate-400">章节: {q.chapter}</span>
+                                  )}
+                                </div>
 
-                            <button
-                              onClick={() => handleDeleteCustomQuestion(q.id)}
-                              className="p-1.5 shrink-0 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                              title="删除此题"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                                {q.passage && (
+                                  <div className="rounded-lg border border-indigo-100 bg-indigo-50/40 overflow-hidden">
+                                    <button
+                                      type="button"
+                                      onClick={() => togglePassageExpand(pKey)}
+                                      className="w-full px-2.5 py-1.5 flex items-center justify-between text-left text-2xs font-semibold text-indigo-700 hover:bg-indigo-50 cursor-pointer"
+                                    >
+                                      <span>📖 关联阅读短文 / 分析材料</span>
+                                      {isPassageOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                                    </button>
+                                    {isPassageOpen && (
+                                      <div className="px-3 py-2 border-t border-indigo-100 bg-white text-xs text-slate-700 max-h-48 overflow-y-auto leading-relaxed">
+                                        <MarkdownRenderer content={q.passage} />
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                <div className="text-xs font-semibold text-slate-900 min-w-0 max-w-full overflow-x-auto">
+                                  <MarkdownRenderer content={q.question} />
+                                </div>
+
+                                {q.options && (
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-2xs">
+                                    {Object.entries(q.options).map(([k, v]) => {
+                                      const correct = isOptionKeyCorrect(q, k)
+                                      return (
+                                        <div
+                                          key={k}
+                                          className={`px-2 py-1 rounded-md border flex items-start gap-1 min-w-0 overflow-x-auto ${
+                                            correct
+                                              ? isMulti
+                                                ? 'border-purple-400 bg-purple-50/60 text-purple-950 font-semibold'
+                                                : 'border-emerald-400 bg-emerald-50/60 text-emerald-900 font-semibold'
+                                              : 'border-slate-100 bg-slate-50/60 text-slate-600'
+                                          }`}
+                                        >
+                                          <span className="font-bold shrink-0">{k}.</span>
+                                          <div className="min-w-0 flex-1">
+                                            <MarkdownRenderer content={String(v)} inline />
+                                          </div>
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                )}
+
+                                <div className="text-2xs text-slate-500 min-w-0 overflow-x-auto flex items-center gap-1">
+                                  <span className="shrink-0">答案：</span>
+                                  <span className={`font-bold ${isMulti ? 'text-purple-700' : 'text-emerald-600'}`}>
+                                    <MarkdownRenderer
+                                      content={
+                                        String(q.answer || '').includes('$') || !/\\/.test(String(q.answer || ''))
+                                          ? String(q.answer || '')
+                                          : `$${q.answer}$`
+                                      }
+                                      inline
+                                    />
+                                  </span>
+                                </div>
+                              </div>
+
+                              <button
+                                onClick={() => handleDeleteCustomQuestion(q.id)}
+                                className="p-1.5 shrink-0 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                title="删除此题"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
                 </div>
@@ -2204,6 +2559,22 @@ D. 5
               </button>
             </div>
 
+            {renameError && (
+              <div className="mb-3 px-3 py-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center justify-between gap-2">
+                <span className="flex items-center gap-1.5 min-w-0">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
+                  <span className="break-words">{renameError}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setRenameError(null)}
+                  className="text-rose-600 hover:text-rose-800 text-2xs shrink-0 underline cursor-pointer"
+                >
+                  关闭
+                </button>
+              </div>
+            )}
+
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1.5">
@@ -2245,7 +2616,11 @@ D. 5
                   value={newBookName}
                   onChange={e => setNewBookName(e.target.value)}
                   onKeyDown={e => {
-                    if (e.key === 'Enter') handleConfirmRename()
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      if (e.nativeEvent.isComposing || (e as any).keyCode === 229) return
+                      handleConfirmRename()
+                    }
                   }}
                   className="w-full text-xs rounded-xl border border-slate-300 px-3 py-2 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
                   placeholder="请输入清晰的教材名称（例如：高等数学第七版上册.pdf）"

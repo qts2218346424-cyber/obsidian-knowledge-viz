@@ -16,8 +16,7 @@ import { api, type LocalAgentStatus } from '../../services/api'
 import { STUDY_AGENTS } from '../../data/studyAgents'
 import { formatUnifiedModelName, detectCrossSubjectProxy } from '../../utils/modelDisplay'
 import type { PetMood } from './DesktopPet'
-import LuluAvatar, { PET_PERSONAS, getSavedPetTheme } from './LuluAvatar'
-import { NailongChibiHead } from './NailongRigAvatar'
+import LuluAvatar, { useActivePetPersona, PetChibiHead, type PetId } from './LuluAvatar'
 import DangoAvatar from '../DangoAvatar'
 import { useAuth } from '../../contexts/AuthContext'
 import { getAuthHeaders } from '../../services/auth'
@@ -70,12 +69,22 @@ const QUICK_PROMPTS = [
   '🎯 考我一道 408 核心考点高频选择题',
 ]
 
+function buildWelcomeText(petId: PetId): string {
+  if (petId === 'feiyu') {
+    return '哼哼，我是大肥鱼（才不是胖鱼，是 DeepSeek 鲸鱼娘啦）！🐟🍚\n只要投喂够热乎的大白米饭补充 Token，不管是 408 算法/高数证明卡壳，还是备考压力大想找本鱼吐槽摸鱼，我都会全程陪着你稳稳上岸哟~ ✨'
+  }
+  return '我是奶龙！🐲🫧\n无论是 408/高数考点卡壳，还是备考压力大、心里焦虑学不动了，都可以随时跟我聊聊！揉揉大肚皮，俺不仅懂真题算法，还能做你的暖心心理疗愈师哟~ 🍗✨'
+}
+
 export default function PetAssistantDrawer({
   isOpen,
   onClose,
   onTokenConsumed,
   onSetMood,
 }: PetAssistantDrawerProps) {
+  const [persona, setPetPersona] = useActivePetPersona()
+  const isFeiyu = persona.id === 'feiyu'
+
   const [provider, setProvider] = useState<ProviderType>(() => {
     return (localStorage.getItem('coreforge_active_provider') as ProviderType) || 'codex'
   })
@@ -90,7 +99,6 @@ export default function PetAssistantDrawer({
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [savedId, setSavedId] = useState<string | null>(null)
 
-  // 移动端视口检测
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
 
   useEffect(() => {
@@ -105,7 +113,6 @@ export default function PetAssistantDrawer({
     }
   }, [])
 
-  // 加载本地可用代理模型列表
   useEffect(() => {
     api.getLocalAgentStatus()
       .then(data => {
@@ -115,12 +122,11 @@ export default function PetAssistantDrawer({
   }, [])
 
   const [input, setInput] = useState('')
-  const [messages, setMessages] = useState<Message[]>([
+  const [messages, setMessages] = useState<Message[]>(() => [
     {
       id: 'welcome',
       role: 'assistant',
-      content:
-        '我是奶龙！🐲🫧\n无论是 408/高数考点卡壳，还是备考压力大、心里焦虑学不动了，都可以随时跟我聊聊！揉揉大肚皮，俺不仅懂真题算法，还能做你的暖心心理疗愈师哟~ 🍗✨',
+      content: buildWelcomeText(persona.id),
     },
   ])
   const [loading, setLoading] = useState(false)
@@ -128,6 +134,16 @@ export default function PetAssistantDrawer({
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+
+  // 当切换宠物且仍处于初始欢迎消息时，自动同步对应角色的欢迎开场白
+  useEffect(() => {
+    setMessages(prev => {
+      if (prev.length === 1 && prev[0].id === 'welcome') {
+        return [{ ...prev[0], content: buildWelcomeText(persona.id) }]
+      }
+      return prev
+    })
+  }, [persona.id])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -175,7 +191,9 @@ export default function PetAssistantDrawer({
     onSetMood('thinking')
     setCurrentToolStatus(
       isPsychologyMode
-        ? '奶龙正在捧着热茶认真倾听你的心里话...'
+        ? isFeiyu
+          ? '大肥鱼正放下大白米饭碗认真倾听你的心里话...'
+          : '奶龙正在捧着热茶认真倾听你的心里话...'
         : `${activeStudyAgent.name}正在查阅知识库并推导...`
     )
 
@@ -308,12 +326,12 @@ export default function PetAssistantDrawer({
       .replace(/^#+\s*/, '')
       .replace(/[<>:"/\\|?*]/g, '_')
       .substring(0, 30)
-    const title = firstLine || `奶龙精析_${new Date().toLocaleDateString('zh-CN')}`
+    const title = firstLine || `${persona.name}精析_${new Date().toLocaleDateString('zh-CN')}`
     const destPath = `wiki/AI伴学笔记/${title}.md`
     try {
       await api.createFile(destPath, msg.content, {
         title,
-        tags: ['ai-study', '奶龙小助手', provider],
+        tags: ['ai-study', `${persona.name}小助手`, provider],
         created: new Date().toISOString().split('T')[0],
       })
       setSavedId(msg.id)
@@ -334,11 +352,9 @@ export default function PetAssistantDrawer({
   }
 
   const { user } = useAuth()
-  const personaName = PET_PERSONAS[getSavedPetTheme()]?.name || '奶龙'
 
   return (
     <>
-      {/* 移动端点击外部轻量背景遮罩 */}
       {isMobile && (
         <div
           onClick={onClose}
@@ -347,39 +363,87 @@ export default function PetAssistantDrawer({
       )}
 
       <div
-        className={`fixed z-50 bg-white/98 dark:bg-slate-900/98 backdrop-blur-xl border border-amber-200/90 dark:border-slate-800 shadow-xl flex flex-col overflow-hidden animate-in fade-in duration-200 ${
+        className={`fixed z-50 bg-white/98 dark:bg-slate-900/98 backdrop-blur-xl border ${
+          isFeiyu
+            ? 'border-sky-200/90 dark:border-slate-800'
+            : 'border-amber-200/90 dark:border-slate-800'
+        } shadow-xl flex flex-col overflow-hidden animate-in fade-in duration-200 ${
           isMobile
             ? 'inset-x-2 bottom-3.5 h-[70vh] max-h-[560px] rounded-3xl slide-in-from-bottom-5'
             : 'right-4 bottom-20 w-[380px] h-[520px] max-h-[calc(100vh-100px)] rounded-3xl slide-in-from-bottom-4'
         }`}
       >
-        {/* 极简轻巧 Header */}
-        <div className="px-3.5 py-2.5 border-b border-amber-100 dark:border-slate-800/80 bg-gradient-to-r from-amber-400/15 via-orange-400/10 to-transparent flex items-center justify-between shrink-0">
+        {/* 极简轻巧 Header（含奶龙 ⇄ 大肥鱼一键切换胶囊） */}
+        <div
+          className={`px-3.5 py-2.5 border-b flex items-center justify-between shrink-0 ${
+            isFeiyu
+              ? 'border-sky-100 dark:border-slate-800/80 bg-gradient-to-r from-sky-400/15 via-blue-400/10 to-transparent'
+              : 'border-amber-100 dark:border-slate-800/80 bg-gradient-to-r from-amber-400/15 via-orange-400/10 to-transparent'
+          }`}
+        >
           <div className="flex items-center gap-2 min-w-0">
-            <div className="w-7 h-7 rounded-full bg-amber-100 dark:bg-amber-950 flex items-center justify-center shrink-0 border border-amber-300/80">
-              <LuluAvatar size="xs" mood={loading ? 'thinking' : 'idle'} isSpeaking={loading} showAccessories={false} />
+            <div
+              className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 border ${
+                isFeiyu
+                  ? 'bg-sky-100 dark:bg-sky-950 border-sky-300/80'
+                  : 'bg-amber-100 dark:bg-amber-950 border-amber-300/80'
+              }`}
+            >
+              <LuluAvatar petId={persona.id} size="xs" mood={loading ? 'thinking' : 'idle'} isSpeaking={loading} showAccessories={false} />
             </div>
             <div className="min-w-0 flex items-center gap-1.5">
               <h3 className="font-bold text-slate-800 dark:text-slate-100 text-xs truncate">
-                {personaName} · 随身伴学
+                {persona.name} · 随身伴学
               </h3>
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" title="在线就绪" />
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
-            {/* 微型极简引擎小标签，点击可切换 */}
+          <div className="flex items-center gap-1 shrink-0">
+            {/* 双宠快捷切换小胶囊 */}
+            <div
+              className="inline-flex items-center p-0.5 rounded-lg bg-white/85 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700"
+              role="group"
+              aria-label="切换伴学宠物"
+            >
+              <button
+                type="button"
+                onClick={() => setPetPersona('nailong')}
+                aria-pressed={!isFeiyu}
+                className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
+                  !isFeiyu
+                    ? 'bg-amber-400 text-amber-950 shadow-2xs'
+                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
+                }`}
+                title="切换为奶龙"
+              >
+                🐲奶龙
+              </button>
+              <button
+                type="button"
+                onClick={() => setPetPersona('feiyu')}
+                aria-pressed={isFeiyu}
+                className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
+                  isFeiyu
+                    ? 'bg-blue-600 text-white shadow-2xs'
+                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
+                }`}
+                title="切换为大肥鱼 (DeepSeek)"
+              >
+                🐟大肥鱼
+              </button>
+            </div>
+
             <button
               onClick={() => setShowConfig(!showConfig)}
-              className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-2xs font-semibold bg-white/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-amber-300 transition-all cursor-pointer shadow-xs"
+              className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-2xs font-semibold bg-white/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-sky-300 transition-all cursor-pointer shadow-xs"
               title="点击快速切换 AI 引擎"
             >
-              <Bot className="w-3 h-3 text-amber-500" />
+              <Bot className={`w-3 h-3 ${isFeiyu ? 'text-blue-600' : 'text-amber-500'}`} />
               <span>{PROVIDER_INFO[provider]?.short || provider}</span>
               <ChevronDown className={`w-2.5 h-2.5 text-slate-400 transition-transform ${showConfig ? 'rotate-180' : ''}`} />
             </button>
 
-            {/* 清空对话 */}
             <button
               onClick={clearChat}
               className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-black/5 transition-colors cursor-pointer"
@@ -388,7 +452,6 @@ export default function PetAssistantDrawer({
               <Trash2 className="w-3.5 h-3.5" />
             </button>
 
-            {/* 关闭小窗口 */}
             <button
               onClick={onClose}
               className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-black/5 transition-colors cursor-pointer"
@@ -399,8 +462,14 @@ export default function PetAssistantDrawer({
           </div>
         </div>
 
-        {/* 极简轻巧人设快捷切换条（让心理聊天师与各科导师一目了然、一触直达） */}
-        <div className="px-3 py-1.5 border-b border-amber-100/80 dark:border-slate-800/80 bg-amber-50/35 dark:bg-slate-900/60 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+        {/* 人设快捷切换条 */}
+        <div
+          className={`px-3 py-1.5 border-b flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0 ${
+            isFeiyu
+              ? 'border-sky-100/80 dark:border-slate-800/80 bg-sky-50/35 dark:bg-slate-900/60'
+              : 'border-amber-100/80 dark:border-slate-800/80 bg-amber-50/35 dark:bg-slate-900/60'
+          }`}
+        >
           {[
             ...STUDY_AGENTS.filter(a => a.id === 'agent-408' || a.id === 'agent-psychology'),
             ...STUDY_AGENTS.filter(a => a.id !== 'agent-408' && a.id !== 'agent-psychology'),
@@ -422,7 +491,9 @@ export default function PetAssistantDrawer({
                         agentIcon: agent.icon,
                         content:
                           agent.id === 'agent-psychology'
-                            ? '呼噜噜~ 欢迎来到奶龙的秘密情绪树洞！🫧\n考研这条路有时候挺孤单也挺累的吧？不管今天是学不进去、错题一大堆，还是深夜焦虑失眠，都可以慢慢跟我说，奶龙的大肚皮一直为你敞开着哟~ 🐲💛'
+                            ? isFeiyu
+                              ? '呼噜噜~ 欢迎来到大肥鱼的深夜干饭情绪树洞！🐟🍚\n备考累了、错题多了或者心里焦虑的时候，别自己硬扛着内耗啦！坐下来跟本鱼分一碗热乎白米饭，把烦恼统统倒出来吧~ 💙'
+                              : '呼噜噜~ 欢迎来到奶龙的秘密情绪树洞！🫧\n考研这条路有时候挺孤单也挺累的吧？不管今天是学不进去、错题一大堆，还是深夜焦虑失眠，都可以慢慢跟我说，奶龙的大肚皮一直为你敞开着哟~ 🐲💛'
                             : `已切换至「${agent.icon} ${agent.name} · ${agent.title}」！随时把你的问题发给我吧~`,
                       },
                     ])
@@ -431,9 +502,11 @@ export default function PetAssistantDrawer({
                 className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold shrink-0 whitespace-nowrap transition-all cursor-pointer border ${
                   active
                     ? agent.id === 'agent-psychology'
-                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white border-amber-500 shadow-xs'
+                      ? isFeiyu
+                        ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white border-blue-500 shadow-xs'
+                        : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white border-amber-500 shadow-xs'
                       : 'bg-slate-900 text-white border-slate-900 shadow-xs'
-                    : 'bg-white/90 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-amber-300'
+                    : 'bg-white/90 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-sky-300'
                 }`}
               >
                 <span>{agent.icon}</span>
@@ -443,13 +516,19 @@ export default function PetAssistantDrawer({
           })}
         </div>
 
-        {/* 极简折叠引擎与导师选择卡（默认收起，点小标签展开） */}
+        {/* 折叠引擎与导师选择卡 */}
         {showConfig && (
-          <div className="px-3.5 py-2.5 bg-amber-50/70 dark:bg-slate-950/80 border-b border-amber-200/60 dark:border-slate-800 shrink-0 animate-in fade-in slide-in-from-top-1 text-xs space-y-2">
+          <div
+            className={`px-3.5 py-2.5 border-b shrink-0 animate-in fade-in slide-in-from-top-1 text-xs space-y-2 ${
+              isFeiyu
+                ? 'bg-sky-50/70 dark:bg-slate-950/80 border-sky-200/60 dark:border-slate-800'
+                : 'bg-amber-50/70 dark:bg-slate-950/80 border-amber-200/60 dark:border-slate-800'
+            }`}
+          >
             <div>
               <div className="flex items-center justify-between text-2xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                 <span>选择伴学引擎:</span>
-                <span className="text-2xs text-amber-700 dark:text-amber-400 font-mono">
+                <span className={`text-2xs font-mono ${isFeiyu ? 'text-blue-700 dark:text-sky-400' : 'text-amber-700 dark:text-amber-400'}`}>
                   {formatUnifiedModelName(provider, selectedModel)}
                 </span>
               </div>
@@ -460,8 +539,10 @@ export default function PetAssistantDrawer({
                     onClick={() => handleProviderSelect(p)}
                     className={`py-1 px-1 rounded-lg text-2xs font-semibold transition-all text-center truncate cursor-pointer ${
                       provider === p
-                        ? 'bg-amber-500 text-white shadow-xs font-bold'
-                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-amber-300'
+                        ? isFeiyu
+                          ? 'bg-blue-600 text-white shadow-xs font-bold'
+                          : 'bg-amber-500 text-white shadow-xs font-bold'
+                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
                     }`}
                   >
                     {PROVIDER_INFO[p].short}
@@ -496,8 +577,14 @@ export default function PetAssistantDrawer({
               className={`flex items-start gap-2 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}
             >
               {m.role === 'assistant' ? (
-                <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-950 border border-amber-300/80 flex items-center justify-center shrink-0 mt-0.5 overflow-hidden">
-                  <NailongChibiHead className="w-5 h-5" />
+                <div
+                  className={`w-6 h-6 rounded-full border flex items-center justify-center shrink-0 mt-0.5 overflow-hidden ${
+                    isFeiyu
+                      ? 'bg-sky-100 dark:bg-sky-950 border-sky-300/80'
+                      : 'bg-amber-100 dark:bg-amber-950 border-amber-300/80'
+                  }`}
+                >
+                  <PetChibiHead petId={persona.id} className="w-5 h-5" />
                 </div>
               ) : (
                 <DangoAvatar
@@ -527,18 +614,20 @@ export default function PetAssistantDrawer({
                 <div
                   className={`px-3 py-2 rounded-2xl leading-relaxed break-words ${
                     m.role === 'user'
-                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-xs font-medium text-2xs'
+                      ? isFeiyu
+                        ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-xs font-medium text-2xs'
+                        : 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-xs font-medium text-2xs'
                       : 'bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/80 text-slate-800 dark:text-slate-100 shadow-xs text-2xs'
                   }`}
                 >
                   {m.role === 'assistant' && !m.content && loading ? (
                     <div className="space-y-1.5 py-0.5 min-w-[190px]">
-                      <div className="flex items-center gap-1.5 text-2xs font-semibold text-amber-600">
+                      <div className={`flex items-center gap-1.5 text-2xs font-semibold ${isFeiyu ? 'text-blue-600' : 'text-amber-600'}`}>
                         <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
                         <span>{currentToolStatus || '正在检索知识库并推导...'}</span>
                       </div>
-                      <div className="w-full h-1 rounded-full bg-amber-100 overflow-hidden">
-                        <div className="h-full bg-amber-500 rounded-full animate-pulse w-2/3" />
+                      <div className={`w-full h-1 rounded-full overflow-hidden ${isFeiyu ? 'bg-sky-100' : 'bg-amber-100'}`}>
+                        <div className={`h-full rounded-full animate-pulse w-2/3 ${isFeiyu ? 'bg-blue-600' : 'bg-amber-500'}`} />
                       </div>
                     </div>
                   ) : (
@@ -546,7 +635,6 @@ export default function PetAssistantDrawer({
                   )}
                 </div>
 
-                {/* 消息底部辅助快捷小操作 */}
                 {m.role === 'assistant' && m.content && !loading && m.id !== 'welcome' && (
                   <div className="flex items-center gap-1 text-2xs text-slate-400 pl-1">
                     <button
@@ -568,7 +656,9 @@ export default function PetAssistantDrawer({
                     <span>·</span>
                     <button
                       onClick={() => handleSaveToNote(m)}
-                      className="flex items-center gap-0.5 hover:text-amber-600 dark:hover:text-amber-400 cursor-pointer"
+                      className={`flex items-center gap-0.5 cursor-pointer ${
+                        isFeiyu ? 'hover:text-blue-600 dark:hover:text-sky-400' : 'hover:text-amber-600 dark:hover:text-amber-400'
+                      }`}
                     >
                       {savedId === m.id ? (
                         <>
@@ -588,19 +678,22 @@ export default function PetAssistantDrawer({
             </div>
           ))}
 
-          {/* 空状态快捷提示小胶囊 */}
           {messages.length <= 1 && (
             <div className="pt-2 space-y-1.5 animate-in fade-in">
               <div className="text-2xs font-bold text-slate-400 px-1 flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-amber-500" />
-                <span>{isPsychologyMode ? '想和奶龙聊聊什么？' : '点选快捷提问:'}</span>
+                <Sparkles className={`w-3 h-3 ${isFeiyu ? 'text-blue-500' : 'text-amber-500'}`} />
+                <span>{isPsychologyMode ? `想和${persona.name}聊聊什么？` : '点选快捷提问:'}</span>
               </div>
               <div className="flex flex-col gap-1">
                 {(isPsychologyMode ? activeStudyAgent.quickPrompts : QUICK_PROMPTS).map((p, idx) => (
                   <button
                     key={idx}
                     onClick={() => handleSendMessage(isPsychologyMode ? p : p.slice(2))}
-                    className="w-full text-left px-2.5 py-1.5 rounded-xl bg-amber-50/60 dark:bg-slate-800/60 hover:bg-amber-100/60 dark:hover:bg-slate-800 border border-amber-200/50 dark:border-slate-700/60 text-slate-700 dark:text-slate-300 text-2xs transition-all cursor-pointer truncate"
+                    className={`w-full text-left px-2.5 py-1.5 rounded-xl border text-slate-700 dark:text-slate-300 text-2xs transition-all cursor-pointer truncate ${
+                      isFeiyu
+                        ? 'bg-sky-50/60 dark:bg-slate-800/60 hover:bg-sky-100/60 dark:hover:bg-slate-800 border-sky-200/50 dark:border-slate-700/60'
+                        : 'bg-amber-50/60 dark:bg-slate-800/60 hover:bg-amber-100/60 dark:hover:bg-slate-800 border-amber-200/50 dark:border-slate-700/60'
+                    }`}
                   >
                     {isPsychologyMode ? `🫧 ${p}` : p}
                   </button>
@@ -609,18 +702,23 @@ export default function PetAssistantDrawer({
             </div>
           )}
 
-          {/* 正在思考指示条 */}
           {loading && (
-            <div className="flex items-center gap-2 p-2 rounded-xl bg-amber-50/80 dark:bg-slate-800/80 border border-amber-200/60 dark:border-slate-700 text-xs text-amber-700 dark:text-amber-300 animate-pulse">
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-500 shrink-0" />
-              <span className="text-2xs truncate">{currentToolStatus || '奶龙正在挠头推导中...'}</span>
+            <div
+              className={`flex items-center gap-2 p-2 rounded-xl border text-xs animate-pulse ${
+                isFeiyu
+                  ? 'bg-sky-50/80 dark:bg-slate-800/80 border-sky-200/60 dark:border-slate-700 text-blue-700 dark:text-sky-300'
+                  : 'bg-amber-50/80 dark:bg-slate-800/80 border-amber-200/60 dark:border-slate-700 text-amber-700 dark:text-amber-300'
+              }`}
+            >
+              <Loader2 className={`w-3.5 h-3.5 animate-spin shrink-0 ${isFeiyu ? 'text-blue-600' : 'text-amber-500'}`} />
+              <span className="text-2xs truncate">{currentToolStatus || `${persona.name}正在推导中...`}</span>
             </div>
           )}
 
           <div ref={messagesEndRef} />
         </div>
 
-        {/* 极简底部输入条 */}
+        {/* 底部输入条 */}
         <div className="p-2.5 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/80 dark:bg-slate-950/80 shrink-0">
           <div className="relative flex items-center">
             <textarea
@@ -628,23 +726,28 @@ export default function PetAssistantDrawer({
               rows={1}
               placeholder={
                 isPsychologyMode
-                  ? '跟奶龙·心理聊天师说说心里话（Enter 发送）...'
-                  : '向奶龙随时提问（Enter 发送）...'
+                  ? `跟${persona.name}·心理聊天师说说心里话（Enter 发送）...`
+                  : `向${persona.name}随时提问（Enter 发送）...`
               }
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()
+                  if (e.nativeEvent.isComposing || (e as any).keyCode === 229) return
                   handleSendMessage()
                 }
               }}
-              className="w-full resize-none rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2 pl-3 pr-10 text-xs text-slate-900 dark:text-slate-100 outline-none focus:border-amber-400 max-h-24 shadow-xs"
+              className={`w-full resize-none rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 py-2 pl-3 pr-10 text-xs text-slate-900 dark:text-slate-100 outline-none max-h-24 shadow-xs ${
+                isFeiyu ? 'focus:border-blue-400' : 'focus:border-amber-400'
+              }`}
             />
             <button
               onClick={() => handleSendMessage()}
               disabled={loading || !input.trim()}
-              className="absolute right-1.5 p-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 disabled:opacity-30 disabled:cursor-not-allowed text-white transition-all cursor-pointer shadow-xs active:scale-95"
+              className={`absolute right-1.5 p-1.5 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed text-white transition-all cursor-pointer shadow-xs active:scale-95 ${
+                isFeiyu ? 'bg-blue-600 hover:bg-blue-700' : 'bg-amber-500 hover:bg-amber-600'
+              }`}
               title="发送提问"
             >
               {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}

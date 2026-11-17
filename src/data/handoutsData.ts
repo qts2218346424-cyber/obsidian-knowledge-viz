@@ -1,5 +1,6 @@
 import { POLITICS_HANDOUTS } from './politicsHandouts'
 import { MATH_EXTRA_HANDOUTS } from './mathExtraHandouts'
+import { ENGLISH_HANDOUTS } from './englishHandouts'
 
 export interface HandoutItem {
   id: string
@@ -411,5 +412,5 @@ $$\\lim_{n \\to \\infty} P\\left( \\frac{\\sum_{i=1}^n X_i - n\\mu}{\\sigma \\sq
   }
 ]
 
-// 合并考研政治讲义（马原 / 经典著作 / 时政）与考研数学专题强化讲义
-CURATED_HANDOUTS.push(...POLITICS_HANDOUTS, ...MATH_EXTRA_HANDOUTS)
+// 合并考研政治讲义、考研英语核心方法论讲义与考研数学专题强化讲义
+CURATED_HANDOUTS.push(...POLITICS_HANDOUTS, ...ENGLISH_HANDOUTS, ...MATH_EXTRA_HANDOUTS)

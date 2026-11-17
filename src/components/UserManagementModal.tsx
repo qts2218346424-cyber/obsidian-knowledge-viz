@@ -378,6 +378,7 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
                     <input
                       type="password"
                       required
+                      autoComplete="new-password"
                       placeholder="至少 6 位密码"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}

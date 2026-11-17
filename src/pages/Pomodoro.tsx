@@ -1,4 +1,10 @@
-import { getPomodoroSyncState, setPomodoroSyncState, onPomodoroSync } from '../utils/pomodoroSync'
+import {
+  getPomodoroSyncState,
+  setPomodoroSyncState,
+  onPomodoroSync,
+  getDailyPomodoroStats,
+  saveDailyPomodoroStats,
+} from '../utils/pomodoroSync'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Timer,
@@ -81,8 +87,8 @@ export default function Pomodoro() {
   const [focusDuration, setFocusDuration] = useState(25)
   const [shortBreakDuration, setShortBreakDuration] = useState(5)
   const [longBreakDuration, setLongBreakDuration] = useState(15)
-  const [pomodoroCount, setPomodoroCount] = useState(0)
-  const [totalFocusMinutes, setTotalFocusMinutes] = useState(0)
+  const [pomodoroCount, setPomodoroCount] = useState(() => getDailyPomodoroStats().count)
+  const [totalFocusMinutes, setTotalFocusMinutes] = useState(() => getDailyPomodoroStats().minutes)
   const [showSettings, setShowSettings] = useState(false)
   const [timerType, setTimerType] = useState<TimerType>('countdown')
   const [elapsed, setElapsed] = useState(0)
@@ -138,8 +144,10 @@ export default function Pomodoro() {
     if (timerType === 'stopwatch') {
       if (elapsed > 0 && elapsed === totalDuration && status === 'running' && mode === 'focus') {
         const newCount = pomodoroCount + 1
+        const newMinutes = totalFocusMinutes + focusDuration
         setPomodoroCount(newCount)
-        setTotalFocusMinutes(prev => prev + focusDuration)
+        setTotalFocusMinutes(newMinutes)
+        saveDailyPomodoroStats(newCount, newMinutes)
       }
       return
     }
@@ -147,8 +155,10 @@ export default function Pomodoro() {
       setStatus('idle')
       if (mode === 'focus') {
         const newCount = pomodoroCount + 1
+        const newMinutes = totalFocusMinutes + focusDuration
         setPomodoroCount(newCount)
-        setTotalFocusMinutes(prev => prev + focusDuration)
+        setTotalFocusMinutes(newMinutes)
+        saveDailyPomodoroStats(newCount, newMinutes)
         if (newCount % 4 === 0) {
           switchMode('longBreak')
         } else {
@@ -158,7 +168,7 @@ export default function Pomodoro() {
         switchMode('focus')
       }
     }
-  }, [timeLeft, elapsed, status, mode, pomodoroCount, focusDuration, timerType, totalDuration])
+  }, [timeLeft, elapsed, status, mode, pomodoroCount, totalFocusMinutes, focusDuration, timerType, totalDuration])
 
   const switchMode = (newMode: TimerMode) => {
     setMode(newMode)

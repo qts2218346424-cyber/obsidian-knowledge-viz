@@ -5,7 +5,7 @@ import type { ResourceDomain } from '../../../services/api'
 import type { CsSubject, MathCategory, MathSubject, UnifiedQuestion } from '../../../types/subject'
 
 export type AllSubject = CsSubject | MathSubject | string
-export type QuizQuestionType = 'choice' | 'blank' | 'analysis'
+export type QuizQuestionType = 'choice' | 'multiple' | 'blank' | 'analysis'
 
 export interface ActiveQuizQuestion {
   id: string
@@ -15,8 +15,9 @@ export interface ActiveQuizQuestion {
   chapter?: string
   type: QuizQuestionType
   difficulty: '简单' | '中等' | '困难' | '基础' | '提高'
+  passage?: string
   question: string
-  options?: { A: string; B: string; C: string; D: string }
+  options?: { A: string; B: string; C: string; D: string; [key: string]: string | undefined }
   answer: string
   explanation: string
   steps?: string[]
@@ -28,6 +29,7 @@ export interface ActiveQuizQuestion {
   sectionName?: string
   sourceKind?: 'builtin' | 'real' | 'mock' | 'custom'
   isCustom?: boolean
+  _cachedTopicId?: string | null
 }
 
 export interface TopicCategoryDef {
@@ -86,17 +88,25 @@ export function convertMathQuestion(q: UnifiedQuestion): ActiveQuizQuestion {
   const isMock = q.id.includes('lilin') || (q.tags || []).some(t => t.includes('模拟') || t.includes('六套卷'))
   const isReal = q.id.includes('93') || (q.tags || []).some(t => t.includes('真题'))
 
+  const ansStr = (q.correctAnswer || 'A').trim()
+  const isMultiAns = Boolean(
+    optionsObj &&
+    /^[A-Fa-f](?:[\s,，、/]*[A-Fa-f])+$/.test(ansStr) &&
+    new Set(ansStr.toUpperCase().match(/[A-F]/g) || []).size >= 2
+  )
+
   return {
     id: q.id,
     domain: 'math',
     subject: q.subject as MathSubject,
     scope: q.scope,
     chapter: q.chapter,
-    type: q.type || (optionsObj ? 'choice' : 'blank'),
+    type: isMultiAns ? 'multiple' : (q.type || (optionsObj ? 'choice' : 'blank')),
     difficulty: q.difficulty,
+    passage: (q as any).passage,
     question: q.question,
     options: optionsObj,
-    answer: q.correctAnswer || 'A',
+    answer: ansStr,
     explanation: q.explanation,
     steps: q.steps,
     keyPoints: q.keyPoints,
@@ -123,17 +133,25 @@ export function convertExamPaperQuestion(
     }
   }
 
+  const ansStr = (q.correctAnswer || '见标准分步推导').trim()
+  const isMultiAns = Boolean(
+    optionsObj &&
+    /^[A-Fa-f](?:[\s,，、/]*[A-Fa-f])+$/.test(ansStr) &&
+    new Set(ansStr.toUpperCase().match(/[A-F]/g) || []).size >= 2
+  )
+
   return {
     id: q.id,
     domain: q.domain,
     subject: q.subject,
     scope: q.scope,
     chapter: q.chapter,
-    type: q.type || (optionsObj ? 'choice' : 'analysis'),
+    type: isMultiAns ? 'multiple' : (q.type || (optionsObj ? 'choice' : 'analysis')),
     difficulty: q.difficulty,
+    passage: (q as any).passage,
     question: q.question,
     options: optionsObj,
-    answer: q.correctAnswer || '见标准分步推导',
+    answer: ansStr,
     explanation: q.explanation,
     steps: q.steps,
     keyPoints: q.keyPoints,
@@ -156,19 +174,25 @@ function questionFingerprint(raw: string): string {
     .slice(0, 72)
 }
 
-/**
- * 汇总内置 408 / 数学题库 + 历年真题/模拟整卷题 + 用户自定义导入题（按 ID 与题干指纹双重去重）
- */
-export function buildUnifiedQuestionPool(customQuestions: ActiveQuizQuestion[]): ActiveQuizQuestion[] {
+interface StaticBasePoolCache {
+  list: ActiveQuizQuestion[]
+  byId: Map<string, ActiveQuizQuestion>
+  byStem: Map<string, string>
+}
+
+let cachedStaticBase: StaticBasePoolCache | null = null
+const cachedStaticTopicsByMathScope = new Map<string, PopulatedTopicCategory[]>()
+
+function ensureStaticBasePool(): StaticBasePoolCache {
+  if (cachedStaticBase) return cachedStaticBase
+
   const byId = new Map<string, ActiveQuizQuestion>()
   const byStem = new Map<string, string>()
 
-  const upsert = (q: ActiveQuizQuestion, preferOverride = false) => {
+  const upsert = (q: ActiveQuizQuestion) => {
     const existingById = byId.get(q.id)
     if (existingById) {
-      if (preferOverride) {
-        byId.set(q.id, { ...existingById, ...q })
-      } else if (!existingById.paperTitle && q.paperTitle) {
+      if (!existingById.paperTitle && q.paperTitle) {
         byId.set(q.id, {
           ...existingById,
           paperTitle: q.paperTitle,
@@ -181,8 +205,7 @@ export function buildUnifiedQuestionPool(customQuestions: ActiveQuizQuestion[]):
     }
 
     const fp = questionFingerprint(q.question)
-    if (fp.length >= 14 && byStem.has(fp) && !q.isCustom) {
-      // 同题已从另一来源进入，补充卷面元信息即可
+    if (fp.length >= 14 && byStem.has(fp)) {
       const targetId = byStem.get(fp)!
       const target = byId.get(targetId)
       if (target && !target.paperTitle && q.paperTitle) {
@@ -214,8 +237,35 @@ export function buildUnifiedQuestionPool(customQuestions: ActiveQuizQuestion[]):
       upsert(convertExamPaperQuestion(pq, paper.title, paper.paperType))
     }
   }
+
+  const list = Array.from(byId.values())
+  for (const item of list) {
+    item._cachedTopicId = classifyQuestionTopicId(item)
+  }
+
+  cachedStaticBase = { list, byId, byStem }
+  return cachedStaticBase
+}
+
+/**
+ * 汇总内置 408 / 数学题库 + 历年真题/模拟整卷题 + 用户自定义导入题（按 ID 与题干指纹双重去重 + 静态基座 O(1) 缓存）
+ */
+export function buildUnifiedQuestionPool(customQuestions: ActiveQuizQuestion[]): ActiveQuizQuestion[] {
+  const base = ensureStaticBasePool()
+  if (!customQuestions || customQuestions.length === 0) {
+    return base.list
+  }
+
+  const byId = new Map<string, ActiveQuizQuestion>(base.byId)
   for (const cq of customQuestions) {
-    upsert({ ...cq, sourceKind: 'custom', isCustom: true }, true)
+    const existing = byId.get(cq.id)
+    const merged: ActiveQuizQuestion = existing
+      ? { ...existing, ...cq, sourceKind: 'custom', isCustom: true }
+      : { ...cq, sourceKind: 'custom', isCustom: true }
+    if (merged._cachedTopicId === undefined) {
+      merged._cachedTopicId = classifyQuestionTopicId(merged)
+    }
+    byId.set(merged.id, merged)
   }
 
   return Array.from(byId.values())
@@ -915,6 +965,12 @@ export function buildPopulatedTopicCategories(
   pool: ActiveQuizQuestion[],
   mathCategory: MathCategory | 'all' = 'all'
 ): PopulatedTopicCategory[] {
+  const isPureStaticPool = cachedStaticBase !== null && pool === cachedStaticBase.list
+  if (isPureStaticPool) {
+    const hit = cachedStaticTopicsByMathScope.get(mathCategory)
+    if (hit) return hit
+  }
+
   const buckets = new Map<string, ActiveQuizQuestion[]>()
   const dynamicDefs = new Map<string, TopicCategoryDef>()
 
@@ -926,7 +982,10 @@ export function buildPopulatedTopicCategories(
   })
 
   for (const q of filteredPool) {
-    let topicId = classifyQuestionTopicId(q)
+    let topicId = q._cachedTopicId !== undefined ? q._cachedTopicId : classifyQuestionTopicId(q)
+    if (q._cachedTopicId === undefined) {
+      q._cachedTopicId = topicId
+    }
     if (!topicId) {
       const subName = (q.subject || '综合专业课').trim()
       const chName = (q.chapter || '综合练习').trim()
@@ -986,7 +1045,11 @@ export function buildPopulatedTopicCategories(
     })
   }
 
-  return result.sort((a, b) => a.order - b.order || b.totalCount - a.totalCount)
+  const sorted = result.toSorted((a, b) => a.order - b.order || b.totalCount - a.totalCount)
+  if (isPureStaticPool) {
+    cachedStaticTopicsByMathScope.set(mathCategory, sorted)
+  }
+  return sorted
 }
 
 // ── 408 章节知识点模块定义与辅助选择器 ──────────────────────────────

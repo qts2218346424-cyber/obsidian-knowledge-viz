@@ -22,9 +22,11 @@ import { memoryRouter } from './routes/memory.js'
 import { flashcardsRouter } from './routes/flashcards.js'
 import { authRouter } from './routes/auth.js'
 import { authenticate, readOnlyGuard } from './middleware/auth.js'
+import { adaptiveCompression } from './middleware/compression.js'
 
 const app = express()
 app.disable('x-powered-by')
+app.use(adaptiveCompression)
 
 // CORS configuration
 const developmentOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173']

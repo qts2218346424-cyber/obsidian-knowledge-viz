@@ -1,15 +1,21 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import type { PetMood, HitZone } from './NailongRigAvatar'
-import NailongRigAvatar from './NailongRigAvatar'
+import NailongRigAvatar, { NailongChibiHead } from './NailongRigAvatar'
+import FeiyuRigAvatar, { FeiyuChibiHead } from './FeiyuRigAvatar'
 
-export type LuluTheme = 'yellow' | 'nailong'
+export type PetId = 'nailong' | 'feiyu'
+export type LuluTheme = 'yellow' | 'nailong' | 'blue' | 'feiyu'
 
 export interface PetPersonaMeta {
   theme: LuluTheme
-  id: 'nailong'
+  id: PetId
   name: string
   fullTitle: string
+  tagline: string
   emoji: string
+  foodName: string
+  foodFull: string
+  foodEmoji: string
   src: string
   glowColor: string
   ringColor: string
@@ -20,25 +26,137 @@ export const NAILONG_PERSONA: PetPersonaMeta = {
   id: 'nailong',
   name: '奶龙',
   fullTitle: '呆傻贪吃大肚皮 · 奶龙',
+  tagline: '圆滚滚暖心小黄龙，最爱啃大烤鸡腿，自带正版原声夸夸与治愈肚皮弹力',
   emoji: '🐲',
-  src: '/pets/nailong.png',
+  foodName: '鸡腿',
+  foodFull: '大烤鸡腿',
+  foodEmoji: '🍗',
+  src: '/pets/nailong.webp',
   glowColor: 'rgba(250, 204, 21, 0.48)',
   ringColor: 'rgba(245, 158, 11, 0.55)',
+}
+
+export const FEIYU_PERSONA: PetPersonaMeta = {
+  theme: 'blue',
+  id: 'feiyu',
+  name: '大肥鱼',
+  fullTitle: 'DeepSeek 干饭鲸鱼娘 · 大肥鱼',
+  tagline: '顶着呆毛、身穿蓝鲸围裙女仆装的傲娇鲸鱼娘，靠狂炫冒尖大白米饭补充算力 Token',
+  emoji: '🐟',
+  foodName: '米饭',
+  foodFull: '冒尖大白米饭',
+  foodEmoji: '🍚',
+  src: '/pets/feiyu_idle.webp?v=2',
+  glowColor: 'rgba(59, 130, 246, 0.48)',
+  ringColor: 'rgba(37, 99, 235, 0.55)',
 }
 
 export const PET_PERSONAS: Record<string, PetPersonaMeta> = {
   yellow: NAILONG_PERSONA,
   nailong: NAILONG_PERSONA,
-  // 兼容旧存储键值映射
+  blue: FEIYU_PERSONA,
+  feiyu: FEIYU_PERSONA,
+  // 兼容历史存储键值
   pink: NAILONG_PERSONA,
   purple: NAILONG_PERSONA,
 }
 
+export const PET_PERSONA_LIST: PetPersonaMeta[] = [NAILONG_PERSONA, FEIYU_PERSONA]
+
+const PET_STORAGE_KEY = 'coreforge_pet_persona'
+const PET_CHANGE_EVENT = 'coreforge-pet-change'
+
+export function getSavedPetId(): PetId {
+  if (typeof window === 'undefined') return 'nailong'
+  try {
+    const saved = localStorage.getItem(PET_STORAGE_KEY)
+    if (saved === 'feiyu' || saved === 'blue') return 'feiyu'
+  } catch {
+    // 忽略存储读取受限
+  }
+  return 'nailong'
+}
+
 export function getSavedPetTheme(): LuluTheme {
-  return 'yellow'
+  return getSavedPetId() === 'feiyu' ? 'feiyu' : 'yellow'
+}
+
+export function setSavedPetId(nextId: PetId): void {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(PET_STORAGE_KEY, nextId)
+  } catch {
+    // 忽略存储写入受限
+  }
+  window.dispatchEvent(new CustomEvent<PetId>(PET_CHANGE_EVENT, { detail: nextId }))
+}
+
+export function useActivePetPersona(): [PetPersonaMeta, (nextId: PetId) => void] {
+  const [petId, setPetId] = useState<PetId>(() => getSavedPetId())
+
+  useEffect(() => {
+    const handlePetChange = (e: Event) => {
+      const detail = (e as CustomEvent<PetId>).detail
+      if (detail === 'nailong' || detail === 'feiyu') {
+        setPetId(detail)
+      } else {
+        setPetId(getSavedPetId())
+      }
+    }
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === PET_STORAGE_KEY) {
+        setPetId(getSavedPetId())
+      }
+    }
+    window.addEventListener(PET_CHANGE_EVENT, handlePetChange)
+    window.addEventListener('storage', handleStorage)
+    return () => {
+      window.removeEventListener(PET_CHANGE_EVENT, handlePetChange)
+      window.removeEventListener('storage', handleStorage)
+    }
+  }, [])
+
+  const updatePet = useCallback((nextId: PetId) => {
+    setPetId(nextId)
+    setSavedPetId(nextId)
+  }, [])
+
+  return [petId === 'feiyu' ? FEIYU_PERSONA : NAILONG_PERSONA, updatePet]
+}
+
+export function PetChibiHead({
+  petId,
+  className = 'w-5 h-5',
+  withWhiteRim = false,
+  decorative = false,
+}: {
+  petId?: PetId
+  className?: string
+  withWhiteRim?: boolean
+  decorative?: boolean
+}) {
+  const [activePersona] = useActivePetPersona()
+  const resolvedId = petId ?? activePersona.id
+  if (resolvedId === 'feiyu') {
+    return (
+      <FeiyuChibiHead
+        className={className}
+        withWhiteRim={withWhiteRim}
+        decorative={decorative}
+      />
+    )
+  }
+  return (
+    <NailongChibiHead
+      className={className}
+      withWhiteRim={withWhiteRim}
+      decorative={decorative}
+    />
+  )
 }
 
 export interface LuluAvatarProps {
+  petId?: PetId
   mood?: PetMood
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
   theme?: string
@@ -55,6 +173,7 @@ export interface LuluAvatarProps {
   bellyJiggle?: boolean
   headPatting?: boolean
   landingBounce?: boolean
+  walkDirection?: 'left' | 'right'
   onZoneTrigger?: (zone: HitZone, e: React.MouseEvent) => void
 }
 
@@ -65,11 +184,14 @@ interface Particle {
   tx: number
 }
 
-const SPARKLE_SYMBOLS = ['🍗', '💖', '✨', '⭐', '🍖', '🎵', '💫', '🫧']
+const NAILONG_SPARKLES = ['🍗', '💖', '✨', '⭐', '🍖', '🎵', '💫', '🫧']
+const FEIYU_SPARKLES = ['🍚', '🐳', '🫧', '✨', '🥢', '💧', '💙', '⭐']
 
 export default function LuluAvatar({
+  petId,
   mood = 'idle',
   size = 'md',
+  theme,
   isSquishing = false,
   isDragging = false,
   isSpeaking = false,
@@ -82,15 +204,23 @@ export default function LuluAvatar({
   bellyJiggle = false,
   headPatting = false,
   landingBounce = false,
+  walkDirection,
   onZoneTrigger,
 }: LuluAvatarProps) {
+  const [activePersona] = useActivePetPersona()
+  const resolvedPersona = petId
+    ? PET_PERSONAS[petId]
+    : theme && PET_PERSONAS[theme]
+    ? PET_PERSONAS[theme]
+    : activePersona
+  const isFeiyu = resolvedPersona.id === 'feiyu'
+
   const [particles, setParticles] = useState<Particle[]>([])
   const [internalEyeOffset, setInternalEyeOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const petRef = useRef<HTMLDivElement>(null)
 
   const isMini = size === 'xs'
 
-  // 如果未从外部提供 eyeOffset，则内部自动进行光标视差追踪计算
   useEffect(() => {
     if (eyeOffset !== undefined || typeof window === 'undefined' || isMini) return
     let rafId = 0
@@ -137,10 +267,11 @@ export default function LuluAvatar({
 
   const spawnParticles = () => {
     if (isMini) return
+    const symbols = isFeiyu ? FEIYU_SPARKLES : NAILONG_SPARKLES
     const count = 5
     const next: Particle[] = Array.from({ length: count }).map((_, idx) => ({
       id: Date.now() + idx + Math.random(),
-      symbol: SPARKLE_SYMBOLS[Math.floor(Math.random() * SPARKLE_SYMBOLS.length)],
+      symbol: symbols[Math.floor(Math.random() * symbols.length)],
       x: 15 + Math.random() * 70,
       tx: (Math.random() - 0.5) * 56,
     }))
@@ -158,20 +289,36 @@ export default function LuluAvatar({
   const moodBadge =
     !showAccessories || isMini
       ? null
+      : mood === 'dizzy'
+      ? '💫'
+      : mood === 'busy'
+      ? '⏳'
+      : mood === 'begging'
+      ? '🥺'
+      : mood === 'dancing'
+      ? '🎶'
+      : mood === 'walking'
+      ? '🐾'
       : isSpeaking
       ? '🎵'
       : mood === 'thinking'
       ? '💭'
       : mood === 'happy'
-      ? '💖'
+      ? isFeiyu
+        ? '🫧'
+        : '💖'
       : mood === 'sleepy'
       ? '💤'
       : mood === 'focus'
-      ? '🔥'
+      ? isFeiyu
+        ? '💡'
+        : '🔥'
       : mood === 'eating'
-      ? '🍗'
+      ? resolvedPersona.foodEmoji
       : mood === 'derp'
-      ? '🤪'
+      ? isFeiyu
+        ? '😤'
+        : '🤪'
       : null
 
   return (
@@ -189,35 +336,54 @@ export default function LuluAvatar({
         }
       `}</style>
 
-      {/* 底部柔和光环 */}
-      {!isMini && (isSpeaking || mood === 'focus' || mood === 'happy') && (
+      {/* 底部柔和角色专属光环 */}
+      {!isMini && (isSpeaking || mood === 'focus' || mood === 'happy' || mood === 'eating' || mood === 'dancing') && (
         <div
           className="absolute inset-0.5 rounded-full blur-md pointer-events-none transition-opacity duration-300"
           style={{
             background:
               mood === 'focus'
                 ? 'radial-gradient(circle, rgba(56,189,248,0.45) 0%, transparent 72%)'
-                : NAILONG_PERSONA.glowColor,
+                : resolvedPersona.glowColor,
           }}
         />
       )}
 
-      {/* 唯一核心角色：正版 3D 奶龙物理骨骼引擎 */}
+      {/* 双核角色分发引擎：3D 奶龙 vs 二次元鲸鱼娘大肥鱼 */}
       <div className="w-full h-full flex items-center justify-center pointer-events-auto">
-        <NailongRigAvatar
-          mood={mood}
-          isSpeaking={isSpeaking}
-          isDragging={isDragging}
-          dragTilt={dragTilt}
-          wearingHeadphones={wearingHeadphones || mood === 'focus'}
-          holdingDrumstick={holdingDrumstick || mood === 'eating'}
-          eyeOffset={effectiveEyeOffset}
-          bellyJiggle={bellyJiggle || isSquishing}
-          headPatting={headPatting}
-          landingBounce={landingBounce}
-          size={sizePixelMap[size]}
-          onZoneTrigger={onZoneTrigger}
-        />
+        {isFeiyu ? (
+          <FeiyuRigAvatar
+            mood={mood}
+            isSpeaking={isSpeaking}
+            isDragging={isDragging}
+            dragTilt={dragTilt}
+            wearingHeadphones={wearingHeadphones || mood === 'focus'}
+            holdingRiceBowl={holdingDrumstick || mood === 'eating'}
+            eyeOffset={effectiveEyeOffset}
+            bellyJiggle={bellyJiggle || isSquishing}
+            headPatting={headPatting}
+            landingBounce={landingBounce}
+            walkDirection={walkDirection}
+            size={sizePixelMap[size]}
+            onZoneTrigger={onZoneTrigger}
+          />
+        ) : (
+          <NailongRigAvatar
+            mood={mood}
+            isSpeaking={isSpeaking}
+            isDragging={isDragging}
+            dragTilt={dragTilt}
+            wearingHeadphones={wearingHeadphones || mood === 'focus'}
+            holdingDrumstick={holdingDrumstick || mood === 'eating'}
+            eyeOffset={effectiveEyeOffset}
+            bellyJiggle={bellyJiggle || isSquishing}
+            headPatting={headPatting}
+            landingBounce={landingBounce}
+            walkDirection={walkDirection}
+            size={sizePixelMap[size]}
+            onZoneTrigger={onZoneTrigger}
+          />
+        )}
       </div>
 
       {/* 状态小气泡角标 */}

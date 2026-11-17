@@ -1,20 +1,19 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 import {
-  Award,
   Clock,
   Sparkles,
   CheckCircle2,
-  AlertCircle,
   RotateCcw,
-  BookOpen,
   ArrowRight,
   Layers,
   ChevronRight,
   ChevronLeft,
-  FileText,
   Play,
   Pause,
   HelpCircle,
+  BookOpen,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 import {
   ENGLISH_FULL_EXAM_PAPERS,
@@ -32,6 +31,7 @@ import EnglishClozeViewer from './EnglishClozeViewer'
 import EnglishReadingViewer from './EnglishReadingViewer'
 import EnglishNewTypeViewer from './EnglishNewTypeViewer'
 import EnglishTranslationViewer from './EnglishTranslationViewer'
+import WordLookupPopover, { useEnglishWordLookup } from './WordLookupPopover'
 
 interface EnglishFullPaperViewProps {
   onGoToEssayGrading?: () => void
@@ -39,8 +39,8 @@ interface EnglishFullPaperViewProps {
 }
 
 type SectionKey = 'cloze' | 'reading' | 'new_type' | 'translation' | 'writing'
-
 type PaperKind = 'modular' | 'full_raw'
+type FontScale = 'sm' | 'md' | 'lg'
 
 interface DisplayPaperItem {
   id: string
@@ -58,11 +58,89 @@ interface DisplayPaperItem {
   rawPaper?: ExamPaper
 }
 
+interface ParsedRawPassageResult {
+  hasPassage: boolean
+  passageText: string
+  passageKey: string
+  cleanStem: string
+  isClozeStyle: boolean
+}
+
+/**
+ * 自动检测并剥离全国统考原卷题目中的 ```text ... ``` 英文篇章代码块（或扩展 passage 字段）
+ */
+function parseRawQuestionPassage(
+  q: ExamPaperQuestion | undefined,
+  allQuestions: ExamPaperQuestion[]
+): ParsedRawPassageResult {
+  if (!q) {
+    return {
+      hasPassage: false,
+      passageText: '',
+      passageKey: '',
+      cleanStem: '',
+      isClozeStyle: false,
+    }
+  }
+
+  const explicitPassage = typeof (q as any).passage === 'string' ? (q as any).passage.trim() : ''
+  const codeBlockRegex = /(?:\*\*(?:篇章语境|篇章节选|阅读原文|文章原文)\*\*[：:\s]*)?```(?:text|en|markdown)?\s*([\s\S]*?)```/i
+  const match = q.question.match(codeBlockRegex)
+
+  let extractedPassage = explicitPassage || (match ? match[1].trim() : '')
+  let cleanStem = q.question
+
+  if (match) {
+    cleanStem = q.question
+      .replace(codeBlockRegex, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+  } else if (!extractedPassage && q.chapter) {
+    // 若同章节相邻小题带有共享篇章代码块，智能回溯复用
+    const siblingWithBlock = allQuestions.find(
+      (item) =>
+        item.sectionName === q.sectionName &&
+        item.chapter === q.chapter &&
+        codeBlockRegex.test(item.question)
+    )
+    const sibMatch = siblingWithBlock?.question.match(codeBlockRegex)
+    if (sibMatch) {
+      extractedPassage = sibMatch[1].trim()
+    }
+  }
+
+  if (!extractedPassage) {
+    return {
+      hasPassage: false,
+      passageText: '',
+      passageKey: '',
+      cleanStem: q.question,
+      isClozeStyle: false,
+    }
+  }
+
+  // 移除首行冗余重复的【2010 考研英语一...】题头提示，使右侧题干聚焦干脆
+  const stemWithoutRedundantTitle = cleanStem
+    .replace(/^【[^】]+】\s*/, '')
+    .replace(/^\*\*题干\*\*[：:\s]*/i, '')
+    .trim()
+
+  const isClozeStyle = /\[\d+\]/.test(extractedPassage)
+  const passageKey = `${q.sectionName}::${extractedPassage.slice(0, 120)}`
+
+  return {
+    hasPassage: true,
+    passageText: extractedPassage,
+    passageKey,
+    cleanStem: stemWithoutRedundantTitle || cleanStem,
+    isClozeStyle,
+  }
+}
+
 export default function EnglishFullPaperView({
   onGoToEssayGrading,
   onGoToPractice,
 }: EnglishFullPaperViewProps) {
-  // 汇总所有英语真题套卷（包含模块化模考舱套卷 + 全国统考原卷整卷）
   const allPapers = useMemo<DisplayPaperItem[]>(() => {
     const list: DisplayPaperItem[] = []
 
@@ -103,7 +181,6 @@ export default function EnglishFullPaperView({
     return list.sort((a, b) => b.year - a.year)
   }, [])
 
-  // 卷种筛选
   const [examTypeFilter, setExamTypeFilter] = useState<EnglishExamCategory | 'all'>('all')
 
   const filteredPaperList = useMemo(() => {
@@ -111,19 +188,16 @@ export default function EnglishFullPaperView({
     return allPapers.filter((p) => p.examType === examTypeFilter || p.examType === 'both')
   }, [allPapers, examTypeFilter])
 
-  // 当前选中的套卷 ID
   const [selectedPaperId, setSelectedPaperId] = useState<string>(allPapers[0]?.id || '')
 
   const currentPaper = useMemo(() => {
     return allPapers.find((p) => p.id === selectedPaperId) || allPapers[0]
   }, [allPapers, selectedPaperId])
 
-  // 是否处于模考工作台
   const [isExamMode, setIsExamMode] = useState<boolean>(false)
-
-  // 计时器状态
   const [timerSeconds, setTimerSeconds] = useState<number>(180 * 60)
   const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false)
+  const [fontScale, setFontScale] = useState<FontScale>('md')
 
   // ── 模块化套卷状态 ───────────────────────────────────────────
   const [activeModularSection, setActiveModularSection] = useState<SectionKey>('cloze')
@@ -165,6 +239,18 @@ export default function EnglishFullPaperView({
   const [rawShowExplanations, setRawShowExplanations] = useState<Record<string, boolean>>({})
   const [rawIsSubmitted, setRawIsSubmitted] = useState<boolean>(false)
   const [rawSectionFilter, setRawSectionFilter] = useState<string>('all')
+  const [rawMatrixExpanded, setRawMatrixExpanded] = useState<boolean>(false)
+
+  // 左侧独立篇章滚动容器引用（切换同篇小题时保持滚动位置不跳动！）
+  const passageScrollRef = useRef<HTMLDivElement | null>(null)
+  const lastPassageKeyRef = useRef<string>('')
+
+  const {
+    lookupState,
+    closeLookup,
+    handleWordLookupClick,
+    handleWordLookupDoubleClick,
+  } = useEnglishWordLookup()
 
   const displayedRawQuestions = useMemo(() => {
     if (rawSectionFilter === 'all') return rawPaperQuestions
@@ -172,6 +258,33 @@ export default function EnglishFullPaperView({
   }, [rawPaperQuestions, rawSectionFilter])
 
   const currentRawQ = displayedRawQuestions[rawQuestionIndex] || displayedRawQuestions[0]
+
+  // 解析当前原卷题是否携带共享阅读/完形篇章
+  const parsedRaw = useMemo(() => {
+    return parseRawQuestionPassage(currentRawQ, rawPaperQuestions)
+  }, [currentRawQ, rawPaperQuestions])
+
+  // 找出共享同一篇原文的所有关联题（如第 21~25 题，或完形 1~20 题）
+  const samePassageGroup = useMemo(() => {
+    if (!parsedRaw.hasPassage) return []
+    return displayedRawQuestions
+      .map((q, idx) => ({
+        q,
+        idx,
+        parsed: parseRawQuestionPassage(q, rawPaperQuestions),
+      }))
+      .filter((entry) => entry.parsed.passageKey === parsedRaw.passageKey)
+  }, [displayedRawQuestions, parsedRaw.hasPassage, parsedRaw.passageKey, rawPaperQuestions])
+
+  // 仅当真正切换到另一篇不同文章（passageKey 变化）时才重置左侧阅读栏滚动条，同篇切题绝对保持原位！
+  useEffect(() => {
+    if (parsedRaw.hasPassage && parsedRaw.passageKey !== lastPassageKeyRef.current) {
+      lastPassageKeyRef.current = parsedRaw.passageKey
+      if (passageScrollRef.current) {
+        passageScrollRef.current.scrollTop = 0
+      }
+    }
+  }, [parsedRaw.hasPassage, parsedRaw.passageKey])
 
   // 计算原卷答题统计
   const rawStats = useMemo(() => {
@@ -196,14 +309,14 @@ export default function EnglishFullPaperView({
       totalChoice,
       answered,
       correct,
-      earnedScore,
+      earnedScore: Number(earnedScore.toFixed(1)),
       percentage: totalChoice > 0 ? Math.round((correct / totalChoice) * 100) : 0,
     }
   }, [rawPaperQuestions, rawUserAnswers])
 
   // 倒计时计时器
   useEffect(() => {
-    let timer: any = null
+    let timer: ReturnType<typeof setInterval> | null = null
     if (isExamMode && isTimerRunning && timerSeconds > 0) {
       timer = setInterval(() => {
         setTimerSeconds((prev) => Math.max(0, prev - 1))
@@ -238,7 +351,6 @@ export default function EnglishFullPaperView({
     }
   }
 
-  // 原卷选择题作答
   const handleSelectRawChoice = (questionId: string, optKey: string) => {
     setRawUserAnswers((prev) => ({
       ...prev,
@@ -246,35 +358,198 @@ export default function EnglishFullPaperView({
     }))
   }
 
+  const typographyClass =
+    fontScale === 'sm'
+      ? 'font-serif text-[14.5px] sm:text-[15.5px] leading-[1.82] tracking-[0.01em]'
+      : fontScale === 'lg'
+      ? 'font-serif text-[17px] sm:text-[18px] leading-[1.94] tracking-[0.012em]'
+      : 'font-serif text-[15.5px] sm:text-[16.5px] leading-[1.88] tracking-[0.01em]'
+
+  // 渲染原卷左侧独立篇章段落（支持完形 [1]~[20] 交互跳题或传统阅读自然段标号）
+  const renderedRawPassageParagraphs = useMemo(() => {
+    if (!parsedRaw.hasPassage) return null
+    const paragraphs = parsedRaw.passageText
+      .split(/\n+/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+
+    return paragraphs.map((paraText, pIdx) => {
+      if (!parsedRaw.isClozeStyle) {
+        return (
+          <div
+            key={pIdx}
+            className="p-3.5 sm:p-4 rounded-2xl bg-slate-50/50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 space-y-1.5"
+          >
+            <div className="text-[10px] font-mono font-bold text-slate-400 dark:text-slate-500">
+              PARAGRAPH {pIdx + 1}
+            </div>
+            <p className="text-slate-800 dark:text-slate-100 indent-6 select-text cursor-text">
+              {paraText}
+            </p>
+          </div>
+        )
+      }
+
+      // 完形风格：将 [1]~[20] 渲染为可交互词槽胶囊
+      const slotRegex = /\[(\d+)\]/g
+      const parts: React.ReactNode[] = []
+      let lastIndex = 0
+      let m: RegExpExecArray | null
+
+      while ((m = slotRegex.exec(paraText)) !== null) {
+        if (m.index > lastIndex) {
+          parts.push(paraText.slice(lastIndex, m.index))
+        }
+        const slotNum = parseInt(m[1], 10)
+        const targetEntry = displayedRawQuestions.findIndex(
+          (item) => item.paperQuestionNumber === slotNum
+        )
+        const targetQ = targetEntry >= 0 ? displayedRawQuestions[targetEntry] : undefined
+        const userAnsKey = targetQ ? rawUserAnswers[targetQ.id] : undefined
+        const chosenOptRaw =
+          targetQ && userAnsKey && targetQ.options
+            ? targetQ.options
+                .find((o) => o.startsWith(`${userAnsKey}.`))
+                ?.replace(/^[A-D]\.\s*/, '')
+            : null
+        const isCurrentSlot = currentRawQ?.paperQuestionNumber === slotNum
+
+        let slotCls =
+          'inline-flex items-baseline gap-1 mx-1 px-2 py-0.5 rounded-lg border text-[13.5px] font-serif font-bold transition-all cursor-pointer select-none '
+        if (isCurrentSlot) {
+          slotCls += 'bg-indigo-600 border-indigo-700 text-white ring-2 ring-indigo-400/30'
+        } else if (rawIsSubmitted && targetQ && userAnsKey) {
+          slotCls +=
+            userAnsKey.toUpperCase() === targetQ.correctAnswer?.toUpperCase()
+              ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-400 dark:border-emerald-600 text-emerald-800 dark:text-emerald-200'
+              : 'bg-rose-50 dark:bg-rose-950/60 border-rose-400 dark:border-rose-600 text-rose-800 dark:text-rose-200'
+        } else if (chosenOptRaw) {
+          slotCls +=
+            'bg-indigo-50 dark:bg-indigo-950/60 border-indigo-300 dark:border-indigo-700 text-indigo-900 dark:text-indigo-200'
+        } else {
+          slotCls +=
+            'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-indigo-50 dark:hover:bg-indigo-950/40'
+        }
+
+        parts.push(
+          <button
+            key={`raw-slot-${slotNum}`}
+            type="button"
+            onClick={() => {
+              if (targetEntry >= 0) setRawQuestionIndex(targetEntry)
+            }}
+            className={slotCls}
+            title={`点击跳转至第 ${slotNum} 题`}
+          >
+            <span className="font-mono text-[10.5px] opacity-75">[{slotNum}]</span>
+            <span>{chosenOptRaw || '______'}</span>
+          </button>
+        )
+
+        lastIndex = m.index + m[0].length
+      }
+
+      if (lastIndex < paraText.length) {
+        parts.push(paraText.slice(lastIndex))
+      }
+
+      return (
+        <p key={pIdx} className="text-slate-800 dark:text-slate-100 indent-6 select-text">
+          {parts}
+        </p>
+      )
+    })
+  }, [
+    parsedRaw,
+    displayedRawQuestions,
+    rawUserAnswers,
+    currentRawQ?.paperQuestionNumber,
+    rawIsSubmitted,
+  ])
+
+  // 复用的题号矩阵色板渲染函数
+  const renderQuestionNumberGrid = (compact = false) => (
+    <div
+      className={`grid ${
+        compact
+          ? 'grid-cols-8 sm:grid-cols-12 md:grid-cols-16 lg:grid-cols-20 gap-1.5'
+          : 'grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-5 gap-1.5 max-h-72 overflow-y-auto pr-1'
+      }`}
+    >
+      {displayedRawQuestions.map((q, idx) => {
+        const userAns = rawUserAnswers[q.id]
+        const isCurrent = idx === rawQuestionIndex
+        const isCorrect =
+          rawIsSubmitted &&
+          q.type === 'choice' &&
+          userAns?.toUpperCase() === q.correctAnswer?.toUpperCase()
+        const isWrong =
+          rawIsSubmitted &&
+          q.type === 'choice' &&
+          Boolean(userAns) &&
+          userAns.toUpperCase() !== q.correctAnswer?.toUpperCase()
+
+        let btnStyle =
+          'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+        if (isCurrent) {
+          btnStyle =
+            'ring-2 ring-indigo-500 font-bold border-indigo-400 dark:border-indigo-500 bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-200'
+        } else if (rawIsSubmitted) {
+          if (isCorrect) btnStyle = 'bg-emerald-500 text-white border-emerald-600'
+          else if (isWrong) btnStyle = 'bg-rose-500 text-white border-rose-600'
+          else if (userAns)
+            btnStyle =
+              'bg-indigo-100 dark:bg-indigo-900/60 text-indigo-800 dark:text-indigo-200 border-indigo-300 dark:border-indigo-700'
+        } else if (userAns) {
+          btnStyle =
+            'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 border-emerald-300 dark:border-emerald-700 font-semibold'
+        }
+
+        return (
+          <button
+            key={q.id}
+            type="button"
+            onClick={() => setRawQuestionIndex(idx)}
+            className={`h-7 sm:h-8 rounded-lg text-xs font-mono border flex items-center justify-center transition-all cursor-pointer ${btnStyle}`}
+            title={`第 ${q.paperQuestionNumber} 题 (${q.sectionName})`}
+          >
+            {q.paperQuestionNumber}
+          </button>
+        )
+      })}
+    </div>
+  )
+
   return (
     <div className="space-y-6 animate-fade-in font-sans">
+      <WordLookupPopover state={lookupState} onClose={closeLookup} />
+
       {/* 头部：考研英语学科整卷库与模考舱 */}
-      <div className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xs space-y-4">
+      <div className="rounded-3xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 sm:p-6 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded-lg bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow-2xs">
                 📜
               </span>
-              <h2 className="text-sm font-black text-slate-900 tracking-tight">
+              <h2 className="text-sm font-black text-slate-900 dark:text-slate-100 tracking-tight">
                 考研英语 · 历年真题套卷与全真模考舱
               </h2>
             </div>
-            <p className="text-[11px] text-slate-500 mt-1">
-              汇聚考研英语(一)与英语(二)全国统考历年官方真实整卷，支持 180 分钟实战模考计时、题号矩阵色板与长难句精析
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+              汇聚考研英语(一)与英语(二)全国统考历年官方真实整卷，支持 180 分钟实战计时、自动左右分栏学术阅读与即点即查生词
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* 卷种筛选 */}
-            <div className="flex items-center rounded-xl bg-slate-100 p-1 text-xs font-bold">
+            <div className="flex items-center rounded-xl bg-slate-100 dark:bg-slate-800 p-1 text-xs font-bold">
               <button
                 type="button"
                 onClick={() => setExamTypeFilter('all')}
                 className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
                   examTypeFilter === 'all'
-                    ? 'bg-white text-slate-900 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-2xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 全部试卷 ({allPapers.length})
@@ -284,8 +559,8 @@ export default function EnglishFullPaperView({
                 onClick={() => setExamTypeFilter('english_1')}
                 className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
                   examTypeFilter === 'english_1'
-                    ? 'bg-white text-indigo-700 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-2xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 英语(一)
@@ -295,8 +570,8 @@ export default function EnglishFullPaperView({
                 onClick={() => setExamTypeFilter('english_2')}
                 className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
                   examTypeFilter === 'english_2'
-                    ? 'bg-white text-indigo-700 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-white dark:bg-slate-700 text-indigo-700 dark:text-indigo-300 shadow-2xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 英语(二)
@@ -307,7 +582,7 @@ export default function EnglishFullPaperView({
               <button
                 type="button"
                 onClick={onGoToPractice}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition-all cursor-pointer shrink-0 border border-indigo-200/60"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-xs font-bold transition-all cursor-pointer shrink-0 border border-indigo-200/60 dark:border-indigo-800/60"
               >
                 <span>切换至分题型专项刷题</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -317,7 +592,7 @@ export default function EnglishFullPaperView({
         </div>
 
         {/* 试卷列表网格 */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2 border-t border-slate-100">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
           {filteredPaperList.map((paper) => {
             const isSelected = selectedPaperId === paper.id
             const isRaw = paper.kind === 'full_raw'
@@ -331,11 +606,10 @@ export default function EnglishFullPaperView({
                 }}
                 className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-3 relative overflow-hidden group ${
                   isSelected
-                    ? 'border-indigo-600 bg-indigo-50/30 ring-2 ring-indigo-500/20 shadow-xs'
-                    : 'border-slate-200/80 bg-white hover:border-slate-300 hover:shadow-2xs'
+                    ? 'border-indigo-600 dark:border-indigo-500 bg-indigo-50/35 dark:bg-indigo-950/35 ring-2 ring-indigo-500/20 shadow-xs'
+                    : 'border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/70 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-2xs'
                 }`}
               >
-                {/* 顶部指示条 */}
                 <div
                   className={`absolute top-0 left-0 right-0 h-1 ${
                     isRaw
@@ -349,8 +623,8 @@ export default function EnglishFullPaperView({
                     <span
                       className={`px-2 py-0.5 rounded-md font-bold text-[10px] border ${
                         isRaw
-                          ? 'bg-teal-50 text-teal-700 border-teal-200/60'
-                          : 'bg-indigo-50 text-indigo-700 border-indigo-200/60'
+                          ? 'bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 border-teal-200/60 dark:border-teal-800/60'
+                          : 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border-indigo-200/60 dark:border-indigo-800/60'
                       }`}
                     >
                       {paper.year} 年 · {paper.categoryLabel}
@@ -360,7 +634,7 @@ export default function EnglishFullPaperView({
                     </span>
                   </div>
 
-                  <h3 className="text-xs font-bold text-slate-900 leading-snug group-hover:text-indigo-600 transition-colors">
+                  <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 leading-snug group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                     {paper.title}
                   </h3>
 
@@ -368,7 +642,7 @@ export default function EnglishFullPaperView({
                     {paper.hotTopics.slice(0, 3).map((topic, tIdx) => (
                       <span
                         key={tIdx}
-                        className="px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 text-[10px]"
+                        className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px]"
                       >
                         #{topic}
                       </span>
@@ -376,13 +650,15 @@ export default function EnglishFullPaperView({
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
                   <span className="text-[10px] text-slate-400 font-medium truncate max-w-[150px]">
                     {paper.avgScoreDesc}
                   </span>
                   <span
                     className={`font-bold text-xs shrink-0 ${
-                      isSelected ? 'text-indigo-600' : 'text-slate-500'
+                      isSelected
+                        ? 'text-indigo-600 dark:text-indigo-400'
+                        : 'text-slate-500 dark:text-slate-400'
                     }`}
                   >
                     {isSelected ? '✓ 选定' : '选择'}
@@ -396,12 +672,11 @@ export default function EnglishFullPaperView({
 
       {/* ── 模考大厅 / 实战工作台 ─────────────────────────────── */}
       {!isExamMode ? (
-        /* 试卷未开考：试卷结构与考点导览大厅 */
-        <div className="rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-8 shadow-xs space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+        <div className="rounded-3xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 sm:p-8 shadow-xs space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
             <div>
-              <div className="flex items-center gap-2 text-xs font-bold text-indigo-600">
-                <span className="px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-200/60">
+              <div className="flex items-center gap-2 text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                <span className="px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/60 dark:border-indigo-800/60">
                   {currentPaper.year} 年官方真题
                 </span>
                 <span>
@@ -412,8 +687,12 @@ export default function EnglishFullPaperView({
                     : '英语(二) 权威全题型全真模考舱'}
                 </span>
               </div>
-              <h2 className="text-xl font-black text-slate-900 mt-2">{currentPaper.title}</h2>
-              <p className="text-xs text-slate-500 mt-1">{currentPaper.subtitle}</p>
+              <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 mt-2">
+                {currentPaper.title}
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                {currentPaper.subtitle}
+              </p>
             </div>
 
             <button
@@ -426,22 +705,24 @@ export default function EnglishFullPaperView({
             </button>
           </div>
 
-          {/* 试卷结构总览 */}
           {currentPaper.kind === 'modular' ? (
-            /* 模块化套卷明细 */
             <div className="space-y-4">
-              <h3 className="text-xs font-bold text-slate-900 flex items-center gap-2">
-                <Layers className="w-4 h-4 text-indigo-600" />
+              <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Layers className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                 <span>试卷模块明细与分值构成 (总计 100 分)</span>
               </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-2">
+                <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-2">
                   <div className="flex items-center justify-between text-xs font-bold">
-                    <span className="text-slate-900">Section I: 完形填空 (Use of English)</span>
-                    <span className="text-indigo-600 font-mono">20 题 · 10 分</span>
+                    <span className="text-slate-900 dark:text-slate-100">
+                      Section I: 完形填空 (Use of English)
+                    </span>
+                    <span className="text-indigo-600 dark:text-indigo-400 font-mono">
+                      20 题 · 10 分
+                    </span>
                   </div>
-                  <p className="text-[11.5px] text-slate-500 leading-relaxed">
+                  <p className="text-[11.5px] text-slate-500 dark:text-slate-400 leading-relaxed">
                     篇目：{clozeExam.title} (约 {clozeExam.wordCount} 词，考查词汇搭配与语境连词)
                   </p>
                   <div className="pt-2">
@@ -451,19 +732,23 @@ export default function EnglishFullPaperView({
                         setIsExamMode(true)
                         setActiveModularSection('cloze')
                       }}
-                      className="text-xs font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer"
+                      className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 cursor-pointer"
                     >
                       单项做题 →
                     </button>
                   </div>
                 </div>
 
-                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-2">
+                <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-2">
                   <div className="flex items-center justify-between text-xs font-bold">
-                    <span className="text-slate-900">Section II Part A: 传统阅读 (Reading)</span>
-                    <span className="text-indigo-600 font-mono">4 篇 · 40 分</span>
+                    <span className="text-slate-900 dark:text-slate-100">
+                      Section II Part A: 传统阅读 (Reading)
+                    </span>
+                    <span className="text-indigo-600 dark:text-indigo-400 font-mono">
+                      4 篇 · 40 分
+                    </span>
                   </div>
-                  <p className="text-[11.5px] text-slate-500 leading-relaxed">
+                  <p className="text-[11.5px] text-slate-500 dark:text-slate-400 leading-relaxed">
                     篇目：{readingExams.map((r) => r.textNumber).join(', ') || 'Text 1~4'} (考查主旨细节推理)
                   </p>
                   <div className="pt-2">
@@ -473,19 +758,23 @@ export default function EnglishFullPaperView({
                         setIsExamMode(true)
                         setActiveModularSection('reading')
                       }}
-                      className="text-xs font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer"
+                      className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 cursor-pointer"
                     >
                       单项做题 →
                     </button>
                   </div>
                 </div>
 
-                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-2">
+                <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-2">
                   <div className="flex items-center justify-between text-xs font-bold">
-                    <span className="text-slate-900">Section II Part B: 新题型 (New Types)</span>
-                    <span className="text-indigo-600 font-mono">5 题 · 10 分</span>
+                    <span className="text-slate-900 dark:text-slate-100">
+                      Section II Part B: 新题型 (New Types)
+                    </span>
+                    <span className="text-indigo-600 dark:text-indigo-400 font-mono">
+                      5 题 · 10 分
+                    </span>
                   </div>
-                  <p className="text-[11.5px] text-slate-500 leading-relaxed">
+                  <p className="text-[11.5px] text-slate-500 dark:text-slate-400 leading-relaxed">
                     题型：{newTypeExam.variantLabel} ({newTypeExam.title})
                   </p>
                   <div className="pt-2">
@@ -495,21 +784,23 @@ export default function EnglishFullPaperView({
                         setIsExamMode(true)
                         setActiveModularSection('new_type')
                       }}
-                      className="text-xs font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer"
+                      className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 cursor-pointer"
                     >
                       单项做题 →
                     </button>
                   </div>
                 </div>
 
-                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-2">
+                <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-2">
                   <div className="flex items-center justify-between text-xs font-bold">
-                    <span className="text-slate-900">Section II Part C: 英汉翻译 (Translation)</span>
-                    <span className="text-indigo-600 font-mono">
+                    <span className="text-slate-900 dark:text-slate-100">
+                      Section II Part C: 英汉翻译 (Translation)
+                    </span>
+                    <span className="text-indigo-600 dark:text-indigo-400 font-mono">
                       {activeModularPaper.examType === 'english_1' ? '5 题 · 10 分' : '整段 · 15 分'}
                     </span>
                   </div>
-                  <p className="text-[11.5px] text-slate-500 leading-relaxed">
+                  <p className="text-[11.5px] text-slate-500 dark:text-slate-400 leading-relaxed">
                     考查长难句切分主干、从句转换与地道中文译文。
                   </p>
                   <div className="pt-2">
@@ -519,7 +810,7 @@ export default function EnglishFullPaperView({
                         setIsExamMode(true)
                         setActiveModularSection('translation')
                       }}
-                      className="text-xs font-bold text-indigo-600 hover:text-indigo-800 cursor-pointer"
+                      className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 cursor-pointer"
                     >
                       单项做题 →
                     </button>
@@ -528,48 +819,53 @@ export default function EnglishFullPaperView({
               </div>
             </div>
           ) : (
-            /* 全国统考原卷明细 */
             <div className="space-y-4">
-              <h3 className="text-xs font-bold text-slate-900 flex items-center gap-2">
-                <Layers className="w-4 h-4 text-teal-600" />
-                <span>全国统考真实原卷试卷架构 (总题数 {rawPaperQuestions.length} 题 · 满分 100 分)</span>
+              <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Layers className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                <span>
+                  全国统考真实原卷试卷架构 (总题数 {rawPaperQuestions.length} 题 · 满分 100 分)
+                </span>
               </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-1.5">
+                <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-1.5">
                   <div className="flex items-center justify-between text-xs font-bold">
-                    <span className="text-slate-900">Section I 英语知识运用</span>
-                    <span className="text-teal-600 font-mono">20 题 · 10 分</span>
+                    <span className="text-slate-900 dark:text-slate-100">Section I 英语知识运用</span>
+                    <span className="text-teal-600 dark:text-teal-400 font-mono">20 题 · 10 分</span>
                   </div>
-                  <p className="text-[11px] text-slate-500">
-                    完形填空 20 道客观单选题，深度考查篇章连贯、逻辑词与词义辨析
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    完形填空 20 道客观单选题，左右双栏交互词槽实时同步
                   </p>
                 </div>
 
-                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-1.5">
+                <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-1.5">
                   <div className="flex items-center justify-between text-xs font-bold">
-                    <span className="text-slate-900">Section II 阅读理解</span>
-                    <span className="text-teal-600 font-mono">20 题 · 40 分</span>
+                    <span className="text-slate-900 dark:text-slate-100">Section II 阅读理解</span>
+                    <span className="text-teal-600 dark:text-teal-400 font-mono">20 题 · 40 分</span>
                   </div>
-                  <p className="text-[11px] text-slate-500">
-                    4 篇传统阅读深度精读，涵盖主旨、细节、推理与作者态度题型
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    左 7 列固定独立滚动阅读栏 + 右 5 列小题作答，同篇切题不跳动
                   </p>
                 </div>
 
-                <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-1.5">
+                <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 space-y-1.5">
                   <div className="flex items-center justify-between text-xs font-bold">
-                    <span className="text-slate-900">Section II Part C / 写作</span>
-                    <span className="text-teal-600 font-mono">主观题 · 50 分</span>
+                    <span className="text-slate-900 dark:text-slate-100">
+                      Section II Part C / 写作
+                    </span>
+                    <span className="text-teal-600 dark:text-teal-400 font-mono">主观题 · 50 分</span>
                   </div>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
                     英汉翻译 5 句核心长难句攻关 + 应用文小作文与图画大作文
                   </p>
                 </div>
               </div>
 
               {currentPaper.rawPaper?.description && (
-                <div className="p-4 rounded-2xl bg-teal-50/50 border border-teal-200/60 text-xs text-slate-700 leading-relaxed">
-                  <span className="font-bold text-teal-900 mr-1.5">📌 试卷导读：</span>
+                <div className="p-4 rounded-2xl bg-teal-50/50 dark:bg-teal-950/35 border border-teal-200/60 dark:border-teal-800/60 text-xs text-slate-700 dark:text-slate-200 leading-relaxed">
+                  <span className="font-bold text-teal-900 dark:text-teal-200 mr-1.5">
+                    📌 试卷导读：
+                  </span>
                   <MarkdownRenderer content={currentPaper.rawPaper.description} inline />
                 </div>
               )}
@@ -580,7 +876,7 @@ export default function EnglishFullPaperView({
         /* 模考进行时工作台 */
         <div className="space-y-5">
           {/* 模考顶栏控制条 */}
-          <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-slate-900 text-white shadow-md">
+          <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-slate-900 text-white shadow-md border border-slate-800">
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -589,18 +885,33 @@ export default function EnglishFullPaperView({
               >
                 ← 退出模考
               </button>
-              <div>
-                <div className="text-xs font-bold flex items-center gap-2">
-                  <span>{currentPaper.title}</span>
-                  <span className="text-[10px] bg-indigo-500 px-1.5 py-0.2 rounded font-mono">
-                    {currentPaper.kind === 'full_raw' ? '原卷实战模考' : '模考舱实战中'}
-                  </span>
-                </div>
+              <div className="text-xs font-bold flex items-center gap-2 flex-wrap">
+                <span>{currentPaper.title}</span>
+                <span className="text-[10px] bg-indigo-500 px-1.5 py-0.2 rounded font-mono">
+                  {currentPaper.kind === 'full_raw' ? '原卷双栏实战模考' : '模考舱实战中'}
+                </span>
               </div>
             </div>
 
-            {/* 倒计时器 */}
-            <div className="flex items-center gap-3">
+            {/* 字号调节与倒计时器 */}
+            <div className="flex items-center gap-2.5">
+              {currentPaper.kind === 'full_raw' && (
+                <div className="inline-flex items-center rounded-xl bg-white/10 p-0.5 border border-white/10">
+                  {(['sm', 'md', 'lg'] as const).map((sz) => (
+                    <button
+                      key={sz}
+                      type="button"
+                      onClick={() => setFontScale(sz)}
+                      className={`px-2 py-0.5 rounded-lg text-[11px] font-serif font-bold transition-all cursor-pointer ${
+                        fontScale === sz ? 'bg-indigo-500 text-white' : 'text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      {sz === 'sm' ? 'A-' : sz === 'md' ? 'A' : 'A+'}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <div className="flex items-center gap-2 font-mono text-sm font-bold bg-white/10 px-3 py-1 rounded-xl">
                 <Clock className="w-4 h-4 text-amber-400" />
                 <span className={timerSeconds < 600 ? 'text-rose-400 animate-pulse' : 'text-white'}>
@@ -622,14 +933,14 @@ export default function EnglishFullPaperView({
           {/* 如果是模块化套卷 */}
           {currentPaper.kind === 'modular' ? (
             <div className="space-y-4">
-              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar p-1.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs text-xs font-bold">
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar p-1.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs text-xs font-bold">
                 <button
                   type="button"
                   onClick={() => setActiveModularSection('cloze')}
                   className={`px-3 py-2 rounded-xl transition-all cursor-pointer shrink-0 ${
                     activeModularSection === 'cloze'
                       ? 'bg-indigo-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:bg-slate-100'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
                   1. 完形填空 (10分)
@@ -641,7 +952,7 @@ export default function EnglishFullPaperView({
                   className={`px-3 py-2 rounded-xl transition-all cursor-pointer shrink-0 ${
                     activeModularSection === 'reading'
                       ? 'bg-indigo-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:bg-slate-100'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
                   2. 传统阅读 (40分)
@@ -653,7 +964,7 @@ export default function EnglishFullPaperView({
                   className={`px-3 py-2 rounded-xl transition-all cursor-pointer shrink-0 ${
                     activeModularSection === 'new_type'
                       ? 'bg-indigo-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:bg-slate-100'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
                   3. 新题型 (10分)
@@ -665,7 +976,7 @@ export default function EnglishFullPaperView({
                   className={`px-3 py-2 rounded-xl transition-all cursor-pointer shrink-0 ${
                     activeModularSection === 'translation'
                       ? 'bg-indigo-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:bg-slate-100'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
                   4. 英汉翻译 ({activeModularPaper.examType === 'english_1' ? '10分' : '15分'})
@@ -675,9 +986,9 @@ export default function EnglishFullPaperView({
                   <button
                     type="button"
                     onClick={onGoToEssayGrading}
-                    className="px-3 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition-all cursor-pointer shrink-0 flex items-center gap-1 ml-auto"
+                    className="px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-800/70 transition-all cursor-pointer shrink-0 flex items-center gap-1 ml-auto"
                   >
-                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                     <span>5. 作文智能批改舱 →</span>
                   </button>
                 )}
@@ -699,8 +1010,8 @@ export default function EnglishFullPaperView({
                             onClick={() => setActiveReadingIndex(idx)}
                             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                               activeReadingIndex === idx
-                                ? 'bg-slate-900 text-white'
-                                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                                ? 'bg-slate-900 dark:bg-indigo-600 text-white'
+                                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                             }`}
                           >
                             {r.textNumber}
@@ -727,36 +1038,29 @@ export default function EnglishFullPaperView({
               </div>
             </div>
           ) : (
-            /* 全国统考原卷模考交互舱 */
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-              {/* 左侧/上方：试卷题号色板矩阵 (LeetCode / 粉笔风格) */}
-              <div className="lg:col-span-4 space-y-4">
-                <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-xs space-y-3">
-                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                    <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                      <Layers className="w-4 h-4 text-indigo-600" />
-                      <span>答题卡题号色板</span>
+            /* ── 全国统考原卷实战交互舱（识别出英文篇章代码块时自动切换左 7 列阅读栏 + 右 5 列小题栏） ── */
+            <div className="space-y-4">
+              {/* 顶部紧凑答题卡导航与交卷评分横条 */}
+              <div className="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                    <span className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 mr-1">
+                      <Layers className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                      <span>试卷模块:</span>
                     </span>
-                    <span className="text-[11px] font-mono font-semibold text-slate-500">
-                      已答 {rawStats.answered} / {rawStats.total} 题
-                    </span>
-                  </div>
-
-                  {/* 部分筛选 */}
-                  <div className="flex flex-wrap gap-1 text-[10px]">
                     <button
                       type="button"
                       onClick={() => {
                         setRawSectionFilter('all')
                         setRawQuestionIndex(0)
                       }}
-                      className={`px-2 py-1 rounded-lg font-medium cursor-pointer ${
+                      className={`px-2.5 py-1 rounded-lg font-medium cursor-pointer transition-colors ${
                         rawSectionFilter === 'all'
-                          ? 'bg-slate-900 text-white'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          ? 'bg-slate-900 dark:bg-indigo-600 text-white font-bold'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                       }`}
                     >
-                      全部题目
+                      全卷 ({rawPaperQuestions.length})
                     </button>
                     {Array.from(new Set(rawPaperQuestions.map((q) => q.sectionName))).map((sec) => (
                       <button
@@ -766,10 +1070,10 @@ export default function EnglishFullPaperView({
                           setRawSectionFilter(sec)
                           setRawQuestionIndex(0)
                         }}
-                        className={`px-2 py-1 rounded-lg font-medium cursor-pointer truncate max-w-[120px] ${
+                        className={`px-2.5 py-1 rounded-lg font-medium cursor-pointer truncate max-w-[150px] transition-colors ${
                           rawSectionFilter === sec
-                            ? 'bg-indigo-600 text-white'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            ? 'bg-indigo-600 text-white font-bold'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                         }`}
                         title={sec}
                       >
@@ -778,56 +1082,33 @@ export default function EnglishFullPaperView({
                     ))}
                   </div>
 
-                  {/* 题号按钮矩阵 */}
-                  <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-5 gap-1.5 max-h-72 overflow-y-auto pr-1">
-                    {displayedRawQuestions.map((q, idx) => {
-                      const userAns = rawUserAnswers[q.id]
-                      const isCurrent = idx === rawQuestionIndex
-                      const isCorrect =
-                        rawIsSubmitted &&
-                        q.type === 'choice' &&
-                        userAns?.toUpperCase() === q.correctAnswer?.toUpperCase()
-                      const isWrong =
-                        rawIsSubmitted &&
-                        q.type === 'choice' &&
-                        userAns &&
-                        userAns.toUpperCase() !== q.correctAnswer?.toUpperCase()
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[11px] font-mono font-semibold text-slate-500 dark:text-slate-400">
+                      已答 {rawStats.answered}/{rawStats.total} 题
+                    </span>
 
-                      let btnStyle = 'bg-slate-100 text-slate-700 border-slate-200'
-                      if (isCurrent) {
-                        btnStyle = 'ring-2 ring-indigo-500 font-bold border-indigo-400 bg-indigo-50 text-indigo-700'
-                      } else if (rawIsSubmitted) {
-                        if (isCorrect) btnStyle = 'bg-emerald-500 text-white border-emerald-600'
-                        else if (isWrong) btnStyle = 'bg-rose-500 text-white border-rose-600'
-                        else if (userAns) btnStyle = 'bg-indigo-100 text-indigo-800 border-indigo-300'
-                      } else if (userAns) {
-                        btnStyle = 'bg-emerald-100 text-emerald-800 border-emerald-300 font-semibold'
-                      }
+                    <button
+                      type="button"
+                      onClick={() => setRawMatrixExpanded((v) => !v)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                    >
+                      <span>{rawMatrixExpanded ? '收起答题卡' : '展开答题卡'}</span>
+                      {rawMatrixExpanded ? (
+                        <ChevronUp className="w-3.5 h-3.5" />
+                      ) : (
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      )}
+                    </button>
 
-                      return (
-                        <button
-                          key={q.id}
-                          type="button"
-                          onClick={() => setRawQuestionIndex(idx)}
-                          className={`h-8 rounded-lg text-xs font-mono border flex items-center justify-center transition-all cursor-pointer ${btnStyle}`}
-                          title={`第 ${q.paperQuestionNumber} 题 (${q.sectionName})`}
-                        >
-                          {q.paperQuestionNumber}
-                        </button>
-                      )
-                    })}
-                  </div>
-
-                  {/* 交卷评分控制按钮 */}
-                  <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => setRawIsSubmitted(true)}
-                      className="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
+                      className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>提交并全卷评分</span>
                     </button>
+
                     {rawIsSubmitted && (
                       <button
                         type="button"
@@ -836,7 +1117,7 @@ export default function EnglishFullPaperView({
                           setRawUserAnswers({})
                           setRawShowExplanations({})
                         }}
-                        className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs transition-colors cursor-pointer"
+                        className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs transition-colors cursor-pointer"
                         title="清空重刷"
                       >
                         <RotateCcw className="w-3.5 h-3.5" />
@@ -845,218 +1126,383 @@ export default function EnglishFullPaperView({
                   </div>
                 </div>
 
-                {/* 评分结果报告卡片 */}
+                {/* 可折叠全卷题号矩阵 */}
+                {rawMatrixExpanded && (
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800 animate-fade-in">
+                    {renderQuestionNumberGrid(true)}
+                  </div>
+                )}
+
+                {/* 评分结果报告卡片（完整暗夜适配，彻底杜绝白底白字灾难） */}
                 {rawIsSubmitted && (
-                  <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200/80 shadow-xs space-y-2 animate-in fade-in">
-                    <div className="flex items-center justify-between text-xs font-bold text-slate-900">
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-slate-900 dark:via-slate-900/95 dark:to-indigo-950/60 border border-indigo-200/80 dark:border-indigo-800/70 shadow-xs flex flex-wrap items-center justify-between gap-3 animate-fade-in">
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-slate-100">
                       <span>🎉 全卷模考评估结果</span>
-                      <span className="font-mono text-indigo-700 text-sm">
-                        选择题得分: {rawStats.earnedScore} 分
+                      <span className="font-mono text-indigo-700 dark:text-indigo-300 text-sm">
+                        客观选择题得分: {rawStats.earnedScore} 分
                       </span>
                     </div>
-                    <div className="text-[11px] text-slate-600 space-y-1">
-                      <div>
-                        客观选择题正确率: <strong>{rawStats.percentage}%</strong> ({rawStats.correct} /{' '}
+                    <div className="flex flex-wrap items-center gap-4 text-[11.5px] text-slate-600 dark:text-slate-300">
+                      <span>
+                        客观题正确率: <strong>{rawStats.percentage}%</strong> ({rawStats.correct} /{' '}
                         {rawStats.totalChoice} 题)
-                      </div>
-                      <div>
+                      </span>
+                      <span>
                         已作答总计: {rawStats.answered} / {rawStats.total} 题
-                      </div>
+                      </span>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* 右侧：单题做题工作台 */}
-              <div className="lg:col-span-8 space-y-4">
-                {currentRawQ ? (
-                  <div className="rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-7 shadow-xs space-y-5">
-                    {/* 题目头部元信息 */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-mono font-bold text-xs">
-                          第 {currentRawQ.paperQuestionNumber} 题
-                        </span>
-                        <span className="text-xs font-semibold text-slate-700">
-                          {currentRawQ.sectionName}
-                        </span>
-                        <span className="text-[11px] text-slate-400 font-mono">
-                          ({currentRawQ.score} 分)
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          disabled={!rawIsSubmitted}
-                          onClick={() => {
-                            if (!rawIsSubmitted) return
-                            setRawShowExplanations((prev) => ({
-                              ...prev,
-                              [currentRawQ.id]: prev[currentRawQ.id] === false ? true : !(prev[currentRawQ.id] ?? true),
-                            }))
-                          }}
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
-                            rawIsSubmitted
-                              ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer'
-                              : 'bg-slate-100/70 text-slate-400 cursor-not-allowed opacity-75'
-                          }`}
-                          title={rawIsSubmitted ? '切换查看或隐藏考点精解' : '全真模考期间已锁定解析，交卷后自动开放'}
-                        >
-                          <HelpCircle className="w-3.5 h-3.5 text-amber-500" />
-                          <span>
-                            {!rawIsSubmitted
-                              ? '交卷后开放精解'
-                              : rawShowExplanations[currentRawQ.id] === false
-                              ? '查看考点精解'
-                              : '隐藏考点精解'}
+              {/* 主做题区：若当前题含英文阅读/完形篇章，自动启用「左 7 列固定独立滚动篇章 + 右 5 列小题作答」 */}
+              {currentRawQ ? (
+                parsedRaw.hasPassage ? (
+                  <div
+                    onClick={handleWordLookupClick}
+                    onDoubleClick={handleWordLookupDoubleClick}
+                    className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start"
+                  >
+                    {/* 左 7 列：英文篇章独立滚动阅读栏（同篇切题滚动条保持不动） */}
+                    <div className="lg:col-span-7">
+                      <div className="rounded-3xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs overflow-hidden flex flex-col lg:max-h-[78vh]">
+                        <div className="px-5 sm:px-6 py-3.5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 flex flex-wrap items-center justify-between gap-2 shrink-0">
+                          <div className="flex items-center gap-2">
+                            <BookOpen className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                            <span className="text-xs font-black text-slate-900 dark:text-slate-100">
+                              {currentRawQ.chapter || currentRawQ.sectionName} · 篇章原文精读区
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded-lg border border-indigo-200/60 dark:border-indigo-800/60">
+                            💡 点词即查生词 · 切题保持阅读位置
                           </span>
-                        </button>
+                        </div>
+
+                        <div
+                          ref={passageScrollRef}
+                          className={`p-5 sm:p-7 overflow-y-auto space-y-4 ${typographyClass}`}
+                        >
+                          {renderedRawPassageParagraphs}
+                        </div>
                       </div>
                     </div>
 
-                    {/* 题干内容 */}
-                    <div className="text-sm text-slate-800 leading-relaxed space-y-3">
-                      <MarkdownRenderer content={currentRawQ.question} />
-                    </div>
+                    {/* 右 5 列：当前小题选项与解析面板 */}
+                    <div className="lg:col-span-5 lg:sticky lg:top-4">
+                      <div className="rounded-3xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 sm:p-6 shadow-xs space-y-4">
+                        {/* 同篇关联小题快速切换药丸（如第 21~25 题） */}
+                        {samePassageGroup.length > 1 && (
+                          <div className="space-y-1.5 pb-3 border-b border-slate-100 dark:border-slate-800">
+                            <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                              <span className="font-bold">本篇关联小题速切：</span>
+                              <span className="font-mono">
+                                共 {samePassageGroup.length} 题
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {samePassageGroup.map(({ q, idx }) => {
+                                const active = idx === rawQuestionIndex
+                                const ans = rawUserAnswers[q.id]
+                                return (
+                                  <button
+                                    key={q.id}
+                                    type="button"
+                                    onClick={() => setRawQuestionIndex(idx)}
+                                    className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold border transition-all cursor-pointer ${
+                                      active
+                                        ? 'bg-indigo-600 border-indigo-700 text-white shadow-2xs'
+                                        : ans
+                                        ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300'
+                                        : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                                    }`}
+                                  >
+                                    #{q.paperQuestionNumber}
+                                    {ans ? ` (${ans})` : ''}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )}
 
-                    {/* 选择题选项 */}
-                    {currentRawQ.type === 'choice' && currentRawQ.options && (
-                      <div className="space-y-2 pt-2">
-                        {currentRawQ.options.map((opt, oIdx) => {
-                          const optKey = opt.match(/^([A-D])\./)?.[1] || ['A', 'B', 'C', 'D'][oIdx]
-                          const isSelected = rawUserAnswers[currentRawQ.id] === optKey
-                          const isCorrect =
-                            rawIsSubmitted && optKey === currentRawQ.correctAnswer?.toUpperCase()
-                          const isWrong =
-                            rawIsSubmitted && isSelected && !isCorrect
+                        {/* 当前小题头部 */}
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-mono font-bold text-xs">
+                              第 {currentRawQ.paperQuestionNumber} 题
+                            </span>
+                            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                              ({currentRawQ.score} 分)
+                            </span>
+                          </div>
 
-                          let optStyle = 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-                          if (isSelected) {
-                            optStyle = 'border-indigo-600 bg-indigo-50/60 ring-2 ring-indigo-500/20 font-bold'
-                          }
-                          if (rawIsSubmitted) {
-                            if (isCorrect) {
-                              optStyle = 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-500/30 text-emerald-900 font-bold'
-                            } else if (isWrong) {
-                              optStyle = 'border-rose-500 bg-rose-50 text-rose-900'
-                            }
-                          }
+                          <button
+                            type="button"
+                            disabled={!rawIsSubmitted}
+                            onClick={() => {
+                              if (!rawIsSubmitted) return
+                              setRawShowExplanations((prev) => ({
+                                ...prev,
+                                [currentRawQ.id]:
+                                  prev[currentRawQ.id] === false
+                                    ? true
+                                    : !(prev[currentRawQ.id] ?? true),
+                              }))
+                            }}
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                              rawIsSubmitted
+                                ? 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 cursor-pointer'
+                                : 'bg-slate-100/70 dark:bg-slate-800/60 text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-75'
+                            }`}
+                          >
+                            <HelpCircle className="w-3.5 h-3.5 text-amber-500" />
+                            <span>
+                              {!rawIsSubmitted
+                                ? '交卷后开放精解'
+                                : rawShowExplanations[currentRawQ.id] === false
+                                ? '查看考点精解'
+                                : '隐藏考点精解'}
+                            </span>
+                          </button>
+                        </div>
 
-                          return (
-                            <div
-                              key={oIdx}
-                              onClick={() => handleSelectRawChoice(currentRawQ.id, optKey)}
-                              className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between text-xs sm:text-sm ${optStyle}`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <span className="w-6 h-6 rounded-lg bg-white border border-slate-200 font-mono font-bold text-xs flex items-center justify-center shadow-2xs">
-                                  {optKey}
-                                </span>
-                                <span>{opt}</span>
-                              </div>
-                              {rawIsSubmitted && isCorrect && (
-                                <span className="text-xs font-bold text-emerald-600">
-                                  ✓ 正确答案
-                                </span>
-                              )}
-                              {rawIsSubmitted && isWrong && (
-                                <span className="text-xs font-bold text-rose-600">
-                                  ✗ 你的选择
+                        {/* 剥离代码块后的干净题干 */}
+                        <div className="font-serif text-[15.5px] font-semibold text-slate-900 dark:text-slate-100 leading-relaxed">
+                          <MarkdownRenderer content={parsedRaw.cleanStem} />
+                        </div>
+
+                        {/* 学术衬线选项 */}
+                        {currentRawQ.type === 'choice' && currentRawQ.options && (
+                          <div className="space-y-2.5 pt-1">
+                            {currentRawQ.options.map((opt, oIdx) => {
+                              const optKey =
+                                opt.match(/^([A-D])\./)?.[1] || ['A', 'B', 'C', 'D'][oIdx]
+                              const pureOptText = opt.replace(/^[A-D]\.\s*/, '')
+                              const isSelected = rawUserAnswers[currentRawQ.id] === optKey
+                              const isCorrect =
+                                rawIsSubmitted &&
+                                optKey === currentRawQ.correctAnswer?.toUpperCase()
+                              const isWrong = rawIsSubmitted && isSelected && !isCorrect
+
+                              let optStyle =
+                                'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/70 text-slate-800 dark:text-slate-200'
+                              if (isSelected) {
+                                optStyle =
+                                  'border-indigo-600 dark:border-indigo-500 bg-indigo-50/60 dark:bg-indigo-950/50 ring-2 ring-indigo-500/20 font-semibold text-indigo-950 dark:text-indigo-100'
+                              }
+                              if (rawIsSubmitted) {
+                                if (isCorrect) {
+                                  optStyle =
+                                    'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/50 ring-2 ring-emerald-500/25 text-emerald-950 dark:text-emerald-100 font-semibold'
+                                } else if (isWrong) {
+                                  optStyle =
+                                    'border-rose-500 bg-rose-50 dark:bg-rose-950/50 text-rose-950 dark:text-rose-100'
+                                }
+                              }
+
+                              return (
+                                <div
+                                  key={oIdx}
+                                  onClick={() => handleSelectRawChoice(currentRawQ.id, optKey)}
+                                  className={`p-3.5 rounded-xl border transition-all cursor-pointer flex items-start justify-between gap-3 ${optStyle}`}
+                                >
+                                  <div className="flex items-start gap-2.5">
+                                    <span
+                                      className={`w-6 h-6 rounded-lg font-mono font-bold text-xs flex items-center justify-center shrink-0 mt-0.5 ${
+                                        isSelected
+                                          ? 'bg-indigo-600 text-white'
+                                          : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200'
+                                      }`}
+                                    >
+                                      {optKey}
+                                    </span>
+                                    <span className="font-serif text-[15px] leading-snug">
+                                      {pureOptText}
+                                    </span>
+                                  </div>
+                                  {rawIsSubmitted && isCorrect && (
+                                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
+                                      ✓ 正确
+                                    </span>
+                                  )}
+                                  {rawIsSubmitted && isWrong && (
+                                    <span className="text-xs font-bold text-rose-600 dark:text-rose-400 shrink-0">
+                                      ✗ 错选
+                                    </span>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+
+                        {/* 官方解析 */}
+                        {rawIsSubmitted && rawShowExplanations[currentRawQ.id] !== false && (
+                          <div className="mt-3 p-4 rounded-2xl bg-amber-50/75 dark:bg-amber-950/35 border border-amber-200/80 dark:border-amber-800/60 text-xs space-y-2 animate-fade-in">
+                            <div className="flex items-center gap-2 font-bold text-amber-900 dark:text-amber-200">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                              <span>官方标准答案与名师解析</span>
+                              {currentRawQ.correctAnswer && (
+                                <span className="font-mono text-emerald-700 dark:text-emerald-300 bg-white dark:bg-slate-900 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800 font-bold ml-auto">
+                                  正确答案：{currentRawQ.correctAnswer}
                                 </span>
                               )}
                             </div>
-                          )
-                        })}
-                      </div>
-                    )}
+                            <div className="text-slate-700 dark:text-slate-200 leading-relaxed pt-1">
+                              <MarkdownRenderer content={currentRawQ.explanation} />
+                            </div>
+                          </div>
+                        )}
 
-                    {/* 非单选题（翻译或写作）：草稿文本框 */}
-                    {currentRawQ.type !== 'choice' && (
-                      <div className="pt-2 space-y-2">
-                        <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
-                          <span>你的答题草稿 / 译文练习：</span>
-                          {onGoToEssayGrading && (
-                            <button
-                              type="button"
-                              onClick={onGoToEssayGrading}
-                              className="text-xs font-bold text-amber-600 hover:underline inline-flex items-center gap-1"
-                            >
-                              <Sparkles className="w-3 h-3" />
-                              <span>前往万能作文批改舱</span>
-                            </button>
-                          )}
-                        </label>
-                        <textarea
-                          rows={4}
-                          value={rawUserAnswers[currentRawQ.id] || ''}
-                          onChange={(e) =>
-                            setRawUserAnswers((prev) => ({
-                              ...prev,
-                              [currentRawQ.id]: e.target.value,
-                            }))
-                          }
-                          placeholder="在此输入你的答题思路或译文草稿..."
-                          className="w-full p-3 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500 outline-none leading-relaxed"
-                        />
-                      </div>
-                    )}
+                        {/* 上下题切换 */}
+                        <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                          <button
+                            type="button"
+                            disabled={rawQuestionIndex <= 0}
+                            onClick={() => setRawQuestionIndex((prev) => Math.max(0, prev - 1))}
+                            className="inline-flex items-center gap-1 px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all cursor-pointer"
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                            <span>上一题</span>
+                          </button>
 
-                    {/* 官方详解与长难句剖析（仅模考交卷后开放，严防考前/考中泄题） */}
-                    {rawIsSubmitted && rawShowExplanations[currentRawQ.id] !== false && (
-                      <div className="mt-4 p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 text-xs space-y-2 animate-in fade-in">
-                        <div className="flex items-center gap-2 font-bold text-amber-900 text-xs">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                          <span>官方标准答案与名师解析</span>
-                          {currentRawQ.correctAnswer && (
-                            <span className="font-mono text-emerald-700 bg-white px-2 py-0.5 rounded border border-emerald-200 font-bold ml-1">
-                              正确答案：{currentRawQ.correctAnswer}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-slate-700 leading-relaxed pt-1">
-                          <MarkdownRenderer content={currentRawQ.explanation} />
+                          <span className="text-xs font-mono text-slate-400">
+                            {rawQuestionIndex + 1} / {displayedRawQuestions.length}
+                          </span>
+
+                          <button
+                            type="button"
+                            disabled={rawQuestionIndex >= displayedRawQuestions.length - 1}
+                            onClick={() =>
+                              setRawQuestionIndex((prev) =>
+                                Math.min(displayedRawQuestions.length - 1, prev + 1)
+                              )
+                            }
+                            className="inline-flex items-center gap-1 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                          >
+                            <span>下一题</span>
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
                         </div>
                       </div>
-                    )}
-
-                    {/* 上下题切换与做题进度条 */}
-                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-                      <button
-                        type="button"
-                        disabled={rawQuestionIndex <= 0}
-                        onClick={() => setRawQuestionIndex((prev) => Math.max(0, prev - 1))}
-                        className="inline-flex items-center gap-1 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-40 text-slate-700 text-xs font-bold transition-all cursor-pointer"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                        <span>上一题</span>
-                      </button>
-
-                      <span className="text-xs font-mono text-slate-400">
-                        {rawQuestionIndex + 1} / {displayedRawQuestions.length}
-                      </span>
-
-                      <button
-                        type="button"
-                        disabled={rawQuestionIndex >= displayedRawQuestions.length - 1}
-                        onClick={() =>
-                          setRawQuestionIndex((prev) =>
-                            Math.min(displayedRawQuestions.length - 1, prev + 1)
-                          )
-                        }
-                        className="inline-flex items-center gap-1 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs font-bold transition-all cursor-pointer shadow-2xs"
-                      >
-                        <span>下一题</span>
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
                     </div>
                   </div>
                 ) : (
-                  <div className="p-12 text-center text-xs text-slate-400">
-                    当前筛选下无题目
+                  /* 无共享阅读篇章的主观题（如第 46~50 题翻译、第 51~52 题大小作文）：左 4 列题号卡 + 右 8 列精练台 */
+                  <div
+                    onClick={handleWordLookupClick}
+                    onDoubleClick={handleWordLookupDoubleClick}
+                    className="grid grid-cols-1 lg:grid-cols-12 gap-5"
+                  >
+                    <div className="lg:col-span-4">
+                      <div className="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs space-y-3">
+                        <div className="text-xs font-bold text-slate-900 dark:text-slate-100 pb-2 border-b border-slate-100 dark:border-slate-800">
+                          题号快速跳转
+                        </div>
+                        {renderQuestionNumberGrid(false)}
+                      </div>
+                    </div>
+
+                    <div className="lg:col-span-8">
+                      <div className="rounded-3xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 sm:p-7 shadow-xs space-y-5">
+                        <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-mono font-bold text-xs">
+                              第 {currentRawQ.paperQuestionNumber} 题
+                            </span>
+                            <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                              {currentRawQ.sectionName}
+                            </span>
+                            <span className="text-[11px] text-slate-400 font-mono">
+                              ({currentRawQ.score} 分)
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className={`text-slate-800 dark:text-slate-100 ${typographyClass}`}>
+                          <MarkdownRenderer content={currentRawQ.question} />
+                        </div>
+
+                        {currentRawQ.type !== 'choice' && (
+                          <div className="pt-2 space-y-2" data-no-word-lookup="true">
+                            <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center justify-between">
+                              <span>你的答题草稿 / 译文练习：</span>
+                              {onGoToEssayGrading && (
+                                <button
+                                  type="button"
+                                  onClick={onGoToEssayGrading}
+                                  className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                                >
+                                  <Sparkles className="w-3 h-3" />
+                                  <span>前往作文智能批改舱 →</span>
+                                </button>
+                              )}
+                            </label>
+                            <textarea
+                              rows={5}
+                              value={rawUserAnswers[currentRawQ.id] || ''}
+                              onChange={(e) =>
+                                setRawUserAnswers((prev) => ({
+                                  ...prev,
+                                  [currentRawQ.id]: e.target.value,
+                                }))
+                              }
+                              placeholder="在此输入你的答题思路、英文写作或中文译文草稿..."
+                              className="w-full p-3.5 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-indigo-500 outline-none leading-relaxed"
+                            />
+                          </div>
+                        )}
+
+                        {rawIsSubmitted && rawShowExplanations[currentRawQ.id] !== false && (
+                          <div className="mt-4 p-4 rounded-2xl bg-amber-50/75 dark:bg-amber-950/35 border border-amber-200/80 dark:border-amber-800/60 text-xs space-y-2 animate-fade-in">
+                            <div className="flex items-center gap-2 font-bold text-amber-900 dark:text-amber-200">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                              <span>官方参考译文 / 高分范文与名师解析</span>
+                            </div>
+                            <div className="text-slate-700 dark:text-slate-200 leading-relaxed pt-1">
+                              <MarkdownRenderer content={currentRawQ.explanation} />
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                          <button
+                            type="button"
+                            disabled={rawQuestionIndex <= 0}
+                            onClick={() => setRawQuestionIndex((prev) => Math.max(0, prev - 1))}
+                            className="inline-flex items-center gap-1 px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-40 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all cursor-pointer"
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                            <span>上一题</span>
+                          </button>
+
+                          <span className="text-xs font-mono text-slate-400">
+                            {rawQuestionIndex + 1} / {displayedRawQuestions.length}
+                          </span>
+
+                          <button
+                            type="button"
+                            disabled={rawQuestionIndex >= displayedRawQuestions.length - 1}
+                            onClick={() =>
+                              setRawQuestionIndex((prev) =>
+                                Math.min(displayedRawQuestions.length - 1, prev + 1)
+                              )
+                            }
+                            className="inline-flex items-center gap-1 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                          >
+                            <span>下一题</span>
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
+                )
+              ) : (
+                <div className="p-12 text-center text-xs text-slate-400">
+                  当前筛选下无题目
+                </div>
+              )}
             </div>
           )}
         </div>

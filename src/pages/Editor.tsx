@@ -672,7 +672,7 @@ export default function Editor() {
       richSyncSourceRef.current = 'external'
       setCurrentFile(null)
       setContent('')
-      if (richEditorRef.current) richEditorRef.current.innerHTML = ''
+      if (richEditorRef.current) richEditorRef.current.replaceChildren()
       setOriginalContent('')
       setTags('')
       setTitle('')
@@ -759,7 +759,7 @@ export default function Editor() {
     richSyncSourceRef.current = 'external'
     setCurrentFile(null)
     setContent('')
-    if (richEditorRef.current) richEditorRef.current.innerHTML = ''
+    if (richEditorRef.current) richEditorRef.current.replaceChildren()
     setOriginalContent('')
     setTags('')
     setTitle(defaultName)
@@ -1952,6 +1952,7 @@ export default function Editor() {
                   onKeyDown={e => {
                     if (e.key === 'Enter') {
                       e.preventDefault()
+                      if (e.nativeEvent.isComposing || (e as any).keyCode === 229) return
                       handleSave()
                     } else if (e.key === 'Escape') {
                       setShowNewDialog(false)
@@ -2007,6 +2008,7 @@ export default function Editor() {
                     onKeyDown={e => {
                       if (e.key === 'Enter') {
                         e.preventDefault()
+                        if (e.nativeEvent.isComposing || (e as any).keyCode === 229) return
                         handleSave()
                       } else if (e.key === 'Escape') {
                         setShowNewDialog(false)
@@ -2109,6 +2111,7 @@ export default function Editor() {
                   onKeyDown={e => {
                     if (e.key === 'Enter') {
                       e.preventDefault()
+                      if (e.nativeEvent.isComposing || (e as any).keyCode === 229) return
                       handleCreateFolder()
                     } else if (e.key === 'Escape') {
                       setShowNewFolderDialog(false)

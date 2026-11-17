@@ -2,13 +2,16 @@ import fs from 'fs'
 import path from 'path'
 import { config, anthropic, getNotes, invalidateCache, getAiClientForModel } from '../context.js'
 import { createFile } from '../vault-parser.js'
+import { safeJsonParseWithLatex } from '../utils/json-rescue.js'
+
+export type WikiDomain = 'cs_408' | 'math' | 'politics' | 'english' | 'general'
 
 export interface OrganizedWikiResult {
   title: string
   originalName: string
   savedPath: string
   wordCount: number
-  domain: 'cs_408' | 'math' | 'general'
+  domain: WikiDomain
   subject: string
   tags: string[]
   entities: string[]
@@ -22,46 +25,34 @@ export interface OrganizedWikiResult {
 
 export interface QuizQuestionItem {
   id: string
-  domain: 'cs_408' | 'math'
+  domain: WikiDomain
   subject: string
   chapter?: string
-  type: 'choice' | 'blank'
+  type: 'choice' | 'multiple' | 'blank' | 'analysis'
   difficulty: '简单' | '中等' | '困难'
+  passage?: string
   question: string
-  options?: { A: string; B: string; C: string; D: string }
+  options?: Record<string, string>
   answer: string
   explanation: string
   tags: string[]
 }
 
 /**
- * 稳健解析 AI 返回的 JSON 字符串（容错思考链、截断、代码块包裹）
+ * 稳健解析 AI 返回的 JSON 字符串（容错思考链、LaTeX 反斜杠碰撞、截断、代码块包裹）
  */
 function robustParseAiJson(rawText: string): any {
   if (!rawText || typeof rawText !== 'string') return null
+  const parsed = safeJsonParseWithLatex(rawText)
+  if (parsed) return parsed
 
-  // 1. 去除首尾空白与 markdown 代码块标记
   let clean = rawText.trim()
   if (clean.startsWith('```json')) clean = clean.slice(7)
   else if (clean.startsWith('```')) clean = clean.slice(3)
   if (clean.endsWith('```')) clean = clean.slice(0, -3)
   clean = clean.trim()
 
-  // 2. 尝试直接解析
-  try {
-    return JSON.parse(clean)
-  } catch {}
-
-  // 3. 正则查找第一个 { 到最后一个 }
   const firstBrace = clean.indexOf('{')
-  const lastBrace = clean.lastIndexOf('}')
-  if (firstBrace !== -1 && lastBrace > firstBrace) {
-    try {
-      return JSON.parse(clean.substring(firstBrace, lastBrace + 1))
-    } catch {}
-  }
-
-  // 4. 尝试智能修复被截断的 JSON
   if (firstBrace !== -1) {
     let truncated = clean.substring(firstBrace)
     const quoteCount = (truncated.match(/(?<!\\)"/g) || []).length
@@ -90,7 +81,7 @@ function robustParseAiJson(rawText: string): any {
 export async function organizeDocumentIntoWiki(
   markdownContent: string,
   originalFilename: string,
-  preferredDomain?: 'cs_408' | 'math' | 'general',
+  preferredDomain?: WikiDomain,
   targetVaultPath?: string
 ): Promise<OrganizedWikiResult> {
   const vaultPath = targetVaultPath || config.vaultPath
@@ -110,13 +101,13 @@ export async function organizeDocumentIntoWiki(
   if (client) {
     try {
       const excerpt = markdownContent.slice(0, 10000)
-      const prompt = `你是一个顶级知识库架构师与考研计算机408/考研数学教研专家（参考 AgriciDaniel/claude-obsidian 的自组织第二大脑架构）。
+      const prompt = `你是一个顶级知识库架构师与全国考研全科（408计算机/考研数学/考研政治/考研英语）教研专家。
 请研读以下从资料转换得到的 Markdown 内容，完成高质量的知识自组织提炼与题库沉淀。
 
 【任务要求】：
 1. 分析归类：
-   - domain: "cs_408" | "math" | "general"
-   - subject: 具体学科名称（如 "操作系统", "数据结构", "计算机组成原理", "计算机网络", "高等数学", "线性代数", "概率论与数理统计" 等）
+   - domain: "cs_408" | "math" | "politics" | "english" | "general"
+   - subject: 具体学科名称（如 "操作系统", "数据结构", "计算机组成原理", "计算机网络", "高等数学", "线性代数", "概率论与数理统计", "马克思主义基本原理", "中国近现代史纲要", "毛泽东思想和中国特色社会主义理论体系概论", "习近平新时代中国特色社会主义思想概论", "思想道德与法治", "阅读理解", "完形填空", "英语写作" 等）
    - title: 规范且富有概括性的笔记名称（不用加扩展名）
    - tags: 3-5 个层次化标签（如 ["408/操作系统", "核心考点", "第二大脑整理"]）
    - entities: 提炼 5-10 个关键技术实体/定理/概念（用于 Obsidian [[双链]] 织网）
@@ -174,30 +165,37 @@ ${excerpt}`
     }
   }
 
-  // 3. 智能领域/学科识别与保底数据填充
-  let detectedDomain: 'cs_408' | 'math' | 'general' = aiData?.domain || preferredDomain
+  // 3. 智能领域/学科识别与保底数据填充（严格尊重用户指定学科，完整覆盖政治与英语）
+  const validDomains = new Set(['cs_408', 'math', 'politics', 'english', 'general'])
+  let detectedDomain: WikiDomain =
+    preferredDomain && preferredDomain !== 'general'
+      ? preferredDomain
+      : validDomains.has(aiData?.domain)
+        ? aiData.domain
+        : 'general'
   let detectedSubject: string = aiData?.subject || ''
 
-  const textToAnalyze = (baseName + ' ' + markdownContent.slice(0, 1500)).toLowerCase()
+  const textToAnalyze = (baseName + ' ' + markdownContent.slice(0, 1800)).toLowerCase()
 
   if (!detectedDomain || detectedDomain === 'general') {
     if (
-      textToAnalyze.includes('408') ||
-      textToAnalyze.includes('计算机') ||
-      textToAnalyze.includes('数据结构') ||
-      textToAnalyze.includes('操作系统') ||
-      textToAnalyze.includes('组成原理') ||
-      textToAnalyze.includes('计网') ||
-      textToAnalyze.includes('计组')
+      /政治|马原|辩证法|唯物|剩余价值|毛中特|习思想|新思想|中国式现代化|史纲|鸦片战争|辛亥革命|思修|肖秀荣|肖四|肖八|腿姐|徐涛/.test(
+        textToAnalyze
+      )
+    ) {
+      detectedDomain = 'politics'
+    } else if (
+      /考研英语|英语一|英语二|reading comprehension|cloze|完形填空|阅读理解|长难句|新题型|英译汉|图画作文|图表作文|黄皮书/.test(
+        textToAnalyze
+      )
+    ) {
+      detectedDomain = 'english'
+    } else if (
+      /408|计算机|数据结构|操作系统|组成原理|计网|计组/.test(textToAnalyze)
     ) {
       detectedDomain = 'cs_408'
     } else if (
-      textToAnalyze.includes('数学') ||
-      textToAnalyze.includes('高数') ||
-      textToAnalyze.includes('线代') ||
-      textToAnalyze.includes('概率') ||
-      textToAnalyze.includes('微积分') ||
-      textToAnalyze.includes('方浩')
+      /数学|高数|线代|概率|微积分|方浩|张宇|李林/.test(textToAnalyze)
     ) {
       detectedDomain = 'math'
     } else {
@@ -206,7 +204,20 @@ ${excerpt}`
   }
 
   if (!detectedSubject || detectedSubject === '通用知识') {
-    if (detectedDomain === 'math') {
+    if (detectedDomain === 'politics') {
+      if (/史纲|鸦片战争|辛亥革命|五四|抗日|遵义/.test(textToAnalyze)) detectedSubject = '中国近现代史纲要'
+      else if (/马原|唯物|辩证法|剩余价值|认识论/.test(textToAnalyze)) detectedSubject = '马克思主义基本原理'
+      else if (/习思想|新思想|中国式现代化|新质生产力/.test(textToAnalyze)) detectedSubject = '习近平新时代中国特色社会主义思想概论'
+      else if (/毛中特|毛泽东思想|三大改造|邓小平/.test(textToAnalyze)) detectedSubject = '毛泽东思想和中国特色社会主义理论体系概论'
+      else if (/思修|法治|道德|宪法/.test(textToAnalyze)) detectedSubject = '思想道德与法治'
+      else detectedSubject = '考研政治综合'
+    } else if (detectedDomain === 'english') {
+      if (/作文|writing|essay/.test(textToAnalyze)) detectedSubject = '英语写作'
+      else if (/完形|cloze/.test(textToAnalyze)) detectedSubject = '完形填空'
+      else if (/翻译|translation/.test(textToAnalyze)) detectedSubject = '英译汉翻译'
+      else if (/新题型|七选五/.test(textToAnalyze)) detectedSubject = '新题型'
+      else detectedSubject = '阅读理解'
+    } else if (detectedDomain === 'math') {
       if (textToAnalyze.includes('概率') || textToAnalyze.includes('数理统计') || textToAnalyze.includes('随机变量')) {
         detectedSubject = '概率论与数理统计'
       } else if (textToAnalyze.includes('线代') || textToAnalyze.includes('线性代数') || textToAnalyze.includes('矩阵') || textToAnalyze.includes('特征值')) {
@@ -231,9 +242,19 @@ ${excerpt}`
 
   let finalTitle = (aiData?.title || baseName).replace(/_\d+_\d+$/, '').replace(/[\\/:*?"<>|]/g, '_').trim()
   if (!finalTitle) finalTitle = baseName
+  const domainTagLabel =
+    detectedDomain === 'cs_408'
+      ? '408'
+      : detectedDomain === 'math'
+        ? '考研数学'
+        : detectedDomain === 'politics'
+          ? '考研政治'
+          : detectedDomain === 'english'
+            ? '考研英语'
+            : '知识库'
   const tags: string[] = Array.isArray(aiData?.tags) && aiData.tags.length > 0
     ? aiData.tags
-    : [detectedDomain === 'cs_408' ? '408' : detectedDomain === 'math' ? '考研数学' : '知识库', detectedSubject, '自动整理']
+    : [domainTagLabel, detectedSubject, '自动整理']
   const entities: string[] = Array.isArray(aiData?.entities) ? aiData.entities : []
 
   // 4. Wikilinks 双向链接自动匹配与织网
@@ -243,7 +264,6 @@ ${excerpt}`
       matchedWikilinks.push(`[[${ent}]]`)
     }
   }
-  // 也支持将文档中自然提及的前 5 个核心实体作为延伸链接
   const extraConceptLinks = entities
     .slice(0, 5)
     .filter(e => !matchedWikilinks.includes(`[[${e}]]`))
@@ -254,29 +274,13 @@ ${excerpt}`
   // 5. 确定存放目录（优先根据学科放入专业知识库，避免孤立）
   let targetDir = 'Ingested'
   if (detectedDomain === 'cs_408') {
-    const candidates = [
-      path.join('wiki', '02-408计算机', detectedSubject),
-      path.join('wiki', detectedSubject),
-      path.join('wiki', '02-408计算机'),
-    ]
-    for (const c of candidates) {
-      if (fs.existsSync(path.resolve(vaultPath, c))) {
-        targetDir = c
-        break
-      }
-    }
+    targetDir = path.join('wiki', '02-408计算机', detectedSubject)
   } else if (detectedDomain === 'math') {
-    const candidates = [
-      path.join('wiki', '01-考研数学', detectedSubject),
-      path.join('wiki', detectedSubject),
-      path.join('wiki', '01-考研数学'),
-    ]
-    for (const c of candidates) {
-      if (fs.existsSync(path.resolve(vaultPath, c))) {
-        targetDir = c
-        break
-      }
-    }
+    targetDir = path.join('wiki', '01-考研数学', detectedSubject)
+  } else if (detectedDomain === 'english') {
+    targetDir = path.join('wiki', '03-考研英语', detectedSubject)
+  } else if (detectedDomain === 'politics') {
+    targetDir = path.join('wiki', '04-考研政治', detectedSubject)
   }
 
   const fullTargetDir = path.resolve(vaultPath, targetDir)
@@ -355,18 +359,21 @@ ${excerpt}`
 
       for (const q of aiData.questions) {
         if (!q.question) continue
+        const rawAns = String(q.answer || '待核对').trim()
+        const isMulti = q.type === 'multiple' || /^[A-F]{2,6}$/i.test(rawAns)
         const item: QuizQuestionItem = {
           id: `quiz-ai-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-          domain: detectedDomain === 'math' ? 'math' : 'cs_408',
+          domain: detectedDomain,
           subject: detectedSubject,
           chapter: finalTitle,
-          type: q.type || 'choice',
+          type: isMulti ? 'multiple' : (q.type || (q.options ? 'choice' : 'analysis')),
           difficulty: q.difficulty || '中等',
+          ...(q.passage ? { passage: String(q.passage) } : {}),
           question: q.question,
-          options: q.options || { A: '选项 A', B: '选项 B', C: '选项 C', D: '选项 D' },
-          answer: q.answer || 'A',
-          explanation: q.explanation || '自动命制题目精析',
-          tags: Array.isArray(q.tags) ? q.tags : [detectedSubject, 'AI命题']
+          ...(q.options ? { options: q.options } : {}),
+          answer: rawAns,
+          explanation: q.explanation || '自动提炼题目精析',
+          tags: Array.isArray(q.tags) ? q.tags : [detectedSubject, '资料提炼']
         }
         customQuestions.push(item)
         questionsCount++
