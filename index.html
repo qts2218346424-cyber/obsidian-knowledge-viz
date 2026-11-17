@@ -1,0 +1,1048 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CoreForge 研核 · 官方实机展厅与在线入口 | claudexxb.online</title>
+  <meta name="description" content="CoreForge 研核 (claudexxb.online) —— 面向 408 计算机与考研数学/英语/政治的全栈智能研学操作系统 & Obsidian 知识大脑。免安装免注册在线体验 AVL 旋转仿真、高数泰勒实验室、百年史纲时空轴与分科专属 AI 导师。" />
+  <meta name="keywords" content="CoreForge,研核,claudexxb.online,408计算机考研,考研数学,考研英语,考研政治,Obsidian知识库,艾宾浩斯闪卡,AI考研导师" />
+  <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
+  <link rel="apple-touch-icon" href="./assets/icon-192.png" />
+
+  <!-- Open Graph / 社交分享大卡片 -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="CoreForge 研核" />
+  <meta property="og:title" content="CoreForge 研核 · 研你所学，核力致胜 | claudexxb.online" />
+  <meta property="og:description" content="免安装免注册直达 408 算法动态仿真、考研高数泰勒实验室、1840-2024 史纲时空轴、英语 20 分制 AI 精批与 Obsidian 双链知识库。" />
+  <meta property="og:url" content="https://claudexxb.online" />
+  <meta property="og:image" content="https://qts2218346424-cyber.github.io/obsidian-knowledge-viz/assets/og-cover.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="CoreForge 研核 · 全科考研智能研学操作系统 | claudexxb.online" />
+  <meta name="twitter:description" content="408 计算机 · 考研数学 · 英语 · 政治一体化研学工作台，立即前往 claudexxb.online 免登录动手试玩！" />
+  <meta name="twitter:image" content="https://qts2218346424-cyber.github.io/obsidian-knowledge-viz/assets/og-cover.png" />
+
+  <!-- 结构化数据 JSON-LD -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "CoreForge 研核",
+    "alternateName": "Obsidian 考研全科智能研学操作系统",
+    "url": "https://claudexxb.online",
+    "applicationCategory": "EducationalApplication",
+    "operatingSystem": "Web, Windows 10/11, Android, iOS",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "CNY"
+    },
+    "description": "集成 408 计算机、考研数学、英语、政治历年真题库、动态仿真课件实验室、分科 AI 导师、SM-2 艾宾浩斯闪卡与 Obsidian 本地优先双链知识库的一体化智能研学平台。"
+  }
+  </script>
+
+  <style>
+    :root {
+      --bg-page: #f5f7fb;
+      --bg-surface: rgba(255, 255, 255, 0.88);
+      --bg-dark: #0b0f19;
+      --text-main: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+      --brand: #4f46e5;
+      --brand-hover: #4338ca;
+      --accent-emerald: #10b981;
+      --border-subtle: rgba(15, 23, 42, 0.09);
+      --shadow-soft: 0 20px 50px -12px rgba(15, 23, 42, 0.1);
+      --shadow-strong: 0 28px 70px -16px rgba(15, 23, 42, 0.2);
+      --radius-xl: 24px;
+      --radius-lg: 16px;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+      background:
+        radial-gradient(900px 480px at 15% -5%, rgba(99, 102, 241, 0.13), transparent 65%),
+        radial-gradient(850px 460px at 85% 4%, rgba(14, 165, 233, 0.12), transparent 65%),
+        var(--bg-page);
+      color: var(--text-main);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* 遵循现代排版规范：仅针对短标题开启对称平衡换行，针对段落开启避免孤字换行 */
+    h1, h2, h3 {
+      margin-block: 0;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      text-wrap: balance;
+    }
+
+    p, li {
+      text-wrap: pretty;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .container {
+      width: min(1180px, 100% - 2.5rem);
+      margin-inline: auto;
+    }
+
+    /* 顶部悬浮毛玻璃导航 */
+    .navbar {
+      position: sticky;
+      inset-block-start: 0.75rem;
+      z-index: 40;
+      margin-block-start: 0.75rem;
+    }
+
+    .navbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.65rem 1.15rem;
+      background: rgba(255, 255, 255, 0.82);
+      backdrop-filter: blur(18px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 999px;
+      box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      font-weight: 800;
+      font-size: 1.05rem;
+    }
+
+    .brand img {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(236, 72, 153, 0.22);
+    }
+
+    .brand-tag {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.15rem 0.5rem;
+      border-radius: 6px;
+      background: rgba(15, 23, 42, 0.07);
+      color: var(--text-secondary);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .nav-links a:hover {
+      color: var(--text-main);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    /* 通用按钮体系 */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+      min-inline-size: 24px;
+      min-block-size: 38px;
+      padding: 0.55rem 1.15rem;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+    }
+
+    .btn:focus-visible {
+      outline: 2px solid var(--brand);
+      outline-offset: 2px;
+    }
+
+    .btn-dark {
+      background: #0f172a;
+      color: #ffffff;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.22);
+    }
+
+    .btn-dark:hover {
+      background: #1e293b;
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #4f46e5, #2563eb);
+      color: #ffffff;
+      box-shadow: 0 12px 28px rgba(79, 70, 229, 0.32);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 34px rgba(79, 70, 229, 0.42);
+    }
+
+    .btn-ghost {
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--text-main);
+      border-color: var(--border-subtle);
+    }
+
+    .btn-ghost:hover {
+      background: #ffffff;
+      border-color: rgba(15, 23, 42, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .btn-lg {
+      min-block-size: 48px;
+      padding: 0.78rem 1.65rem;
+      font-size: 1rem;
+    }
+
+    /* 首屏 Hero */
+    .hero {
+      padding-block: 4rem 2.5rem;
+      text-align: center;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.95rem;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.28);
+      color: #047857;
+      font-size: 0.84rem;
+      font-weight: 700;
+      margin-block-end: 1.4rem;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-emerald);
+      box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.22);
+    }
+
+    .hero h1 {
+      font-size: clamp(2.35rem, 5.2vw, 4.1rem);
+      font-weight: 900;
+      color: #0b0f19;
+      margin-block-end: 1rem;
+    }
+
+    .hero-sub {
+      max-width: 760px;
+      margin-inline: auto;
+      font-size: clamp(1.05rem, 2vw, 1.25rem);
+      color: var(--text-secondary);
+      margin-block-end: 2rem;
+    }
+
+    .hero-cta-group {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.85rem;
+      margin-block-end: 1rem;
+    }
+
+    .domain-hint {
+      font-size: 0.86rem;
+      color: var(--text-muted);
+    }
+
+    .domain-hint strong {
+      color: var(--brand);
+    }
+
+    /* 实机展厅舞台 */
+    .showcase-section {
+      padding-block: 1.5rem 4rem;
+    }
+
+    .showcase-shell {
+      background: var(--bg-dark);
+      color: #f8fafc;
+      border-radius: var(--radius-xl);
+      padding: clamp(1.25rem, 3vw, 2.25rem);
+      box-shadow: var(--shadow-strong);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .showcase-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      justify-content: center;
+      margin-block-end: 1.5rem;
+    }
+
+    .tab-btn {
+      background: rgba(255, 255, 255, 0.07);
+      color: #cbd5e1;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 0.55rem 1rem;
+      border-radius: 999px;
+      font-size: 0.86rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    }
+
+    .tab-btn:hover {
+      background: rgba(255, 255, 255, 0.14);
+      color: #ffffff;
+    }
+
+    .tab-btn[aria-selected="true"] {
+      background: linear-gradient(135deg, #6366f1, #0ea5e9);
+      color: #ffffff;
+      border-color: transparent;
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.45);
+    }
+
+    .showcase-grid {
+      display: grid;
+      grid-template-columns: 1.45fr 0.85fr;
+      gap: 1.75rem;
+      align-items: center;
+    }
+
+    .screen-window {
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: #050811;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+      aspect-ratio: 16 / 10.8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .screen-window img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top center;
+      display: block;
+    }
+
+    .scene-info {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .scene-kicker {
+      display: inline-block;
+      width: fit-content;
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      padding: 0.25rem 0.65rem;
+      border-radius: 6px;
+      background: rgba(99, 102, 241, 0.2);
+      color: #a5b4fc;
+    }
+
+    .scene-info h2 {
+      font-size: clamp(1.4rem, 2.4vw, 1.85rem);
+      color: #ffffff;
+    }
+
+    .scene-info p {
+      margin: 0;
+      color: #94a3b8;
+      font-size: 0.96rem;
+    }
+
+    .scene-points {
+      margin: 0;
+      padding-inline-start: 1.2rem;
+      color: #e2e8f0;
+      font-size: 0.9rem;
+      display: grid;
+      gap: 0.45rem;
+    }
+
+    /* 四核学科 Bento 网格 */
+    .section-head {
+      text-align: center;
+      max-width: 720px;
+      margin-inline: auto;
+      margin-block-end: 2.25rem;
+    }
+
+    .section-head h2 {
+      font-size: clamp(1.75rem, 3.2vw, 2.4rem);
+      margin-block-end: 0.65rem;
+    }
+
+    .section-head p {
+      margin: 0;
+      color: var(--text-secondary);
+    }
+
+    .bento-section {
+      padding-block: 2.5rem 4rem;
+    }
+
+    .bento-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .bento-card {
+      background: var(--bg-surface);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      box-shadow: var(--shadow-soft);
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      transition: transform 0.2s ease;
+    }
+
+    .bento-card:hover {
+      transform: translateY(-3px);
+    }
+
+    .bento-icon {
+      font-size: 1.65rem;
+    }
+
+    .bento-card h3 {
+      font-size: 1.18rem;
+    }
+
+    .bento-card p {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: 0.92rem;
+      flex: 1;
+    }
+
+    .card-link {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--brand);
+    }
+
+    /* 一键安利分享与扫码中心 */
+    .share-section {
+      padding-block: 2rem 4.5rem;
+    }
+
+    .share-box {
+      background: #ffffff;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: clamp(1.5rem, 3.5vw, 2.5rem);
+      box-shadow: var(--shadow-soft);
+      display: grid;
+      grid-template-columns: 1.5fr 0.85fr;
+      gap: 2rem;
+      align-items: center;
+    }
+
+    .template-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-block: 1rem;
+    }
+
+    .tpl-btn {
+      padding: 0.4rem 0.85rem;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      background: #f8fafc;
+      color: var(--text-secondary);
+      font-size: 0.84rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .tpl-btn[aria-pressed="true"] {
+      background: #eef2ff;
+      border-color: #6366f1;
+      color: #4338ca;
+    }
+
+    .copy-pre {
+      margin: 0 0 1rem;
+      padding: 1.1rem 1.25rem;
+      border-radius: 14px;
+      background: #f8fafc;
+      border: 1px solid rgba(15, 23, 42, 0.1);
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 0.92rem;
+      white-space: pre-wrap;
+      line-height: 1.65;
+    }
+
+    /* 遵循 copy-button 规范：反馈气泡位于按钮外部，以 opacity 控制显隐 */
+    .copy-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .copy-button {
+      min-inline-size: 24px;
+      min-block-size: 42px;
+    }
+
+    .copy-button .icon-check {
+      display: none;
+    }
+
+    .copy-button[data-copied] .icon-copy {
+      display: none;
+    }
+
+    .copy-button[data-copied] .icon-check {
+      display: inline;
+    }
+
+    .tip {
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      background: #ecfdf5;
+      color: #047857;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      opacity: 0;
+      transform: translateX(-4px);
+      transition: opacity 0.18s ease, transform 0.18s ease;
+      pointer-events: none;
+    }
+
+    .copy-button[data-copied] + .tip {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .copy-button[data-failed] + .tip {
+      opacity: 1;
+      transform: translateX(0);
+      background: #fef2f2;
+      color: #b91c1c;
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .qr-card {
+      background: linear-gradient(180deg, #f8fafc, #eef2ff);
+      border: 1px solid rgba(99, 102, 241, 0.2);
+      border-radius: 20px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    .qr-card img {
+      width: 176px;
+      height: 176px;
+      border-radius: 14px;
+      background: #ffffff;
+      padding: 0.5rem;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+      margin-block-end: 0.75rem;
+    }
+
+    .qr-card h3 {
+      font-size: 1.05rem;
+      margin-block-end: 0.35rem;
+    }
+
+    .qr-card p {
+      margin: 0;
+      font-size: 0.84rem;
+      color: var(--text-secondary);
+    }
+
+    /* 原生模态框 light-dismiss */
+    dialog {
+      border: 1px solid var(--border-subtle);
+      border-radius: 22px;
+      padding: 1.75rem;
+      max-width: 380px;
+      width: calc(100% - 2rem);
+      text-align: center;
+      box-shadow: var(--shadow-strong);
+      background: #ffffff;
+      color: var(--text-main);
+    }
+
+    dialog::backdrop {
+      background-color: rgba(15, 23, 42, 0.55);
+      backdrop-filter: blur(4px);
+    }
+
+    .dialog-qr {
+      width: 210px;
+      height: 210px;
+      margin-block: 1rem;
+      border-radius: 14px;
+      border: 1px solid var(--border-subtle);
+      padding: 0.5rem;
+    }
+
+    footer {
+      border-top: 1px solid var(--border-subtle);
+      padding-block: 2rem;
+      text-align: center;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+    }
+
+    @media (max-width: 900px) {
+      .nav-links {
+        display: none;
+      }
+      .showcase-grid,
+      .share-box {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+      .btn,
+      .bento-card,
+      .tip {
+        transition: opacity 0.15s ease;
+        transform: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="navbar">
+    <div class="container navbar-inner">
+      <a href="https://claudexxb.online" class="brand">
+        <img src="./assets/icon-192.png" alt="CoreForge 研核图标" />
+        <span>CoreForge 研核</span>
+        <span class="brand-tag">claudexxb.online</span>
+      </a>
+
+      <nav class="nav-links" aria-label="主导航">
+        <a href="#showcase">实机互动展厅</a>
+        <a href="#subjects">考研四核生态</a>
+        <a href="#share">研友安利分享</a>
+        <a href="https://github.com/qts2218346424-cyber/obsidian-knowledge-viz" target="_blank" rel="noopener">GitHub 源码</a>
+      </nav>
+
+      <div class="nav-actions">
+        <button type="button" class="btn btn-ghost" id="openQrBtn">📱 手机扫码</button>
+        <a href="https://claudexxb.online" class="btn btn-dark">立即进入官网 →</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero container">
+      <div class="status-pill">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span>官方云端站 claudexxb.online 已实时开启 · 免注册直接试玩</span>
+      </div>
+
+      <h1>研你所学，核力致胜。</h1>
+      <p class="hero-sub">
+        面向 <strong>408 计算机综合</strong> 与 <strong>考研数学 / 英语 / 政治</strong> 的一体化全栈智能研学操作系统 &amp; Obsidian 知识大脑。打破刷题与笔记的物理隔阂，让每一道真题沉淀为可回溯的知识网络。
+      </p>
+
+      <div class="hero-cta-group">
+        <a href="https://claudexxb.online" class="btn btn-primary btn-lg">
+          🌐 立即访问 claudexxb.online（免安装网页版）
+        </a>
+        <a href="https://claudexxb.online/#preview" class="btn btn-ghost btn-lg">
+          🎮 免登录试玩五大仿真实验室
+        </a>
+        <a href="https://claudexxb.online/#download" class="btn btn-ghost btn-lg">
+          💻 下载 Windows 桌面端
+        </a>
+      </div>
+
+      <p class="domain-hint">
+        记住专属研学域名：<strong>https://claudexxb.online</strong> · 支持电脑端、平板与手机 PWA 跨端同步
+      </p>
+    </section>
+
+    <!-- 实机高清切换展厅 -->
+    <section id="showcase" class="showcase-section container">
+      <div class="showcase-shell">
+        <div class="showcase-tabs" role="tablist" aria-label="五大核心实机场景预览">
+          <button type="button" class="tab-btn" role="tab" aria-selected="true" data-index="0">01 · 官网双核工作台</button>
+          <button type="button" class="tab-btn" role="tab" aria-selected="false" data-index="1">02 · 408 AVL 树旋转实验室</button>
+          <button type="button" class="tab-btn" role="tab" aria-selected="false" data-index="2">03 · 高数泰勒逼近仿真</button>
+          <button type="button" class="tab-btn" role="tab" aria-selected="false" data-index="3">04 · 政治百年史纲时空轴</button>
+          <button type="button" class="tab-btn" role="tab" aria-selected="false" data-index="4">05 · 分科专属 AI 导师</button>
+        </div>
+
+        <div class="showcase-grid">
+          <a href="https://claudexxb.online/#preview" class="screen-window" title="点击前往 claudexxb.online 亲手交互体验">
+            <img id="stageImage" src="./assets/01_hero_overview.png" alt="CoreForge 研核官网首屏全景" />
+          </a>
+
+          <div class="scene-info">
+            <span id="stageKicker" class="scene-kicker">LIVE WORKSPACE · 在线即开即用</span>
+            <h2 id="stageTitle">五模一体 · 零门槛开启全科心流备考</h2>
+            <p id="stageDesc">
+              打开 claudexxb.online 即可在 408 计算机、考研数学、政治、英语与 AI 导师五大模式间无缝切换，手写批注、公式推导与真题双链自动沉淀。
+            </p>
+            <ul id="stageBullets" class="scene-points">
+              <li>免安装网页端秒开，同时提供 Windows 64 位独立客户端</li>
+              <li>100% 兼容本地 Obsidian 原生 Markdown 双链笔记生态</li>
+              <li>内置治愈系伴学桌宠、专注番茄钟与 Lofi 白噪音自习室</li>
+            </ul>
+            <div>
+              <a id="stageAction" href="https://claudexxb.online" class="btn btn-primary">
+                前往 claudexxb.online 亲手体验 →
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 考研四核生态矩阵 -->
+    <section id="subjects" class="bento-section container">
+      <div class="section-head">
+        <h2>四核驱动 · 全面覆盖考研四大主力科目</h2>
+        <p>不止于刷题，为每一门考研硬核科目定制专属的可视化推演工具与 AI 判分闭环。</p>
+      </div>
+
+      <div class="bento-grid">
+        <article class="bento-card">
+          <div class="bento-icon" aria-hidden="true">💻</div>
+          <h3>408 计算机学科综合</h3>
+          <p>收录 2009–2024 统考真题整卷，内置 AVL/红黑树旋转动画、Cache 映射、五段流水线冒险、PV 同步原语与 TCP 拥塞窗口交互沙盒。</p>
+          <a href="https://claudexxb.online/#subjects" class="card-link">进入 408 研学专区 →</a>
+        </article>
+
+        <article class="bento-card">
+          <div class="bento-icon" aria-hidden="true">📐</div>
+          <h3>全国考研数学（一/二/三）</h3>
+          <p>覆盖 1987–2024 历年全真卷与李林冲刺卷，出版级 KaTeX 公式渲染，独创 Step Tutor 大题分步踩分点启发引导与泰勒展开实验室。</p>
+          <a href="https://claudexxb.online/#subjects" class="card-link">进入数学推导专区 →</a>
+        </article>
+
+        <article class="bento-card">
+          <div class="bento-icon" aria-hidden="true">📚</div>
+          <h3>考研英语（英一 / 英二）</h3>
+          <p>支持大小作文 20 分制 AI 四维秒级批改与高分词汇升格卡片，长难句语法树可视化拆解，配合 2000+ 大纲词根词缀艾宾浩斯闪卡。</p>
+          <a href="https://claudexxb.online/#subjects" class="card-link">体验 AI 作文批改 →</a>
+        </article>
+
+        <article class="bento-card">
+          <div class="bento-icon" aria-hidden="true">🏛️</div>
+          <h3>考研政治史纲大本营</h3>
+          <p>搭载高精度球面墨卡托矢量中国地图与 1840–2024 史纲时空轴，融合肖秀荣精选题库即时判分、易混纲领对比与遮罩背诵卡。</p>
+          <a href="https://claudexxb.online/#subjects" class="card-link">漫游百年史纲时空 →</a>
+        </article>
+      </div>
+    </section>
+
+    <!-- 研友推广一键复制工具箱 -->
+    <section id="share" class="share-section container">
+      <div class="share-box">
+        <div>
+          <h2>觉得好用？一键安利给并肩作战的研友</h2>
+          <p style="color: var(--text-secondary); margin-block: 0.4rem 0;">
+            选择下方任意场景模板，点击按钮即可复制推广文案并发送至考研交流群、小红书、知乎或朋友圈：
+          </p>
+
+          <div class="template-pills" role="group" aria-label="推广文案模板切换">
+            <button type="button" class="tpl-btn" aria-pressed="true" data-tpl="group">💬 考研群 / 研友速推版</button>
+            <button type="button" class="tpl-btn" aria-pressed="false" data-tpl="social">📕 小红书 / 朋友圈种草版</button>
+            <button type="button" class="tpl-btn" aria-pressed="false" data-tpl="geek">⚡ 技术社区 / 极客开源版</button>
+          </div>
+
+          <pre id="shareCopyBox" class="copy-pre">安利一个超惊艳的考研全科智能研学神器【CoreForge 研核】👉 https://claudexxb.online
+免注册就能直接在网页里玩 408 AVL 平衡树旋转动画、高数泰勒展开动态拟合、1840-2024 政治史纲时空轴，还有 4 位分科 AI 导师、英语作文 20 分制秒批和艾宾浩斯错题闪卡！电脑手机打开即用，备考 408 和数英政的同学强烈建议试试！</pre>
+
+          <span class="copy-wrap">
+            <button type="button" class="btn btn-primary copy-button" command="--copy" commandfor="shareCopyBox">
+              <span class="icon-copy" aria-hidden="true">📋</span>
+              <span class="icon-check" aria-hidden="true">✅</span>
+              <span>一键复制推广文案与链接</span>
+            </button>
+            <span class="tip" role="status"></span>
+          </span>
+        </div>
+
+        <div class="qr-card">
+          <img src="./assets/qr-claudexxb.svg" alt="扫码访问 claudexxb.online 二维码" />
+          <h3>手机扫码直达官网</h3>
+          <p>微信 / 浏览器扫码即刻打开 <strong>claudexxb.online</strong>，支持一键添加到手机主屏幕随时刷题背词。</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 原生 Light-Dismiss 扫码弹窗 -->
+  <dialog id="qrDialog" closedby="any" aria-labelledby="qrDialogTitle">
+    <h3 id="qrDialogTitle">扫码体验 CoreForge 研核移动版</h3>
+    <img class="dialog-qr" src="./assets/qr-claudexxb.svg" alt="claudexxb.online 手机访问二维码" />
+    <p style="margin-block: 0 1.1rem; font-size: 0.88rem; color: var(--text-secondary);">
+      使用手机相机或浏览器扫描上方二维码，免安装直达 <strong>https://claudexxb.online</strong>
+    </p>
+    <form method="dialog">
+      <button type="submit" class="btn btn-dark" style="width: 100%;">关闭窗口</button>
+    </form>
+  </dialog>
+
+  <footer>
+    <div class="container">
+      <p style="margin: 0;">
+        <strong>CoreForge 研核</strong> · 官方网站：<a href="https://claudexxb.online" style="color: var(--brand); font-weight: 700;">https://claudexxb.online</a> ·
+        <a href="https://github.com/qts2218346424-cyber/obsidian-knowledge-viz" target="_blank" rel="noopener">GitHub 开源仓库 (MIT)</a>
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    // 1. 实机场景切换数据
+    const scenes = [
+      {
+        img: './assets/01_hero_overview.png',
+        alt: 'CoreForge 研核官网首屏全景',
+        kicker: 'LIVE WORKSPACE · 在线即开即用',
+        title: '五模一体 · 零门槛开启全科心流备考',
+        desc: '打开 claudexxb.online 即可在 408 计算机、考研数学、政治、英语与 AI 导师五大模式间无缝切换，手写批注、公式推导与真题双链自动沉淀。',
+        bullets: [
+          '免安装网页端秒开，同时提供 Windows 64 位独立客户端',
+          '100% 兼容本地 Obsidian 原生 Markdown 双链笔记生态',
+          '内置治愈系伴学桌宠、专注番茄钟与 Lofi 白噪音自习室'
+        ],
+        href: 'https://claudexxb.online'
+      },
+      {
+        img: './assets/02_lab_408_avl.png',
+        alt: '408 数据结构 AVL 平衡二叉树四种自平衡旋转仿真实验',
+        kicker: 'CS 408 LAB · 算法动态可视化',
+        title: 'AVL 平衡二叉树 LL / RR / LR / RL 旋转仿真',
+        desc: '告别死记硬背指针顺序！亲手插入节点触发失衡旋转，左侧同步高亮 408 标准 C 语言旋转源码与平衡因子（BF）实时追踪日志。',
+        bullets: [
+          '一键预设四种经典失衡模型，慢放观察子树挂载过程',
+          '同步呈现节点高度、树高度与平衡状态动态指标',
+          '无缝衔接 2009–2024 统考 408 历年树结构真题演练'
+        ],
+        href: 'https://claudexxb.online/#preview'
+      },
+      {
+        img: './assets/03_lab_math_taylor.png',
+        alt: '考研高数泰勒与麦克劳林展开式动态逼近实验室',
+        kicker: 'MATH LAB · 定理直观推演',
+        title: '高数泰勒 / 麦克劳林展开式动态逼近实验室',
+        desc: '自由拖动多项式展开阶数滑块，实时对比真实函数曲线与 n 阶泰勒多项式拟合轨迹，一眼看透佩亚诺余项的有效收敛区间。',
+        bullets: [
+          '配套提炼“首项抵消必展开、上下同阶”求极限黄金原则',
+          '内置特征值线性空间变换仿真与真题演算草稿判分舱',
+          '全站采用 KaTeX 出版级公式排版，推导步骤清晰严谨'
+        ],
+        href: 'https://claudexxb.online/#preview'
+      },
+      {
+        img: './assets/04_lab_politics_timeline.png',
+        alt: '考研政治 1840 至 2024 史纲时空轴互动演示',
+        kicker: 'POLITICS HUB · 时空联动记忆',
+        title: '1840–2024 近代史纲全屏时空轴与矢量地图',
+        desc: '串联旧民主主义革命、新民主主义革命与社会主义建设全时段，点击历史节点即刻对照核心命题点、重要文献纲领与高频易混陷阱。',
+        bullets: [
+          '结合高精度矢量中国地图，让重大会议与历史坐标双向锚定',
+          '内置《天朝田亩制度》对比《资政新篇》等高频混淆辨析卡',
+          '联动精选题库即刷即改与核心考点遮罩主动回忆'
+        ],
+        href: 'https://claudexxb.online/#preview'
+      },
+      {
+        img: './assets/05_lab_ai_tutors.png',
+        alt: '分科专属 AI 导师伴学中枢',
+        kicker: 'MULTI-AGENT TUTORS · 双师同台会诊',
+        title: '四位分科专属 AI 导师 · 随时答疑不跳步',
+        desc: '研小核、数小通、英小研、政小思四位导师挂载全科考纲与你的个人错题图谱，按「核心结论 → 底层机理 → 考场坑点」逐层剖析。',
+        bullets: [
+          '支持「严谨推导 / 考前冲刺 / 苏格拉底追问」三种教学风格',
+          '独创双师同台开关，跨视角交叉核验复杂跨章节综合题',
+          '本地部署更可桥接 Claude Code CLI 与 Codex CLI 批处理知识库'
+        ],
+        href: 'https://claudexxb.online/#preview'
+      }
+    ];
+
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const stageImage = document.getElementById('stageImage');
+    const stageKicker = document.getElementById('stageKicker');
+    const stageTitle = document.getElementById('stageTitle');
+    const stageDesc = document.getElementById('stageDesc');
+    const stageBullets = document.getElementById('stageBullets');
+    const stageAction = document.getElementById('stageAction');
+
+    function activateScene(index) {
+      const s = scenes[index];
+      if (!s) return;
+      tabButtons.forEach((btn, i) => {
+        btn.setAttribute('aria-selected', String(i === index));
+      });
+      stageImage.src = s.img;
+      stageImage.alt = s.alt;
+      stageKicker.textContent = s.kicker;
+      stageTitle.textContent = s.title;
+      stageDesc.textContent = s.desc;
+      stageAction.href = s.href;
+      stageBullets.innerHTML = s.bullets.map((item) => `<li>${item}</li>`).join('');
+    }
+
+    tabButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        activateScene(Number(btn.dataset.index));
+      });
+    });
+
+    // 2. 推广文案模板切换
+    const shareTemplates = {
+      group: `安利一个超惊艳的考研全科智能研学神器【CoreForge 研核】👉 https://claudexxb.online\n免注册就能直接在网页里玩 408 AVL 平衡树旋转动画、高数泰勒展开动态拟合、1840-2024 政治史纲时空轴，还有 4 位分科 AI 导师、英语作文 20 分制秒批和艾宾浩斯错题闪卡！电脑手机打开即用，备考 408 和数英政的同学强烈建议试试！`,
+      social: `✨ 挖到一个宝藏级考研全科智能工作台：CoreForge 研核（claudexxb.online）！\n不用下载安装，打开网页就能亲手推演：\n💻 408 平衡二叉树 LL/RR/LR/RL 旋转代码追踪\n📐 考研高数泰勒展开曲线动态逼近\n🏛️ 1840-2024 政治史纲时空地图\n📚 英语作文 20 分制 AI 四维精批 + Obsidian 双链错题本\n🔗 在线直达：https://claudexxb.online （手机扫码也能随时背词刷题！）`,
+      geek: `分享一个开源 + 在线双模的考研全科智能研学操作系统：CoreForge 研核（https://claudexxb.online）。\n基于 React 19 + TypeScript 6 + Express 5 + Electron 42 构建，深度打通本地 Obsidian Markdown 双链图谱、KaTeX 公式推导、SM-2 间隔重复算法与分科多 Agent 导师（支持桥接本地 Claude Code / Codex CLI），内置交互式算法与高数仿真实验室，欢迎体验与 Star！`
+    };
+
+    const tplButtons = document.querySelectorAll('.tpl-btn');
+    const shareCopyBox = document.getElementById('shareCopyBox');
+    tplButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        tplButtons.forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+        shareCopyBox.textContent = shareTemplates[btn.dataset.tpl] || shareTemplates.group;
+      });
+    });
+
+    // 3. 遵循 copy-button 规范：Invoker Commands + Async Clipboard + 无障碍播报防重
+    const copyTimers = new WeakMap();
+    let lastMessage = '';
+
+    function legacyCopy(text) {
+      const field = Object.assign(document.createElement('textarea'), { value: text });
+      field.setAttribute('readonly', '');
+      field.style.cssText = 'position:fixed;inset-block-start:0;opacity:0';
+      document.body.append(field);
+      field.select();
+      try { return document.execCommand('copy'); } finally { field.remove(); }
+    }
+
+    function reportCopy(button, ok) {
+      const tip = button.nextElementSibling;
+      clearTimeout(copyTimers.get(button));
+      button.removeAttribute('data-copied');
+      button.removeAttribute('data-failed');
+      let message = ok ? '已复制推广文案' : '复制失败，请手动复制';
+      if (message === lastMessage) message += '\u00A0';
+      lastMessage = message;
+      tip.textContent = '';
+      void button.offsetWidth;
+      button.setAttribute(ok ? 'data-copied' : 'data-failed', '');
+      requestAnimationFrame(() => { tip.textContent = message; });
+      copyTimers.set(button, setTimeout(() => {
+        button.removeAttribute('data-copied');
+        button.removeAttribute('data-failed');
+        tip.textContent = '';
+      }, 2400));
+    }
+
+    async function copyTargetText(button, target) {
+      const text = target.matches('input, textarea') ? target.value : target.innerText.trim();
+      if (!text) return;
+      try {
+        try {
+          await navigator.clipboard.writeText(text);
+        } catch {
+          if (!legacyCopy(text)) throw new Error('Copy failed');
+        }
+        reportCopy(button, true);
+      } catch {
+        reportCopy(button, false);
+      }
+    }
+
+    if ('CommandEvent' in window) {
+      document.addEventListener('command', (event) => {
+        if (event.command && event.command.startsWith('--copy')) {
+          copyTargetText(event.source, event.target);
+        }
+      }, true);
+    } else {
+      document.addEventListener('click', (event) => {
+        const button = event.target.closest('button[command^="--copy"]');
+        if (!button) return;
+        const target = document.getElementById(button.getAttribute('commandfor'));
+        if (target) copyTargetText(button, target);
+      });
+    }
+
+    // 4. 遵循 light-dismiss-a-dialog 规范：showModal() + closedby="any" + 坐标边界回退
+    const qrDialog = document.getElementById('qrDialog');
+    document.getElementById('openQrBtn').addEventListener('click', () => {
+      qrDialog.showModal();
+    });
+
+    if (!('closedBy' in HTMLDialogElement.prototype)) {
+      qrDialog.addEventListener('click', (event) => {
+        if (event.target !== qrDialog) return;
+        const rect = qrDialog.getBoundingClientRect();
+        const isDialogContent = (
+          rect.top <= event.clientY &&
+          event.clientY <= rect.top + rect.height &&
+          rect.left <= event.clientX &&
+          event.clientX <= rect.left + rect.width
+        );
+        if (isDialogContent) return;
+        qrDialog.close();
+      });
+    }
+  </script>
+</body>
+</html>
