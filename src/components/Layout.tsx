@@ -134,6 +134,51 @@ export default function Layout({ children }: LayoutProps) {
   const [mobileSubjectOpen, setMobileSubjectOpen] = useState(false)
   const [subjectMenuOpen, setSubjectMenuOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
+  const subjectMenuRef = useRef<HTMLDivElement | null>(null)
+  const moreMenuRef = useRef<HTMLDivElement | null>(null)
+  const userMenuRef = useRef<HTMLDivElement | null>(null)
+  const subjectCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const moreCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const userCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const clearSubjectCloseTimer = () => {
+    if (subjectCloseTimerRef.current) {
+      clearTimeout(subjectCloseTimerRef.current)
+      subjectCloseTimerRef.current = null
+    }
+  }
+  const scheduleSubjectClose = () => {
+    clearSubjectCloseTimer()
+    subjectCloseTimerRef.current = setTimeout(() => {
+      setSubjectMenuOpen(false)
+    }, 130)
+  }
+
+  const clearMoreCloseTimer = () => {
+    if (moreCloseTimerRef.current) {
+      clearTimeout(moreCloseTimerRef.current)
+      moreCloseTimerRef.current = null
+    }
+  }
+  const scheduleMoreClose = () => {
+    clearMoreCloseTimer()
+    moreCloseTimerRef.current = setTimeout(() => {
+      setMoreOpen(false)
+    }, 160)
+  }
+
+  const clearUserCloseTimer = () => {
+    if (userCloseTimerRef.current) {
+      clearTimeout(userCloseTimerRef.current)
+      userCloseTimerRef.current = null
+    }
+  }
+  const scheduleUserClose = () => {
+    clearUserCloseTimer()
+    userCloseTimerRef.current = setTimeout(() => {
+      setUserMenuOpen(false)
+    }, 160)
+  }
   const { activeModals, openModal, closeModal } = useUIModalStore()
   const [assistantOpen, setAssistantOpen] = useState(false)
   const [assistantLaunchState, setAssistantLaunchState] = useState<{
@@ -306,6 +351,7 @@ export default function Layout({ children }: LayoutProps) {
     document.title = ROUTE_PAGE_TITLES[location.pathname] || (currentPage ? `${currentPage.label} · 研核 CoreForge` : '研核 CoreForge')
     setMobileNavOpen(false)
     setMobileSubjectOpen(false)
+    setSubjectMenuOpen(false)
     setMoreOpen(false)
     setUserMenuOpen(false)
     setMobileUserMenuOpen(false)
@@ -332,6 +378,48 @@ export default function Layout({ children }: LayoutProps) {
       if (timeoutId !== null) clearTimeout(timeoutId)
     }
   }, [currentPage?.label, vaultName, location.pathname])
+
+  // 桌面端顶栏下拉菜单：点击外部任意区域或按下 Escape 立即无阻断收回（不使用全屏遮罩拦截指针与悬停事件）
+  useEffect(() => {
+    if (!subjectMenuOpen && !moreOpen && !userMenuOpen) return
+
+    const handleOutsidePointerDown = (e: PointerEvent) => {
+      const target = e.target as Node | null
+      if (!target) return
+      if (subjectMenuOpen && subjectMenuRef.current && !subjectMenuRef.current.contains(target)) {
+        setSubjectMenuOpen(false)
+      }
+      if (moreOpen && moreMenuRef.current && !moreMenuRef.current.contains(target)) {
+        setMoreOpen(false)
+      }
+      if (userMenuOpen && userMenuRef.current && !userMenuRef.current.contains(target)) {
+        setUserMenuOpen(false)
+      }
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSubjectMenuOpen(false)
+        setMoreOpen(false)
+        setUserMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('pointerdown', handleOutsidePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handleOutsidePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [subjectMenuOpen, moreOpen, userMenuOpen])
+
+  useEffect(() => {
+    return () => {
+      clearSubjectCloseTimer()
+      clearMoreCloseTimer()
+      clearUserCloseTimer()
+    }
+  }, [])
 
   const isSubjectActive =
     ['/politics', '/english'].includes(location.pathname) ||
@@ -618,12 +706,20 @@ export default function Layout({ children }: LayoutProps) {
               to="/quiz"
               data-tour="nav-quiz"
               onPointerEnter={() => prefetchRoute('/quiz')}
-              className={({ isActive }) => navClass(isActive && !['/politics', '/english'].includes(location.pathname))}
+              className={({ isActive }) =>
+                navClass(isActive && !['/politics', '/english'].includes(location.pathname) && !location.search.includes('domain='))
+              }
               title="真题试卷、自由组卷与错题本"
             >
               {({ isActive }) => (
                 <>
-                  <ClipboardList className={`h-3.5 w-3.5 shrink-0 ${isActive && !['/politics', '/english'].includes(location.pathname) ? 'text-white' : 'text-slate-400'}`} />
+                  <ClipboardList
+                    className={`h-3.5 w-3.5 shrink-0 ${
+                      isActive && !['/politics', '/english'].includes(location.pathname) && !location.search.includes('domain=')
+                        ? 'text-white'
+                        : 'text-slate-400'
+                    }`}
+                  />
                   <span className="whitespace-nowrap font-medium">
                     <span className="inline lg:hidden">刷题</span>
                     <span className="hidden lg:inline">刷题中心</span>
@@ -633,24 +729,36 @@ export default function Layout({ children }: LayoutProps) {
             </NavLink>
 
             {/* 3. 学科专项 */}
-            <div className="relative shrink-0" onMouseLeave={() => setSubjectMenuOpen(false)}>
+            <div
+              ref={subjectMenuRef}
+              className="relative shrink-0"
+              onMouseEnter={() => {
+                clearSubjectCloseTimer()
+                setMoreOpen(false)
+                setUserMenuOpen(false)
+                setSubjectMenuOpen(true)
+              }}
+              onMouseLeave={scheduleSubjectClose}
+            >
               <button
                 type="button"
                 data-tour="nav-subjects"
-                onClick={() => setSubjectMenuOpen(prev => !prev)}
-                onMouseEnter={() => setSubjectMenuOpen(true)}
-                className={navClass(
-                  subjectMenuOpen ||
-                  ['/politics', '/english'].includes(location.pathname) ||
-                  location.search.includes('subject=')
-                )}
+                onClick={() => {
+                  clearSubjectCloseTimer()
+                  setMoreOpen(false)
+                  setUserMenuOpen(false)
+                  setSubjectMenuOpen(prev => !prev)
+                }}
+                className={`${navClass(isSubjectActive)} ${
+                  !isSubjectActive && subjectMenuOpen ? 'bg-slate-100 text-slate-900 ring-1 ring-slate-200/90' : ''
+                }`}
                 aria-expanded={subjectMenuOpen}
               >
-                <BookOpen className={`h-3.5 w-3.5 shrink-0 ${
-                  subjectMenuOpen || ['/politics', '/english'].includes(location.pathname) || location.search.includes('subject=')
-                    ? 'text-white'
-                    : 'text-slate-400'
-                }`} />
+                <BookOpen
+                  className={`h-3.5 w-3.5 shrink-0 ${
+                    isSubjectActive ? 'text-white' : subjectMenuOpen ? 'text-slate-700' : 'text-slate-400'
+                  }`}
+                />
                 <span className="whitespace-nowrap font-medium">
                   <span className="inline lg:hidden">专项</span>
                   <span className="hidden lg:inline">学科专项</span>
@@ -659,12 +767,12 @@ export default function Layout({ children }: LayoutProps) {
               </button>
 
               {subjectMenuOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setSubjectMenuOpen(false)} />
-                  <div
-                    onMouseEnter={() => setSubjectMenuOpen(true)}
-                    className="absolute left-1/2 -translate-x-1/2 top-full z-50 mt-1.5 w-64 rounded-2xl border border-slate-200/80 bg-white/95 p-2 shadow-[0_12px_32px_rgba(0,0,0,0.08)] backdrop-blur-xl animate-fade-in-up"
-                  >
+                <div
+                  onMouseEnter={clearSubjectCloseTimer}
+                  onMouseLeave={scheduleSubjectClose}
+                  className="absolute left-1/2 -translate-x-1/2 top-full z-50 pt-1.5 w-64"
+                >
+                  <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-2 shadow-[0_12px_32px_rgba(0,0,0,0.08)] backdrop-blur-xl animate-fade-in-up">
                     <div className="px-2.5 py-1 text-2xs font-semibold uppercase tracking-wider text-slate-400 flex items-center justify-between">
                       <span>考研统考专项</span>
                       <span className="text-2xs text-indigo-500 font-mono">4 大科目</span>
@@ -694,7 +802,7 @@ export default function Layout({ children }: LayoutProps) {
                               <div className="flex items-center justify-between gap-1">
                                 <span className="font-bold text-slate-800 text-xs">{sub.label}</span>
                                 {sub.badge && (
-                                   <span className="text-2xs px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-600 border border-slate-200/60 font-mono">
+                                  <span className="text-2xs px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-600 border border-slate-200/60 font-mono">
                                     {sub.badge}
                                   </span>
                                 )}
@@ -706,7 +814,7 @@ export default function Layout({ children }: LayoutProps) {
                       })}
                     </div>
                   </div>
-                </>
+                </div>
               )}
             </div>
 
@@ -838,13 +946,20 @@ export default function Layout({ children }: LayoutProps) {
             )}
 
             {/* 3. 更多功能下拉菜单集合 (研学快捷动作、导入、图谱、编辑器、工作流与新手指引) */}
-            <div className="relative shrink-0">
+            <div
+              ref={moreMenuRef}
+              className="relative shrink-0"
+              onMouseEnter={clearMoreCloseTimer}
+              onMouseLeave={scheduleMoreClose}
+            >
               <button
                 type="button"
                 data-tour="btn-more"
                 onClick={() => {
-                  setMoreOpen(prev => !prev)
+                  clearMoreCloseTimer()
+                  setSubjectMenuOpen(false)
                   setUserMenuOpen(false)
+                  setMoreOpen(prev => !prev)
                 }}
                 className={`inline-flex items-center gap-1 xl:gap-1.5 h-8 px-2 xl:px-2.5 rounded-xl border text-xs font-medium shadow-xs transition-all cursor-pointer active:scale-95 shrink-0 ${
                   moreOpen
@@ -860,9 +975,12 @@ export default function Layout({ children }: LayoutProps) {
               </button>
 
               {moreOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
-                  <div className="absolute right-0 top-full z-50 mt-1.5 w-64 rounded-2xl border border-slate-200/90 bg-white/98 p-2 shadow-[0_16px_40px_rgba(0,0,0,0.12)] backdrop-blur-xl animate-fade-in-up text-slate-800">
+                <div
+                  onMouseEnter={clearMoreCloseTimer}
+                  onMouseLeave={scheduleMoreClose}
+                  className="absolute right-0 top-full z-50 pt-1.5 w-64"
+                >
+                  <div className="rounded-2xl border border-slate-200/90 bg-white/98 p-2 shadow-[0_16px_40px_rgba(0,0,0,0.12)] backdrop-blur-xl animate-fade-in-up text-slate-800">
                     {/* 功能集合小标题 */}
                     <div className="px-2.5 py-1 text-2xs font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
                       <span>研学百宝箱</span>
@@ -1028,18 +1146,25 @@ export default function Layout({ children }: LayoutProps) {
                       </button>
                     </div>
                   </div>
-                </>
+                </div>
               )}
             </div>
 
             {/* 4. 用户头像与个人账号菜单 (设置、改密、管理与退出) */}
             {user && (
-              <div className="relative shrink-0">
+              <div
+                ref={userMenuRef}
+                className="relative shrink-0"
+                onMouseEnter={clearUserCloseTimer}
+                onMouseLeave={scheduleUserClose}
+              >
                 <button
                   type="button"
                   onClick={() => {
-                    setUserMenuOpen(prev => !prev)
+                    clearUserCloseTimer()
+                    setSubjectMenuOpen(false)
                     setMoreOpen(false)
+                    setUserMenuOpen(prev => !prev)
                   }}
                   className="flex items-center gap-1.5 rounded-full p-0.5 border border-slate-200/90 hover:ring-2 hover:ring-indigo-100 transition-all cursor-pointer active:scale-95"
                   title={`${user.displayName || user.username} (${user.role === 'admin' ? '👑 超级管理员' : '🎓 考研研学者'}) · 点击展开设置与个人中心`}
@@ -1048,12 +1173,15 @@ export default function Layout({ children }: LayoutProps) {
                 </button>
 
                 {userMenuOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
-                    <div className="absolute right-0 top-full z-50 mt-1.5 w-60 rounded-2xl border border-slate-200/90 bg-white/98 p-2 shadow-[0_16px_40px_rgba(0,0,0,0.1)] backdrop-blur-xl animate-fade-in-up text-slate-800">
+                  <div
+                    onMouseEnter={clearUserCloseTimer}
+                    onMouseLeave={scheduleUserClose}
+                    className="absolute right-0 top-full z-50 pt-1.5 w-60"
+                  >
+                    <div className="rounded-2xl border border-slate-200/90 bg-white/98 p-2 shadow-[0_16px_40px_rgba(0,0,0,0.1)] backdrop-blur-xl animate-fade-in-up text-slate-800">
                       {renderUserMenuCard(() => setUserMenuOpen(false))}
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             )}

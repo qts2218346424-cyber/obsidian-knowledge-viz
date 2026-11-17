@@ -1455,7 +1455,10 @@ export default function Editor() {
           {showMathMenu && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setShowMathMenu(false)} />
-              <div className="absolute left-2 sm:left-3 top-full mt-1 w-64 sm:w-68 max-w-[calc(100vw-1rem)] bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-1.5 animate-fade-in-up">
+              <div
+                onMouseLeave={() => setShowMathMenu(false)}
+                className="absolute left-2 sm:left-3 top-full mt-1 w-64 sm:w-68 max-w-[calc(100vw-1rem)] bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-1.5 animate-fade-in-up"
+              >
                 <div className="px-2.5 py-1.5 border-b border-slate-100 text-2xs text-slate-600 font-bold flex items-center justify-between">
                   <span>LaTeX 数学公式速插</span>
                   <span className="text-2xs text-slate-900 font-normal">实时 KaTeX 渲染</span>
@@ -1480,7 +1483,10 @@ export default function Editor() {
           {showAiMenu && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setShowAiMenu(false)} />
-              <div className="absolute right-2 sm:right-3 top-full mt-1 w-56 sm:w-60 max-w-[calc(100vw-1rem)] bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden animate-fade-in-up">
+              <div
+                onMouseLeave={() => setShowAiMenu(false)}
+                className="absolute right-2 sm:right-3 top-full mt-1 w-56 sm:w-60 max-w-[calc(100vw-1rem)] bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden animate-fade-in-up"
+              >
                 <div className="px-3 py-2 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between">
                   <span className="text-2xs font-bold text-slate-700">AI 编辑助手</span>
                 </div>
