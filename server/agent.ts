@@ -343,22 +343,97 @@ export async function* runAgentLoop(
 
   for (let iteration = 0; iteration < maxIterations; iteration++) {
     try {
-      const response = await anthropic.messages.create({
-        model,
-        max_tokens: 8192,
-        system: systemPrompt,
-        messages: conversationMessages as Anthropic.MessageParam[],
-        tools: tools.length > 0 ? tools : undefined,
-      })
+      let responseContent: any[] = []
+      let streamedTextOut = false
 
-      if ((response as any).usage) {
-        const u = (response as any).usage
-        yield {
-          type: 'usage',
-          usage: {
-            prompt_tokens: Number(u.prompt_tokens || u.input_tokens || 0),
-            completion_tokens: Number(u.completion_tokens || u.output_tokens || 0),
-            total_tokens: Number(u.total_tokens || ((u.prompt_tokens || u.input_tokens || 0) + (u.completion_tokens || u.output_tokens || 0))),
+      if (typeof anthropic.messages.createStream === 'function') {
+        let inThinkBlock = false
+        let tagBuffer = ''
+
+        for await (const chunk of anthropic.messages.createStream({
+          model,
+          max_tokens: 8192,
+          system: systemPrompt,
+          messages: conversationMessages as Anthropic.MessageParam[],
+          tools: tools.length > 0 ? tools : undefined,
+        })) {
+          if (chunk.type === 'text_delta' && chunk.text) {
+            tagBuffer += chunk.text
+            // 流式剥离 <think>...</think> 或 <thought>...</thought> 标签内容
+            while (tagBuffer.length > 0) {
+              if (!inThinkBlock) {
+                const openMatch = tagBuffer.match(/<(?:think|thought)>/i)
+                if (openMatch && openMatch.index !== undefined) {
+                  const before = tagBuffer.slice(0, openMatch.index)
+                  if (before) {
+                    streamedTextOut = true
+                    yield { type: 'text', content: before }
+                  }
+                  inThinkBlock = true
+                  tagBuffer = tagBuffer.slice(openMatch.index + openMatch[0].length)
+                  continue
+                }
+                // 保留末尾可能半截的 '<think' 前缀暂不吐出
+                const partialIdx = tagBuffer.lastIndexOf('<')
+                if (partialIdx !== -1 && tagBuffer.length - partialIdx < 10 && /^<(?:t(?:h(?:i(?:n(?:k)?|o(?:u(?:g(?:h(?:t)?)?)?)?)?)?)?)?$/i.test(tagBuffer.slice(partialIdx))) {
+                  const safePart = tagBuffer.slice(0, partialIdx)
+                  if (safePart) {
+                    streamedTextOut = true
+                    yield { type: 'text', content: safePart }
+                  }
+                  tagBuffer = tagBuffer.slice(partialIdx)
+                  break
+                }
+                streamedTextOut = true
+                yield { type: 'text', content: tagBuffer }
+                tagBuffer = ''
+              } else {
+                const closeMatch = tagBuffer.match(/<\/(?:think|thought)>/i)
+                if (closeMatch && closeMatch.index !== undefined) {
+                  inThinkBlock = false
+                  tagBuffer = tagBuffer.slice(closeMatch.index + closeMatch[0].length).replace(/^\r?\n+/, '')
+                  continue
+                }
+                // 思考块内暂存末尾最多 12 个字符以检测闭合标签
+                if (tagBuffer.length > 12) {
+                  tagBuffer = tagBuffer.slice(-12)
+                }
+                break
+              }
+            }
+          } else if (chunk.type === 'final') {
+            if (!inThinkBlock && tagBuffer) {
+              streamedTextOut = true
+              yield { type: 'text', content: tagBuffer }
+              tagBuffer = ''
+            }
+            responseContent = chunk.content || []
+            if (chunk.usage) {
+              yield {
+                type: 'usage',
+                usage: chunk.usage,
+              }
+            }
+          }
+        }
+      } else {
+        const response = await anthropic.messages.create({
+          model,
+          max_tokens: 8192,
+          system: systemPrompt,
+          messages: conversationMessages as Anthropic.MessageParam[],
+          tools: tools.length > 0 ? tools : undefined,
+        })
+        responseContent = response.content as any[]
+        if ((response as any).usage) {
+          const u = (response as any).usage
+          yield {
+            type: 'usage',
+            usage: {
+              prompt_tokens: Number(u.prompt_tokens || u.input_tokens || 0),
+              completion_tokens: Number(u.completion_tokens || u.output_tokens || 0),
+              total_tokens: Number(u.total_tokens || ((u.prompt_tokens || u.input_tokens || 0) + (u.completion_tokens || u.output_tokens || 0))),
+            },
           }
         }
       }
@@ -369,7 +444,7 @@ export async function* runAgentLoop(
       const thinkingParts: string[] = []
       const toolCalls: { id: string; name: string; input: Record<string, any> }[] = []
 
-      for (const block of response.content) {
+      for (const block of responseContent) {
         if (block.type === 'text') {
           textParts.push(block.text)
         } else if ((block as any).type === 'thinking') {
@@ -385,21 +460,23 @@ export async function* runAgentLoop(
         }
       }
 
-      // Emit sanitized text & thinking
-      if (textParts.length > 0) {
-        const joined = textParts.join('\n')
-        const { cleanText, thinking } = sanitizeModelText(joined)
-        if (thinking) {
-          thinkingParts.push(thinking)
-        }
-        if (cleanText) {
-          yield { type: 'text', content: cleanText }
-        }
-      } else if (!hasToolUse) {
-        if (thinkingParts.length > 0) {
-          yield { type: 'text', content: thinkingParts.join('\n\n') }
-        } else {
-          yield { type: 'text', content: '💡 智能体推演完成。' }
+      // 若未经过流式实时吐字，补发清洗后的完整文本
+      if (!streamedTextOut) {
+        if (textParts.length > 0) {
+          const joined = textParts.join('\n')
+          const { cleanText, thinking } = sanitizeModelText(joined)
+          if (thinking) {
+            thinkingParts.push(thinking)
+          }
+          if (cleanText) {
+            yield { type: 'text', content: cleanText }
+          }
+        } else if (!hasToolUse) {
+          if (thinkingParts.length > 0) {
+            yield { type: 'text', content: thinkingParts.join('\n\n') }
+          } else {
+            yield { type: 'text', content: '💡 智能体推演完成。' }
+          }
         }
       }
 
@@ -453,7 +530,7 @@ export async function* runAgentLoop(
       // Append assistant response and tool results to conversation
       conversationMessages.push({
         role: 'assistant',
-        content: response.content as any,
+        content: responseContent as any,
       })
       conversationMessages.push({
         role: 'user',

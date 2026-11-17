@@ -813,14 +813,25 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
 
   if (body.provider === 'codex') {
     let hasLocalCli = false
-    try {
-      const st = detectLocalAgents(config.localAgents)
-      const codexObj = st.find(s => s.provider === 'codex')
-      hasLocalCli = Boolean(codexObj?.version)
-    } catch {}
+    const isDesktopHost = process.platform === 'win32' || process.platform === 'darwin'
+    if (isDesktopHost) {
+      try {
+        const st = detectLocalAgents(config.localAgents)
+        const codexObj = st.find(s => s.provider === 'codex')
+        hasLocalCli = Boolean(codexObj?.version)
+      } catch {}
+    }
 
-    let cliSucceeded = false
+    let cliProducedText = false
     if (hasLocalCli) {
+      const cliAbort = new AbortController()
+      const syncParentAbort = () => cliAbort.abort()
+      abortController.signal.addEventListener('abort', syncParentAbort, { once: true })
+      // 12 秒无首字响应则快速熔断并无缝切换至云端双核 AgentLoop
+      const firstTokenTimer = setTimeout(() => {
+        if (!cliProducedText) cliAbort.abort()
+      }, 12_000)
+
       try {
         for await (const event of runLocalAgent({
           provider: 'codex',
@@ -829,26 +840,33 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
           sessionId: body.sessionId,
           model: body.model,
           config: config.localAgents,
-          signal: abortController.signal,
+          signal: cliAbort.signal,
         })) {
           if (event.type === 'error') {
-            if (event.content?.includes('超时')) {
-              handleRunFailure(event.content)
-              res.end()
-              return
-            }
-            cliSucceeded = false
+            if (!cliProducedText) break
+            handleRunFailure(event.content || 'Codex 执行异常')
+            res.end()
+            return
+          }
+          if (event.type === 'text' && event.content?.trim()) {
+            cliProducedText = true
+            clearTimeout(firstTokenTimer)
+          }
+          if (event.type === 'done' && !cliProducedText) {
             break
           }
-          cliSucceeded = true
           sendEvent(event)
-        }
-        if (abortController.signal.aborted || cliSucceeded) {
-          res.end()
-          return
         }
       } catch (err: any) {
         console.warn('[Codex CLI fallback to AgentLoop]:', err?.message)
+      } finally {
+        clearTimeout(firstTokenTimer)
+        abortController.signal.removeEventListener('abort', syncParentAbort)
+      }
+
+      if (abortController.signal.aborted || cliProducedText) {
+        res.end()
+        return
       }
     }
 
@@ -953,14 +971,25 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
 
   if (body.provider === 'claude-code') {
     let hasLocalCli = false
-    try {
-      const st = detectLocalAgents(config.localAgents)
-      const claudeObj = st.find(s => s.provider === 'claude-code')
-      hasLocalCli = Boolean(claudeObj?.available && claudeObj?.version)
-    } catch {}
+    const isDesktopHost = process.platform === 'win32' || process.platform === 'darwin'
+    if (isDesktopHost) {
+      try {
+        const st = detectLocalAgents(config.localAgents)
+        const claudeObj = st.find(s => s.provider === 'claude-code')
+        hasLocalCli = Boolean(claudeObj?.available && claudeObj?.version)
+      } catch {}
+    }
 
-    let cliSucceeded = false
+    let cliProducedText = false
     if (hasLocalCli) {
+      const cliAbort = new AbortController()
+      const syncParentAbort = () => cliAbort.abort()
+      abortController.signal.addEventListener('abort', syncParentAbort, { once: true })
+      // 12 秒无首字响应则快速熔断并无缝切换至云端双核 AgentLoop
+      const firstTokenTimer = setTimeout(() => {
+        if (!cliProducedText) cliAbort.abort()
+      }, 12_000)
+
       try {
         for await (const event of runLocalAgent({
           provider: 'claude-code',
@@ -969,26 +998,33 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
           sessionId: body.sessionId,
           model: body.model,
           config: config.localAgents,
-          signal: abortController.signal,
+          signal: cliAbort.signal,
         })) {
           if (event.type === 'error') {
-            if (event.content?.includes('超时')) {
-              handleRunFailure(event.content)
-              res.end()
-              return
-            }
-            cliSucceeded = false
+            if (!cliProducedText) break
+            handleRunFailure(event.content || 'Claude Code 执行异常')
+            res.end()
+            return
+          }
+          if (event.type === 'text' && event.content?.trim()) {
+            cliProducedText = true
+            clearTimeout(firstTokenTimer)
+          }
+          if (event.type === 'done' && !cliProducedText) {
             break
           }
-          cliSucceeded = true
           sendEvent(event)
-        }
-        if (abortController.signal.aborted || cliSucceeded) {
-          res.end()
-          return
         }
       } catch (err: any) {
         console.warn('[Claude Code CLI fallback to AgentLoop]:', err?.message)
+      } finally {
+        clearTimeout(firstTokenTimer)
+        abortController.signal.removeEventListener('abort', syncParentAbort)
+      }
+
+      if (abortController.signal.aborted || cliProducedText) {
+        res.end()
+        return
       }
     }
 

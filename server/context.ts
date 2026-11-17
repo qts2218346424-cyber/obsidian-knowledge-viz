@@ -116,8 +116,10 @@ export function getAiClientForModel(
     }
 
     // 3. 如果仍未找到，在各个接口的 models 列表中匹配
+    let matchedExplicitly = Boolean(matchedEndpoint)
     if (!matchedEndpoint && cleanModel) {
       matchedEndpoint = endpoints.find(ep => Array.isArray(ep.models) && ep.models.includes(cleanModel))
+      if (matchedEndpoint) matchedExplicitly = true
     }
 
     // 4. 回退到 activeEndpointId 或第一个有效的 endpoint
@@ -137,8 +139,12 @@ export function getAiClientForModel(
         apiFormat: matchedEndpoint.apiFormat,
         provider: matchedEndpoint.apiFormat === 'openai' ? 'openai-compatible' : 'anthropic',
       })
-      const finalModel = cleanModel || matchedEndpoint.defaultModel || matchedEndpoint.models?.[0] || 'deepseek-v4-pro'
-      return { client: epClient, model: finalModel, endpoint: matchedEndpoint }
+      const endpointHasModels = Array.isArray(matchedEndpoint.models) && matchedEndpoint.models.length > 0
+      const resolvedModel =
+        cleanModel && (matchedExplicitly || !endpointHasModels || matchedEndpoint.models.includes(cleanModel))
+          ? cleanModel
+          : matchedEndpoint.defaultModel || matchedEndpoint.models?.[0] || cleanModel || 'deepseek-v4-pro'
+      return { client: epClient, model: resolvedModel, endpoint: matchedEndpoint }
     }
   }
 

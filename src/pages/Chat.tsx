@@ -1540,7 +1540,7 @@ export default function Chat() {
                 firstEventTimedOut = true
                 attemptController.abort()
               }
-            }, 30_000)
+            }, 45_000)
 
             try {
               const res = await fetch(endpoint, {
@@ -1591,7 +1591,12 @@ export default function Chat() {
 
                   try {
                     const event = JSON.parse(jsonStr)
-                    if (event.type && event.type !== 'points_updated' && !receivedAnyModelEvent) {
+                    if (
+                      event.type &&
+                      event.type !== 'points_updated' &&
+                      event.type !== 'context_enriched' &&
+                      !receivedAnyModelEvent
+                    ) {
                       receivedAnyModelEvent = true
                       window.clearTimeout(firstEventTimer)
                     }

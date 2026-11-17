@@ -55,9 +55,17 @@ export interface AiUsage {
   total_tokens: number
 }
 
+export interface AiStreamChunk {
+  type: 'text_delta' | 'final'
+  text?: string
+  content?: AiContentBlock[]
+  usage?: AiUsage
+}
+
 export interface AiClient {
   messages: {
     create(params: AiMessageCreateParams): Promise<{ content: AiContentBlock[]; usage?: AiUsage }>
+    createStream?(params: AiMessageCreateParams): AsyncGenerator<AiStreamChunk>
   }
 }
 
@@ -291,8 +299,156 @@ ${textParts}` : '[已上传考研真题/手写笔记图片附件]',
 
       return { content, usage }
     },
+    createStream: (params: AiMessageCreateParams) => this.streamInternal(params),
   }
 
+  private async *streamInternal(params: AiMessageCreateParams): AsyncGenerator<AiStreamChunk> {
+      const messages: Array<Record<string, unknown>> = []
+      if (params.system) messages.push({ role: 'system', content: params.system })
+      messages.push(...convertOpenAIMessages(params.messages))
+
+      const hasImageParts = messages.some(
+        m => Array.isArray(m.content) && (m.content as any[]).some(p => p.type === 'image_url')
+      )
+      // 含图片附件时复用 create() 内置的多模态降级重试逻辑
+      if (hasImageParts) {
+        const fallbackRes = await this.messages.create(params)
+        for (const blk of fallbackRes.content) {
+          if (blk.type === 'text' && blk.text) {
+            yield { type: 'text_delta', text: blk.text }
+          }
+        }
+        yield { type: 'final', content: fallbackRes.content, usage: fallbackRes.usage }
+        return
+      }
+
+      const body: Record<string, unknown> = {
+        model: params.model,
+        messages,
+        max_tokens: params.max_tokens,
+        stream: true,
+      }
+      if (params.tools?.length) {
+        body.tools = params.tools.map(tool => ({
+          type: 'function',
+          function: {
+            name: tool.name,
+            description: tool.description || '',
+            parameters: tool.input_schema,
+          },
+        }))
+        body.tool_choice = 'auto'
+      }
+
+      const response = await fetch(resolveOpenAIChatURL(this.baseURL), {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      })
+
+      if (!response.ok || !response.body) {
+        const raw = await response.text().catch(() => '')
+        let data: any = {}
+        try { data = raw ? JSON.parse(raw) : {} } catch {}
+        const message = data?.error?.message || raw || `HTTP ${response.status}`
+        const error = new Error(message) as Error & { status?: number }
+        error.status = response.status
+        throw error
+      }
+
+      const contentType = response.headers.get('content-type') || ''
+      if (!contentType.includes('event-stream')) {
+        const data: any = await response.json()
+        const choice = data?.choices?.[0]?.message
+        const content: AiContentBlock[] = []
+        const text = normalizeOpenAIContent(choice?.content)
+        if (text) {
+          yield { type: 'text_delta', text }
+          content.push({ type: 'text', text })
+        }
+        for (const toolCall of choice?.tool_calls || []) {
+          let input: Record<string, unknown> = {}
+          try { input = JSON.parse(toolCall.function?.arguments || '{}') } catch {}
+          content.push({
+            type: 'tool_use',
+            id: toolCall.id || `call_${Date.now()}`,
+            name: toolCall.function?.name || '',
+            input,
+          })
+        }
+        yield { type: 'final', content }
+        return
+      }
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let fullText = ''
+      const toolCallsAccum = new Map<number, { id: string; name: string; args: string }>()
+      let usage: AiUsage | undefined
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const rawLine of lines) {
+          const line = rawLine.trim()
+          if (!line.startsWith('data:')) continue
+          const payload = line.slice(5).trim()
+          if (!payload || payload === '[DONE]') continue
+          try {
+            const parsed = JSON.parse(payload)
+            if (parsed?.usage) {
+              usage = {
+                prompt_tokens: Number(parsed.usage.prompt_tokens || 0),
+                completion_tokens: Number(parsed.usage.completion_tokens || 0),
+                total_tokens: Number(
+                  parsed.usage.total_tokens ||
+                    (Number(parsed.usage.prompt_tokens || 0) + Number(parsed.usage.completion_tokens || 0))
+                ),
+              }
+            }
+            const delta = parsed?.choices?.[0]?.delta
+            if (!delta) continue
+            if (typeof delta.content === 'string' && delta.content.length > 0) {
+              fullText += delta.content
+              yield { type: 'text_delta', text: delta.content }
+            }
+            if (Array.isArray(delta.tool_calls)) {
+              for (const tc of delta.tool_calls) {
+                const idx = typeof tc.index === 'number' ? tc.index : 0
+                const cur = toolCallsAccum.get(idx) || { id: '', name: '', args: '' }
+                if (tc.id) cur.id = tc.id
+                if (tc.function?.name) cur.name += tc.function.name
+                if (tc.function?.arguments) cur.args += tc.function.arguments
+                toolCallsAccum.set(idx, cur)
+              }
+            }
+          } catch {}
+        }
+      }
+
+      const finalBlocks: AiContentBlock[] = []
+      if (fullText) finalBlocks.push({ type: 'text', text: fullText })
+      for (const [, tc] of toolCallsAccum) {
+        if (!tc.name) continue
+        let input: Record<string, unknown> = {}
+        try { input = JSON.parse(tc.args || '{}') } catch {}
+        finalBlocks.push({
+          type: 'tool_use',
+          id: tc.id || `call_${Date.now()}`,
+          name: tc.name,
+          input,
+        })
+      }
+      yield { type: 'final', content: finalBlocks, usage }
+  }
 
   constructor(
     private readonly apiKey: string,
@@ -300,13 +456,86 @@ ${textParts}` : '[已上传考研真题/手写笔记图片附件]',
   ) {}
 }
 
-export function createAiClient(config: AiConfig): AiClient {
-  if (resolveProvider(config) === 'openai-compatible') {
-    return new OpenAICompatibleClient(config.apiKey, config.baseURL)
+function normalizeAnthropicResponseContent(rawContent: any[]): AiContentBlock[] {
+  if (!Array.isArray(rawContent)) return []
+  const textBlocks: any[] = []
+  const otherBlocks: any[] = []
+  const thinkingTexts: string[] = []
+
+  for (const b of rawContent) {
+    if (b?.type === 'text') {
+      textBlocks.push(b)
+    } else {
+      if (b?.type === 'thinking' && (b.thinking || b.text)) {
+        thinkingTexts.push(String(b.thinking || b.text))
+      }
+      otherBlocks.push(b)
+    }
   }
 
-  const client = new Anthropic({ apiKey: config.apiKey, baseURL: config.baseURL })
-  return client as unknown as AiClient
+  // 确保 text 块排在数组首位，彻底消除 DeepSeek Anthropic 协议将 thinking 块置于 content[0] 导致业务侧取空的问题
+  if (textBlocks.length > 0) {
+    return [...textBlocks, ...otherBlocks] as AiContentBlock[]
+  }
+  const hasToolUse = otherBlocks.some(b => b?.type === 'tool_use')
+  if (!hasToolUse && thinkingTexts.length > 0) {
+    return [{ type: 'text', text: thinkingTexts.join('\n\n') }, ...otherBlocks] as AiContentBlock[]
+  }
+  return otherBlocks as AiContentBlock[]
+}
+
+export function createAiClient(config: AiConfig): AiClient {
+  if (resolveProvider(config) === 'openai-compatible') {
+    const oai = new OpenAICompatibleClient(config.apiKey, config.baseURL)
+    return oai
+  }
+
+  const rawClient = new Anthropic({ apiKey: config.apiKey, baseURL: config.baseURL })
+  return {
+    messages: {
+      async create(params: AiMessageCreateParams) {
+        const res = await rawClient.messages.create(params as any)
+        const normalizedContent = normalizeAnthropicResponseContent((res as any).content || [])
+        const u = (res as any).usage
+        const usage: AiUsage | undefined = u
+          ? {
+              prompt_tokens: Number(u.input_tokens || u.prompt_tokens || 0),
+              completion_tokens: Number(u.output_tokens || u.completion_tokens || 0),
+              total_tokens: Number(
+                u.total_tokens || (Number(u.input_tokens || 0) + Number(u.output_tokens || 0))
+              ),
+            }
+          : undefined
+        return { content: normalizedContent, usage }
+      },
+      async *createStream(params: AiMessageCreateParams): AsyncGenerator<AiStreamChunk> {
+        const stream = rawClient.messages.stream(params as any)
+        for await (const event of stream as any) {
+          if (
+            event?.type === 'content_block_delta' &&
+            event?.delta?.type === 'text_delta' &&
+            typeof event.delta.text === 'string' &&
+            event.delta.text.length > 0
+          ) {
+            yield { type: 'text_delta', text: event.delta.text }
+          }
+        }
+        const finalMsg: any = await stream.finalMessage()
+        const normalizedContent = normalizeAnthropicResponseContent(finalMsg?.content || [])
+        const u = finalMsg?.usage
+        const usage: AiUsage | undefined = u
+          ? {
+              prompt_tokens: Number(u.input_tokens || u.prompt_tokens || 0),
+              completion_tokens: Number(u.output_tokens || u.completion_tokens || 0),
+              total_tokens: Number(
+                u.total_tokens || (Number(u.input_tokens || 0) + Number(u.output_tokens || 0))
+              ),
+            }
+          : undefined
+        yield { type: 'final', content: normalizedContent, usage }
+      },
+    },
+  }
 }
 
 export function getAiProvider(config?: AiConfig): AiProvider | null {
