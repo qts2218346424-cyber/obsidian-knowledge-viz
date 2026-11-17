@@ -10,18 +10,18 @@ const MIN_COMPRESS_BYTES = 1024
  * - 采用 Brotli quality=4 / Gzip level=6 平衡极低 CPU 延迟与 75%~85% 传输体积缩减
  */
 export function adaptiveCompression(req: Request, res: Response, next: NextFunction) {
-  if (req.method === 'HEAD' || req.headers['x-no-compression']) {
+  // 仅对幂等 GET 读取请求启用自适应压缩；所有 POST/PUT/DELETE（含全部 AI 流式对话接口）100% 零缓冲直通
+  if (req.method !== 'GET' || req.headers['x-no-compression']) {
     next()
     return
   }
 
-  // 豁免 SSE 实时事件流、AI 流式对话与音频 Range 流接口
+  // 豁免 GET 类 SSE 实时事件流与音频/PDF Range 分块媒体流接口
   if (
     req.headers.accept?.includes('text/event-stream') ||
     req.headers.range ||
     req.path.startsWith('/api/music/stream') ||
-    req.path === '/api/local-agents/chat' ||
-    req.path === '/api/chat' ||
+    req.path.startsWith('/api/books/raw') ||
     req.path.endsWith('/events') ||
     req.path.endsWith('/stream')
   ) {
@@ -44,11 +44,20 @@ export function adaptiveCompression(req: Request, res: Response, next: NextFunct
   const origWrite = res.write.bind(res)
   const origEnd = res.end.bind(res)
   const origOn = res.on.bind(res)
+  const origFlushHeaders = res.flushHeaders ? res.flushHeaders.bind(res) : null
   let decided = false
   let forwardingDrain = false
   let compressor: zlib.BrotliCompress | zlib.Gzip | null = null
   const pendingChunks: { chunk: Buffer; encoding?: BufferEncoding }[] = []
   let bufferedBytes = 0
+
+  if (origFlushHeaders) {
+    res.flushHeaders = function () {
+      decided = true
+      compressor = null
+      return origFlushHeaders()
+    }
+  }
 
   origOn('close', () => {
     if (compressor && !compressor.destroyed) {
@@ -67,13 +76,17 @@ export function adaptiveCompression(req: Request, res: Response, next: NextFunct
 
   function initStream(useCompression: boolean): boolean {
     decided = true
-    if (res.headersSent) {
+    if (res.headersSent || (res as any)._header) {
       useCompression = false
     } else {
-      res.AppendVarySafe?.()
-      const existingVary = String(res.getHeader('Vary') || '')
-      if (!existingVary.toLowerCase().includes('accept-encoding')) {
-        res.setHeader('Vary', existingVary ? `${existingVary}, Accept-Encoding` : 'Accept-Encoding')
+      try {
+        res.AppendVarySafe?.()
+        const existingVary = String(res.getHeader('Vary') || '')
+        if (!existingVary.toLowerCase().includes('accept-encoding')) {
+          res.setHeader('Vary', existingVary ? `${existingVary}, Accept-Encoding` : 'Accept-Encoding')
+        }
+      } catch {
+        useCompression = false
       }
     }
 
@@ -86,14 +99,23 @@ export function adaptiveCompression(req: Request, res: Response, next: NextFunct
       return ok
     }
 
-    if (!res.headersSent) {
-      res.removeHeader('Content-Length')
-      res.removeHeader('Accept-Ranges')
-      const etag = res.getHeader('ETag')
-      if (typeof etag === 'string' && !etag.startsWith('W/')) {
-        res.setHeader('ETag', `W/${etag}`)
+    if (!res.headersSent && !(res as any)._header) {
+      try {
+        res.removeHeader('Content-Length')
+        res.removeHeader('Accept-Ranges')
+        const etag = res.getHeader('ETag')
+        if (typeof etag === 'string' && !etag.startsWith('W/')) {
+          res.setHeader('ETag', `W/${etag}`)
+        }
+        res.setHeader('Content-Encoding', encoding!)
+      } catch {
+        let ok = true
+        for (const item of pendingChunks) {
+          ok = origWrite(item.chunk)
+        }
+        pendingChunks.length = 0
+        return ok
       }
-      res.setHeader('Content-Encoding', encoding!)
     }
 
     compressor =

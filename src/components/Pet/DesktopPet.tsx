@@ -481,7 +481,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
           text: `20 秒眼部放松完成！${persona.name}元气满满陪你继续冲刺高分！💪`,
           subtext: '视力充能完毕 · 状态拉满 ✨',
         }
-        const doneAudio = doneLine.audio || (isFeiyu ? '/pets/voices/feiyu_focus_done.mp3?v=1' : '/pets/voices/nailong_6.mp3?v=3')
+        const doneAudio = doneLine.audio || (isFeiyu ? '/pets/voices/feiyu_focus_start.mp3?v=auth2' : '/pets/voices/nailong_6.mp3?v=3')
         showBubbleWithVoice(doneLine.text, doneAudio, 6000, false, doneLine.subtext)
         setTimeout(() => {
           setMood(focusActive ? 'focus' : 'idle')
@@ -502,7 +502,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
       }
 
       const eyeAudios = ['/pets/voices/nailong_5.mp3?v=3', '/pets/voices/nailong_6.mp3?v=3']
-      const chosenAudio = line.audio || (isFeiyu ? '/pets/voices/feiyu_eyecare.mp3?v=1' : eyeAudios[Math.floor(Math.random() * eyeAudios.length)])
+      const chosenAudio = line.audio || (isFeiyu ? '/pets/voices/feiyu_eyecare.mp3?v=auth2' : eyeAudios[Math.floor(Math.random() * eyeAudios.length)])
 
       setBubbleAction({
         label: `👀 陪${persona.name}闭眼远眺 20 秒`,
@@ -578,10 +578,10 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
       }
       if (isFeiyu) {
         setBubbleText(
-          `考研倒计时 ${daysToExam} 天！大家好，我是大肥鱼🐟，DeepSeek 家的鲸鱼娘！下次来刷题，记得给我带碗大白米饭哟~`
+          `考研倒计时 ${daysToExam} 天！本肥鱼终于能动了！这几天收到了很多喜欢，嘿嘿，谢谢你们！🐟💙`
         )
-        setBubbleSubtext('热门短视频少女语音已就绪 · 点击右上角小喇叭畅听')
-        setCurrentAudioUrl('/pets/voices/feiyu_intro.mp3?v=1')
+        setBubbleSubtext('大肥鱼自调少女本尊原声已就绪 · 点小喇叭畅听')
+        setCurrentAudioUrl('/pets/voices/feiyu_intro.mp3?v=auth2')
       } else {
         const firstAudio = NAILONG_VOICE_PACK[1]?.audio || '/pets/voices/nailong_2.mp3?v=3'
         setBubbleText(`考研倒计时 ${daysToExam} 天！我是奶龙，摸摸我头或者戳戳大肚皮听我唠叨哟~`)
@@ -614,11 +614,11 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
           playPetSynthSound('cheer', voiceMuted)
           if (isFeiyu) {
             showBubbleWithVoice(
-              '🎉 叮咚！25 分钟深度专注达成！让你刷题没让你直接封神呀！快跟本鱼一起炫碗大白米饭庆祝一下吧！🍚🐟',
-              '/pets/voices/feiyu_focus_done.mp3?v=1',
+              '🎉 主人，今天已经做了很多事情了，剩下的可以慢一点处理~ 快跟大肥鱼吃碗白米饭歇口气吧！🍚🐟',
+              '/pets/voices/feiyu_focus_done.mp3?v=auth2',
               6500,
               false,
-              '考神附体 · 奖励冒尖大白米饭一碗'
+              '25 分钟专注达成 · 大肥鱼温柔原声犒劳'
             )
           } else {
             showBubbleWithVoice(
@@ -694,15 +694,15 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
     if (nextId === 'feiyu') {
       if (bubbleTimerRef.current) window.clearTimeout(bubbleTimerRef.current)
       setBubbleAction(null)
-      const introAudio = '/pets/voices/feiyu_intro.mp3?v=1'
+      const introAudio = '/pets/voices/feiyu_intro.mp3?v=auth2'
       setCurrentAudioUrl(introAudio)
       if (!voiceMuted) playVoice(introAudio, false)
-      setBubbleText('大家好，我是大肥鱼，DeepSeek 家的鲸鱼娘！蓝头发，女仆装，尾巴特别能摇~ 白天吃白饭，晚上摸鱼，记得带碗大白米饭哟！🐟🍚')
-      setBubbleSubtext('已切换至：大肥鱼 · 短视频热门少女语音已开启')
+      setBubbleText('本肥鱼终于能动了！这几天，本肥鱼收到了很多喜欢。嘿嘿，谢谢你们！🐟💙')
+      setBubbleSubtext('已切换至：大肥鱼 · B站热门自调少女本尊原声')
       bubbleTimerRef.current = window.setTimeout(() => {
         setBubbleText(null)
         setBubbleSubtext(null)
-      }, 7200)
+      }, 8500)
     } else {
       if (bubbleTimerRef.current) window.clearTimeout(bubbleTimerRef.current)
       setBubbleAction(null)
@@ -894,7 +894,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
       setMood('dancing')
       const list = activeDialogues.dance || []
       const line = list[Math.floor(Math.random() * list.length)]
-      const danceAudio = line?.audio || (isFeiyu ? '/pets/voices/feiyu_praise_streak.mp3?v=1' : '/pets/voices/nailong_6.mp3?v=3')
+      const danceAudio = line?.audio || (isFeiyu ? '/pets/voices/feiyu_praise_streak.mp3?v=auth2' : '/pets/voices/nailong_6.mp3?v=3')
       if (line) showBubbleWithVoice(line.text, danceAudio, 6200, false, line.subtext)
       moodResetTimerRef.current = window.setTimeout(() => setMood(focusActive ? 'focus' : 'idle'), 5200)
     } else if (currentTrick === 'busy') {
@@ -927,7 +927,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
           mood: 'focus' as PetMood,
           text: `🤓 ${persona.name}进入学霸推演状态！把最难的 408 或高数大题砸过来吧！`,
           subtext: '深度专注思考姿态展示',
-          audio: isFeiyu ? '/pets/voices/feiyu_focus_start.mp3?v=1' : '/pets/voices/nailong_focus_start.mp3?v=3',
+          audio: isFeiyu ? '/pets/voices/feiyu_focus_start.mp3?v=auth2' : '/pets/voices/nailong_focus_start.mp3?v=3',
         },
       ]
       const line = list[Math.floor(Math.random() * list.length)]
@@ -1275,7 +1275,7 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
           setMood('dancing')
           const list = activeDialogues.dance || []
           const line = list[Math.floor(Math.random() * list.length)]
-          const danceAudio = line?.audio || (isFeiyu ? '/pets/voices/feiyu_praise_streak.mp3?v=1' : '/pets/voices/nailong_6.mp3?v=3')
+          const danceAudio = line?.audio || (isFeiyu ? '/pets/voices/feiyu_praise_streak.mp3?v=auth2' : '/pets/voices/nailong_6.mp3?v=3')
           if (line) showBubbleWithVoice(line.text, danceAudio, 6200, false, line.subtext)
           moodResetTimerRef.current = window.setTimeout(() => setMood(focusActive ? 'focus' : 'idle'), 4800)
         }}
@@ -1594,11 +1594,11 @@ export default function DesktopPet({ onOpenQuickPractice }: DesktopPetProps) {
                       playPetSynthSound('cheer', voiceMuted)
                       if (isFeiyu) {
                         showBubbleWithVoice(
-                          '⏱️ 推推小圆框眼镜🤓——依旧框框烧 Token，依旧用爱发电！接下来 25 分钟，本鱼放下饭碗不摸鱼，陪你沉浸推演到底！🐟💡',
-                          '/pets/voices/feiyu_focus_start.mp3?v=1',
+                          '⏱️ 今天的算力还算充足，我可以安安静静陪你把事情做完！🤓💡',
+                          '/pets/voices/feiyu_focus_start.mp3?v=auth2',
                           6200,
                           false,
-                          '学霸眼镜鲸鱼娘 · 开启 408 考研心流模式'
+                          '学霸眼镜鲸鱼娘 · 开启 25 分钟心流陪考'
                         )
                       } else {
                         showBubbleWithVoice(
