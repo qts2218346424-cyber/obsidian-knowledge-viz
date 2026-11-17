@@ -15,12 +15,15 @@ export function adaptiveCompression(req: Request, res: Response, next: NextFunct
     return
   }
 
-  // 豁免 SSE 实时事件流与音频 Range 流接口
+  // 豁免 SSE 实时事件流、AI 流式对话与音频 Range 流接口
   if (
     req.headers.accept?.includes('text/event-stream') ||
     req.headers.range ||
     req.path.startsWith('/api/music/stream') ||
-    req.path.endsWith('/events')
+    req.path === '/api/local-agents/chat' ||
+    req.path === '/api/chat' ||
+    req.path.endsWith('/events') ||
+    req.path.endsWith('/stream')
   ) {
     next()
     return
@@ -54,6 +57,7 @@ export function adaptiveCompression(req: Request, res: Response, next: NextFunct
   })
 
   function shouldCompress(): boolean {
+    if (res.headersSent) return false
     if (res.statusCode === 204 || res.statusCode === 206 || res.statusCode === 304) return false
     if (res.getHeader('Content-Encoding')) return false
     const contentType = String(res.getHeader('Content-Type') || '')
@@ -63,10 +67,14 @@ export function adaptiveCompression(req: Request, res: Response, next: NextFunct
 
   function initStream(useCompression: boolean): boolean {
     decided = true
-    res.AppendVarySafe?.()
-    const existingVary = String(res.getHeader('Vary') || '')
-    if (!existingVary.toLowerCase().includes('accept-encoding')) {
-      res.setHeader('Vary', existingVary ? `${existingVary}, Accept-Encoding` : 'Accept-Encoding')
+    if (res.headersSent) {
+      useCompression = false
+    } else {
+      res.AppendVarySafe?.()
+      const existingVary = String(res.getHeader('Vary') || '')
+      if (!existingVary.toLowerCase().includes('accept-encoding')) {
+        res.setHeader('Vary', existingVary ? `${existingVary}, Accept-Encoding` : 'Accept-Encoding')
+      }
     }
 
     if (!useCompression) {
@@ -78,13 +86,15 @@ export function adaptiveCompression(req: Request, res: Response, next: NextFunct
       return ok
     }
 
-    res.removeHeader('Content-Length')
-    res.removeHeader('Accept-Ranges')
-    const etag = res.getHeader('ETag')
-    if (typeof etag === 'string' && !etag.startsWith('W/')) {
-      res.setHeader('ETag', `W/${etag}`)
+    if (!res.headersSent) {
+      res.removeHeader('Content-Length')
+      res.removeHeader('Accept-Ranges')
+      const etag = res.getHeader('ETag')
+      if (typeof etag === 'string' && !etag.startsWith('W/')) {
+        res.setHeader('ETag', `W/${etag}`)
+      }
+      res.setHeader('Content-Encoding', encoding!)
     }
-    res.setHeader('Content-Encoding', encoding!)
 
     compressor =
       encoding === 'br'

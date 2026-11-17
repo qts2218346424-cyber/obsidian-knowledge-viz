@@ -736,9 +736,9 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
 
     // 针对 Antigravity 注入专属研学双核与知识库全权智能体人设
     let { client, model } = aiTarget
-    // 如果当前端点不支持前端传来的 gemini 模型名，自动使用该端点的默认模型
-    if (aiTarget.endpoint && !aiTarget.endpoint.models?.includes(model) && !aiTarget.endpoint.baseURL?.includes('google')) {
-      model = aiTarget.endpoint.defaultModel || aiTarget.endpoint.models?.[0] || model
+    // 如果当前端点明确配置了可用模型列表且不包含前端传入的虚拟模型别名，自动映射为端点默认模型
+    if (aiTarget.endpoint && Array.isArray(aiTarget.endpoint.models) && aiTarget.endpoint.models.length > 0 && !aiTarget.endpoint.models.includes(model)) {
+      model = aiTarget.endpoint.defaultModel || aiTarget.endpoint.models[0] || model
     }
 
     const antigravityPrompt = [
@@ -750,7 +750,7 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
       body.agentPrompt || '',
     ].filter(Boolean).join('\n')
 
-
+    let loopErrMsg: string | null = null
     try {
       for await (const event of runAgentLoop(
         client,
@@ -759,42 +759,55 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
         userVaultPath,
         antigravityPrompt
       )) {
+        if (event.type === 'error') {
+          loopErrMsg = event.content || '主通道响应异常'
+          break
+        }
         sendEvent(event)
-        if (event.type === 'error') break
       }
     } catch (primaryErr: any) {
-      console.warn('[Antigravity Primary Failed, trying fallback]:', primaryErr?.message)
+      loopErrMsg = primaryErr?.message || '网络连接超时'
+    }
+
+    if (loopErrMsg && !hasProducedContent && !abortController.signal.aborted) {
+      console.warn('[Antigravity Primary Failed, trying fallback]:', loopErrMsg)
       const fallbackTarget = getAiClientForModel()
-      if (fallbackTarget && (fallbackTarget.client !== client || fallbackTarget.model !== model)) {
+      const fbModel = fallbackTarget?.endpoint?.defaultModel || fallbackTarget?.endpoint?.models?.[0] || fallbackTarget?.model
+      if (fallbackTarget && fbModel && (fallbackTarget.client !== client || fbModel !== model)) {
+        loopErrMsg = null
         try {
           sendEvent({ type: 'status', content: '正在为您自动切换高可用轻量通道重推...' })
           for await (const fbEvent of runAgentLoop(
             fallbackTarget.client,
-            fallbackTarget.model,
+            fbModel,
             conversationMessages,
             userVaultPath,
             antigravityPrompt
           )) {
+            if (fbEvent.type === 'error') {
+              loopErrMsg = fbEvent.content || '备用通道响应异常'
+              break
+            }
             sendEvent(fbEvent)
-            if (fbEvent.type === 'error') break
           }
         } catch (fbErr: any) {
-          handleRunFailure(`Antigravity 智能体运行异常: ${fbErr?.message || primaryErr?.message || '网络连接超时'}`)
+          loopErrMsg = fbErr?.message || '备用通道连接异常'
         }
-      } else {
-        handleRunFailure(`Antigravity 智能体运行异常: ${primaryErr?.message || '网络连接超时'}`)
       }
-    } finally {
-      if (!hasSettledDeduction && req.user) {
-        const userPts = database.getUserPoints(req.user.id)?.points ?? req.user.points ?? 0
-        sendEvent({
-          type: 'points_updated',
-          points: userPts,
-          deducted: 0,
-        })
-      }
-      res.end()
     }
+
+    if (loopErrMsg && !abortController.signal.aborted) {
+      handleRunFailure(`Antigravity 智能体运行异常: ${loopErrMsg}`)
+    }
+    if (!hasSettledDeduction && req.user) {
+      const userPts = database.getUserPoints(req.user.id)?.points ?? req.user.points ?? 0
+      sendEvent({
+        type: 'points_updated',
+        points: userPts,
+        deducted: 0,
+      })
+    }
+    res.end()
     return
   }
 
@@ -842,13 +855,13 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
     // 若本地 CLI 不可用或异常，优雅启动 Codex 架构师云端双核 Loop
     const aiTarget = getAiClientForModel(body.model) || getAiClientForModel()
     if (!aiTarget) {
-      sendEvent({ type: 'error', content: 'Codex 智能体所需 AI 接口尚未配置，请在设置中配置 API Key' })
+      handleRunFailure('Codex 智能体所需 AI 接口尚未配置，请在设置中配置 API Key')
       res.end()
       return
     }
     let { client, model } = aiTarget
-    if (aiTarget.endpoint && !aiTarget.endpoint.models?.includes(model) && !aiTarget.endpoint.baseURL?.includes('openai')) {
-      model = aiTarget.endpoint.defaultModel || aiTarget.endpoint.models?.[0] || model
+    if (aiTarget.endpoint && Array.isArray(aiTarget.endpoint.models) && aiTarget.endpoint.models.length > 0 && !aiTarget.endpoint.models.includes(model)) {
+      model = aiTarget.endpoint.defaultModel || aiTarget.endpoint.models[0] || model
     }
     const codexPrompt = [
       '【智能体核心身份】：你是 OpenAI Codex 软件系统架构师与工程代码专家，现已深度结合至 CoreForge 研核系统中。',
@@ -857,6 +870,7 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
       body.agentPrompt || '',
     ].filter(Boolean).join('\n')
 
+    let codexErr: string | null = null
     try {
       for await (const event of runAgentLoop(
         client,
@@ -865,37 +879,46 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
         userVaultPath,
         codexPrompt
       )) {
+        if (event.type === 'error') {
+          codexErr = event.content || '响应异常'
+          break
+        }
         sendEvent(event)
-        if (event.type === 'error') break
       }
     } catch (error: any) {
-      handleRunFailure(`Codex 智能体运行异常: ${error?.message || '未知错误'}`)
-    } finally {
-      if (!hasSettledDeduction && req.user) {
-        const userPts = database.getUserPoints(req.user.id)?.points ?? req.user.points ?? 0
-        sendEvent({
-          type: 'points_updated',
-          points: userPts,
-          deducted: 0,
-        })
-      }
-      res.end()
+      codexErr = error?.message || '未知错误'
     }
+    if (codexErr && !abortController.signal.aborted) {
+      handleRunFailure(`Codex 智能体运行异常: ${codexErr}`)
+    }
+    if (!hasSettledDeduction && req.user) {
+      const userPts = database.getUserPoints(req.user.id)?.points ?? req.user.points ?? 0
+      sendEvent({
+        type: 'points_updated',
+        points: userPts,
+        deducted: 0,
+      })
+    }
+    res.end()
     return
   }
 
   if (body.provider === 'web') {
-    const aiTarget = getAiClientForModel(body.model)
+    const aiTarget = getAiClientForModel(body.model) || getAiClientForModel()
     if (!aiTarget) {
       handleRunFailure('云端 AI 尚未配置或对应接口不可用，请在系统设置中检查 API 配置')
       res.end()
       return
     }
-    const { client, model } = aiTarget
+    let { client, model } = aiTarget
+    if (aiTarget.endpoint && Array.isArray(aiTarget.endpoint.models) && aiTarget.endpoint.models.length > 0 && !aiTarget.endpoint.models.includes(model)) {
+      model = aiTarget.endpoint.defaultModel || aiTarget.endpoint.models[0] || model
+    }
     const webPrompt = [
       '【语言与回答习惯铁律】：必须全程使用规范、严谨、通顺的简体中文展开深度解答与解析推导，严格符合中文母语考生的思维与阅读习惯，除专业代码/英文缩写外严禁输出整句英文。',
       body.agentPrompt || '',
     ].filter(Boolean).join('\n')
+    let webErr: string | null = null
     try {
       for await (const event of runAgentLoop(
         client,
@@ -904,22 +927,27 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
         userVaultPath,
         webPrompt
       )) {
+        if (event.type === 'error') {
+          webErr = event.content || '响应异常'
+          break
+        }
         sendEvent(event)
-        if (event.type === 'error') break
       }
     } catch (error: any) {
-      handleRunFailure(`云端 AI 执行失败: ${error?.message || '未知错误'}`)
-    } finally {
-      if (!hasSettledDeduction && req.user) {
-        const userPts = database.getUserPoints(req.user.id)?.points ?? req.user.points ?? 0
-        sendEvent({
-          type: 'points_updated',
-          points: userPts,
-          deducted: 0,
-        })
-      }
-      res.end()
+      webErr = error?.message || '未知错误'
     }
+    if (webErr && !abortController.signal.aborted) {
+      handleRunFailure(`云端 AI 执行失败: ${webErr}`)
+    }
+    if (!hasSettledDeduction && req.user) {
+      const userPts = database.getUserPoints(req.user.id)?.points ?? req.user.points ?? 0
+      sendEvent({
+        type: 'points_updated',
+        points: userPts,
+        deducted: 0,
+      })
+    }
+    res.end()
     return
   }
 
@@ -972,8 +1000,8 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
       return
     }
     let { client, model } = aiTarget
-    if (aiTarget.endpoint && !aiTarget.endpoint.models?.includes(model) && !aiTarget.endpoint.baseURL?.includes('anthropic')) {
-      model = aiTarget.endpoint.defaultModel || aiTarget.endpoint.models?.[0] || model
+    if (aiTarget.endpoint && Array.isArray(aiTarget.endpoint.models) && aiTarget.endpoint.models.length > 0 && !aiTarget.endpoint.models.includes(model)) {
+      model = aiTarget.endpoint.defaultModel || aiTarget.endpoint.models[0] || model
     }
     const claudePrompt = [
       '【智能体核心身份】：你是 Anthropic Claude 全栈系统专家与高级伴学导师，现已深度结合至 CoreForge 研核系统中。',
@@ -982,6 +1010,7 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
       body.agentPrompt || '',
     ].filter(Boolean).join('\n')
 
+    let claudeErr: string | null = null
     try {
       for await (const event of runAgentLoop(
         client,
@@ -991,22 +1020,27 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
         claudePrompt
       )) {
         if (event.type === 'text' && event.content) hasProducedContent = true
+        if (event.type === 'error') {
+          claudeErr = event.content || '响应异常'
+          break
+        }
         sendEvent(event)
-        if (event.type === 'error') break
       }
     } catch (error: any) {
-      handleRunFailure(`Claude 智能体运行异常: ${error?.message || '未知错误'}`)
-    } finally {
-      if (!hasSettledDeduction && req.user) {
-        const userPts = database.getUserPoints(req.user.id)?.points ?? req.user.points ?? 0
-        sendEvent({
-          type: 'points_updated',
-          points: userPts,
-          deducted: 0,
-        })
-      }
-      res.end()
+      claudeErr = error?.message || '未知错误'
     }
+    if (claudeErr && !abortController.signal.aborted) {
+      handleRunFailure(`Claude 智能体运行异常: ${claudeErr}`)
+    }
+    if (!hasSettledDeduction && req.user) {
+      const userPts = database.getUserPoints(req.user.id)?.points ?? req.user.points ?? 0
+      sendEvent({
+        type: 'points_updated',
+        points: userPts,
+        deducted: 0,
+      })
+    }
+    res.end()
     return
   }
 
