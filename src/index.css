@@ -68,15 +68,8 @@ body {
 }
 
 @theme {
-  /* UI/UX Pro Max · CoreForge Design System Tokens */
-  --font-mono: 'JetBrains Mono', 'Cascadia Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
-
-  /* Master Dark & Code Accent */
-  --color-brand-midnight: #0F172A;
-  --color-brand-primary: #1E293B;
+  /* CoreForge Extended Surface & Typography Tokens (与 tokens.css 协同无冲突) */
   --color-brand-secondary: #334155;
-  --color-brand-green: #22C55E;
   --color-brand-border: #475569;
 
   /* Subframe Neutral Surfaces & Typography Tokens */
@@ -96,20 +89,6 @@ body {
   --color-warm-700: #27272A;
   --color-warm-800: #18181B;
   --color-warm-900: #09090B;
-
-  /* Primary action: Subframe Graphite Black High-Contrast */
-  --color-accent-orange: #18181B;
-  --color-accent-peach: #F4F4F5;
-
-  /* Status colors */
-  --color-accent-sage: #34C759;
-  --color-accent-mint: #D9F7E2;
-  --color-accent-amber: #FF9F0A;
-  --color-accent-rose: #FF3B30;
-
-  /* Surface colors */
-  --color-surface: #FFFFFF;
-  --color-surface-elevated: #FFFFFF;
 
   /* Slate (keep for backward compat during migration) */
   --color-slate-950: #020617;
@@ -914,21 +893,26 @@ body {
   animation: slideUpSheet 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Bento Card 精致层次表面 */
+/* Bento Card 精致层次表面（带微光顶缘高光，对齐 Apple / Linear 现代桌面质感） */
 .bento-card {
   background: #FFFFFF;
-  border: 1px solid rgba(229, 231, 235, 0.9);
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(226, 232, 240, 0.92);
+  box-shadow:
+    0 1px 2px 0 rgba(15, 23, 42, 0.03),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s ease;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease, background-color 0.2s ease;
 }
 
 @media (hover: hover) {
   .bento-card-hover:hover {
-    transform: translateY(-1.5px);
-    border-color: rgba(209, 213, 219, 1);
-    box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+    transform: translateY(-2px);
+    border-color: rgba(203, 213, 225, 1);
+    box-shadow:
+      0 8px 24px -4px rgba(15, 23, 42, 0.06),
+      0 2px 6px -1px rgba(15, 23, 42, 0.03),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
   }
 }
 
@@ -1205,11 +1189,105 @@ input[type="range"].history-range-slider:focus-visible {
 
 
 /* ========================================================================= */
-/* Subframe 标志性 3D 金属硬件质感与高质感落地页设计规范 (Subframe Design System) */
+/* Subframe 标志性 3D 金属硬件质感与旗舰级主页导航门户规范 (Subframe Studio) */
 /* ========================================================================= */
 
+html {
+  scroll-padding-top: 5.25rem;
+}
+
+@media (max-width: 767px) {
+  html {
+    scroll-padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 .subframe-landing-bg {
-  background: radial-gradient(120% 90% at 50% 18%, #d4d5d8 0%, #dcdde0 48%, #ececee 76%, #ffffff 100%);
+  background-color: #f6f7f9;
+  background-image:
+    radial-gradient(65% 42% at 50% 0%, rgba(99, 102, 241, 0.08) 0%, rgba(99, 102, 241, 0) 72%),
+    radial-gradient(48% 36% at 82% 8%, rgba(16, 185, 129, 0.06) 0%, rgba(16, 185, 129, 0) 70%),
+    radial-gradient(125% 88% at 50% 16%, #dfe1e6 0%, #eaebee 46%, #f5f6f8 78%, #ffffff 100%);
+}
+
+/* 建筑级精密坐标暗纹遮罩层 */
+.landing-architectural-grid {
+  background-size: 36px 36px;
+  background-image:
+    linear-gradient(to right, rgba(24, 24, 27, 0.038) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(24, 24, 27, 0.038) 1px, transparent 1px);
+  -webkit-mask-image: radial-gradient(85% 58% at 50% 18%, #000 25%, transparent 92%);
+  mask-image: radial-gradient(85% 58% at 50% 18%, #000 25%, transparent 92%);
+}
+
+/* 旗舰级主页主标题微金属质感与平衡排版 */
+.landing-hero-title {
+  text-wrap: balance;
+  background: linear-gradient(180deg, #09090b 0%, #18181b 58%, #3f3f46 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: #171719;
+}
+
+.landing-pretty-copy {
+  text-wrap: pretty;
+}
+
+/* 光学折射玻璃 Bento 导航卡片 */
+.landing-bento-card {
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 8px 24px -6px rgba(15, 23, 42, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1), border-color 220ms ease;
+}
+
+.landing-bento-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(99, 102, 241, 0.28);
+  box-shadow:
+    0 4px 12px rgba(15, 23, 42, 0.05),
+    0 20px 38px -12px rgba(79, 70, 229, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+
+/* 高转化黑曜石流光主按钮 */
+.landing-cta-primary {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, #27272a 0%, #141417 52%, #09090b 100%);
+  box-shadow:
+    0 10px 26px -6px rgba(9, 9, 11, 0.38),
+    0 2px 6px rgba(9, 9, 11, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.26);
+  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 180ms ease;
+}
+
+.landing-cta-primary:hover {
+  box-shadow:
+    0 14px 32px -6px rgba(79, 70, 229, 0.32),
+    0 4px 10px rgba(9, 9, 11, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.38);
+}
+
+.landing-cta-primary::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 65%;
+  height: 100%;
+  background: linear-gradient(105deg, transparent 20%, rgba(255, 255, 255, 0.18) 50%, transparent 80%);
+  transition: left 650ms cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.landing-cta-primary:hover::after {
+  left: 145%;
 }
 
 /* 3D 镀铬金属硬件外框 (3D Metallic Chrome Hardware Pill Outer Frame) */
@@ -1356,10 +1434,20 @@ input[type="range"].history-range-slider:focus-visible {
   color: #3730a3 !important;
 }
 
-/* 顶部导航激活项：鲜艳渐变 */
-.theme-vibrant nav a.bg-slate-900 {
+/* 顶部导航激活项：鲜艳渐变（同时覆盖 NavLink 与学科专项下拉激活态） */
+.theme-vibrant nav a.bg-slate-900,
+.theme-vibrant nav button.bg-slate-900 {
   background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%) !important;
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3) !important;
+}
+
+/* 鲜艳风首页 Hero 极光高定展台 */
+.theme-vibrant .subframe-bg {
+  background:
+    radial-gradient(65% 80% at 18% 12%, rgba(99, 102, 241, 0.12) 0%, transparent 65%),
+    radial-gradient(65% 80% at 82% 15%, rgba(236, 72, 153, 0.09) 0%, transparent 65%),
+    radial-gradient(120% 90% at 50% 18%, #eef2ff 0%, #f5f7ff 48%, #ffffff 100%);
+  border-color: rgba(199, 210, 254, 0.75) !important;
 }
 
 /* 考点掌握度热力图原位红光闪烁动效（无位移/无缩放，避免 SVG 原点偏移飘动） */
@@ -1538,10 +1626,19 @@ input[type="range"].history-range-slider:focus-visible {
   color: #1b4332 !important;
 }
 
-/* 导航激活项 */
+/* 导航激活项（覆盖 a 与下拉 button） */
+.theme-eyecare nav a.bg-slate-900,
+.theme-eyecare nav button.bg-slate-900,
 .theme-eyecare nav a.bg-neutral-900 {
   background: linear-gradient(135deg, #2d6a4f 0%, #40916c 100%) !important;
   box-shadow: 0 2px 8px rgba(45, 106, 79, 0.25) !important;
+}
+
+/* 护眼模式首页 Hero 竹韵宣纸展台 */
+.theme-eyecare .subframe-bg {
+  background:
+    radial-gradient(80% 90% at 50% 15%, rgba(82, 183, 136, 0.14) 0%, rgba(216, 243, 220, 0.22) 48%, #f7faf5 100%) !important;
+  border-color: #d5e3d1 !important;
 }
 
 /* ==========================================================================
@@ -1704,11 +1801,32 @@ input[type="range"].history-range-slider:focus-visible {
   color: #ffffff !important;
 }
 
-/* 导航激活项 */
+/* 导航激活项（修复暗夜模式下 bg-slate-900 与深空背景融为一体看不清的问题） */
+.dark nav a.bg-slate-900,
+.theme-dark nav a.bg-slate-900,
+.dark nav button.bg-slate-900,
+.theme-dark nav button.bg-slate-900,
 .dark nav a.bg-neutral-900,
 .theme-dark nav a.bg-neutral-900 {
   background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
-  box-shadow: 0 2px 10px rgba(2, 132, 199, 0.35) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 12px rgba(14, 165, 233, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
+}
+
+/* 暗黑模式首页 Hero 深空黑曜石星云展台（消除原本纯白银灰块在夜间刺眼的问题） */
+.dark .subframe-bg,
+.theme-dark .subframe-bg {
+  background:
+    radial-gradient(70% 85% at 50% 12%, rgba(56, 189, 248, 0.14) 0%, rgba(99, 102, 241, 0.08) 42%, rgba(19, 25, 38, 0.96) 100%) !important;
+  border-color: rgba(56, 189, 248, 0.18) !important;
+  box-shadow: 0 12px 36px -8px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+
+.dark .subframe-pill,
+.theme-dark .subframe-pill {
+  background-color: rgba(30, 41, 59, 0.85) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #cbd5e1 !important;
 }
 
 /* 代码块与 Markdown 在黑夜模式下的深色调优 */

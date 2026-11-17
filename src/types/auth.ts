@@ -6,6 +6,7 @@ export interface UserProfile {
   displayName: string
   role: UserRole
   points?: number
+  recoveryCode?: string
   lastCheckinAt?: string
   createdAt?: string
   updatedAt?: string

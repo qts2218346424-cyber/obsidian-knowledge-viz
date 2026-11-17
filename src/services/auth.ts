@@ -143,6 +143,9 @@ export async function initAdmin(data: {
   if (res.token) {
     setStoredToken(res.token)
   }
+  if (res.user) {
+    setStoredUser(res.user)
+  }
   return res
 }
 
@@ -159,6 +162,9 @@ export async function register(data: {
   if (res.token) {
     setStoredToken(res.token)
   }
+  if (res.user) {
+    setStoredUser(res.user)
+  }
   return res
 }
 
@@ -173,6 +179,9 @@ export async function login(data: {
   })
   if (res.token) {
     setStoredToken(res.token)
+  }
+  if (res.user) {
+    setStoredUser(res.user)
   }
   return res
 }
