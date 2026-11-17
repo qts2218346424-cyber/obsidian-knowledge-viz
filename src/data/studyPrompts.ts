@@ -346,7 +346,7 @@ export function extractFollowUpPrompts(
  * 随机打乱并获取 N 个元素
  */
 function sampleRandom<T>(array: T[], n: number): T[] {
-  const shuffled = [...array].sort(() => 0.5 - Math.random())
+  const shuffled = array.toSorted(() => 0.5 - Math.random())
   return shuffled.slice(0, n)
 }
 

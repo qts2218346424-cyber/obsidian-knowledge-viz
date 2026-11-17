@@ -1,7 +1,7 @@
 import * as authService from '../services/auth'
 import { useAuth } from '../contexts/AuthContext'
 import { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
   X,
   ChevronDown,
@@ -9,6 +9,9 @@ import {
   RefreshCw,
   FolderPlus,
   ArrowUp,
+  CheckCircle2,
+  Compass,
+  Brain,
 } from 'lucide-react'
 import {
   api,
@@ -39,16 +42,25 @@ import ChatStudioHeader, {
 import ChatComposerDock from '../components/chat/ChatComposerDock'
 import ChatMobileConfigSheet from '../components/chat/ChatMobileConfigSheet'
 import ChatSessionSidebar from '../components/chat/ChatSessionSidebar'
+import ChatSelectionPopover from '../components/chat/ChatSelectionPopover'
 
 const QuickPracticeModal = lazy(() => import('../components/QuickPracticeModal'))
 const AIMemoryModal = lazy(() => import('../components/AIMemoryModal'))
 const LocalSkillPickerModal = lazy(() => import('../components/LocalSkillPickerModal'))
 const ModelManagerModal = lazy(() => import('../components/ModelManagerModal'))
-export type StudyTone = 'rigorous' | 'vivid' | 'exam' | 'followup'
 const StepTutorModal = lazy(() => import('../components/study/StepTutorModal'))
 
-import type { ToolCallInfo, AgentMessage, AttachedFile, Conversation } from '../features/ai-chat/types'
+import type {
+  ToolCallInfo,
+  AgentMessage,
+  AttachedFile,
+  Conversation,
+  StudyTone,
+  ContextEnrichmentMeta,
+} from '../features/ai-chat/types'
+export type { StudyTone }
 import { processImageFile, formatFileSize } from '../features/ai-chat/utils'
+import { useChatBackdrop, resolveChatBackdropClass } from '../features/ai-chat/useChatBackdrop'
 
 // 向后兼容：保留原有的类型导出入口
 export type { PeerAgentResponse, AttachedFile, AgentMessage } from '../features/ai-chat/types'
@@ -72,6 +84,30 @@ function getUserChatStorageKey(userId?: string): string {
 
 export default function Chat() {
   const { user, isAdmin } = useAuth()
+  const { backdropId } = useChatBackdrop()
+  const navigate = useNavigate()
+  // 非阻塞伴学操作轻提示 (替代生硬打断心流的 window.alert)
+  const [chatToast, setChatToast] = useState<{
+    title: string
+    subtitle?: string
+    actionLabel?: string
+    onAction?: () => void
+  } | null>(null)
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const showChatToast = useCallback((payload: {
+    title: string
+    subtitle?: string
+    actionLabel?: string
+    onAction?: () => void
+  }) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+    setChatToast(payload)
+    toastTimerRef.current = setTimeout(() => setChatToast(null), 5000)
+  }, [])
+
+  // 划词引用追问状态
+  const [quotedSelection, setQuotedSelection] = useState<string | null>(null)
   // 项目工作区管理状态
   const [workspace, setWorkspace] = useState(() => loadWorkspace())
   const activeProject = useMemo(() => {
@@ -192,11 +228,11 @@ export default function Chat() {
   const fontSizeClass = useMemo(() => {
     switch (chatFontSize) {
       case 'sm':
-        return 'text-2xs sm:text-2xs leading-[1.52]'
+        return 'text-[13px] sm:text-[13.5px] leading-[1.68]'
       case 'base':
-        return 'text-xs sm:text-[12.5px] leading-[1.56]'
+        return 'text-[14px] sm:text-[14.5px] leading-[1.76]'
       case 'lg':
-        return 'text-[12.5px] sm:text-[13.5px] leading-[1.6]'
+        return 'text-[15px] sm:text-[16px] leading-[1.82]'
     }
   }, [chatFontSize])
 
@@ -526,17 +562,28 @@ export default function Chat() {
   const handleMessagesScroll = useCallback(() => {
     const el = messagesContainerRef.current
     if (!el) return
-    const threshold = 140
+    const threshold = 96
     const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight <= threshold
     isAtBottomRef.current = isAtBottom
     setShowScrollBottomBtn(!isAtBottom)
     setShowScrollTopBtn(el.scrollTop > 480)
   }, [])
 
-  const scrollToBottom = useCallback((smooth = false) => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' })
+  // 用户主动向上滚轮阅读上方推导时立即解除吸底锁定，绝不在流式输出中途抢夺视线
+  const handleMessagesWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    if (e.deltaY < -4) {
+      isAtBottomRef.current = false
+      setShowScrollBottomBtn(true)
     }
+  }, [])
+
+  const scrollToBottom = useCallback((smooth = false) => {
+    const el = messagesContainerRef.current
+    if (!el) return
+    el.scrollTo({
+      top: el.scrollHeight,
+      behavior: smooth ? 'smooth' : 'auto',
+    })
   }, [])
 
   const scrollToTop = useCallback(() => {
@@ -578,8 +625,8 @@ export default function Chat() {
 
         const validMsgs = messages.filter(m => m.id !== 'welcome' && m.content)
         if (!forceRandom && validMsgs.length > 0) {
-          const lastUser = [...validMsgs].reverse().find(m => m.role === 'user')
-          const lastAss = [...validMsgs].reverse().find(m => m.role === 'assistant')
+          const lastUser = validMsgs.findLast(m => m.role === 'user')
+          const lastAss = validMsgs.findLast(m => m.role === 'assistant')
           const combined = `${lastUser?.content || ''} ${
             lastAss?.content ? lastAss.content.slice(0, 600) : ''
           }`
@@ -1248,6 +1295,7 @@ export default function Chat() {
   const handleSend = useCallback(
     async (overridePrompt?: string, forceInterrupt = false) => {
       const rawText = (overridePrompt ?? input).trim()
+      const currentQuote = overridePrompt ? '' : quotedSelection?.trim() || ''
       const convId = activeConvId
       const currentImages = [...stagedImages]
       const currentFiles = [...stagedFiles]
@@ -1255,6 +1303,7 @@ export default function Chat() {
 
       if (
         !rawText &&
+        !currentQuote &&
         !hasNoteContext &&
         currentImages.length === 0 &&
         currentFiles.length === 0
@@ -1274,15 +1323,21 @@ export default function Chat() {
       // 展示在用户气泡里的干净问题文本
       const displayUserText =
         rawText ||
-        (selectedNote
+        (currentQuote
+          ? '请针对我划选的这段内容，结合上下文做微观逐步拆解与易混点精析。'
+          : selectedNote
           ? `请结合伴读笔记《${selectedNote.title || selectedNote.path}》为我深度精讲核心考点与统考命题陷阱。`
           : '请分析附加内容')
 
-      // 构造发送给后端的完整上下文 Prompt（自动附带伴读笔记内容，不污染用户输入框）
+      // 构造发送给后端的完整上下文 Prompt（自动附带划词片段与伴读笔记内容，不污染用户输入框）
       let fullPromptText = displayUserText
+      if (currentQuote) {
+        const quoteBlock = `【用户在对话中划词聚焦追问的原文片段】：\n> ${currentQuote.replace(/\n+/g, '\n> ')}`
+        fullPromptText = `${quoteBlock}\n\n【用户针对该片段的具体疑问】：${displayUserText}`
+      }
       if (selectedNote) {
         const noteContextBlock = `【当前伴读知识库笔记：《${selectedNote.title || selectedNote.path}》 (路径: ${selectedNote.path})】\n\`\`\`markdown\n${selectedNote.content.slice(0, 6000)}\n\`\`\``
-        fullPromptText = `${noteContextBlock}\n\n【用户提问】：${displayUserText}`
+        fullPromptText = `${noteContextBlock}\n\n${fullPromptText}`
       }
       if (currentFiles.length > 0) {
         const fileExcerpts = currentFiles
@@ -1302,6 +1357,7 @@ export default function Chat() {
         id: `user-${Date.now()}`,
         role: 'user',
         content: displayUserText,
+        quotedText: currentQuote || undefined,
         images: currentImages.length > 0 ? currentImages : undefined,
         files: currentFiles.length > 0 ? currentFiles : undefined,
         toolCalls: [],
@@ -1335,7 +1391,10 @@ export default function Chat() {
         title: conv.messages.length <= 1 ? defaultTitle : conv.title,
       }))
 
-      if (!overridePrompt) setInput('')
+      if (!overridePrompt) {
+        setInput('')
+        setQuotedSelection(null)
+      }
       setStagedImages([])
       setStagedFiles([])
 
@@ -1366,6 +1425,12 @@ export default function Chat() {
 4. 【微观逐步拆解】：针对该疑问所涉及的细节步骤进行显微镜式的深入剖析与逻辑推演，做到步步有据，条理分明，直击本质。
 5. 【针对性小自测】：在解答完该具体疑问后，给出一个极小粒度的针对性微自测问题或推导反思，检验盲点是否真正攻克。
 \n${intuitiveFormattingRules}`
+      } else if (studyTone === 'socratic') {
+        toneInstruction = `【作答风格要求】：🧭 苏格拉底分步启发导学模式（严格遵守：点拨破题跳板，留白引导主动思考，防止直接喂答案导致“假性看懂”）！
+1. 【点透题眼抓手，不直接喂全套终局答案】：开篇先用 1~2 句话点透本题或该概念的核心考查本质与审题突破口（应当联想到哪个定理、数据结构性质或硬件状态转换）。
+2. 【拆解第 1 步思维跳板】：将复杂问题拆解为清晰的阶梯，先为考生铺好第 1 步关键推导或状态映射，讲清“为什么第一步要这样切入”。
+3. 【埋坑预警提示】：用 > ⚠️ **思维路标** 点出接下来最容易踩的 1 个隐蔽前提或边界陷阱，但把关键推算留给考生自己完成。
+4. 【结尾互动启发微提问】：回答末尾必须给出 1 个小巧具体、指向明确的下一步思考问题（例如：“顺着这个思路，当边界满足 XX 时，下一步结果会变成什么？试着说出你的判断，我来为你印证并推进下一步！”），引导考生主动动脑闭环。`
       } else if (studyTone === 'rigorous') {
         toneInstruction = `【作答风格要求】：学术严谨模式，考纲对齐，公式推导严谨规范。\n${intuitiveFormattingRules}`
       } else if (studyTone === 'vivid') {
@@ -1381,7 +1446,11 @@ export default function Chat() {
         onFlushDelta: (bufferedDelta: string) => void,
         onStatus?: (st: string) => void,
         onDone?: () => void,
-        onErrorMsg?: (err: string) => void
+        onErrorMsg?: (err: string) => void,
+        onContextEnriched?: (payload: {
+          citedNotes?: Array<{ title: string; path: string }>
+          contextEnrichment?: ContextEnrichmentMeta
+        }) => void
       ) => {
         let pendingDelta = ''
         let rafId: number | null = null
@@ -1528,6 +1597,16 @@ export default function Chat() {
                     }
                     if (event.type === 'points_updated' && typeof event.points === 'number') {
                       window.dispatchEvent(new CustomEvent('points-updated', { detail: { points: event.points } }))
+                    } else if (event.type === 'context_enriched') {
+                      onContextEnriched?.({
+                        citedNotes: Array.isArray(event.citedNotes) ? event.citedNotes : undefined,
+                        contextEnrichment: {
+                          matchedWeakPoints: Array.isArray(event.matchedWeakPoints) ? event.matchedWeakPoints : undefined,
+                          relatedErrorsCount: typeof event.relatedErrorsCount === 'number' ? event.relatedErrorsCount : undefined,
+                          targetExam: typeof event.targetExam === 'string' ? event.targetExam : undefined,
+                          profileApplied: Boolean(event.profileApplied),
+                        },
+                      })
                     } else if (event.type === 'text' && event.content) {
                       receivedAnyContent = true
                       scheduleFlush(event.content)
@@ -1604,7 +1683,10 @@ export default function Chat() {
 
         fetch('/api/local-agents/generate-followups', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...authService.getAuthHeaders(),
+          },
           body: JSON.stringify({
             prompt: inputText,
             lastResponse: responseText.slice(0, 800),
@@ -1620,6 +1702,23 @@ export default function Chat() {
             }
           })
           .catch(() => {})
+      }
+
+      const handleStreamContextEnriched = (payload: {
+        citedNotes?: Array<{ title: string; path: string }>
+        contextEnrichment?: ContextEnrichmentMeta
+      }) => {
+        updateConversation(convId, conv => {
+          const msgs = [...conv.messages]
+          const idx = msgs.findIndex(m => m.id === assistantMsgId)
+          if (idx === -1) return conv
+          msgs[idx] = {
+            ...msgs[idx],
+            citedNotes: payload.citedNotes ?? msgs[idx].citedNotes,
+            contextEnrichment: payload.contextEnrichment ?? msgs[idx].contextEnrichment,
+          }
+          return { ...conv, messages: msgs }
+        })
       }
 
       if (isDualMode) {
@@ -1715,7 +1814,8 @@ export default function Chat() {
                 }
                 return { ...conv, messages: msgs }
               })
-            }
+            },
+            handleStreamContextEnriched
           )
 
           const peerTask = executeStreamRequest(
@@ -1852,7 +1952,8 @@ export default function Chat() {
               }
               return { ...conv, messages: msgs }
             })
-          }
+          },
+          handleStreamContextEnriched
         )
       } finally {
         updateConversation(convId, conv => {
@@ -1885,6 +1986,7 @@ export default function Chat() {
     },
     [
       input,
+      quotedSelection,
       activeConvId,
       stagedImages,
       stagedFiles,
@@ -1941,9 +2043,9 @@ export default function Chat() {
 
     const queryPrompt = searchParams.get('prompt') || searchParams.get('q')
     const modeParam = searchParams.get('mode')
-    if (modeParam === 'followup') {
-      setStudyTone('followup')
-      localStorage.setItem('coreforge_study_tone', 'followup')
+    if (modeParam === 'followup' || modeParam === 'socratic') {
+      setStudyTone(modeParam)
+      localStorage.setItem('coreforge_study_tone', modeParam)
     }
     const finalPrompt = pendingPrompt || queryPrompt
     const auto = searchParams.get('auto') === '1' || Boolean(pendingPrompt)
@@ -2022,9 +2124,9 @@ export default function Chat() {
       if (!conv) return
       const idx = conv.messages.findIndex(m => m.id === assistantMsgId)
       if (idx === -1) return
-      const prevUserMsg = [...conv.messages.slice(0, idx)]
-        .reverse()
-        .find(m => m.role === 'user')
+      const prevUserMsg = conv.messages
+        .slice(0, idx)
+        .findLast(m => m.role === 'user')
       if (!prevUserMsg) return
 
       updateConversation(activeConvId, c => ({
@@ -2209,26 +2311,224 @@ export default function Chat() {
   const handleSaveMessage = useCallback(
     async (msg: AgentMessage) => {
       if (!msg.content) return
-      const firstLine = msg.content
-        .split('\n')[0]
-        .replace(/^#+\s*/, '')
+      const cleanedContent = msg.content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
+      if (!cleanedContent) return
+
+      const firstLine = cleanedContent
+        .split('\n')
+        .map(l => l.trim())
+        .find(l => l.length > 0 && !l.startsWith('```'))
+        ?.replace(/^#+\s*/, '')
+        .replace(/\*\*/g, '')
         .replace(/[<>:"/\\|?*]/g, '_')
-        .substring(0, 40)
-      const title =
-        firstLine || `AI伴学精析_${new Date().toLocaleDateString('zh-CN')}`
-      const destPath = `wiki/AI伴学笔记/${title}.md`
+        .substring(0, 38)
+
+      const baseTitle =
+        firstLine || `AI伴学精析_${new Date().toLocaleDateString('zh-CN').replace(/\//g, '-')}`
+      let finalTitle = baseTitle
+      let finalPath = `wiki/AI伴学笔记/${finalTitle}.md`
+
       try {
-        await api.createFile(destPath, msg.content, {
-          title,
-          tags: ['ai-study', activeAgent.domain, provider],
-          created: new Date().toISOString().split('T')[0],
+        try {
+          await api.createFile(finalPath, cleanedContent, {
+            title: finalTitle,
+            tags: ['ai-study', activeAgent.domain, provider],
+            created: new Date().toISOString().split('T')[0],
+          })
+        } catch (firstErr: any) {
+          const errMsg = String(firstErr?.message || '')
+          if (errMsg.includes('exists') || errMsg.includes('已存在')) {
+            const stamp = new Date().toTimeString().slice(0, 8).replace(/:/g, '')
+            finalTitle = `${baseTitle}_${stamp}`
+            finalPath = `wiki/AI伴学笔记/${finalTitle}.md`
+            await api.createFile(finalPath, cleanedContent, {
+              title: finalTitle,
+              tags: ['ai-study', activeAgent.domain, provider],
+              created: new Date().toISOString().split('T')[0],
+            })
+          } else {
+            throw firstErr
+          }
+        }
+
+        showChatToast({
+          title: '已沉淀至个人知识库笔记',
+          subtitle: finalPath,
+          actionLabel: '伴读打开 →',
+          onAction: () => {
+            void handleNoteClick(finalPath)
+            setChatToast(null)
+          },
         })
-        alert(`✅ 已成功沉淀为知识库笔记：\n${destPath}`)
       } catch (err: any) {
-        alert(`保存失败: ${err.message}`)
+        showChatToast({
+          title: '保存笔记失败',
+          subtitle: err?.message || '请检查知识库写入权限后重试',
+        })
       }
     },
-    [activeAgent.domain, provider]
+    [activeAgent.domain, provider, showChatToast, handleNoteClick]
+  )
+
+  // 智能推断闪卡所属学科分栏
+  const inferFlashcardMeta = useCallback(
+    (textSample: string): { domain: 'cs_408' | 'math' | 'politics'; subject: string } => {
+      if (activeAgent.domain === 'math') {
+        if (/矩阵|特征值|行列式|向量|方程组|二次型|秩|对角化/.test(textSample)) {
+          return { domain: 'math', subject: '线性代数' }
+        }
+        if (/随机变量|概率|分布|期望|方差|协方差|极大似然|矩估计/.test(textSample)) {
+          return { domain: 'math', subject: '概率论与数理统计' }
+        }
+        return { domain: 'math', subject: '高等数学' }
+      }
+      if (activeAgent.domain === 'politics') {
+        return { domain: 'politics', subject: '考研政治' }
+      }
+      if (/链表|二叉树|红黑树|AVL|哈希|散列|排序|KMP|最短路|最小生成树|栈|队列/.test(textSample)) {
+        return { domain: 'cs_408', subject: '数据结构' }
+      }
+      if (/Cache|流水线|IEEE|补码|移码|总线|寻址|微指令|硬布线|加法器/.test(textSample)) {
+        return { domain: 'cs_408', subject: '计算机组成原理' }
+      }
+      if (/TCP|UDP|HTTP|IP|路由|子网|ARP|DNS|滑动窗口|拥塞|CSMA|以太网/.test(textSample)) {
+        return { domain: 'cs_408', subject: '计算机网络' }
+      }
+      return { domain: 'cs_408', subject: '操作系统' }
+    },
+    [activeAgent.domain]
+  )
+
+  const handleCreateFlashcardFromMsg = useCallback(
+    async (msg: AgentMessage) => {
+      const cleaned = (msg.content || '').replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
+      if (!cleaned) return
+
+      const msgIdx = messages.findIndex(m => m.id === msg.id)
+      let prevUserQuestion = ''
+      if (msgIdx > 0) {
+        for (let i = msgIdx - 1; i >= 0; i--) {
+          if (messages[i].role === 'user' && messages[i].content.trim()) {
+            prevUserQuestion = messages[i].content.trim()
+            break
+          }
+        }
+      }
+
+      const firstHeadline = cleaned
+        .split('\n')
+        .map(l => l.trim())
+        .find(l => l.length > 0 && !l.startsWith('```'))
+        ?.replace(/^#+\s*/, '')
+        .replace(/\*\*/g, '')
+        .slice(0, 46)
+
+      const cardTitle =
+        (prevUserQuestion ? prevUserQuestion.replace(/\s+/g, ' ').slice(0, 42) : firstHeadline) ||
+        `${activeAgent.name}核心考点速记`
+      const front = prevUserQuestion || `请简述「${cardTitle}」的核心机理、关键结论与统考避坑要点？`
+      const back = cleaned.length > 1800 ? `${cleaned.slice(0, 1800)}\n\n…（详见伴学完整会话）` : cleaned
+
+      const mnemonicMatch = cleaned.match(/>\s*💡[^\n]+/)
+      const pitfallMatch = cleaned.match(/>\s*⚠️[^\n]+/)
+      const { domain, subject } = inferFlashcardMeta(`${front}\n${cleaned.slice(0, 500)}`)
+
+      try {
+        const res = await fetch('/api/flashcards/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authService.getAuthHeaders(),
+          },
+          body: JSON.stringify({
+            title: cardTitle,
+            domain,
+            subject,
+            chapter: 'AI 伴学沉淀',
+            front,
+            back,
+            mnemonic: mnemonicMatch ? mnemonicMatch[0].replace(/^>\s*/, '').trim() : undefined,
+            pitfall: pitfallMatch ? pitfallMatch[0].replace(/^>\s*/, '').trim() : undefined,
+            isForgotten: true,
+            difficulty: 'medium',
+            tags: [subject, 'AI伴学制卡'],
+          }),
+        })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || '创建闪卡失败')
+        }
+        showChatToast({
+          title: '已加入艾宾浩斯 SM-2 记忆闪卡库',
+          subtitle: `【${subject}】${cardTitle}`,
+          actionLabel: '去闪卡复习 →',
+          onAction: () => {
+            setChatToast(null)
+            navigate('/study?tab=flashcards')
+          },
+        })
+      } catch (err: any) {
+        showChatToast({
+          title: '转存闪卡失败',
+          subtitle: err?.message || '请稍后重试',
+        })
+      }
+    },
+    [messages, activeAgent.name, inferFlashcardMeta, showChatToast, navigate]
+  )
+
+  const handleCreateFlashcardFromSelection = useCallback(
+    async (selectedText: string) => {
+      const cleaned = selectedText.trim()
+      if (!cleaned) return
+      const snippetTitle = cleaned
+        .split('\n')[0]
+        .replace(/^#+\s*/, '')
+        .replace(/\*\*/g, '')
+        .trim()
+        .slice(0, 38) || '划词核心考点'
+      const { domain, subject } = inferFlashcardMeta(cleaned)
+
+      try {
+        const res = await fetch('/api/flashcards/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authService.getAuthHeaders(),
+          },
+          body: JSON.stringify({
+            title: snippetTitle,
+            domain,
+            subject,
+            chapter: '伴学划词摘录',
+            front: `【考点速测】请复述并辨析以下核心结论或步骤：\n「${snippetTitle}…」`,
+            back: cleaned,
+            isForgotten: true,
+            difficulty: 'medium',
+            tags: [subject, '划词精摘'],
+          }),
+        })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || '创建闪卡失败')
+        }
+        showChatToast({
+          title: '划词片段已制成记忆闪卡',
+          subtitle: `【${subject}】${snippetTitle}`,
+          actionLabel: '去闪卡复习 →',
+          onAction: () => {
+            setChatToast(null)
+            navigate('/study?tab=flashcards')
+          },
+        })
+      } catch (err: any) {
+        showChatToast({
+          title: '制卡失败',
+          subtitle: err?.message || '请稍后重试',
+        })
+      }
+    },
+    [inferFlashcardMeta, showChatToast, navigate]
   )
 
   const handleTriggerPracticeFromChat = useCallback(
@@ -2260,6 +2560,14 @@ export default function Chat() {
     () => messages.filter(m => m.id !== 'welcome'),
     [messages]
   )
+  const lastAssistantMsgId = useMemo(() => {
+    for (let i = visibleMessages.length - 1; i >= 0; i--) {
+      if (visibleMessages[i].role === 'assistant') {
+        return visibleMessages[i].id
+      }
+    }
+    return null
+  }, [visibleMessages])
   const isWelcomeState = visibleMessages.length === 0
   const welcomeCards = useMemo(() => {
     const source = promptsList.length >= 4 ? promptsList : activeAgent.quickPrompts || []
@@ -2267,7 +2575,41 @@ export default function Chat() {
   }, [promptsList, activeAgent.quickPrompts])
 
   return (
-    <div className="h-full max-h-full flex flex-col gap-0 sm:gap-2.5 overflow-hidden min-h-0">
+    <div className="h-full max-h-full flex flex-col gap-0 sm:gap-2.5 overflow-hidden min-h-0 relative">
+      {/* 非阻塞丝滑伴学轻提示胶囊 (替代打断心流的原生 alert) */}
+      {chatToast && (
+        <div className="fixed top-16 right-4 sm:right-6 z-50 max-w-sm rounded-2xl border border-emerald-200/90 dark:border-emerald-800/70 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-4 py-3 shadow-lg flex items-start gap-2.5 animate-fade-in">
+          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+          <div className="min-w-0 flex-1">
+            <div className="text-xs font-bold text-slate-900 dark:text-slate-100">
+              {chatToast.title}
+            </div>
+            {chatToast.subtitle && (
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                {chatToast.subtitle}
+              </div>
+            )}
+            {chatToast.actionLabel && chatToast.onAction && (
+              <button
+                type="button"
+                onClick={chatToast.onAction}
+                className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 cursor-pointer"
+              >
+                <span>{chatToast.actionLabel}</span>
+              </button>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setChatToast(null)}
+            className="p-0.5 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+            aria-label="关闭通知"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* 1. 一体化高颜值灵动工作台顶栏 (Unified Studio Header) */}
       <ChatStudioHeader
         activeAgent={activeAgent}
@@ -2366,53 +2708,87 @@ export default function Chat() {
           setShowSessions={setShowSessions}
         />
 
-        {/* 2.2 中间：主伴学对话流 + 一体化智能输入舱 (高级轻透磨砂质感，舒目纸感背景通透映现) */}
-        <div className="flex-1 flex flex-col bg-white/35 dark:bg-slate-900/40 backdrop-blur-xl sm:border sm:border-white/50 dark:sm:border-slate-800/60 sm:rounded-2xl overflow-hidden min-w-0 shadow-xs complex-panel-contain transition-colors">
+        {/* 2.2 中间：主伴学对话流 + 一体化智能输入舱 (6款可切换高定学术沉浸背景画布) */}
+        <div
+          className={`flex-1 flex flex-col ${resolveChatBackdropClass(
+            backdropId,
+            activeAgent.domain
+          )} sm:border sm:border-slate-200/80 dark:sm:border-slate-800/80 sm:rounded-2xl overflow-hidden min-w-0 shadow-[0_8px_30px_-8px_rgba(15,23,42,0.06)] complex-panel-contain transition-colors duration-300`}
+        >
+          {/* 划词即追问 / 秒懂举例 / 易错辨析 / 制闪卡悬浮微工具条 */}
+          <ChatSelectionPopover
+            containerRef={messagesContainerRef}
+            isStreaming={isCurrentRunning}
+            onQuoteFollowUp={selected => {
+              setQuotedSelection(selected)
+              handleStudyToneChange('followup')
+            }}
+            onExplainVividly={selected => {
+              const prompt = `【用户在对话中划词聚焦的原文片段】：\n> ${selected.replace(/\n+/g, '\n> ')}\n\n请针对我划选的这段内容，用一个最直观的生活/工程类比或极简数值小例子带我秒懂它的工作过程，不要复述抽象定义。`
+              void handleSend(prompt)
+            }}
+            onAnalyzePitfall={selected => {
+              const prompt = `【用户在对话中划词聚焦的原文片段】：\n> ${selected.replace(/\n+/g, '\n> ')}\n\n请针对我划选的这段内容，一针见血指出统考命题人最爱在这里挖的 1~2 个隐蔽陷阱、前提条件误区及正误对比。`
+              void handleSend(prompt)
+            }}
+            onCreateFlashcardFromSelection={selected => {
+              void handleCreateFlashcardFromSelection(selected)
+            }}
+          />
+
           {/* 消息滚动列表 (通透背景，漫射纸感自然映现) */}
           <div
             ref={messagesContainerRef}
             onScroll={handleMessagesScroll}
+            onWheel={handleMessagesWheel}
             className="flex-1 overflow-y-auto px-2 sm:px-6 py-2.5 sm:py-6 space-y-3 sm:space-y-5 relative bg-transparent"
           >
             {isWelcomeState ? (
               <div
                 className={`${messageWidthClass} mx-auto w-full min-h-full flex flex-col justify-center py-4 sm:py-8`}
               >
-                {/* 清爽通透的居中导师欢迎区 (Clean Studio Hero) */}
+                {/* 居中导师沉浸欢迎舞台 */}
                 <div className="flex flex-col items-center text-center max-w-2xl mx-auto mb-7 sm:mb-9">
-                  <div className="w-14 h-14 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-2xl shadow-xs mb-3.5">
-                    {activeAgent.icon}
+                  <div className="relative mb-4">
+                    <div
+                      aria-hidden="true"
+                      className="absolute -inset-2 rounded-2xl bg-gradient-to-tr from-indigo-500/20 via-sky-400/15 to-emerald-400/20 blur-md"
+                    />
+                    <div className="relative w-15 h-15 rounded-2xl bg-white/90 dark:bg-slate-800/95 border border-white dark:border-slate-700 flex items-center justify-center text-2xl shadow-sm backdrop-blur-md">
+                      {activeAgent.icon}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap justify-center mb-2">
-                    <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+                    <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
                       你好，我是「{activeAgent.name}」
                     </h2>
                     <span
-                      className={`text-2xs px-2 py-0.5 rounded-full border font-semibold ${activeAgent.badgeClass}`}
+                      className={`text-2xs px-2.5 py-0.5 rounded-full border font-bold ${activeAgent.badgeClass}`}
                     >
                       {activeAgent.title}
                     </span>
                   </div>
-                  <p className="text-xs sm:text-sm text-slate-500 leading-relaxed max-w-xl">
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-xl">
                     {activeAgent.description}
                   </p>
-                  <div className="flex items-center justify-center flex-wrap gap-2 mt-3.5 text-2xs text-slate-400">
-                    <span className="px-2.5 py-1 rounded-full bg-slate-100/80 text-slate-600">
-                      👥 顶栏支持双师同台对比
+                  <div className="flex items-center justify-center flex-wrap gap-2 mt-4 text-2xs">
+                    <span className="px-3 py-1 rounded-full bg-white/80 dark:bg-slate-800/85 border border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-200 shadow-2xs flex items-center gap-1 font-medium">
+                      <Brain className="w-3 h-3 text-indigo-500" />
+                      <span>自动联动薄弱档案、错题预警与本地笔记</span>
                     </span>
-                    <span className="px-2.5 py-1 rounded-full bg-slate-100/80 text-slate-600">
-                      📖 右上角开启讲义原文伴读
+                    <span className="px-3 py-1 rounded-full bg-white/80 dark:bg-slate-800/85 border border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-200 shadow-2xs font-medium">
+                      划选解析文字可一键追问 / 制闪卡
                     </span>
-                    <span className="px-2.5 py-1 rounded-full bg-slate-100/80 text-slate-600">
-                      🎯 回答可一键存笔记或现场考 3 题
+                    <span className="px-3 py-1 rounded-full bg-white/80 dark:bg-slate-800/85 border border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-200 shadow-2xs font-medium">
+                      顶栏可随时切换 6 款护眼背景或双师对比
                     </span>
                   </div>
                 </div>
 
-                {/* 舒展无外框嵌套的 2x2 研学切入点卡片 */}
+                {/* 高透微光 2x2 研学切入点卡片 */}
                 <div className="w-full max-w-3xl mx-auto space-y-3">
                   <div className="flex items-center justify-between px-1">
-                    <span className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
                       <span>推荐高频研学切入点</span>
                     </span>
@@ -2420,7 +2796,7 @@ export default function Chat() {
                       type="button"
                       onClick={() => handleRefreshPrompts(true)}
                       disabled={isCurrentRunning || isRefreshingPrompts}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-slate-500 hover:text-indigo-600 hover:bg-indigo-50/60 transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white/70 dark:hover:bg-slate-800/70 transition-colors cursor-pointer"
                     >
                       <RefreshCw
                         className={`w-3 h-3 ${
@@ -2433,19 +2809,19 @@ export default function Chat() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {welcomeCards.map((promptText, idx) => {
-                      const badges = ['⚡ 核心机制', '🎯 高频真题', '🧭 脉络辨析', '💡 秒杀口诀']
+                      const badges = ['核心机制推演', '高频真题拆解', '易混脉络辨析', '考场秒杀口诀']
                       return (
                         <button
                           key={`${idx}-${promptText.slice(0, 10)}`}
                           type="button"
                           onClick={() => handleSend(promptText)}
                           disabled={isCurrentRunning}
-                          className="p-4 text-left rounded-xl border border-slate-200/80 bg-white hover:border-slate-900 hover:shadow-xs transition-all flex flex-col gap-1.5 group cursor-pointer"
+                          className="p-4 text-left rounded-2xl border border-white/90 dark:border-slate-700/80 bg-white/85 dark:bg-slate-800/80 backdrop-blur-md hover:bg-white dark:hover:bg-slate-800 hover:border-indigo-400/80 dark:hover:border-indigo-500 shadow-[0_2px_12px_rgba(15,23,42,0.04)] hover:shadow-md hover:-translate-y-0.5 transition-all flex flex-col gap-1.5 group cursor-pointer"
                         >
-                          <span className="text-2xs font-semibold text-indigo-600/90">
+                          <span className="text-2xs font-bold text-indigo-600 dark:text-indigo-400">
                             {badges[idx % badges.length]}
                           </span>
-                          <span className="text-xs sm:text-[13px] font-medium text-slate-700 group-hover:text-slate-950 line-clamp-2 leading-relaxed">
+                          <span className="text-xs sm:text-[13px] font-medium text-slate-700 dark:text-slate-200 group-hover:text-slate-950 dark:group-hover:text-white line-clamp-2 leading-relaxed">
                             {promptText}
                           </span>
                         </button>
@@ -2463,6 +2839,8 @@ export default function Chat() {
                     key={msg.id}
                     msg={msg}
                     isDeferred={isDeferred}
+                    isLastAssistant={msg.id === lastAssistantMsgId}
+                    inlineFollowups={promptsList}
                     activeAgent={activeAgent}
                     provider={provider}
                     selectedModel={selectedModel}
@@ -2472,6 +2850,9 @@ export default function Chat() {
                     isCurrentRunning={isCurrentRunning}
                     onCopy={handleCopy}
                     onSaveMessage={handleSaveMessage}
+                    onCreateFlashcard={handleCreateFlashcardFromMsg}
+                    onOpenCitedNote={handleNoteClick}
+                    onSelectFollowup={q => handleSend(q)}
                     onTriggerPractice={handleTriggerPracticeFromChat}
                     onDeleteMessage={handleDeleteMessage}
                     onContinue={handleContinue}
@@ -2492,7 +2873,7 @@ export default function Chat() {
                   <button
                     type="button"
                     onClick={scrollToTop}
-                    className="pointer-events-auto px-2.5 py-1 rounded-full bg-white/95 border border-slate-200/90 shadow-sm text-2xs font-semibold text-slate-600 hover:text-indigo-600 flex items-center gap-1 transition-all cursor-pointer backdrop-blur-xs"
+                    className="pointer-events-auto px-2.5 py-1 rounded-full bg-white/95 dark:bg-slate-800/95 border border-slate-200/90 dark:border-slate-700 shadow-sm text-2xs font-semibold text-slate-600 dark:text-slate-200 hover:text-indigo-600 flex items-center gap-1 transition-all cursor-pointer backdrop-blur-xs"
                     title="回到对话顶部"
                   >
                     <ArrowUp className="w-3 h-3" />
@@ -2507,7 +2888,7 @@ export default function Chat() {
                       setShowScrollBottomBtn(false)
                       scrollToBottom(true)
                     }}
-                    className="pointer-events-auto px-3 py-1 rounded-full bg-slate-900/95 text-white shadow-sm text-2xs font-semibold hover:bg-indigo-600 flex items-center gap-1 transition-all cursor-pointer backdrop-blur-xs"
+                    className="pointer-events-auto px-3 py-1 rounded-full bg-slate-900/95 dark:bg-indigo-600 text-white shadow-sm text-2xs font-semibold hover:bg-indigo-600 dark:hover:bg-indigo-500 flex items-center gap-1 transition-all cursor-pointer backdrop-blur-xs"
                   >
                     <ChevronDown className="w-3.5 h-3.5" />
                     <span>最新回复</span>
@@ -2520,20 +2901,40 @@ export default function Chat() {
 
           {/* 追问模式专属全局高亮指引条 */}
           {studyTone === 'followup' && (
-            <div className="mx-2 sm:mx-4 mb-1 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 flex items-center justify-between text-xs animate-fade-in shadow-2xs">
+            <div className="mx-2 sm:mx-4 mb-1 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-900 dark:text-amber-200 flex items-center justify-between text-xs animate-fade-in shadow-2xs">
               <div className="flex items-center gap-2">
                 <span className="flex h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-                <span className="font-bold text-amber-800">🎯 追问模式已激活</span>
-                <span className="text-[11px] text-amber-700 hidden sm:inline">
+                <span className="font-bold text-amber-800 dark:text-amber-300">🎯 追问模式已激活</span>
+                <span className="text-[11px] text-amber-700 dark:text-amber-300/80 hidden sm:inline">
                   导师将锁定您的具体疑问做靶向深度解答，拒绝笼统套话与大段概念复述
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => handleStudyToneChange('rigorous')}
-                className="text-[11px] text-amber-800 hover:text-amber-950 font-medium underline underline-offset-2 cursor-pointer"
+                className="text-[11px] text-amber-800 dark:text-amber-300 hover:text-amber-950 font-medium underline underline-offset-2 cursor-pointer"
               >
                 退出追问模式
+              </button>
+            </div>
+          )}
+
+          {/* 苏格拉底启发导学模式专属高亮指引条 */}
+          {studyTone === 'socratic' && (
+            <div className="mx-2 sm:mx-4 mb-1 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-900 dark:text-emerald-200 flex items-center justify-between text-xs animate-fade-in shadow-2xs">
+              <div className="flex items-center gap-2">
+                <Compass className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span className="font-bold text-emerald-800 dark:text-emerald-300">🧭 启发导学已激活</span>
+                <span className="text-[11px] text-emerald-700 dark:text-emerald-300/80 hidden sm:inline">
+                  导师将先点拨题眼与第 1 步思维跳板，留白引导您主动推演下一步，彻底告别“假性看懂”
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleStudyToneChange('rigorous')}
+                className="text-[11px] text-emerald-800 dark:text-emerald-300 hover:text-emerald-950 font-medium underline underline-offset-2 cursor-pointer"
+              >
+                切回严谨模式
               </button>
             </div>
           )}
@@ -2549,6 +2950,8 @@ export default function Chat() {
             activeAgent={activeAgent}
             studyTone={studyTone}
             onStudyToneChange={handleStudyToneChange}
+            quotedSelection={quotedSelection}
+            onClearQuotedSelection={() => setQuotedSelection(null)}
             promptsList={promptsList}
             promptLabel={promptLabel}
             promptTopic={promptTopic}

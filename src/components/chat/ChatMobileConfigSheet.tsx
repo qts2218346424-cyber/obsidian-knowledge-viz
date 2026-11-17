@@ -1,7 +1,9 @@
-import { X, Sparkles, Settings, Users, Brain } from 'lucide-react'
+import { X, Sparkles, Settings, Users, Brain, Palette } from 'lucide-react'
 import type { ProviderType, ChatFontSize } from './ChatStudioHeader'
+import { useChatBackdrop } from '../../features/ai-chat/useChatBackdrop'
 
-export type StudyTone = 'rigorous' | 'vivid' | 'exam' | 'followup'
+import type { StudyTone } from '../../features/ai-chat/types'
+export type { StudyTone }
 
 export interface ChatMobileConfigSheetProps {
   mobileConfigOpen: boolean
@@ -25,6 +27,7 @@ export interface ChatMobileConfigSheetProps {
 }
 
 export default function ChatMobileConfigSheet({ mobileConfigOpen, setMobileConfigOpen, studyTone, setStudyTone, provider, handleProviderChange, currentAvailableModels, selectedModel, isCustomModel, handleModelSelect, isAdmin, setShowModelManagerModal, setShowMemoryModal, setShowSkillPicker, chatFontSize, handleSetFontSize, isDualMode, setIsDualMode }: ChatMobileConfigSheetProps) {
+  const { backdropId, setBackdrop, options: backdropOptions } = useChatBackdrop()
   return (
     <>
       {mobileConfigOpen && (
@@ -53,10 +56,11 @@ export default function ChatMobileConfigSheet({ mobileConfigOpen, setMobileConfi
                 <div className="text-2xs font-bold text-slate-400 uppercase tracking-wider">
                   伴学风格与语调
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {[
                     { key: 'rigorous', label: '📐 学术严谨' },
                     { key: 'vivid', label: '💡 通俗直观' },
+                    { key: 'socratic', label: '🧭 启发导学' },
                     { key: 'exam', label: '⚡ 考场冲刺' },
                     { key: 'followup', label: '🎯 针对追问' },
                   ].map(tone => (
@@ -64,14 +68,16 @@ export default function ChatMobileConfigSheet({ mobileConfigOpen, setMobileConfi
                       key={tone.key}
                       type="button"
                       onClick={() => {
-                        setStudyTone(tone.key as any)
+                        setStudyTone(tone.key as StudyTone)
                         localStorage.setItem('coreforge_study_tone', tone.key)
                       }}
                       className={`py-2 px-1 text-center rounded-xl text-xs font-semibold border transition-all ${
                         studyTone === tone.key
                           ? tone.key === 'followup'
                             ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
-                            : 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                            : tone.key === 'socratic'
+                              ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                              : 'bg-slate-900 text-white border-slate-900 shadow-xs'
                           : 'bg-slate-50 text-slate-700 border-slate-200'
                       }`}
                     >
@@ -171,7 +177,38 @@ export default function ChatMobileConfigSheet({ mobileConfigOpen, setMobileConfi
                 </button>
               </div>
 
-              {/* 5. 字号与双师同台 */}
+              {/* 5. 伴学聊天背景氛围 */}
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
+                  <Palette className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>聊天空间背景氛围</span>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {backdropOptions.map(opt => {
+                    const active = backdropId === opt.id
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setBackdrop(opt.id)}
+                        className={`p-2 rounded-xl border text-left flex items-center gap-1.5 transition-all ${
+                          active
+                            ? 'border-indigo-500 bg-indigo-50/70 font-bold text-indigo-950'
+                            : 'border-slate-200 bg-slate-50/60 text-slate-700'
+                        }`}
+                      >
+                        <span
+                          className="w-4 h-4 rounded-md border border-black/15 shrink-0"
+                          style={{ background: opt.swatchStyle }}
+                        />
+                        <span className="text-xs truncate">{opt.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* 6. 字号与双师同台 */}
               <div className="space-y-2 pt-2 border-t border-slate-100">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-slate-600">回答正文字号</span>

@@ -46,7 +46,7 @@ export default function ProtectedRoutes() {
             <Route path="/study" element={<Study />} />
             <Route path="/learn" element={<Navigate to="/study" replace />} />
             <Route path="/quiz" element={<Quiz />} />
-            <Route path="/vocabulary" element={<Navigate to="/english" replace />} />
+            <Route path="/vocabulary" element={<Vocabulary />} />
             <Route path="/english" element={<English />} />
             <Route path="/politics" element={<Politics />} />
             <Route path="/history" element={<Politics />} />

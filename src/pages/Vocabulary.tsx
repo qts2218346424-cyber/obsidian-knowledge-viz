@@ -22,11 +22,11 @@ import ImportPanel from '../components/vocab/ImportPanel'
 
 // 词汇 5 级掌握度色谱数据 (Subframe Screen 4 Swatches Replica)
 const VOCAB_SWATCH_LEVELS = [
-  { level: 'Level 50', name: '生词录入 · 未背', hex: '#f4f4f5', desc: '刚从真题长难句或大纲中提取，尚未形成记忆痕迹', example: 'ephemeral · 短暂的' },
-  { level: 'Level 200', name: '初次认知 · 模糊', hex: '#e4e4e7', desc: '艾宾浩斯第 1 天复习，能模糊辨识词性与常见词根', example: 'ambiguous · 模棱两可的' },
-  { level: 'Level 400', name: '词根联想 · 熟悉', hex: '#a1a1aa', desc: '掌握词缀派生，在真题阅读上下文可自主推导词义', example: 'comprehensive · 全面的' },
-  { level: 'Level 700', name: '熟练掌握 · 秒杀', hex: '#52525b', desc: '熟记熟词生义与常见考法，听辨与写作皆能自如运用', example: 'arbitrary · 武断的/专断的' },
-  { level: 'Level 950', name: '绝对斩词 · 永久', hex: '#18181b', desc: '连续 5 次以上正确复述，已完全固化为长期本能记忆', example: 'paradox · 悖论' },
+  { level: '第 1 阶', name: '生词录入 · 未背', hex: '#f4f4f5', desc: '刚从真题长难句或大纲中提取，尚未形成记忆痕迹', example: 'ephemeral · 短暂的' },
+  { level: '第 2 阶', name: '初次认知 · 模糊', hex: '#e4e4e7', desc: '艾宾浩斯第 1 天复习，能模糊辨识词性与常见词根', example: 'ambiguous · 模棱两可的' },
+  { level: '第 3 阶', name: '词根联想 · 熟悉', hex: '#a1a1aa', desc: '掌握词缀派生，在真题阅读上下文可自主推导词义', example: 'comprehensive · 全面的' },
+  { level: '第 4 阶', name: '熟练掌握 · 秒杀', hex: '#52525b', desc: '熟记熟词生义与常见考法，听辨与写作皆能自如运用', example: 'arbitrary · 武断的/专断的' },
+  { level: '第 5 阶', name: '绝对斩词 · 永久', hex: '#18181b', desc: '连续 5 次以上正确复述，已完全固化为长期本能记忆', example: 'paradox · 悖论' },
 ]
 
 // 英语常考词根词缀矩阵
@@ -72,10 +72,10 @@ function VocabMasteryPalette() {
       <div className="bg-white rounded-2xl border border-black/[0.08] p-5 sm:p-6 shadow-xs space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div>
-            <h3 className="text-sm font-bold text-slate-900">记忆深度梯度 (Retention Gradient)</h3>
+            <h3 className="text-sm font-bold text-slate-900">记忆深度五阶梯度</h3>
             <p className="text-xs text-slate-500 mt-0.5">从初识模糊到长期永久记忆的认知阶跃轨迹</p>
           </div>
-          <span className="text-2xs font-mono text-slate-400">LEVEL 50 ~ 950</span>
+          <span className="text-2xs font-mono text-slate-500">五阶抗遗忘模型</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
@@ -115,10 +115,10 @@ function VocabMasteryPalette() {
       <div className="bg-white rounded-2xl border border-black/[0.08] p-5 sm:p-6 shadow-xs space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div>
-            <h3 className="text-sm font-bold text-slate-900">核心高频词根族谱 (Root Family Swatches)</h3>
+            <h3 className="text-sm font-bold text-slate-900">核心高频词根族谱</h3>
             <p className="text-xs text-slate-500 mt-0.5">考研真题命题率最高的前缀、词根与衍生词群</p>
           </div>
-          <span className="text-2xs font-mono text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+          <span className="text-2xs font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
             紫罗兰考点系
           </span>
         </div>
@@ -238,23 +238,23 @@ export default function Vocabulary() {
       {/* 工作区团队头 (Subframe Team Header Bar) */}
       <div className="bg-white rounded-2xl border border-black/[0.08] p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-              考研英语 · 核心词汇复盘工作区
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">
+              考研英语 · 核心词汇斩词中枢
             </h1>
-            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-2xs font-mono font-medium">
-              VOCABULARY
+            <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-200/80 text-indigo-700 text-2xs font-bold">
+              语境 · 听辨 · 拼写默写
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            历年真题真题语境浸润 · 艾宾浩斯动态推迟 · 词根词缀衍生知识图谱
+            历年真题语境浸润 · 随身听自动巡航 · 写作拼写默写特训 · 词根词缀衍生图谱
           </p>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <div className="text-right">
-            <div className="text-2xs text-slate-400 uppercase tracking-wider font-semibold">今日推荐</div>
-            <div className="text-sm font-bold font-mono text-slate-900">20 词 / 组</div>
+          <div className="text-left sm:text-right">
+            <div className="text-2xs text-slate-400 font-semibold">支持自由定制</div>
+            <div className="text-sm font-bold font-mono text-slate-900">15 / 25 / 40 词每组</div>
           </div>
         </div>
       </div>

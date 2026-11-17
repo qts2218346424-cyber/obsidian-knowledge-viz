@@ -17,6 +17,11 @@ import {
   Columns,
   Maximize2,
   Loader2,
+  Layers,
+  BookOpen,
+  Brain,
+  Sparkles,
+  Quote,
 } from 'lucide-react'
 import MarkdownRenderer from '../MarkdownRenderer'
 import ToolCallCard from '../ToolCallCard'
@@ -28,6 +33,8 @@ import type { AgentMessage } from '../../features/ai-chat/types'
 interface ChatMessageItemProps {
   msg: AgentMessage
   isDeferred: boolean
+  isLastAssistant?: boolean
+  inlineFollowups?: string[]
   activeAgent: StudyAgent
   provider: string
   selectedModel: string
@@ -37,6 +44,9 @@ interface ChatMessageItemProps {
   isCurrentRunning: boolean
   onCopy: (id: string, text: string) => void
   onSaveMessage: (msg: AgentMessage) => void
+  onCreateFlashcard?: (msg: AgentMessage) => void
+  onOpenCitedNote?: (notePath: string) => void
+  onSelectFollowup?: (question: string) => void
   onTriggerPractice: (msg: AgentMessage) => void
   onDeleteMessage: (id: string) => void
   onContinue: (id: string) => void
@@ -103,6 +113,8 @@ export const ChatMessageItem = memo(
   function ChatMessageItem({
     msg,
     isDeferred,
+    isLastAssistant = false,
+    inlineFollowups,
     activeAgent,
     provider,
     selectedModel,
@@ -112,6 +124,9 @@ export const ChatMessageItem = memo(
     isCurrentRunning,
     onCopy,
     onSaveMessage,
+    onCreateFlashcard,
+    onOpenCitedNote,
+    onSelectFollowup,
     onTriggerPractice,
     onDeleteMessage,
     onContinue,
@@ -527,6 +542,17 @@ export const ChatMessageItem = memo(
                     <Save className="w-3 h-3 text-purple-500" />
                     <span className="hidden lg:inline">存笔记</span>
                   </button>
+                  {onCreateFlashcard && (
+                    <button
+                      type="button"
+                      onClick={() => onCreateFlashcard(msg)}
+                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-2xs text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
+                      title="一键提炼为艾宾浩斯记忆闪卡"
+                    >
+                      <Layers className="w-3 h-3 text-emerald-600" />
+                      <span className="hidden xl:inline">转闪卡</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => onTriggerPractice(msg)}
@@ -561,14 +587,70 @@ export const ChatMessageItem = memo(
             </div>
           )}
 
-          {/* 消息卡片主体 (高密度精致排版：紧凑适度，保持可读性) */}
+          {/* 消息卡片主体 (讲义级舒适呼吸留白与高可读排版) */}
           <div
-            className={`px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-2xl max-w-full overflow-x-hidden ${fontSizeClass} shadow-xs ${
+            className={`px-3.5 py-2.5 sm:px-5 sm:py-3.5 rounded-2xl max-w-full overflow-x-hidden ${fontSizeClass} ${
               isUser
-                ? 'bg-slate-900 text-white rounded-2xl rounded-br-xs shadow-xs border border-slate-800'
-                : 'w-full bg-white border border-slate-200/60 text-slate-900 rounded-2xl rounded-tl-xs shadow-[0_2px_10px_rgba(0,0,0,0.02)] leading-[1.56] academic-body'
+                ? 'bg-gradient-to-br from-slate-800 to-slate-900 dark:from-indigo-600 dark:to-blue-700 text-white rounded-2xl rounded-br-xs shadow-xs border border-slate-700/80 dark:border-indigo-500/40'
+                : 'w-full bg-white border border-slate-200/75 text-slate-900 rounded-2xl rounded-tl-xs shadow-[0_2px_12px_rgba(15,23,42,0.03)] academic-body'
             }`}
           >
+            {/* 助手消息顶部：个性化考情与本地笔记自动溯源胶囊 */}
+            {!isUser &&
+              (Boolean(msg.citedNotes && msg.citedNotes.length > 0) ||
+                Boolean(msg.contextEnrichment?.matchedWeakPoints?.length) ||
+                Boolean(msg.contextEnrichment?.relatedErrorsCount)) && (
+                <div className="mb-3 pb-2.5 border-b border-slate-100 flex items-center flex-wrap gap-1.5 text-[11px]">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200/70 font-semibold">
+                    <Brain className="w-3 h-3 shrink-0" />
+                    <span>靶向考情已注入</span>
+                  </span>
+
+                  {msg.contextEnrichment?.matchedWeakPoints?.map(wp => (
+                    <span
+                      key={wp}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200/80 font-medium"
+                      title="已自动匹配您在考生档案中登记的薄弱考点并针对性拆解"
+                    >
+                      <span>⚠️ 攻克薄弱项：{wp}</span>
+                    </span>
+                  ))}
+
+                  {(msg.contextEnrichment?.relatedErrorsCount ?? 0) > 0 && (
+                    <span
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200/80 font-medium"
+                      title="已关联您错题本中的历史同类错题进行防坑点拨"
+                    >
+                      <span>🎯 结合 {msg.contextEnrichment!.relatedErrorsCount} 道历史错题预警</span>
+                    </span>
+                  )}
+
+                  {msg.citedNotes?.map(cn => (
+                    <button
+                      key={cn.path}
+                      type="button"
+                      onClick={() => onOpenCitedNote?.(cn.path)}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 font-medium transition-colors cursor-pointer"
+                      title={`点击在右侧伴读栏打开个人笔记：${cn.path}`}
+                    >
+                      <BookOpen className="w-3 h-3 text-emerald-600 shrink-0" />
+                      <span className="truncate max-w-[160px]">《{cn.title}》</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+            {/* 用户划词追问的原文引用块 */}
+            {isUser && msg.quotedText && (
+              <div className="mb-2 px-2.5 py-1.5 rounded-xl bg-white/12 border-l-3 border-amber-400 text-white/90 text-xs leading-relaxed">
+                <div className="flex items-center gap-1 text-[10.5px] text-amber-300 font-semibold mb-0.5">
+                  <Quote className="w-2.5 h-2.5" />
+                  <span>引用片段追问</span>
+                </div>
+                <div className="line-clamp-3 opacity-90">{msg.quotedText}</div>
+              </div>
+            )}
+
             {/* 工具调用折叠卡 */}
             {msg.toolCalls && msg.toolCalls.length > 0 && (
               <div className="mb-3 space-y-1.5 w-full">
@@ -645,7 +727,7 @@ export const ChatMessageItem = memo(
                 </span>
               </div>
             ) : isUser ? (
-              <div className="whitespace-pre-wrap break-words leading-relaxed text-2xs sm:text-xs">{msg.content}</div>
+              <div className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</div>
             ) : msg.streaming && !msg.content ? (
               <StreamingWaitBanner />
             ) : (
@@ -773,6 +855,18 @@ export const ChatMessageItem = memo(
                 <span>沉淀笔记</span>
               </button>
 
+              {onCreateFlashcard && (
+                <button
+                  type="button"
+                  onClick={() => onCreateFlashcard(msg)}
+                  className="hover:text-emerald-700 text-emerald-600 flex items-center gap-1 px-2 py-0.5 rounded-lg hover:bg-emerald-50 transition-colors cursor-pointer font-medium"
+                  title="自动提取结论、口诀与避坑点生成艾宾浩斯复习闪卡"
+                >
+                  <Layers className="w-3 h-3" />
+                  <span>转闪卡</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={() => onTriggerPractice(msg)}
@@ -805,6 +899,36 @@ export const ChatMessageItem = memo(
               </button>
             </div>
           )}
+
+          {/* 最新一条 AI 回复尾随智能深挖追问胶囊（读完顺手一点即可层层递进） */}
+          {!isUser &&
+            isLastAssistant &&
+            !msg.streaming &&
+            !msg.error &&
+            !isCollapsed &&
+            inlineFollowups &&
+            inlineFollowups.length > 0 &&
+            onSelectFollowup && (
+              <div className="mt-2.5 pt-2 border-t border-slate-200/60 w-full space-y-1.5 animate-fade-in">
+                <div className="text-[11px] font-semibold text-slate-400 flex items-center gap-1 px-0.5">
+                  <Sparkles className="w-3 h-3 text-indigo-500" />
+                  <span>顺着思路继续深挖（点击即问）：</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {inlineFollowups.slice(0, 3).map((q, qIdx) => (
+                    <button
+                      key={`${qIdx}-${q.slice(0, 10)}`}
+                      type="button"
+                      disabled={isCurrentRunning}
+                      onClick={() => onSelectFollowup(q)}
+                      className="text-left text-xs px-3 py-1.5 rounded-xl bg-white hover:bg-indigo-50/80 text-slate-700 hover:text-indigo-700 border border-slate-200/85 hover:border-indigo-300 shadow-2xs transition-all cursor-pointer active:scale-[0.98] disabled:opacity-50"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
         </div>
       </div>
     )
@@ -824,10 +948,14 @@ export const ChatMessageItem = memo(
       prev.msg.content === next.msg.content &&
       prev.msg.streaming === next.msg.streaming &&
       prev.msg.error === next.msg.error &&
+      prev.msg.citedNotes?.length === next.msg.citedNotes?.length &&
+      prev.msg.contextEnrichment === next.msg.contextEnrichment &&
       prev.msg.peerResponse?.content === next.msg.peerResponse?.content &&
       prev.msg.peerResponse?.streaming === next.msg.peerResponse?.streaming &&
       prev.msg.toolCalls?.length === next.msg.toolCalls?.length &&
       prev.isDeferred === next.isDeferred &&
+      prev.isLastAssistant === next.isLastAssistant &&
+      prev.inlineFollowups === next.inlineFollowups &&
       prev.messageWidthClass === next.messageWidthClass &&
       prev.fontSizeClass === next.fontSizeClass &&
       prev.isCurrentRunning === next.isCurrentRunning &&

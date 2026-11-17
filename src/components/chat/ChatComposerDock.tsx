@@ -15,11 +15,12 @@ import {
   BookOpen,
   Maximize2,
   Minimize2,
+  Quote,
 } from 'lucide-react'
 import type { StudyAgent } from '../../data/studyAgents'
 import type { StudySkill } from '../../data/studySkills'
 import type { FileDetail, LocalSkill } from '../../services/api'
-import type { AttachedFile } from '../../features/ai-chat/types'
+import type { AttachedFile, StudyTone } from '../../features/ai-chat/types'
 
 interface ChatComposerDockProps {
   input: string
@@ -29,8 +30,10 @@ interface ChatComposerDockProps {
   isCurrentRunning: boolean
   runningStatus?: string
   activeAgent: StudyAgent
-  studyTone: 'rigorous' | 'vivid' | 'exam' | 'followup'
-  onStudyToneChange: (tone: 'rigorous' | 'vivid' | 'exam' | 'followup') => void
+  studyTone: StudyTone
+  onStudyToneChange: (tone: StudyTone) => void
+  quotedSelection?: string | null
+  onClearQuotedSelection?: () => void
   promptsList: string[]
   promptLabel: string
   promptTopic: string | null
@@ -74,6 +77,8 @@ export const ChatComposerDock = memo(function ChatComposerDock({
   activeAgent,
   studyTone,
   onStudyToneChange,
+  quotedSelection,
+  onClearQuotedSelection,
   promptsList,
   promptLabel,
   promptTopic,
@@ -106,25 +111,30 @@ export const ChatComposerDock = memo(function ChatComposerDock({
   const { points, isAdmin } = useAuth()
   const [isExpandedEditor, setIsExpandedEditor] = useState(false)
 
-  // 自动调节 Textarea 高度：移动端 26px 极简紧凑启动，根据实际打字动态长高与即时收缩归位
+  // 当用户划词选择「引用追问」时自动聚焦输入框，衔接如丝般顺滑
+  useEffect(() => {
+    if (quotedSelection) {
+      setTimeout(() => textareaRef.current?.focus(), 40)
+    }
+  }, [quotedSelection])
+
+  // 自动调节 Textarea 高度：人体工学舒适输入高度，根据实际打字动态长高与即时收缩归位
   useEffect(() => {
     const el = textareaRef.current
     if (!el) return
     if (isExpandedEditor) {
-      el.style.height = '180px'
+      el.style.height = '190px'
       return
     }
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 640
-    const minHeight = isMobile ? 20 : 28
-    const maxHeight = isMobile ? 110 : 150
+    const minHeight = isMobile ? 28 : 36
+    const maxHeight = isMobile ? 120 : 168
 
-    // 当输入为空或空白字符时，瞬间强制重置归位为极简单行高度，杜绝多余高度滞留
     if (!input || !input.trim()) {
       el.style.height = `${minHeight}px`
       return
     }
 
-    // 动态重置高度为 auto 后，根据实际文本内容精确测量 scrollHeight，随着字数增加自动长高，随着文字删除自动收缩
     el.style.height = 'auto'
     const scrollH = el.scrollHeight
     const nextHeight = Math.min(Math.max(scrollH, minHeight), maxHeight)
@@ -134,8 +144,9 @@ export const ChatComposerDock = memo(function ChatComposerDock({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
+      if (e.nativeEvent.isComposing || (e as any).keyCode === 229) return
       if (isCurrentRunning) {
-        if (input.trim() || stagedImages.length > 0 || stagedFiles.length > 0) {
+        if (input.trim() || quotedSelection || stagedImages.length > 0 || stagedFiles.length > 0) {
           onSend(undefined, true)
         }
       } else {
@@ -271,6 +282,33 @@ export const ChatComposerDock = memo(function ChatComposerDock({
           }}
           className="rounded-2xl border border-slate-200/80 dark:border-slate-700/80 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md focus-within:border-indigo-500/80 focus-within:ring-2 focus-within:ring-indigo-500/15 transition-all shadow-[0_4px_24px_rgba(0,0,0,0.06)] overflow-hidden"
         >
+          {/* 3.0 划词引用靶向追问卡片 */}
+          {quotedSelection && (
+            <div className="px-3.5 py-2 bg-amber-50/90 dark:bg-amber-950/35 border-b border-amber-200/80 dark:border-amber-800/50 flex items-start justify-between gap-2.5 animate-fade-in">
+              <div className="flex items-start gap-2 min-w-0">
+                <Quote className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <div className="text-[11px] font-bold text-amber-800 dark:text-amber-300">
+                    🎯 正在针对以下导师解析片段深挖追问：
+                  </div>
+                  <p className="text-xs text-amber-950/85 dark:text-amber-100/90 line-clamp-2 mt-0.5 leading-relaxed font-mono">
+                    「{quotedSelection}」
+                  </p>
+                </div>
+              </div>
+              {onClearQuotedSelection && (
+                <button
+                  type="button"
+                  onClick={onClearQuotedSelection}
+                  className="p-1 rounded-lg hover:bg-amber-200/60 text-amber-700 cursor-pointer shrink-0"
+                  title="移除引用片段"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          )}
+
           {/* 3.1 顶部已挂载上下文胶囊条（笔记伴读、激活技能、待发图片/文件） */}
           {hasContextPills && (
             <div className="px-3.5 py-2 bg-slate-50 border-b border-slate-200/70 flex items-center gap-2 overflow-x-auto no-scrollbar">
@@ -396,8 +434,8 @@ export const ChatComposerDock = memo(function ChatComposerDock({
             </div>
           )}
 
-          {/* 3.2 多行自适应输入区 (超轻量微缩自适应：打字字体缩小，纵向高度更低) */}
-          <div className="relative px-2 sm:px-3 pt-0.5 sm:pt-1.5 pb-0 flex items-start gap-1 sm:gap-1.5">
+          {/* 3.2 多行自适应输入区 (人体工学舒适字号与柔和呼吸留白) */}
+          <div className="relative px-3 sm:px-4 pt-2 sm:pt-2.5 pb-1 flex items-start gap-1.5 sm:gap-2">
             <textarea
               ref={textareaRef}
               value={input}
@@ -410,14 +448,18 @@ export const ChatComposerDock = memo(function ChatComposerDock({
                 }
               }}
               placeholder={
-                studyTone === 'followup'
-                  ? '🎯 追问模式：输入您的具体疑问、卡壳细节或推导困惑（AI针对性解答，拒绝笼统套话）...'
-                  : selectedNote
-                  ? `围绕《${selectedNote.title || selectedNote.path.split('/').pop()}》提问...`
-                  : `向 ${activeAgent.name} 提问，或粘贴题目...`
+                quotedSelection
+                  ? '输入你对上面这段推导/概念的具体疑问（直接按 Enter 也可让导师逐句拆解）...'
+                  : studyTone === 'followup'
+                    ? '🎯 追问模式：输入您的具体疑问、卡壳细节或推导困惑（导师靶向解答，拒绝笼统套话）...'
+                    : studyTone === 'socratic'
+                      ? '🧭 启发导学模式：粘贴不会做的真题或输入卡壳点，导师将搭梯子一步步引导你自己推出来...'
+                      : selectedNote
+                        ? `围绕《${selectedNote.title || selectedNote.path.split('/').pop()}》提问...`
+                        : `向 ${activeAgent.name} 提问，或粘贴真题 / 划选上方回答直接追问...`
               }
               rows={1}
-              className="flex-1 bg-transparent border-none text-2xs sm:text-xs text-slate-800 placeholder-slate-400 placeholder:text-2xs sm:placeholder:text-xs focus:outline-hidden resize-none leading-[1.38] sm:leading-[1.45] py-0 tracking-tight"
+              className="flex-1 bg-transparent! border-none! text-[13.5px] sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-hidden resize-none leading-[1.58] py-0.5"
             />
             {(input.length > 60 || isExpandedEditor) && (
               <button
@@ -488,14 +530,15 @@ export const ChatComposerDock = memo(function ChatComposerDock({
 
               <span className="hidden lg:inline-block w-px h-3.5 bg-slate-200 mx-1" />
 
-              {/* 桌面端轻量语调切换组 */}
+              {/* 桌面端轻量五大教学风格切换组 */}
               <div className="hidden lg:flex items-center gap-0.5 bg-slate-100/90 p-0.5 rounded-xl">
                 {(
                   [
-                    { key: 'rigorous', label: '严谨' },
-                    { key: 'vivid', label: '直观' },
-                    { key: 'exam', label: '冲刺' },
-                    { key: 'followup', label: '🎯追问' },
+                    { key: 'rigorous', label: '严谨', tip: '考纲对齐，公式与逻辑严密推导' },
+                    { key: 'vivid', label: '直观', tip: '生活比喻与物理/几何图景，一看就懂' },
+                    { key: 'socratic', label: '🧭启发', tip: '苏格拉底导学：点拨题眼与第1步跳板，引导你自主推演，拒绝假性看懂' },
+                    { key: 'exam', label: '冲刺', tip: '直击阅卷采分点与秒杀口诀' },
+                    { key: 'followup', label: '🎯追问', tip: '靶向锁定卡壳细节深度剖析，拒绝笼统复述' },
                   ] as const
                 ).map(t => (
                   <button
@@ -506,10 +549,12 @@ export const ChatComposerDock = memo(function ChatComposerDock({
                       studyTone === t.key
                         ? t.key === 'followup'
                           ? 'bg-amber-500 text-white shadow-xs font-bold'
-                          : 'bg-white text-slate-900 shadow-xs font-semibold'
+                          : t.key === 'socratic'
+                            ? 'bg-emerald-600 text-white shadow-xs font-bold'
+                            : 'bg-white text-slate-900 shadow-xs font-semibold'
                         : 'text-slate-500 hover:text-slate-800'
                     }`}
-                    title={t.key === 'followup' ? '切换为：🎯追问模式（针对性解答疑问，拒绝笼统套话）' : `切换作答风格为：${t.label}`}
+                    title={t.tip}
                   >
                     {t.label}
                   </button>
@@ -584,6 +629,7 @@ export const ChatComposerDock = memo(function ChatComposerDock({
                   onClick={() => onSend()}
                   disabled={
                     !input.trim() &&
+                    !quotedSelection &&
                     !selectedNote &&
                     stagedImages.length === 0 &&
                     stagedFiles.length === 0

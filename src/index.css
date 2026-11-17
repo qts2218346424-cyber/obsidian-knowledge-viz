@@ -1668,13 +1668,31 @@ html {
     radial-gradient(at 0% 100%, rgba(16, 185, 129, 0.05) 0px, transparent 50%) !important;
 }
 
-/* 暗黑卡片与面板 */
+/* 暗黑卡片与面板（覆盖纯白与半透明白底卡片，彻底消灭暗夜模式“白底浅白字”不可读故障） */
 .dark .bento-card,
 .theme-dark .bento-card,
 .dark .bg-white,
-.theme-dark .bg-white {
+.theme-dark .bg-white,
+.dark .bg-white\/95,
+.theme-dark .bg-white\/95,
+.dark .bg-white\/90,
+.theme-dark .bg-white\/90,
+.dark .bg-white\/85,
+.theme-dark .bg-white\/85,
+.dark .bg-white\/80,
+.theme-dark .bg-white\/80,
+.dark .bg-white\/75,
+.theme-dark .bg-white\/75,
+.dark .bg-white\/70,
+.theme-dark .bg-white\/70 {
   background-color: #131926 !important;
   border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* 暗夜模式下对未显式指定 dark:from-* 的白色起点渐变自动替换为深空卡片渐变 */
+.dark .from-white:not([class*="dark:from-"]),
+.theme-dark .from-white:not([class*="dark:from-"]) {
+  background-image: linear-gradient(135deg, #131926 0%, #172033 55%, #111827 100%) !important;
 }
 
 .dark .bento-card,
@@ -1801,16 +1819,18 @@ html {
   color: #ffffff !important;
 }
 
-/* 导航激活项（修复暗夜模式下 bg-slate-900 与深空背景融为一体看不清的问题） */
+/* 导航与页面内 Tab 激活按钮（修复暗夜模式下 bg-slate-900 与深空卡片底色 #131926 融为一体无法辨识的问题） */
 .dark nav a.bg-slate-900,
 .theme-dark nav a.bg-slate-900,
 .dark nav button.bg-slate-900,
 .theme-dark nav button.bg-slate-900,
 .dark nav a.bg-neutral-900,
-.theme-dark nav a.bg-neutral-900 {
-  background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
+.theme-dark nav a.bg-neutral-900,
+.dark button.bg-slate-900:not([class*="dark:bg-"]),
+.theme-dark button.bg-slate-900:not([class*="dark:bg-"]) {
+  background: linear-gradient(135deg, #0284c7 0%, #4f46e5 100%) !important;
   color: #ffffff !important;
-  box-shadow: 0 2px 12px rgba(14, 165, 233, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
+  box-shadow: 0 2px 12px rgba(56, 189, 248, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
 }
 
 /* 暗黑模式首页 Hero 深空黑曜石星云展台（消除原本纯白银灰块在夜间刺眼的问题） */
@@ -2135,6 +2155,30 @@ h1, h2, h3 {
   }
 }
 
+/* 双栏精读/刷题复杂工作区隔离容器：防止单栏滚动或局部高亮触发全局页面回流 (60FPS INP 优化) */
+.complex-panel-contain {
+  contain: layout style paint;
+}
+
+/* 讲义重点词挖空背诵模式（毛玻璃遮罩，悬停或点击揭示） */
+.handout-cloze-active strong {
+  background-color: rgba(99, 102, 241, 0.18);
+  color: transparent !important;
+  border-bottom: 1.5px dashed rgba(99, 102, 241, 0.55);
+  border-radius: 4px;
+  padding: 0 4px;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.18s ease, background-color 0.18s ease;
+}
+.handout-cloze-active strong:hover,
+.handout-cloze-active strong.cloze-revealed {
+  color: inherit !important;
+  background-color: rgba(16, 185, 129, 0.16);
+  border-bottom-color: rgba(16, 185, 129, 0.6);
+  user-select: text;
+}
+
 /* KaTeX 渲染异常优雅回退：隐藏刺眼的技术栈错误，以精致的行内代码形式展示原文本 */
 .katex-error {
   color: #64748b !important;
@@ -2147,4 +2191,113 @@ h1, h2, h3 {
 .dark .katex-error {
   color: #94a3b8 !important;
   background: #1e293b;
+}
+
+/* ==========================================================================
+   AI 伴学聊天空间 · 6 款高定沉浸背景画布体系 (Chat Ambient Backdrops)
+   严格保障 WCAG 4.5:1 以上阅读对比度与高帧率 GPU 滚动流畅度
+   ========================================================================== */
+
+/* 1. 学科灵动极光（默认：顶部双色漫射水彩柔光 + 24px 微点阵坐标衬底） */
+.chat-canvas-aurora {
+  --aurora-a: rgba(99, 102, 241, 0.09);
+  --aurora-b: rgba(14, 165, 233, 0.075);
+  background-color: #f8f9fc;
+  background-image:
+    radial-gradient(65% 48% at 18% 0%, var(--aurora-a) 0%, transparent 72%),
+    radial-gradient(58% 45% at 84% 6%, var(--aurora-b) 0%, transparent 70%),
+    radial-gradient(rgba(15, 23, 42, 0.055) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 24px 24px;
+}
+
+.chat-aurora-408 {
+  --aurora-a: rgba(59, 130, 246, 0.095);
+  --aurora-b: rgba(99, 102, 241, 0.08);
+}
+
+.chat-aurora-math {
+  --aurora-a: rgba(236, 72, 153, 0.085);
+  --aurora-b: rgba(139, 92, 246, 0.085);
+}
+
+.chat-aurora-english {
+  --aurora-a: rgba(16, 185, 129, 0.09);
+  --aurora-b: rgba(56, 189, 248, 0.075);
+}
+
+.chat-aurora-politics {
+  --aurora-a: rgba(245, 158, 11, 0.095);
+  --aurora-b: rgba(244, 63, 94, 0.07);
+}
+
+/* 2. 牛津暖绒书卷（长时间推演公式零酸胀暖米纸感） */
+.chat-canvas-parchment {
+  background-color: #faf6ee;
+  background-image:
+    radial-gradient(70% 50% at 50% 0%, rgba(217, 119, 6, 0.06) 0%, transparent 75%),
+    linear-gradient(to bottom, rgba(180, 155, 115, 0.065) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 32px;
+}
+
+/* 3. 清茗青瓷护眼（考前舒缓焦虑森系柔光） */
+.chat-canvas-sage {
+  background-color: #f1f7f3;
+  background-image:
+    radial-gradient(60% 45% at 20% 0%, rgba(16, 185, 129, 0.08) 0%, transparent 72%),
+    radial-gradient(55% 40% at 85% 12%, rgba(20, 184, 166, 0.06) 0%, transparent 70%),
+    radial-gradient(rgba(15, 118, 110, 0.055) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 26px 26px;
+}
+
+/* 4. 理工精密方格（仿康奈尔 / Rhodia 工程演算坐标本） */
+.chat-canvas-blueprint {
+  background-color: #f9fafc;
+  background-image:
+    radial-gradient(65% 40% at 50% 0%, rgba(99, 102, 241, 0.065) 0%, transparent 75%),
+    linear-gradient(to right, rgba(99, 102, 241, 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(99, 102, 241, 0.055) 1px, transparent 1px);
+  background-size: 100% 100%, 22px 22px, 22px 22px;
+}
+
+/* 5. 静谧深空星云（沉浸午夜星空画布） */
+.chat-canvas-cosmos {
+  background-color: #0b1020 !important;
+  background-image:
+    radial-gradient(62% 48% at 22% 0%, rgba(99, 102, 241, 0.19) 0%, transparent 72%),
+    radial-gradient(50% 42% at 82% 8%, rgba(16, 185, 129, 0.11) 0%, transparent 70%),
+    radial-gradient(rgba(255, 255, 255, 0.075) 1px, transparent 1px) !important;
+  background-size: 100% 100%, 100% 100%, 28px 28px !important;
+}
+
+/* 6. 无界极简纯白 */
+.chat-canvas-minimal {
+  background-color: #fafbfc;
+  background-image: radial-gradient(60% 35% at 50% 0%, rgba(148, 163, 184, 0.06) 0%, transparent 70%);
+}
+
+/* 全局深色主题开启时的和谐适配 */
+:where(.dark) .chat-canvas-aurora,
+:where(.dark) .chat-canvas-parchment,
+:where(.dark) .chat-canvas-sage,
+:where(.dark) .chat-canvas-blueprint,
+:where(.dark) .chat-canvas-minimal {
+  background-color: #0d1324;
+  background-image:
+    radial-gradient(60% 45% at 25% 0%, rgba(99, 102, 241, 0.15) 0%, transparent 70%),
+    radial-gradient(50% 40% at 80% 10%, rgba(14, 165, 233, 0.1) 0%, transparent 70%),
+    radial-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 26px 26px;
+}
+
+@media (forced-colors: active) {
+  .chat-canvas-aurora,
+  .chat-canvas-parchment,
+  .chat-canvas-sage,
+  .chat-canvas-blueprint,
+  .chat-canvas-cosmos,
+  .chat-canvas-minimal {
+    background-image: none !important;
+    background-color: Canvas !important;
+    border: 1px solid CanvasText !important;
+  }
 }

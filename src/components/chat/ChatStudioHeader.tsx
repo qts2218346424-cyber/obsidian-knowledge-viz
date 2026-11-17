@@ -21,11 +21,14 @@ import {
   Check,
   Cpu,
   Coins,
+  Palette,
 } from 'lucide-react'
+import { useChatBackdrop } from '../../features/ai-chat/useChatBackdrop'
 import { STUDY_AGENTS, type StudyAgent } from '../../data/studyAgents'
 import { STUDY_SKILLS, type StudySkill } from '../../data/studySkills'
 import { formatUnifiedModelName } from '../../utils/modelDisplay'
 import type { LocalAgentStatus, LocalSkill, CloudEndpoint, FileDetail } from '../../services/api'
+import type { StudyTone } from '../../features/ai-chat/types'
 
 export type ProviderType = 'antigravity' | 'codex' | 'claude-code' | 'web'
 export type ChatWidthMode = 'normal' | 'wide' | 'full'
@@ -91,8 +94,8 @@ interface ChatStudioHeaderProps {
   modelSyncFeedback: string | null
   onScanModels?: () => void
   onOpenModelManager: () => void
-  studyTone: 'rigorous' | 'vivid' | 'exam' | 'followup'
-  onStudyToneChange: (tone: 'rigorous' | 'vivid' | 'exam' | 'followup') => void
+  studyTone: StudyTone
+  onStudyToneChange: (tone: StudyTone) => void
   isDualMode: boolean
   onToggleDualMode: () => void
   peerAgent: StudyAgent
@@ -194,11 +197,14 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
     setAgentDropdownOpen(false)
   }
 
+  const { backdropId, setBackdrop, currentMeta: currentBackdropMeta, options: backdropOptions } = useChatBackdrop()
+  const [backdropPopoverOpen, setBackdropPopoverOpen] = useState(false)
+
   const displayModelName = formatUnifiedModelName(provider, selectedModel)
 
   const activeProviderMeta = PROVIDER_META[provider]
 
-  const isAnyPopoverOpen = modelPopoverOpen || skillsDropdownOpen || hubPopoverOpen || agentDropdownOpen
+  const isAnyPopoverOpen = modelPopoverOpen || skillsDropdownOpen || hubPopoverOpen || agentDropdownOpen || backdropPopoverOpen
 
   return (
     <div className={`shrink-0 space-y-2 relative ${isAnyPopoverOpen ? 'z-40' : 'z-20'}`}>
@@ -997,10 +1003,11 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                     <div className="text-2xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                       导师作答风格
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 bg-slate-100 p-1 rounded-xl">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 bg-slate-100 p-1 rounded-xl">
                       {[
                         { key: 'rigorous' as const, label: '📐 学术严谨' },
                         { key: 'vivid' as const, label: '💡 通俗直观' },
+                        { key: 'socratic' as const, label: '🧭 启发导学' },
                         { key: 'exam' as const, label: '⚡ 考场冲刺' },
                         { key: 'followup' as const, label: '🎯 针对追问' },
                       ].map(t => (
@@ -1069,6 +1076,74 @@ export const ChatStudioHeader = memo(function ChatStudioHeader({
                         ))}
                       </div>
                     </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* 伴学聊天背景氛围快切器 */}
+          <div className="relative hidden sm:block">
+            <button
+              type="button"
+              onClick={() => setBackdropPopoverOpen(prev => !prev)}
+              className="h-9 px-2.5 inline-flex items-center gap-1.5 rounded-xl border border-slate-200/85 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 hover:text-slate-900 transition-all cursor-pointer active:scale-95"
+              title="切换 AI 伴学聊天背景氛围"
+            >
+              <span
+                className="w-3.5 h-3.5 rounded-full border border-black/15 shrink-0"
+                style={{ background: currentBackdropMeta.swatchStyle }}
+              />
+              <Palette className="w-3.5 h-3.5 text-indigo-600 lg:hidden" />
+              <span className="hidden lg:inline">{currentBackdropMeta.label}</span>
+            </button>
+
+            {backdropPopoverOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-30"
+                  onClick={() => setBackdropPopoverOpen(false)}
+                />
+                <div className="absolute right-0 top-11 z-40 w-72 rounded-2xl bg-white border border-slate-200/90 shadow-xl p-3 space-y-2.5 animate-fade-in-up">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <Palette className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>伴学聊天空间背景</span>
+                    </span>
+                    <span className="text-2xs text-slate-400">自动记忆</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {backdropOptions.map(opt => {
+                      const active = backdropId === opt.id
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => {
+                            setBackdrop(opt.id)
+                            setBackdropPopoverOpen(false)
+                          }}
+                          className={`p-2 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-2 ${
+                            active
+                              ? 'border-indigo-500 bg-indigo-50/60 ring-1 ring-indigo-500/30'
+                              : 'border-slate-200/80 hover:border-slate-300 bg-slate-50/50 hover:bg-white'
+                          }`}
+                        >
+                          <span
+                            className="w-6 h-6 rounded-lg border border-black/10 shrink-0 shadow-2xs"
+                            style={{ background: opt.swatchStyle }}
+                          />
+                          <div className="min-w-0">
+                            <div className="text-xs font-bold text-slate-900 truncate">
+                              {opt.label}
+                            </div>
+                            <div className="text-[10px] text-slate-500 truncate">
+                              {opt.shortDesc}
+                            </div>
+                          </div>
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
               </>

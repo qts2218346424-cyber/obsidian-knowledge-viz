@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import MarkdownRenderer from './MarkdownRenderer'
 import ToolCallCard from './ToolCallCard'
+import { useChatBackdrop, resolveChatBackdropClass } from '../features/ai-chat/useChatBackdrop'
 import { AI_SKILLS, getSkills } from '../data/ai-skills'
 import { STUDY_AGENTS } from '../data/studyAgents'
 import { formatUnifiedModelName, detectCrossSubjectProxy } from '../utils/modelDisplay'
@@ -90,6 +91,7 @@ const defaultContext = {
 }
 
 export default function AIAssistantModal({ isOpen, onClose, pagePath, initialContextPrompt, initialDefaultInput, initialTriggerKey }: AIAssistantModalProps) {
+  const { backdropId } = useChatBackdrop()
   const context = (pagePath ? pageContext[pagePath] : undefined) || defaultContext
   const [workspace, setWorkspace] = useState<AIWorkspaceState>(() => loadWorkspace())
   const [input, setInput] = useState('')
@@ -104,12 +106,15 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath, initialCon
   const [localStatusLoading, setLocalStatusLoading] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesScrollRef = useRef<HTMLDivElement>(null)
+  const isModalAtBottomRef = useRef(true)
   const abortRef = useRef<AbortController | null>(null)
   // 分阶段流式等待反馈与超时容错状态
   const [loadingSeconds, setLoadingSeconds] = useState(0)
   const lastUserPromptRef = useRef<string>('')
   const [pendingContext, setPendingContext] = useState<string | null>(initialContextPrompt || null)
   const [isFollowUpMode, setIsFollowUpMode] = useState<boolean>(Boolean(initialContextPrompt))
+  const [isSocraticMode, setIsSocraticMode] = useState<boolean>(false)
 
   const getDefaultAgentByPath = (path?: string) => {
     if (path?.includes('/politics')) return 'agent-politics'
@@ -315,7 +320,11 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath, initialCon
   }, [isOpen])
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (!isModalAtBottomRef.current) return
+    const el = messagesScrollRef.current
+    if (el) {
+      el.scrollTo({ top: el.scrollHeight, behavior: 'auto' })
+    }
   }, [activeSession?.messages])
 
   useEffect(() => () => abortRef.current?.abort(), [])
@@ -414,7 +423,9 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath, initialCon
       : '- 知识库问答：优先基于当前个人知识库回答。'
     const followupInstruction = isFollowUpMode
       ? '\n【🎯 靶向追问模式已激活】：用户当前处于针对性追问模式。请锁定用户的具体疑问细节与思维卡壳点做精准剖析解答，指出认知偏差，严禁给出泛泛而谈、笼统空洞的课本概念复述与宏观套话！'
-      : ''
+      : isSocraticMode
+        ? '\n【🧭 苏格拉底分步启发导学模式已激活】：请先点透本题核心考查本质与第 1 步破题跳板，用 > ⚠️ 思维路标 提示隐蔽陷阱，并在结尾留出一个指向明确的下一步思考小问题引导用户主动推演，切勿一次性直接喂出全套终局答案导致“假性看懂”！'
+        : ''
     const proxyHint = proxySubject
       ? `\n【跨科代答提示】：当前提问涉及「${proxySubject}」，由408总导师「研小核」暂代解答，请在作答后顺带说明如有需要可切换至对应专科导师。`
       : ''
@@ -431,6 +442,7 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath, initialCon
       `用户问题：${text}`,
     ].filter(Boolean).join('\n')
 
+    isModalAtBottomRef.current = true
     updateSession(activeSession.id, session => ({
       ...session,
       title: session.messages.length === 0 ? text.slice(0, 32) : session.title,
@@ -443,6 +455,8 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath, initialCon
     const sessionId = activeSession.id
     const controller = new AbortController()
     abortRef.current = controller
+
+    const modeValue = isFollowUpMode ? 'followup' : isSocraticMode ? 'socratic' : undefined
 
     try {
       const response = await fetch(
@@ -458,14 +472,14 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath, initialCon
               ? {
                   message: agentMessage,
                   history,
-                  mode: isFollowUpMode ? 'followup' : undefined,
+                  mode: modeValue,
                   agentName: activeStudyAgent.name,
                   agentPrompt: activeStudyAgent.systemPrompt,
                 }
               : {
                   provider: activeProvider,
                   prompt: text,
-                  mode: isFollowUpMode ? 'followup' : undefined,
+                  mode: modeValue,
                   isFollowUp: isFollowUpMode,
                   cwd: activeProject.cwd,
                   sessionId: activeSession.agentSessionId || undefined,
@@ -809,7 +823,19 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath, initialCon
               </div>
             )}
 
-            <div className="flex-1 overflow-y-auto bg-slate-50/70 px-4 py-4 sm:px-6">
+            <div
+              ref={messagesScrollRef}
+              onScroll={e => {
+                const el = e.currentTarget
+                isModalAtBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight <= 80
+              }}
+              onWheel={e => {
+                if (e.deltaY < -4) {
+                  isModalAtBottomRef.current = false
+                }
+              }}
+              className={`flex-1 overflow-y-auto ${resolveChatBackdropClass(backdropId)} px-4 py-4 sm:px-6 transition-colors`}
+            >
               {activeSession.messages.length === 0 && (
                 <div className="mx-auto max-w-2xl rounded-2xl border border-slate-200 bg-white p-4">
                   <div className="flex items-center gap-2 text-sm font-medium text-warm-800">
@@ -834,24 +860,57 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath, initialCon
             </div>
 
             <div className="border-t border-slate-200 bg-white p-3 sm:p-4">
-              {/* 追问模式与上下文控制胶囊 */}
-              <div className="mx-auto mb-2 max-w-2xl flex items-center justify-between gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsFollowUpMode(prev => !prev)}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                    isFollowUpMode
-                      ? 'bg-amber-500 text-white shadow-2xs'
-                      : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-                  }`}
-                  title="开启后，AI 将精准锁定您的具体疑问做靶向深入解答，杜绝泛泛而谈与笼统套话"
-                >
-                  <Sparkles className="w-3 h-3" />
-                  <span>{isFollowUpMode ? '🎯 追问模式已开启（针对性解惑）' : '🎯 切换至追问模式'}</span>
-                </button>
+              {/* 追问模式与启发导学快捷切换栏 */}
+              <div className="mx-auto mb-2 max-w-2xl flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsFollowUpMode(prev => {
+                        const next = !prev
+                        if (next) setIsSocraticMode(false)
+                        return next
+                      })
+                    }}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      isFollowUpMode
+                        ? 'bg-amber-500 text-white shadow-2xs'
+                        : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                    }`}
+                    title="开启后，AI 将精准锁定您的具体疑问做靶向深入解答，杜绝泛泛而谈与笼统套话"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span>{isFollowUpMode ? '🎯 靶向追问中' : '🎯 靶向追问'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSocraticMode(prev => {
+                        const next = !prev
+                        if (next) setIsFollowUpMode(false)
+                        return next
+                      })
+                    }}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      isSocraticMode
+                        ? 'bg-emerald-600 text-white shadow-2xs'
+                        : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                    }`}
+                    title="开启后，导师先给破题第 1 步跳板并提问引导您主动推演，防止直接看答案假性看懂"
+                  >
+                    <span>{isSocraticMode ? '🧭 启发导学中' : '🧭 启发导学'}</span>
+                  </button>
+                </div>
+
                 {isFollowUpMode && (
-                  <span className="text-[10px] text-amber-700 hidden sm:inline">
-                    严格对具体卡壳点对症下药，拒绝笼统宏观概括
+                  <span className="text-[10.5px] text-amber-700 hidden sm:inline">
+                    直击具体卡壳点，拒绝笼统概念复述
+                  </span>
+                )}
+                {isSocraticMode && (
+                  <span className="text-[10.5px] text-emerald-700 hidden sm:inline">
+                    分步点拨题眼 + 留白引导主动思考
                   </span>
                 )}
               </div>
@@ -884,6 +943,7 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath, initialCon
                   onKeyDown={event => {
                     if (event.key === 'Enter' && !event.shiftKey) {
                       event.preventDefault()
+                      if (event.nativeEvent.isComposing || (event as any).keyCode === 229) return
                       void sendMessage()
                     }
                   }}
@@ -891,9 +951,11 @@ export default function AIAssistantModal({ isOpen, onClose, pagePath, initialCon
                   placeholder={
                     isFollowUpMode
                       ? '🎯 追问模式：输入您对具体细节或推导的疑问（AI 针对性解答，拒绝笼统）…'
-                      : '问问当前项目或页面内容…'
+                      : isSocraticMode
+                        ? '🧭 启发导学：粘贴卡壳真题或概念，导师将先点拨第 1 步引导你推演…'
+                        : '问问当前项目或页面内容…'
                   }
-                  className="max-h-28 min-h-8 flex-1 resize-none bg-transparent px-1 py-1 text-sm text-warm-800 outline-none placeholder:text-warm-400"
+                  className="max-h-28 min-h-8 flex-1 resize-none bg-transparent px-1 py-1 text-[13.5px] leading-relaxed text-warm-800 outline-none placeholder:text-warm-400"
                 />
                 <button onClick={() => void sendMessage()} disabled={!input.trim() || loading} aria-label="发送消息" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-warm-900 text-white hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-30">
                   {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
@@ -926,9 +988,9 @@ function MessageBubble({
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
-        className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed transition-all shadow-xs ${
+        className={`max-w-[90%] rounded-2xl px-4 py-3 text-[13px] sm:text-[13.5px] leading-[1.68] transition-all shadow-xs ${
           isUser
-            ? 'rounded-br-xs bg-gradient-to-r from-accent-orange to-blue-600 text-white shadow-xs'
+            ? 'rounded-br-xs bg-gradient-to-br from-indigo-600 to-blue-600 text-white shadow-xs'
             : 'rounded-bl-xs border border-cream-200/90 dark:border-slate-800 bg-surface dark:bg-slate-900 text-warm-800 dark:text-slate-200'
         }`}
       >
