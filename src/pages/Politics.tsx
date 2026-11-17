@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useCallback, Suspense } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback, Suspense, type CSSProperties } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { lazyWithRetry } from '../utils/lazyWithRetry'
 import ChunkErrorBoundary from '../components/ChunkErrorBoundary'
@@ -73,6 +73,8 @@ import {
   Loader2,
   Sun,
   Moon,
+  Award,
+  Globe,
 } from 'lucide-react'
 
 const ChinaHistoricalMap = lazyWithRetry(() => import('../components/ChinaHistoricalMap'), 'chinaHistoricalMap')
@@ -273,6 +275,8 @@ export default function Politics() {
   const [selectedCategory, setSelectedCategory] = useState<ItemCategory | 'all'>('all')
   const [onlyAnniversary, setOnlyAnniversary] = useState(false)
   const [onlyPitfall, setOnlyPitfall] = useState(false)
+  const [onlyHistoricalFirst, setOnlyHistoricalFirst] = useState(false)
+  const [onlyRecentCurrent, setOnlyRecentCurrent] = useState(false)
   const [anniversaryMode] = useState<AnniversaryMode>('both')
   const [isPlaying, setIsPlaying] = useState(false)
   const [maskMode, setMaskMode] = useState(false)
@@ -280,10 +284,14 @@ export default function Politics() {
   const [expandedQuote, setExpandedQuote] = useState(false)
   const [expandedContradiction, setExpandedContradiction] = useState(false)
   const [activeMatrixId, setActiveMatrixId] = useState<string>(COMPARISON_MATRICES[0].id)
+  const yearRailRef = useRef<HTMLDivElement | null>(null)
+  const pendingEventIdRef = useRef<string | null>(null)
 
-  // 当切换年份时，重置同年份子事件索引与金句展开态
+  // 当切换年份时，若有指定待定位事件 ID 则对齐到该子事件，否则重置子事件索引与金句展开态
   useEffect(() => {
-    setActiveYearEventIdx(0)
+    if (!pendingEventIdRef.current) {
+      setActiveYearEventIdx(0)
+    }
     setExpandedQuote(false)
   }, [activeYear])
 
@@ -764,9 +772,20 @@ export default function Politics() {
       if (selectedCategory !== 'all' && item.category !== selectedCategory) return false
       if (onlyAnniversary && !getAnniversaryInfo(item.year, anniversaryMode).matched) return false
       if (onlyPitfall && !item.pitfall) return false
+      if (onlyHistoricalFirst && !item.isHistoricalFirst) return false
+      if (onlyRecentCurrent && !item.isRecentCivicCurrent) return false
       return true
     })
-  }, [selectedCategory, onlyAnniversary, anniversaryMode, onlyPitfall])
+  }, [selectedCategory, onlyAnniversary, anniversaryMode, onlyPitfall, onlyHistoricalFirst, onlyRecentCurrent])
+
+  const historicalFirstTotalCount = useMemo(
+    () => ENHANCED_HISTORY_TIMELINE_ITEMS.filter((i) => i.isHistoricalFirst).length,
+    []
+  )
+  const recentCurrentTotalCount = useMemo(
+    () => ENHANCED_HISTORY_TIMELINE_ITEMS.filter((i) => i.isRecentCivicCurrent).length,
+    []
+  )
 
   const availableYears = useMemo(() => {
     const set = new Set<number>()
@@ -794,6 +813,26 @@ export default function Politics() {
   const currentYearItems = useMemo(() => {
     return filteredItems.filter((item) => item.year === activeYear)
   }, [filteredItems, activeYear])
+
+  // 当通过地图点击名城切换同城事件时，精准定位到目标子事件索引
+  useEffect(() => {
+    const targetId = pendingEventIdRef.current
+    if (!targetId) return
+    const idx = currentYearItems.findIndex((i) => i.id === targetId)
+    if (idx >= 0) {
+      setActiveYearEventIdx(idx)
+      pendingEventIdRef.current = null
+    }
+  }, [currentYearItems])
+
+  // 自动将当前选中的年份胶囊滚动入可视区域（遵循 modern-web-guidance tabs 规范）
+  useEffect(() => {
+    if (activeTab !== 'timeline' || !yearRailRef.current) return
+    const activePill = yearRailRef.current.querySelector<HTMLButtonElement>(`[data-year-pill="${activeYear}"]`)
+    if (activePill) {
+      activePill.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+    }
+  }, [activeYear, activeTab])
 
   const safeEventIdx = activeYearEventIdx < currentYearItems.length ? activeYearEventIdx : 0
   const activeItem = currentYearItems[safeEventIdx] || currentYearItems[0] || filteredItems[0]
@@ -999,25 +1038,66 @@ export default function Politics() {
     return { answered, correct }
   }, [allPoliticsQuestions, quizAnswers])
 
-  // 地图城市点击联动历史事件
-  const handleMapCityClick = useCallback((cityName: string) => {
-    const matches = ENHANCED_HISTORY_TIMELINE_ITEMS.filter(
-      (item) =>
-        item.cityName?.includes(cityName) ||
-        item.location?.includes(cityName) ||
-        item.title.includes(cityName)
-    )
-    if (matches.length > 0) {
-      setActiveYear(matches[0].year)
-    }
-  }, [])
+  // 地图城市点击联动历史事件（支持同城多史实循环切换，若受限于当前筛选器则自动放开筛选）
+  const handleMapCityClick = useCallback(
+    (cityName: string) => {
+      const visibleMatches = filteredItems.filter(
+        (item) =>
+          item.cityName?.includes(cityName) ||
+          item.location?.includes(cityName) ||
+          item.title.includes(cityName)
+      )
+      const allMatches = ENHANCED_HISTORY_TIMELINE_ITEMS.filter(
+        (item) =>
+          item.cityName?.includes(cityName) ||
+          item.location?.includes(cityName) ||
+          item.title.includes(cityName)
+      )
+      if (allMatches.length === 0) return
 
-  // 计算唯一编年滑块在轨道上的百分比位置
+      let pool = visibleMatches
+      if (pool.length === 0) {
+        setSelectedCategory('all')
+        setOnlyAnniversary(false)
+        setOnlyPitfall(false)
+        setOnlyHistoricalFirst(false)
+        setOnlyRecentCurrent(false)
+        pool = allMatches
+      }
+
+      const currentIdx = pool.findIndex((item) => item.id === activeItem?.id)
+      const targetItem = currentIdx >= 0 ? pool[(currentIdx + 1) % pool.length] : pool[0]
+      pendingEventIdRef.current = targetItem.id
+      if (targetItem.year === activeYear) {
+        const sameYearList = (visibleMatches.length > 0 ? filteredItems : ENHANCED_HISTORY_TIMELINE_ITEMS).filter(
+          (i) => i.year === targetItem.year
+        )
+        const subIdx = sameYearList.findIndex((i) => i.id === targetItem.id)
+        if (subIdx >= 0) setActiveYearEventIdx(subIdx)
+        pendingEventIdRef.current = null
+      } else {
+        setActiveYear(targetItem.year)
+      }
+    },
+    [filteredItems, activeItem?.id, activeYear]
+  )
+
+  // 计算唯一编年滑块在轨道上的百分比位置与 CSS 变量（遵循 modern-web-guidance slider 规范）
+  const sliderIndex = Math.max(0, availableYears.indexOf(activeYear))
+  const sliderMaxIdx = Math.max(0, availableYears.length - 1)
   const sliderPercent = useMemo(() => {
-    const currentIndex = availableYears.indexOf(activeYear)
-    if (currentIndex <= 0 || availableYears.length <= 1) return 0
-    return Math.min(100, Math.max(0, (currentIndex / (availableYears.length - 1)) * 100))
-  }, [availableYears, activeYear])
+    if (sliderIndex <= 0 || availableYears.length <= 1) return 0
+    return Math.min(100, Math.max(0, (sliderIndex / sliderMaxIdx) * 100))
+  }, [availableYears.length, sliderIndex, sliderMaxIdx])
+
+  const sliderCustomStyle = useMemo((): CSSProperties => {
+    return {
+      '--attr-min': 0,
+      '--attr-max': Math.max(1, sliderMaxIdx),
+      '--control-value': sliderIndex,
+      '--slider-fill-color': isCinemaTimeline ? '#f59e0b' : currentEra.themeColor,
+    } as CSSProperties
+  }, [sliderMaxIdx, sliderIndex, isCinemaTimeline, currentEra.themeColor])
 
   return (
     <div
@@ -1360,6 +1440,41 @@ export default function Politics() {
 
                 <button
                   type="button"
+                  aria-pressed={onlyHistoricalFirst}
+                  onClick={() => setOnlyHistoricalFirst((v) => !v)}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                    onlyHistoricalFirst
+                      ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-xs font-black'
+                      : isCinemaTimeline
+                      ? 'bg-[#0f172a] text-amber-300 border-amber-500/40 hover:border-amber-400'
+                      : 'bg-amber-50/80 text-amber-800 border-amber-200 hover:bg-amber-100/80'
+                  }`}
+                  title="筛选近代反侵略第一次与各时期标志性首创考点"
+                >
+                  <Award className="w-3.5 h-3.5" />
+                  <span>史上第一 ({historicalFirstTotalCount})</span>
+                </button>
+
+                <button
+                  type="button"
+                  aria-pressed={onlyRecentCurrent}
+                  onClick={() => setOnlyRecentCurrent((v) => !v)}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                    onlyRecentCurrent
+                      ? 'bg-sky-600 text-white border-sky-500 shadow-xs font-black'
+                      : isCinemaTimeline
+                      ? 'bg-[#0f172a] text-sky-300 border-sky-500/40 hover:border-sky-400'
+                      : 'bg-sky-50/80 text-sky-800 border-sky-200 hover:bg-sky-100/80'
+                  }`}
+                  title="直达 2024–2026 近两年重大会议、大思政课与“十五五”时政热点"
+                >
+                  <Globe className="w-3.5 h-3.5" />
+                  <span>近两年思政/时政 ({recentCurrentTotalCount})</span>
+                </button>
+
+                <button
+                  type="button"
+                  aria-pressed={onlyAnniversary}
                   onClick={() => setOnlyAnniversary((v) => !v)}
                   className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                     onlyAnniversary
@@ -1375,6 +1490,7 @@ export default function Politics() {
 
                 <button
                   type="button"
+                  aria-pressed={onlyPitfall}
                   onClick={() => setOnlyPitfall((v) => !v)}
                   className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                     onlyPitfall
@@ -1498,6 +1614,34 @@ export default function Politics() {
                   >
                     {activeItem?.title || `${activeYear}年历史概览`}
                   </h2>
+                  {(activeItem?.isHistoricalFirst || activeItem?.isRecentCivicCurrent) && (
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                      {activeItem.isHistoricalFirst && (
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-2xs font-extrabold border ${
+                            isCinemaTimeline
+                              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                              : 'bg-amber-100/90 text-amber-900 border-amber-300'
+                          }`}
+                        >
+                          <span>🥇</span>
+                          <span>{activeItem.firstBadge || '历史上的第一次必考锚点'}</span>
+                        </span>
+                      )}
+                      {activeItem.isRecentCivicCurrent && (
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-2xs font-extrabold border ${
+                            isCinemaTimeline
+                              ? 'bg-sky-500/20 text-sky-300 border-sky-500/40'
+                              : 'bg-sky-100/90 text-sky-900 border-sky-300'
+                          }`}
+                        >
+                          <span>🌟</span>
+                          <span>2024–2026 思政与时政核心</span>
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* 视觉图解与文献金句卡片（支持点击展开被截断的金句） */}
@@ -1768,6 +1912,13 @@ export default function Politics() {
                       activeCoordinates={activeItem?.coordinates}
                       activeCityName={activeItem?.cityName}
                       activeDate={activeItem?.date}
+                      activeBadgeTag={
+                        activeItem?.isHistoricalFirst
+                          ? '🥇 史上第一必考锚点'
+                          : activeItem?.isRecentCivicCurrent
+                          ? '🌟 近两年思政与时政'
+                          : undefined
+                      }
                       onCityClick={handleMapCityClick}
                       mapTone={isCinemaTimeline ? 'cinema' : isEyecareTheme ? 'eyecare' : 'paper'}
                     />
@@ -1775,7 +1926,7 @@ export default function Politics() {
                 </ChunkErrorBoundary>
               </div>
 
-              {/* 地图底栏：简洁坐标定位与热点名城快跳 */}
+              {/* 地图底栏：简洁坐标定位与热点名城快跳（支持多次点击循环浏览同城史实） */}
               <div
                 className={`z-10 pt-2 px-2.5 pb-1.5 border rounded-xl flex flex-wrap items-center justify-between gap-2 text-2xs ${
                   isCinemaTimeline
@@ -1786,8 +1937,8 @@ export default function Politics() {
                 }`}
               >
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className={isCinemaTimeline ? 'text-slate-400' : 'text-slate-500'}>革命坐标快跳：</span>
-                  {['上海', '瑞金', '遵义', '延安', '西柏坡', '北京'].map((city) => {
+                  <span className={isCinemaTimeline ? 'text-slate-400' : 'text-slate-500'}>坐标快跳：</span>
+                  {['三元里', '上海', '井冈山', '遵义', '延安', '会宁', '西柏坡', '深圳', '北京'].map((city) => {
                     const isCityActive =
                       activeItem?.cityName?.includes(city) || activeItem?.location?.includes(city)
                     return (
@@ -1795,6 +1946,7 @@ export default function Politics() {
                         key={city}
                         type="button"
                         onClick={() => handleMapCityClick(city)}
+                        title={`点击定位「${city}」历史事件（同城多事件支持连续点击切换）`}
                         className={`px-1.5 py-0.5 rounded font-bold cursor-pointer transition-colors ${
                           isCityActive
                             ? isCinemaTimeline
@@ -1970,7 +2122,7 @@ export default function Politics() {
             </div>
           </div>
 
-          {/* ── 唯一高响应度编年时间轴底座（1840–2024 合并单轨 + 悬浮气泡 + 热力胶囊尺） ── */}
+          {/* ── 唯一高响应度编年时间轴底座（1839–2026 合并单轨 + 悬浮气泡 + 热力胶囊尺） ── */}
           <div
             className={`p-3.5 sm:p-4 rounded-2xl border relative ${
               isCinemaTimeline
@@ -1985,10 +2137,10 @@ export default function Politics() {
                     isCinemaTimeline ? 'text-amber-400' : 'text-rose-700'
                   }`}
                 >
-                  📅 考研史纲唯一主编年轴 (1840–2024)
+                  📅 考研史纲唯一主编年轴 (1839–2026)
                 </span>
                 <span className={isCinemaTimeline ? 'text-slate-400' : 'text-slate-500'}>
-                  | 拖动滑块或点击下方年份胶囊直达
+                  | 涵盖近代反侵略首创至“十五五”开局思政时政
                 </span>
               </div>
               <div className={`font-mono ${isCinemaTimeline ? 'text-slate-300' : 'text-slate-700'}`}>
@@ -2005,20 +2157,20 @@ export default function Politics() {
             </div>
 
             {/* 唯一编年滑轨容器 */}
-            <div className="relative pt-7 pb-2 px-1">
+            <div className="relative pt-7 pb-1 px-1">
               <div
                 className="absolute top-0 transition-all duration-100 pointer-events-none transform -translate-x-1/2 flex flex-col items-center z-20"
-                style={{ left: `clamp(64px, ${sliderPercent}%, calc(100% - 64px))` }}
+                style={{ left: `clamp(72px, ${sliderPercent}%, calc(100% - 72px))` }}
               >
                 <div
-                  className={`px-2.5 py-0.5 rounded-lg border text-2xs font-black whitespace-nowrap flex items-center gap-1.5 shadow-xs ${
+                  className={`px-2.5 py-0.5 rounded-lg border text-2xs font-black whitespace-nowrap flex items-center gap-1.5 shadow-xs max-w-[260px] sm:max-w-[360px] truncate ${
                     isCinemaTimeline
                       ? 'bg-[#080d1a] border-amber-400/90 text-amber-300'
                       : 'bg-rose-600 border-rose-500 text-white'
                   }`}
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-300 animate-pulse" />
-                  <span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-300 animate-pulse shrink-0" />
+                  <span className="truncate">
                     {activeYear} {activeItem?.title || '历史节点'}
                   </span>
                 </div>
@@ -2027,17 +2179,17 @@ export default function Politics() {
               <input
                 type="range"
                 aria-label="史纲编年时间轴滑块"
+                aria-valuetext={`${activeYear}年：${activeItem?.title || '历史节点'}`}
                 min={0}
-                max={Math.max(0, availableYears.length - 1)}
+                max={sliderMaxIdx}
                 step={1}
-                value={Math.max(0, availableYears.indexOf(activeYear))}
+                value={sliderIndex}
+                style={sliderCustomStyle}
                 onChange={(e) => {
                   const target = availableYears[Number(e.target.value)]
                   if (target !== undefined) setActiveYear(target)
                 }}
-                className={`w-full h-2 rounded-lg appearance-none cursor-pointer ${
-                  isCinemaTimeline ? 'bg-slate-800 accent-amber-400' : 'bg-slate-200 accent-rose-600'
-                }`}
+                className={`politics-timeline-slider ${isCinemaTimeline ? 'slider-cinema' : ''}`}
               />
             </div>
 
@@ -2048,19 +2200,29 @@ export default function Politics() {
               }`}
             >
               {[
-                { y: 1840, label: '1840 鸦片战争', always: true },
-                { y: 1851, label: '1851 太平天国', always: false },
-                { y: 1911, label: '1911 辛亥革命', always: false },
+                { y: 1841, label: '1841 三元里抗英', always: true },
+                { y: 1895, label: '1895 甲午觉醒', always: false },
                 { y: 1921, label: '1921 中共建党', always: true },
                 { y: 1935, label: '1935 遵义会议', always: false },
+                { y: 1937, label: '1937 平型关首捷', always: false },
                 { y: 1949, label: '1949 新中国成立', always: true },
                 { y: 1978, label: '1978 改革开放', always: false },
-                { y: 2024, label: '2024 二十届三中', always: true },
+                { y: 2025, label: '2025 二十届四中', always: false },
+                { y: 2026, label: '2026 十五五开局', always: true },
               ].map((m) => (
                 <button
                   key={m.y}
                   type="button"
-                  onClick={() => setActiveYear(m.y)}
+                  onClick={() => {
+                    if (!availableYears.includes(m.y)) {
+                      setSelectedCategory('all')
+                      setOnlyAnniversary(false)
+                      setOnlyPitfall(false)
+                      setOnlyHistoricalFirst(false)
+                      setOnlyRecentCurrent(false)
+                    }
+                    setActiveYear(m.y)
+                  }}
                   className={`${
                     m.always ? 'inline' : 'hidden md:inline'
                   } cursor-pointer font-semibold transition-colors ${
@@ -2074,13 +2236,17 @@ export default function Politics() {
 
             {/* 年份胶囊高频直达尺（多事件年份柱高醒目提示） */}
             <div
+              ref={yearRailRef}
               className={`flex items-end gap-1.5 overflow-x-auto no-scrollbar pt-2.5 mt-2 border-t ${
                 isCinemaTimeline ? 'border-slate-800/80' : 'border-slate-200/80'
               }`}
             >
               {availableYears.map((yr) => {
                 const isCurr = yr === activeYear
-                const yrCount = filteredItems.filter((i) => i.year === yr).length
+                const yrItems = filteredItems.filter((i) => i.year === yr)
+                const yrCount = yrItems.length
+                const hasFirst = yrItems.some((i) => i.isHistoricalFirst)
+                const hasRecent = yrItems.some((i) => i.isRecentCivicCurrent)
                 const anniv = getAnniversaryInfo(yr, anniversaryMode)
                 const barHeight = Math.min(22, 6 + yrCount * 6)
 
@@ -2088,8 +2254,12 @@ export default function Politics() {
                   <button
                     key={yr}
                     type="button"
+                    data-year-pill={yr}
+                    aria-pressed={isCurr}
                     onClick={() => setActiveYear(yr)}
-                    title={`${yr}年（收录 ${yrCount} 项史实）`}
+                    title={`${yr}年（收录 ${yrCount} 项史实${hasFirst ? ' · 含史上第一考点' : ''}${
+                      hasRecent ? ' · 近两年思政时政' : ''
+                    }）`}
                     className={`group flex flex-col items-center px-2 py-1 rounded-lg border transition-all shrink-0 cursor-pointer ${
                       isCurr
                         ? isCinemaTimeline
@@ -2106,7 +2276,9 @@ export default function Politics() {
                           ? isCinemaTimeline
                             ? 'bg-slate-950'
                             : 'bg-white'
-                          : anniv.matched
+                          : hasRecent
+                          ? 'bg-sky-500'
+                          : hasFirst || anniv.matched
                           ? 'bg-amber-500'
                           : isCinemaTimeline
                           ? 'bg-slate-600'

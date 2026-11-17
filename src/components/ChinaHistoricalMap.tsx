@@ -6,6 +6,7 @@ export interface ChinaHistoricalMapProps {
   activeCoordinates?: [number, number]
   activeCityName?: string
   activeDate?: string
+  activeBadgeTag?: string
   onCityClick?: (cityName: string) => void
   className?: string
   mapTone?: HistoricalMapTone
@@ -25,24 +26,39 @@ export function projectGeoPoint(lng: number, lat: number): [number, number] {
   return [Math.round(x * 10) / 10, Math.round(y * 10) / 10]
 }
 
-// 预设考研史纲主要历史名城真实经纬度坐标
-const CORE_HISTORICAL_CITIES: Array<{ name: string; lng: number; lat: number }> = [
-  { name: '北京', lng: 116.4, lat: 39.9 },
-  { name: '南京', lng: 118.78, lat: 32.04 },
-  { name: '上海', lng: 121.47, lat: 31.23 },
-  { name: '广州', lng: 113.26, lat: 23.13 },
-  { name: '武昌', lng: 114.3, lat: 30.59 },
-  { name: '延安', lng: 109.49, lat: 36.59 },
-  { name: '遵义', lng: 106.93, lat: 27.7 },
-  { name: '西柏坡', lng: 114.05, lat: 38.41 },
-  { name: '沈阳', lng: 123.43, lat: 41.8 },
-  { name: '金田', lng: 110.08, lat: 23.58 },
-  { name: '井冈山', lng: 114.17, lat: 26.57 },
-  { name: '瑞金', lng: 116.03, lat: 25.88 },
-  { name: '重庆', lng: 106.55, lat: 29.56 },
-  { name: '西安', lng: 108.94, lat: 34.34 },
-  { name: '天津', lng: 117.2, lat: 39.12 },
-  { name: '南昌', lng: 115.89, lat: 28.68 },
+// 预设考研史纲主要历史名城与“史上第一”/新时代地标真实经纬度坐标（含文字避让偏移）
+const CORE_HISTORICAL_CITIES: Array<{ name: string; lng: number; lat: number; dx?: number; dy?: number }> = [
+  { name: '北京', lng: 116.4, lat: 39.9, dx: 5, dy: -4 },
+  { name: '天津', lng: 117.2, lat: 39.12, dx: 6, dy: 6 },
+  { name: '西柏坡', lng: 114.05, lat: 38.41, dx: -34, dy: 5 },
+  { name: '平型关', lng: 113.96, lat: 39.3, dx: -34, dy: -3 },
+  { name: '乌兰浩特', lng: 122.09, lat: 46.08, dx: 5, dy: 3 },
+  { name: '沈阳', lng: 123.43, lat: 41.8, dx: 5, dy: 3 },
+  { name: '长春', lng: 125.32, lat: 43.88, dx: 5, dy: 3 },
+  { name: '台儿庄', lng: 117.73, lat: 34.56, dx: 5, dy: 3 },
+  { name: '小岗村', lng: 117.75, lat: 32.83, dx: -34, dy: -3 },
+  { name: '南京', lng: 118.78, lat: 32.04, dx: 5, dy: 3 },
+  { name: '桐城', lng: 116.95, lat: 31.05, dx: -25, dy: 4 },
+  { name: '上海', lng: 121.47, lat: 31.23, dx: 5, dy: -2 },
+  { name: '嘉兴', lng: 120.75, lat: 30.75, dx: 5, dy: 8 },
+  { name: '武昌', lng: 114.3, lat: 30.59, dx: -25, dy: 3 },
+  { name: '南昌', lng: 115.89, lat: 28.68, dx: 5, dy: 3 },
+  { name: '井冈山', lng: 114.17, lat: 26.57, dx: -34, dy: 3 },
+  { name: '瑞金', lng: 116.03, lat: 25.88, dx: 5, dy: 3 },
+  { name: '古田', lng: 116.8, lat: 25.2, dx: 5, dy: 5 },
+  { name: '延安', lng: 109.49, lat: 36.59, dx: 5, dy: 3 },
+  { name: '西安', lng: 108.94, lat: 34.34, dx: 5, dy: 4 },
+  { name: '会宁', lng: 105.05, lat: 35.69, dx: -26, dy: 3 },
+  { name: '酒泉', lng: 100.29, lat: 40.96, dx: 5, dy: 3 },
+  { name: '罗布泊', lng: 90.3, lat: 40.5, dx: 5, dy: 3 },
+  { name: '重庆', lng: 106.55, lat: 29.56, dx: 5, dy: 3 },
+  { name: '遵义', lng: 106.93, lat: 27.7, dx: 5, dy: 3 },
+  { name: '金田', lng: 110.08, lat: 23.58, dx: -25, dy: 3 },
+  { name: '镇南关', lng: 106.75, lat: 21.97, dx: -34, dy: 5 },
+  { name: '三元里', lng: 113.26, lat: 23.16, dx: -33, dy: -3 },
+  { name: '虎门', lng: 113.67, lat: 22.81, dx: -25, dy: 7 },
+  { name: '深圳', lng: 114.06, lat: 22.54, dx: 5, dy: 8 },
+  { name: '台南', lng: 120.2, lat: 22.99, dx: 5, dy: 4 },
 ]
 
 // 阿里 DataV 标准中国各省边界
@@ -210,19 +226,21 @@ const StaticChinaMapBackground = memo(function StaticChinaMapBackground({
       {/* 预设历史名城锚点底标 (支持点击直接联动跳转史实) */}
       {CORE_HISTORICAL_CITIES.map((city) => {
         const [cx, cy] = projectGeoPoint(city.lng, city.lat)
+        const lx = cx + (city.dx ?? 5)
+        const ly = cy + (city.dy ?? 3)
         return (
           <g
             key={city.name}
             onClick={() => onCityClick?.(city.name)}
-            className="opacity-80 hover:opacity-100 transition-all cursor-pointer group"
+            className="opacity-85 hover:opacity-100 transition-all cursor-pointer group"
           >
-            <circle cx={cx} cy={cy} r="4" fill="none" stroke={palette.cityRingStroke} strokeWidth="1" />
-            <circle cx={cx} cy={cy} r="2" fill={palette.cityDotFill} className={palette.cityDotHoverClass} />
+            <circle cx={cx} cy={cy} r="3.8" fill="none" stroke={palette.cityRingStroke} strokeWidth="1" />
+            <circle cx={cx} cy={cy} r="1.9" fill={palette.cityDotFill} className={palette.cityDotHoverClass} />
             <text
-              x={cx + 5}
-              y={cy + 3}
+              x={lx}
+              y={ly}
               fill={palette.cityLabelFill}
-              fontSize="8"
+              fontSize="7.8"
               fontFamily="sans-serif"
               fontWeight="bold"
               className={`select-none ${palette.cityLabelHoverClass}`}
@@ -240,6 +258,7 @@ function ChinaHistoricalMapComponent({
   activeCoordinates,
   activeCityName = '历史坐标',
   activeDate = '',
+  activeBadgeTag,
   onCityClick,
   className = '',
   mapTone = 'cinema',
@@ -253,6 +272,22 @@ function ChinaHistoricalMapComponent({
     const coords = activeCoordinates || [116.4, 39.9]
     return projectGeoPoint(coords[0], coords[1])
   }, [activeCoordinates])
+
+  // 自适应标牌尺寸与画布安全边界定位（防止边疆/沿海城市长名称截断）
+  const { badgeWidth, badgeHeight, boxX, boxY, arrowTipX } = useMemo(() => {
+    const titleChars = (activeCityName || '').length
+    const dateChars = (activeDate || '').length
+    const tagChars = (activeBadgeTag || '').length
+    const w = Math.min(
+      240,
+      Math.max(134, Math.ceil(Math.max(titleChars * 11.5 + 34, dateChars * 6.2 + 24, tagChars * 9.5 + 28)))
+    )
+    const h = activeBadgeTag ? 50 : 38
+    const clampedX = Math.min(800 - w - 8, Math.max(8, activeX - w / 2))
+    const clampedY = Math.max(8, activeY - h - 14)
+    const tipX = Math.min(w - 14, Math.max(14, activeX - clampedX))
+    return { badgeWidth: w, badgeHeight: h, boxX: clampedX, boxY: clampedY, arrowTipX: tipX }
+  }, [activeCityName, activeDate, activeBadgeTag, activeX, activeY])
 
   return (
     <svg
@@ -286,24 +321,64 @@ function ChinaHistoricalMapComponent({
         </circle>
         <circle cx={activeX} cy={activeY} r="6" fill={palette.activeDotFill} stroke={palette.activeDotStroke} strokeWidth="2" />
 
-        {/* 浮动历史事件地名标签 */}
-        <g transform={`translate(${activeX - 60}, ${activeY - 52})`}>
+        {/* 浮动历史事件地名与“史上第一/思政时政”标签 */}
+        <g transform={`translate(${boxX}, ${boxY})`}>
           <rect
-            width="120"
-            height="38"
+            width={badgeWidth}
+            height={badgeHeight}
             rx="8"
             fill={palette.badgeFill}
             stroke={palette.badgeStroke}
             strokeWidth="1.6"
             className={palette.badgeShadowClass}
           />
-          <polygon points="54,38 66,38 60,44" fill={palette.badgeStroke} />
-          <text x="60" y="17" fill={palette.badgeTitleFill} fontSize="11" fontWeight="bold" textAnchor="middle">
-            📍 {activeCityName}
-          </text>
-          <text x="60" y="30" fill={palette.badgeSubFill} fontSize="9" textAnchor="middle">
-            {activeDate}
-          </text>
+          <polygon
+            points={`${arrowTipX - 6},${badgeHeight} ${arrowTipX + 6},${badgeHeight} ${arrowTipX},${badgeHeight + 6}`}
+            fill={palette.badgeStroke}
+          />
+          {activeBadgeTag ? (
+            <>
+              <text
+                x={badgeWidth / 2}
+                y="14"
+                fill={palette.rippleOuterStroke}
+                fontSize="8.8"
+                fontWeight="bold"
+                textAnchor="middle"
+              >
+                {activeBadgeTag}
+              </text>
+              <text
+                x={badgeWidth / 2}
+                y="29"
+                fill={palette.badgeTitleFill}
+                fontSize="10.8"
+                fontWeight="bold"
+                textAnchor="middle"
+              >
+                📍 {activeCityName}
+              </text>
+              <text x={badgeWidth / 2} y="42" fill={palette.badgeSubFill} fontSize="8.8" textAnchor="middle">
+                {activeDate}
+              </text>
+            </>
+          ) : (
+            <>
+              <text
+                x={badgeWidth / 2}
+                y="17"
+                fill={palette.badgeTitleFill}
+                fontSize="11"
+                fontWeight="bold"
+                textAnchor="middle"
+              >
+                📍 {activeCityName}
+              </text>
+              <text x={badgeWidth / 2} y="30" fill={palette.badgeSubFill} fontSize="9" textAnchor="middle">
+                {activeDate}
+              </text>
+            </>
+          )}
         </g>
       </g>
     </svg>

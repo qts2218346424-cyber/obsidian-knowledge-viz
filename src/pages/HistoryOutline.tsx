@@ -144,8 +144,8 @@ export default function HistoryOutline() {
   }, [availableYears, activeYear])
 
   // 滑块数值计算
-  const sliderMin = sliderMode === 'snap' ? 0 : 1840
-  const sliderMax = sliderMode === 'snap' ? Math.max(0, availableYears.length - 1) : 2024
+  const sliderMin = sliderMode === 'snap' ? 0 : 1839
+  const sliderMax = sliderMode === 'snap' ? Math.max(0, availableYears.length - 1) : 2026
   const sliderValue = useMemo(() => {
     if (sliderMode === 'continuous') return activeYear
     const idx = availableYears.indexOf(activeYear)
@@ -284,7 +284,7 @@ export default function HistoryOutline() {
               </span>
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200/80 text-2xs font-bold text-amber-800">
                 <Flame className="w-3 h-3 text-amber-600" />
-                <span>1840–2024 共 {totalCount} 组必背史实与会议</span>
+                <span>1839–2026 共 {totalCount} 组必背史实、会议与思政时政</span>
               </span>
             </div>
 
@@ -590,7 +590,7 @@ export default function HistoryOutline() {
                         ? 'bg-slate-900 text-white'
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
-                    title="按 1840–2024 真实历史时间比例逐年连续拖动"
+                    title="按 1839–2026 真实历史时间比例逐年连续拖动"
                   >
                     📅 全编年连续
                   </button>
@@ -663,13 +663,13 @@ export default function HistoryOutline() {
 
               {/* 进度条刻度地标提示 */}
               <div className="flex items-center justify-between text-2xs font-mono font-semibold text-slate-400 mt-0.5 select-none">
-                <span>1840 鸦片战争</span>
+                <span>1841 三元里抗英</span>
                 <span className="hidden sm:inline">1919 五四运动</span>
                 <span>1921 中共成立</span>
                 <span className="hidden md:inline">1935 遵义会议</span>
                 <span>1949 新中国成立</span>
                 <span className="hidden sm:inline">1978 改革开放</span>
-                <span>2024 二十届三中</span>
+                <span>2026 十五五开局</span>
               </div>
 
               {/* 黄金考点年份热力胶囊尺（支持点击直达任意年份，柱高代表当年考点密集度） */}
