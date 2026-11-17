@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { updateTrialBridgeState } from '../../utils/trialStateBridge'
 import {
   ClipboardList,
   GraduationCap,
@@ -24,6 +25,7 @@ interface InteractiveBentoShowcaseProps {
   isAuthenticated: boolean
   onLaunchModule: (path: string, label: string) => void
   onOpenRegister: (contextHint?: string) => void
+  mode?: 'both' | 'features-only' | 'hub-only'
 }
 
 type HubCategory = 'all' | 'exam' | 'memory' | 'focus'
@@ -220,6 +222,7 @@ export function InteractiveBentoShowcase({
   isAuthenticated,
   onLaunchModule,
   onOpenRegister,
+  mode = 'both',
 }: InteractiveBentoShowcaseProps) {
   const [hubCategory, setHubCategory] = useState<HubCategory>('all')
 
@@ -247,7 +250,22 @@ export function InteractiveBentoShowcase({
   const currentSlide = GALLERY_SLIDES[slideIdx]
 
   const handleRateCard = (ratingLabel: string, nextInterval: string) => {
-    setScheduledHint(`已按「${ratingLabel}」记录：下次最佳抗遗忘复习时间 → ${nextInterval}`)
+    const card = DEMO_FLASHCARDS[cardIdx]
+    updateTrialBridgeState((prev) => {
+      const filtered = prev.flashcardRatedItems.filter((x) => x.question !== card.question)
+      return {
+        flashcardRatedItems: [
+          ...filtered,
+          {
+            subject: card.subject,
+            question: card.question,
+            answer: card.answer,
+            rating: ratingLabel,
+          },
+        ],
+      }
+    })
+    setScheduledHint(`已暂存自评「${ratingLabel}」（注册后自动导入复习队列 · 下次复习：${nextInterval}）`)
     setTimeout(() => {
       setCardFlipped(false)
       setCardIdx((prev) => (prev + 1) % DEMO_FLASHCARDS.length)
@@ -282,7 +300,8 @@ export function InteractiveBentoShowcase({
       {/* =====================================================================
           模块一：全景研学导航舱 (#hub) —— 一键直达 8 大核心研学空间
          ===================================================================== */}
-      <section id="hub" className="w-full min-w-0 max-w-[1280px] mx-auto px-3.5 sm:px-8 pt-6 pb-16 sm:pb-22">
+      {mode !== 'features-only' && (
+      <section id="hub" className="w-full min-w-0 max-w-[1280px] mx-auto px-3.5 sm:px-8 pt-6 pb-16 sm:pb-20">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6 sm:mb-9">
           <div className="text-left">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-50 border border-indigo-200/70 text-indigo-700 text-2xs font-bold mb-2">
@@ -356,7 +375,7 @@ export function InteractiveBentoShowcase({
                 <div className="pt-2.5 border-t border-slate-100 flex items-center justify-between gap-1 text-[10px] sm:text-2xs font-semibold text-slate-600 w-full min-w-0">
                   <span className="truncate">{item.metric}</span>
                   <span className="text-indigo-600 font-bold shrink-0 group-hover:translate-x-0.5 transition-transform">
-                    直达 →
+                    {isAuthenticated ? '立即进入 →' : '登录开启 →'}
                   </span>
                 </div>
               </button>
@@ -364,10 +383,12 @@ export function InteractiveBentoShowcase({
           })}
         </div>
       </section>
+      )}
 
       {/* =====================================================================
           模块二：交互式黑科技 Bento 兴趣画廊 (#features)
          ===================================================================== */}
+      {mode !== 'hub-only' && (
       <section
         id="features"
         className="w-full min-w-0 py-16 sm:py-22 border-t border-slate-200/80 bg-gradient-to-b from-white/75 via-[#f6f7fb] to-white/90"
@@ -645,7 +666,7 @@ export function InteractiveBentoShowcase({
                     onClick={() => onLaunchModule(currentSlide.targetPath, currentSlide.title)}
                     className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-[13px] font-bold shadow-sm transition-all active:scale-[0.98] cursor-pointer inline-flex items-center gap-1.5"
                   >
-                    <span>立即进入该功能实操</span>
+                    <span>{isAuthenticated ? '立即进入该功能实操' : '注册 / 登录进入该功能舱'}</span>
                     <ArrowUpRight className="w-4 h-4" />
                   </button>
                   <span className="text-2xs text-slate-500">支持本地 Markdown 随时无损导出</span>
@@ -677,6 +698,7 @@ export function InteractiveBentoShowcase({
           </div>
         </div>
       </section>
+      )}
     </>
   )
 }

@@ -17,6 +17,8 @@ import {
   Laptop,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { getStoredUser } from '../services/auth'
+import { inheritTrialDataToUserWorkspace } from '../utils/trialStateBridge'
 
 export default function Login() {
   const { isAuthenticated, initialized, login, register, initAdmin, isLoading } = useAuth()
@@ -78,6 +80,7 @@ export default function Login() {
       } else {
         await login(username.trim(), password)
       }
+      await inheritTrialDataToUserWorkspace(getStoredUser()?.id).catch(() => {})
       navigate(fromPath, { replace: true })
     } catch (err: any) {
       setError(err.message || '操作失败，请重试')
@@ -177,6 +180,8 @@ export default function Login() {
                     type="text"
                     required
                     autoFocus
+                    autoComplete="username"
+                    spellCheck={false}
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder={

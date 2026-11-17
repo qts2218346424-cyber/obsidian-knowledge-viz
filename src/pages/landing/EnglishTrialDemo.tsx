@@ -1,5 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Sparkles, CheckCircle2, RotateCcw, Wand2, ArrowUpRight, BookOpenCheck } from 'lucide-react'
+import {
+  loadTrialBridgeState,
+  subscribeTrialBridge,
+  updateTrialBridgeState,
+} from '../../utils/trialStateBridge'
 
 interface EnglishTrialDemoProps {
   fullscreen?: boolean
@@ -172,11 +177,23 @@ const ESSAY_SAMPLES: EssaySample[] = [
 ]
 
 export function EnglishTrialDemo({ fullscreen, onEnter }: EnglishTrialDemoProps) {
-  const [sampleIdx, setSampleIdx] = useState(0)
-  const [upgradedIds, setUpgradedIds] = useState<Record<string, boolean>>({ t1: true })
+  const [sampleIdx, setSampleIdx] = useState<number>(() => loadTrialBridgeState().englishSampleIdx || 0)
+  const [upgradedBySample, setUpgradedBySample] = useState<Record<string, Record<string, boolean>>>(
+    () => loadTrialBridgeState().englishUpgradedBySample || { eng1: { t1: true } }
+  )
   const [activeTokenId, setActiveTokenId] = useState<string>('t1')
 
-  const sample = ESSAY_SAMPLES[sampleIdx]
+  useEffect(() => {
+    return subscribeTrialBridge((next) => {
+      setSampleIdx(next.englishSampleIdx || 0)
+      if (next.englishUpgradedBySample) {
+        setUpgradedBySample(next.englishUpgradedBySample)
+      }
+    })
+  }, [])
+
+  const sample = ESSAY_SAMPLES[sampleIdx] || ESSAY_SAMPLES[0]
+  const upgradedIds = upgradedBySample[sample.id] || {}
   const tokenKeys = Object.keys(sample.tokens)
   const upgradedCount = tokenKeys.filter((k) => upgradedIds[k]).length
 
@@ -193,17 +210,35 @@ export function EnglishTrialDemo({ fullscreen, onEnter }: EnglishTrialDemoProps)
   const scoreRatio = Math.round((currentScore / sample.maxScore) * 100)
   const activeToken = sample.tokens[activeTokenId] || sample.tokens[tokenKeys[0]]
 
+  const syncEnglishState = (
+    nextIdx: number,
+    nextMap: Record<string, Record<string, boolean>>,
+    interacted = true
+  ) => {
+    setSampleIdx(nextIdx)
+    setUpgradedBySample(nextMap)
+    updateTrialBridgeState({
+      englishSampleIdx: nextIdx,
+      englishUpgradedBySample: nextMap,
+      englishInteracted: interacted || loadTrialBridgeState().englishInteracted,
+    })
+  }
+
   const handleSelectSample = (idx: number) => {
     const next = ESSAY_SAMPLES[idx]
     const firstKey = Object.keys(next.tokens)[0]
-    setSampleIdx(idx)
-    setUpgradedIds({ [firstKey]: true })
+    const nextMap = {
+      ...upgradedBySample,
+      [next.id]: upgradedBySample[next.id] || { [firstKey]: true },
+    }
     setActiveTokenId(firstKey)
+    syncEnglishState(idx, nextMap, false)
   }
 
   const toggleToken = (id: string) => {
     setActiveTokenId(id)
-    setUpgradedIds((prev) => ({ ...prev, [id]: !prev[id] }))
+    const nextSampleTokens = { ...upgradedIds, [id]: !upgradedIds[id] }
+    syncEnglishState(sampleIdx, { ...upgradedBySample, [sample.id]: nextSampleTokens }, true)
   }
 
   const upgradeAll = () => {
@@ -211,13 +246,13 @@ export function EnglishTrialDemo({ fullscreen, onEnter }: EnglishTrialDemoProps)
     tokenKeys.forEach((k) => {
       next[k] = true
     })
-    setUpgradedIds(next)
     setActiveTokenId(tokenKeys[tokenKeys.length - 1])
+    syncEnglishState(sampleIdx, { ...upgradedBySample, [sample.id]: next }, true)
   }
 
   const resetAll = () => {
-    setUpgradedIds({})
     setActiveTokenId(tokenKeys[0])
+    syncEnglishState(sampleIdx, { ...upgradedBySample, [sample.id]: {} }, true)
   }
 
   return (

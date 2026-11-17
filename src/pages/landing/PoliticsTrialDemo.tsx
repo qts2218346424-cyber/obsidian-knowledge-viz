@@ -1,4 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import {
+  loadTrialBridgeState,
+  subscribeTrialBridge,
+  updateTrialBridgeState,
+} from '../../utils/trialStateBridge'
 
 /**
  * 落地页「免登录试玩」中的考研政治 · 史纲时空演示。
@@ -61,8 +66,22 @@ const PAD = 24
 const x = (year: number) => PAD + ((year - START) / (END - START)) * (W - PAD * 2)
 
 export function PoliticsTrialDemo({ fullscreen, onEnter }: PoliticsTrialDemoProps) {
-  const [idx, setIdx] = useState(0)
-  const node = NODES[idx]
+  const [idx, setIdxState] = useState<number>(() => loadTrialBridgeState().politicsNodeIdx || 0)
+
+  useEffect(() => {
+    return subscribeTrialBridge((next) => {
+      if (typeof next.politicsNodeIdx === 'number') {
+        setIdxState(next.politicsNodeIdx)
+      }
+    })
+  }, [])
+
+  const setIdx = (nextIdx: number) => {
+    setIdxState(nextIdx)
+    updateTrialBridgeState({ politicsNodeIdx: nextIdx, politicsInteracted: true })
+  }
+
+  const node = NODES[idx] || NODES[0]
 
   return (
     <div

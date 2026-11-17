@@ -15,7 +15,6 @@ import {
   Cpu,
   GraduationCap,
   Landmark,
-  Network,
   Clock,
   X,
   LogIn,
@@ -38,14 +37,28 @@ import {
   Languages,
   Award,
   Share2,
+  BookmarkCheck,
+  ExternalLink,
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { MathTrialDemo, AgentTrialDemo } from './landing/TrialDemos'
 import { PoliticsTrialDemo } from './landing/PoliticsTrialDemo'
 import { EnglishTrialDemo } from './landing/EnglishTrialDemo'
 import { InteractiveBentoShowcase } from './landing/InteractiveBentoShowcase'
+import { MobilePreviewModal } from './landing/MobilePreviewModal'
+import { TrustAndTestimonialsSection } from './landing/TrustAndTestimonialsSection'
 import { getSecurityQuestion, resetPassword, getStoredUser } from '../services/auth'
 import { useExamCountdown } from '../utils/examDate'
+import {
+  getTrialActivitySummary,
+  inheritTrialDataToUserWorkspace,
+  subscribeTrialBridge,
+  type InheritResult,
+  type TrialActivitySummary,
+} from '../utils/trialStateBridge'
+
+const OFFICIAL_DOMAIN = 'https://claudexxb.online'
+const OFFICIAL_DOMAIN_HOST = 'claudexxb.online'
 
 interface DownloadInfo {
   desktop: {
@@ -84,14 +97,17 @@ interface RegisteredWelcomeInfo {
   recoveryCode?: string
   targetPath: string
   targetLabel: string
+  inheritResult?: InheritResult
 }
 
+// 严格对齐页面从上到下的黄金叙事顺序：建立认知 -> 动手试玩 -> 了解全科覆盖 -> 信任背书 -> 多端下载转化
 const NAV_LINKS = [
-  { href: '#hub', label: '全景导航舱' },
   { href: '#preview', label: '动手试玩' },
   { href: '#features', label: '互动黑科技' },
   { href: '#subjects', label: '考研四核' },
-  { href: '#download', label: '多端同步' },
+  { href: '#hub', label: '全景功能舱' },
+  { href: '#trust', label: '真题与口碑' },
+  { href: '#download', label: '多端下载' },
 ] as const
 
 export default function LandingPage() {
@@ -102,19 +118,31 @@ export default function LandingPage() {
   // 3D 金属胶囊当前切换模式
   const [activeMode, setActiveMode] = useState<ModeType>('408')
 
+  // 试玩足迹实时统计（驱动“注册后自动继承 N 项试玩成果”提示）
+  const [trialSummary, setTrialSummary] = useState<TrialActivitySummary>(() =>
+    getTrialActivitySummary()
+  )
+
+  useEffect(() => {
+    return subscribeTrialBridge((next) => {
+      setTrialSummary(getTrialActivitySummary(next))
+    })
+  }, [])
+
   // 顶栏滚动感知、移动端折叠菜单与底部悬浮转化栏状态
   const [isScrolled, setIsScrolled] = useState(false)
   const [showMobileStickyCta, setShowMobileStickyCta] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
-  // 手机/全平台试玩全屏沉浸视窗显隐
+  // 全屏沉浸试玩视窗 & 免登录手机伴学预览视窗显隐
   const [fullScreenSandbox, setFullScreenSandbox] = useState(false)
+  const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false)
 
   // 下载信息与二维码
   const [downloadInfo, setDownloadInfo] = useState<DownloadInfo | null>(null)
   const [downloading, setDownloading] = useState(false)
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('')
-  const [currentUrl, setCurrentUrl] = useState<string>('')
+  const [shareSiteUrl, setShareSiteUrl] = useState<string>(OFFICIAL_DOMAIN)
   const [copiedUrl, setCopiedUrl] = useState(false)
 
   // 双栏高转化认证弹窗控制与意图路由记忆
@@ -134,11 +162,11 @@ export default function LandingPage() {
   const [modalError, setModalError] = useState<string | null>(null)
   const [modalLoading, setModalLoading] = useState(false)
 
-  // 新人注册成功后的仪式感欢迎与救援码备份状态
+  // 新人注册成功后的仪式感欢迎、试玩成果继承与救援码备份状态
   const [registeredWelcome, setRegisteredWelcome] = useState<RegisteredWelcomeInfo | null>(null)
   const [copiedRecovery, setCopiedRecovery] = useState(false)
 
-  // 找回密码（Forgot Password）相关交互状态
+  // 找回密码相关交互状态
   const [forgotStep, setForgotStep] = useState<1 | 2>(1)
   const [forgotUsername, setForgotUsername] = useState('')
   const [securityQuestion, setSecurityQuestion] = useState<string | null>(null)
@@ -158,7 +186,7 @@ export default function LandingPage() {
     setToastMessage(msg)
     setTimeout(() => {
       setToastMessage((prev) => (prev === msg ? null : prev))
-    }, 2800)
+    }, 3000)
   }
 
   // 监听滚动：驱动动态吸顶毛玻璃导航头与移动端底部悬浮转化栏
@@ -194,7 +222,6 @@ export default function LandingPage() {
   }, [fullScreenSandbox, authModalOpen, registeredWelcome])
 
   useEffect(() => {
-    // 获取安装包元数据
     fetch('/api/downloads/info')
       .then((res) => res.json())
       .then((data) => {
@@ -214,10 +241,12 @@ export default function LandingPage() {
         })
       })
 
-    // 生成移动端访问二维码
+    // 若在公网或 IP 访问，优先使用官方域名生成扫码链接，本地 localhost 调试则保留当前地址以便局域网联调
     const origin = window.location.origin
-    setCurrentUrl(origin)
-    QRCode.toDataURL(origin, {
+    const isLocalDev = /localhost|127\.0\.0\.1/.test(origin)
+    const targetQrUrl = isLocalDev ? origin : OFFICIAL_DOMAIN
+    setShareSiteUrl(targetQrUrl)
+    QRCode.toDataURL(targetQrUrl, {
       width: 176,
       margin: 1,
       color: {
@@ -229,15 +258,20 @@ export default function LandingPage() {
       .catch(() => {})
   }, [])
 
-  // 统一打开认证弹窗辅助函数（支持目标路由记忆与转化语境提示）
+  // 统一打开认证弹窗辅助函数（支持目标路由记忆与试玩成果自动继承提示）
   const openAuthWithIntent = (
     tab: 'login' | 'register',
     target: PendingTarget = { path: '/dashboard', label: '研核全景工作台' },
     hint?: string
   ) => {
+    const footprints = getTrialActivitySummary().totalFootprints
+    const defaultHint =
+      footprints > 0
+        ? `检测到您有 ${footprints} 项试玩问答/做题记录，完成后将自动同步至您的个人空间`
+        : undefined
     setModalTab(tab)
     setPendingTarget(target)
-    setContextBannerHint(hint || null)
+    setContextBannerHint(hint || defaultHint || null)
     setModalError(null)
     setRegisteredWelcome(null)
     setMobileMenuOpen(false)
@@ -249,10 +283,12 @@ export default function LandingPage() {
     if (isAuthenticated) {
       navigate(path)
     } else {
+      const footprints = getTrialActivitySummary().totalFootprints
+      const extra = footprints > 0 ? `，并同步刚才的 ${footprints} 项试玩记录` : ''
       openAuthWithIntent(
         'register',
         { path, label },
-        `完成注册或登录后，将为您直接跳转至「${label}」`
+        `完成注册或登录后，将直接为您打开「${label}」${extra}`
       )
     }
   }
@@ -266,15 +302,15 @@ export default function LandingPage() {
     }
   }
 
-  // 复制当前网址（供手机端分享至电脑大屏打开）
-  const handleCopyCurrentUrl = async () => {
+  // 复制官方网址
+  const handleCopySiteUrl = async () => {
     try {
-      await navigator.clipboard.writeText(currentUrl || window.location.origin)
+      await navigator.clipboard.writeText(shareSiteUrl)
       setCopiedUrl(true)
-      showToast('已复制研核网址，可发送至微信或电脑浏览器打开')
+      showToast(`已复制官方网址 ${shareSiteUrl}，可发送至微信或电脑浏览器打开`)
       setTimeout(() => setCopiedUrl(false), 2400)
     } catch {
-      showToast('请手动复制浏览器地址栏链接')
+      showToast(`请手动复制官方域名：${OFFICIAL_DOMAIN}`)
     }
   }
 
@@ -303,7 +339,7 @@ export default function LandingPage() {
     setTimeout(() => setDownloading(false), 2600)
   }
 
-  // 模态框登录/注册快速提交
+  // 模态框登录/注册快速提交 + 自动执行试玩成果状态继承！
   const handleModalAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setModalError(null)
@@ -333,25 +369,49 @@ export default function LandingPage() {
     try {
       if (!initialized) {
         await initAdmin(cleanUser, modalPassword, modalDisplayName.trim() || undefined)
+        const stored = getStoredUser()
+        await inheritTrialDataToUserWorkspace(stored?.id)
         showToast('管理员空间初始化成功，正在进入工作台...')
         setAuthModalOpen(false)
         navigate(pendingTarget.path, { replace: true })
       } else if (modalTab === 'register') {
         await register(cleanUser, modalPassword, modalDisplayName.trim() || undefined)
         const stored = getStoredUser()
+        const inheritRes = await inheritTrialDataToUserWorkspace(stored?.id)
+        // 若用户刚在 AI 试玩区提问过且未专门指定其他舱室，引导他可直达包含该会话或首篇笔记的工作台
+        const smartTarget: PendingTarget =
+          pendingTarget.path === '/dashboard' && inheritRes.conversationsSynced > 0
+            ? { path: '/chat', label: 'AI 伴学工作台（含刚才的试玩问答）' }
+            : pendingTarget
+
         setRegisteredWelcome({
           username: stored?.displayName || cleanUser,
           points: typeof stored?.points === 'number' ? stored.points : 5.0,
           recoveryCode: stored?.recoveryCode,
-          targetPath: pendingTarget.path,
-          targetLabel: pendingTarget.label,
+          targetPath: smartTarget.path,
+          targetLabel: smartTarget.label,
+          inheritResult: inheritRes,
         })
-        showToast('账号创建成功！已为您发放新人 5.0 研学积分')
+        showToast(
+          inheritRes.inherited
+            ? '账号创建成功！已为您自动导入试玩问答与错题笔记'
+            : '账号创建成功！已为您发放新人 5.0 研学积分'
+        )
       } else {
         await login(cleanUser, modalPassword)
-        showToast(`验证通过，正在为您打开${pendingTarget.label}...`)
+        const stored = getStoredUser()
+        const inheritRes = await inheritTrialDataToUserWorkspace(stored?.id)
+        showToast(
+          inheritRes.inherited
+            ? `验证通过！已将刚才的试玩问答与错题同步至您的空间`
+            : `验证通过，正在为您打开${pendingTarget.label}...`
+        )
         setAuthModalOpen(false)
-        navigate(pendingTarget.path, { replace: true })
+        const dest =
+          pendingTarget.path === '/dashboard' && inheritRes.conversationsSynced > 0
+            ? '/chat'
+            : pendingTarget.path
+        navigate(dest, { replace: true })
       }
     } catch (err: any) {
       setModalError(err.message || '操作失败，请检查输入后重试')
@@ -493,7 +553,7 @@ export default function LandingPage() {
         !isAuthenticated ? 'pb-20 md:pb-0' : ''
       }`}
     >
-      {/* 建筑级微米坐标暗纹顶层装饰（不阻挡任何点击） */}
+      {/* 建筑级微米坐标暗纹顶层装饰 */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 h-[680px] landing-architectural-grid z-0"
@@ -512,7 +572,7 @@ export default function LandingPage() {
       )}
 
       {/* =====================================================================
-          1. 动态吸顶毛玻璃主页导航头 (Sticky Glassmorphic Header + Mobile Menu)
+          第一幕：建立认知 —— 动态吸顶导航栏 + 首屏五核 Hero 舞台
          ===================================================================== */}
       <header
         className={`sticky top-0 z-40 w-full transition-all duration-200 pt-[env(safe-area-inset-top,0px)] ${
@@ -547,7 +607,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* 中部：桌面端磨砂玻璃胶囊导航 */}
+          {/* 中部：桌面端磨砂玻璃胶囊导航（顺序与下方板块严格一致） */}
           <nav
             aria-label="主页分区导航"
             className="hidden lg:flex items-center gap-0.5 px-2 py-1 rounded-2xl bg-white/65 backdrop-blur-md border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)]"
@@ -560,7 +620,7 @@ export default function LandingPage() {
                   e.preventDefault()
                   scrollToSection(link.href)
                 }}
-                className="px-3.5 py-1.5 rounded-xl text-[13px] font-semibold text-[#52525b] hover:text-[#171719] hover:bg-slate-900/[0.05] transition-colors whitespace-nowrap"
+                className="px-3 py-1.5 rounded-xl text-[12.5px] font-semibold text-[#52525b] hover:text-[#171719] hover:bg-slate-900/[0.05] transition-colors whitespace-nowrap"
               >
                 {link.label}
               </a>
@@ -589,9 +649,7 @@ export default function LandingPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() =>
-                    openAuthWithIntent('register', undefined, '新用户极速注册 · 立即获赠 5.0 初始研学积分')
-                  }
+                  onClick={() => openAuthWithIntent('register')}
                   className="landing-cta-primary inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-[13px] font-bold text-white active:scale-[0.98] cursor-pointer"
                 >
                   <Gift className="w-3.5 h-3.5 text-amber-300 shrink-0 hidden xs:inline" />
@@ -600,7 +658,6 @@ export default function LandingPage() {
               </>
             )}
 
-            {/* 移动端导航菜单开关（保证 ≥40px 舒适触控热区） */}
             <button
               type="button"
               onClick={() => setMobileMenuOpen((v) => !v)}
@@ -645,38 +702,55 @@ export default function LandingPage() {
               ))}
             </div>
 
-            {!isAuthenticated && (
+            <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() =>
-                  openAuthWithIntent('register', undefined, '新用户极速注册 · 立享 5.0 研学积分与专属知识库')
-                }
-                className="w-full py-3 px-4 rounded-xl landing-cta-primary text-white text-xs font-bold flex items-center justify-center gap-2 cursor-pointer"
+                onClick={() => {
+                  setMobileMenuOpen(false)
+                  setMobilePreviewOpen(true)
+                }}
+                className="py-2.5 px-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <Gift className="w-4 h-4 text-amber-300" />
-                <span>10 秒免费注册 · 领 5.0 初始研学积分</span>
+                <Smartphone className="w-3.5 h-3.5" />
+                <span>免登录手机预览</span>
               </button>
-            )}
+              {!isAuthenticated ? (
+                <button
+                  type="button"
+                  onClick={() => openAuthWithIntent('register')}
+                  className="py-2.5 px-3 rounded-xl landing-cta-primary text-white text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Gift className="w-3.5 h-3.5 text-amber-300" />
+                  <span>免费注册领5积分</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => navigate('/dashboard')}
+                  className="py-2.5 px-3 rounded-xl bg-slate-900 text-white text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <span>进入正式空间</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
         )}
       </header>
 
-      {/* =====================================================================
-          2. 首屏 Hero 舞台：五核 3D 金属切换器 + 流体标题 + 价值锚点 + 双轨 CTA
-         ===================================================================== */}
+      {/* 首屏 Hero 舞台 */}
       <section className="relative z-10 w-full min-w-0 flex flex-col items-center justify-center px-3.5 sm:px-6 pt-5 sm:pt-11 pb-8 sm:pb-14 text-center">
-        {/* 顶部冲刺倒计时与新人注册激励双联徽章 */}
         <div className="mb-4 sm:mb-6 inline-flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-full bg-white/80 backdrop-blur-md border border-slate-200/90 shadow-2xs text-2xs sm:text-xs">
           <span className="inline-flex items-center gap-1 font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200/70">
             <Clock className="w-3 h-3" />
             <span>考研冲刺倒计时 {countdown.days} 天</span>
           </span>
           <span className="text-slate-600 font-medium">
-            新用户免费注册即赠 <strong className="text-slate-900 font-bold">5.0 AI 研学积分</strong> 与独立双链沙盒
+            新用户免费注册赠 <strong className="text-slate-900 font-bold">5.0 研学积分</strong> · 试玩问答自动继承
           </span>
         </div>
 
-        {/* Subframe 标志性 3D 镀铬金属硬件药丸切换器 (移动端高可读触控优化) */}
+        {/* 3D 镀铬金属硬件药丸切换器 */}
         <div className="relative w-full max-w-full flex justify-center mb-5 sm:mb-9 select-none">
           <div className="metallic-ambient-glow max-w-full" />
 
@@ -711,39 +785,41 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* 流体自适应主标题 (移动端醒目大气 ~30px，桌面端澎湃 72px) */}
         <h1 className="landing-hero-title text-[clamp(1.85rem,6vw,4.5rem)] font-extrabold tracking-[-0.04em] leading-[1.12] sm:leading-[1.05] mb-3 sm:mb-4 max-w-4xl mx-auto px-1">
           {modeConfigs[activeMode].title}
         </h1>
 
-        {/* 细腻副标题 */}
         <p className="text-sm sm:text-[22px] md:text-[26px] font-medium tracking-[-0.015em] leading-[1.42] sm:leading-[1.3] text-[#686b73] max-w-[740px] mb-4 sm:mb-6 px-2 sm:px-0 landing-pretty-copy">
           {modeConfigs[activeMode].subtitle}
         </p>
 
-        {/* 当前学科能力实时状态条 */}
         <div className="mb-6 sm:mb-8 inline-flex items-center gap-2 px-3.5 sm:px-4 py-1.5 rounded-full bg-white/75 border border-slate-200/90 text-2xs sm:text-xs text-slate-700 max-w-full sm:max-w-2xl shadow-2xs">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
           <span className="min-w-0 truncate font-medium">{modeConfigs[activeMode].badge}</span>
         </div>
 
-        {/* 主次转化按钮组（桌面端与手机端统一高转化逻辑：主按钮直达免费注册！） */}
+        {/* 首屏主次 CTA（明确区分“免登录动手试玩”与“免费注册开启个人空间”） */}
         <div className="w-full max-w-xl mx-auto flex flex-col items-center gap-3 px-2 mb-7 sm:mb-10">
           <div className="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-3.5">
+            <button
+              type="button"
+              onClick={() => scrollToSection('#preview')}
+              className="py-3.5 px-6 sm:px-7 rounded-2xl bg-white hover:bg-slate-50 text-[#18181b] text-sm sm:text-[15px] font-bold border border-slate-300/90 shadow-xs flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
+            >
+              <Play className="w-4 h-4 text-indigo-600 shrink-0" />
+              <span>免登录动手试玩</span>
+            </button>
+
             <button
               type="button"
               onClick={() => {
                 if (isAuthenticated) {
                   navigate(modeConfigs[activeMode].targetPath)
                 } else {
-                  openAuthWithIntent(
-                    'register',
-                    {
-                      path: modeConfigs[activeMode].targetPath,
-                      label: modeConfigs[activeMode].targetLabel,
-                    },
-                    `10 秒极速注册 · 立赠 5.0 积分并直达「${modeConfigs[activeMode].targetLabel}」`
-                  )
+                  openAuthWithIntent('register', {
+                    path: modeConfigs[activeMode].targetPath,
+                    label: modeConfigs[activeMode].targetLabel,
+                  })
                 }
               }}
               className="landing-cta-primary py-3.5 px-6 sm:px-8 rounded-2xl text-white text-sm sm:text-[15px] font-bold flex items-center justify-center gap-2.5 active:scale-[0.98] cursor-pointer"
@@ -752,26 +828,16 @@ export default function LandingPage() {
               <span>
                 {isAuthenticated
                   ? `进入${modeConfigs[activeMode].targetLabel}`
-                  : '免费开启专属研学空间'}
+                  : '免费注册开启专属空间'}
               </span>
               <ArrowRight className="w-4 h-4 text-slate-300 shrink-0" />
             </button>
-
-            <button
-              type="button"
-              onClick={() => scrollToSection('#preview')}
-              className="py-3.5 px-5 sm:px-6 rounded-2xl bg-white/90 hover:bg-white text-[#18181b] text-sm sm:text-[14px] font-bold border border-slate-200/95 shadow-xs flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
-            >
-              <Play className="w-4 h-4 text-indigo-600 shrink-0" />
-              <span>免登录动手试玩</span>
-            </button>
           </div>
 
-          {/* 消除注册顾虑的三重信任微承诺 */}
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] sm:text-xs text-slate-500">
             <span className="inline-flex items-center gap-1">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>免手机号 10 秒注册</span>
+              <span>试玩问答与错题注册后自动继承</span>
             </span>
             <span className="inline-flex items-center gap-1">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
@@ -779,18 +845,18 @@ export default function LandingPage() {
             </span>
             <span className="inline-flex items-center gap-1">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>Markdown 笔记随时本地导出</span>
+              <span>标准 Markdown 本地随时导出</span>
             </span>
           </div>
         </div>
 
-        {/* 四大硬核实证数据条（手机端 2x2 清晰排布，桌面端 4 列横排） */}
+        {/* 四大硬核实证数据条 */}
         <div className="w-full max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4 px-1">
           {[
-            { value: '1987–2024', label: '统考历年真题沉淀', sub: '全真卷面与权威详析' },
-            { value: '43 套+', label: '整卷模考与名师密押', sub: '1900+ 道高频精校题' },
+            { value: '1987–2024', label: '统考历年真题覆盖', sub: '数学38年 · 408全套精校' },
+            { value: '43 套+', label: '整卷模考与名师密押', sub: '1900+ 道高频精析题' },
             { value: 'SM-2 算法', label: '艾宾浩斯抗遗忘调度', sub: '每日智能推送待复习卡' },
-            { value: '~1.2 秒', label: '分科 AI 踩分点精批', sub: '408 / 数 / 英 / 政全覆盖' },
+            { value: '100% 导出', label: '云端同步 + 本地主权', sub: '无缝兼容本地 Obsidian' },
           ].map((stat) => (
             <div
               key={stat.label}
@@ -809,7 +875,7 @@ export default function LandingPage() {
       </section>
 
       {/* =====================================================================
-          3. 免登录动手试玩实验室 (#preview) —— 五大学科全交互沙盒 + 底部转化钩子
+          第二幕：动手试玩（100% 免登录零打扰体验 · 内嵌/全屏/注册后全链路状态继承）
          ===================================================================== */}
       <section id="preview" className="w-full min-w-0 max-w-[1280px] mx-auto px-3.5 sm:px-8 pt-4 pb-16 sm:pb-20">
         {/* 手机端专属沉浸全屏试玩推荐横幅 */}
@@ -822,10 +888,10 @@ export default function LandingPage() {
               <div className="text-xs font-bold text-white flex items-center gap-1.5">
                 <span className="truncate">手机端全屏沉浸试玩</span>
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-400 text-amber-950 font-extrabold shrink-0">
-                  强烈推荐
+                  状态实时同步
                 </span>
               </div>
-              <div className="text-[11px] text-indigo-200/90 truncate">画布宽广不拥挤 · 五大科目随心切换</div>
+              <div className="text-[11px] text-indigo-200/90 truncate">问答与草稿切换全屏不丢失 · 注册自动继承</div>
             </div>
           </div>
           <button
@@ -837,19 +903,35 @@ export default function LandingPage() {
           </button>
         </div>
 
-        {/* 试玩顶部状态与就地切科胶囊栏（无需滚回页面顶端即可随时切换试玩科目！） */}
+        {/* 试玩顶部状态与就地切科胶囊栏 */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3.5">
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex flex-wrap items-center gap-2 min-w-0">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/90 text-xs font-bold text-emerald-700 shadow-2xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
               <span>免登录互动试玩实验室</span>
             </span>
-            <span className="text-xs text-slate-500 hidden xl:inline">
-              · 直接动手旋转 AVL 树、打草稿判分、升格英语作文或向 AI 导师提问
-            </span>
+
+            {trialSummary.totalFootprints > 0 ? (
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isAuthenticated) openAuthWithIntent('register')
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-xs font-bold text-indigo-700 transition-colors cursor-pointer"
+              >
+                <BookmarkCheck className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                <span>
+                  已自动暂存 {trialSummary.totalFootprints} 项试玩问答/错题
+                  {!isAuthenticated ? '（点击注册即可导入个人空间 →）' : ''}
+                </span>
+              </button>
+            ) : (
+              <span className="text-xs text-slate-500 hidden xl:inline">
+                · 切换全屏或注册账号时，您在下方产生的问答与错题将自动保留继承
+              </span>
+            )}
           </div>
 
-          {/* 试玩窗随手切科栏 */}
           <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-white/85 border border-slate-200/90 shadow-2xs max-w-full overflow-x-auto no-scrollbar">
             {[
               { id: '408' as const, label: '408 仿真' },
@@ -886,7 +968,7 @@ export default function LandingPage() {
                   <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
                 </div>
                 <span className="font-bold text-slate-900 truncate text-xs">
-                  CoreForge 实时交互沙盒 · {modeConfigs[activeMode].heroSubject}
+                  CoreForge 免登录沙盒 · {modeConfigs[activeMode].heroSubject}
                 </span>
               </div>
 
@@ -895,9 +977,10 @@ export default function LandingPage() {
                   type="button"
                   onClick={() => setFullScreenSandbox(true)}
                   className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 font-bold text-2xs transition-all active:scale-95 flex items-center gap-1 cursor-pointer"
+                  title="切换至全屏视图，当前问答与草稿进度将自动同步保留"
                 >
                   <Maximize2 className="w-3 h-3 text-indigo-600" />
-                  <span>全屏沉浸试玩</span>
+                  <span>全屏试玩 (保留当前进度)</span>
                 </button>
                 <button
                   type="button"
@@ -909,7 +992,7 @@ export default function LandingPage() {
                   }
                   className="hidden sm:inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-slate-900 text-white font-bold text-2xs hover:bg-slate-800 transition-colors cursor-pointer"
                 >
-                  <span>进入完整舱室</span>
+                  <span>{isAuthenticated ? '进入完整舱室' : '登录进入完整舱室'}</span>
                   <ArrowRight className="w-3 h-3" />
                 </button>
               </div>
@@ -958,32 +1041,46 @@ export default function LandingPage() {
               )}
             </div>
 
-            {/* 试玩视窗底部：高转化进度留存引导横幅 */}
+            {/* 试玩视窗底部：动态感知试玩足迹的状态继承转化条 */}
             {!isAuthenticated && (
               <div className="px-4 sm:px-6 py-3.5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-t border-indigo-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-white">
                 <div className="flex items-center gap-2.5 text-xs sm:text-[13px]">
-                  <span className="w-7 h-7 rounded-lg bg-amber-400/20 border border-amber-400/40 flex items-center justify-center shrink-0">
-                    <Gift className="w-4 h-4 text-amber-300" />
+                  <span className="w-7 h-7 rounded-lg bg-emerald-400/20 border border-emerald-400/40 flex items-center justify-center shrink-0">
+                    {trialSummary.totalFootprints > 0 ? (
+                      <BookmarkCheck className="w-4 h-4 text-emerald-300" />
+                    ) : (
+                      <Gift className="w-4 h-4 text-amber-300" />
+                    )}
                   </span>
-                  <span className="text-slate-200 leading-snug">
-                    想永久保存错题归因、同步双链笔记并解锁全部 <strong className="text-white">43 套历年统考真题</strong>？新用户注册即赠 <strong className="text-amber-300">5.0 研学积分</strong>！
-                  </span>
+                  {trialSummary.totalFootprints > 0 ? (
+                    <span className="text-slate-100 leading-snug">
+                      系统已为您实时暂存 <strong className="text-emerald-300">{trialSummary.totalFootprints} 项试玩成果</strong>！现在注册将自动为您生成<strong className="text-white">首篇双链笔记与个人错题记录</strong>，绝不白做。
+                    </span>
+                  ) : (
+                    <span className="text-slate-200 leading-snug">
+                      在上方试玩产生的提问解答与错题，注册后将<strong className="text-white">自动继承至您的专属知识库</strong>，并立赠 <strong className="text-amber-300">5.0 研学积分</strong>！
+                    </span>
+                  )}
                 </div>
                 <button
                   type="button"
                   onClick={() =>
-                    openAuthWithIntent(
-                      'register',
-                      {
-                        path: modeConfigs[activeMode].targetPath,
-                        label: modeConfigs[activeMode].targetLabel,
-                      },
-                      '注册完成后自动解锁完整题库与个人知识库空间'
-                    )
+                    openAuthWithIntent('register', {
+                      path:
+                        trialSummary.aiTurnsCount > 0
+                          ? '/chat'
+                          : modeConfigs[activeMode].targetPath,
+                      label:
+                        trialSummary.aiTurnsCount > 0
+                          ? 'AI 伴学工作台'
+                          : modeConfigs[activeMode].targetLabel,
+                    })
                   }
                   className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs whitespace-nowrap transition-all active:scale-95 cursor-pointer shrink-0 shadow-sm"
                 >
-                  10 秒免费注册解锁全功能 →
+                  {trialSummary.totalFootprints > 0
+                    ? `免费注册并保存这 ${trialSummary.totalFootprints} 项记录 →`
+                    : '10 秒免费注册解锁全功能 →'}
                 </button>
               </div>
             )}
@@ -991,29 +1088,29 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* =====================================================================
-          4 & 5. 全景研学导航舱 (#hub) + 互动黑科技 Bento 兴趣画廊 (#features)
-         ===================================================================== */}
+      {/* 免登录互动 Bento 体验区 (#features：紧接试玩实验室，强化免登录使用兴趣) */}
       <InteractiveBentoShowcase
+        mode="features-only"
         isAuthenticated={isAuthenticated}
         onLaunchModule={handleLaunchModule}
         onOpenRegister={(hint) => openAuthWithIntent('register', undefined, hint)}
       />
 
       {/* =====================================================================
-          6. 考研四核超级学科矩阵 (#subjects) —— 零廉价 Emoji，支持直达体验
+          第三幕：了解全科覆盖 —— 四大主力科目生态 (#subjects) + 八大功能舱 (#hub)
+          （严格置于信任背书与多端下载区上方！）
          ===================================================================== */}
-      <section id="subjects" className="w-full min-w-0 py-16 sm:py-22 max-w-[1280px] mx-auto px-3.5 sm:px-8">
+      <section id="subjects" className="w-full min-w-0 pt-16 sm:pt-22 pb-10 sm:pb-14 max-w-[1280px] mx-auto px-3.5 sm:px-8">
         <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-14">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/[0.05] border border-slate-900/[0.08] text-2xs font-bold text-slate-700 mb-2">
             <Award className="w-3.5 h-3.5 text-indigo-600" />
-            <span>四大主力学科深度定制生态</span>
+            <span>全面覆盖考研四大主力科目</span>
           </span>
           <h2 className="mt-1 text-2xl sm:text-4xl font-bold text-[#18181b] tracking-[-0.03em]">
-            全面覆盖考研四大核心战场
+            为每一门统考核心课量身定制的四核生态
           </h2>
           <p className="mt-2.5 text-xs sm:text-sm text-[#71717a] landing-pretty-copy">
-            拒绝泛泛而谈的通用记事本，CoreForge 为每一门统考科目打造专属解题引擎与交互实验舱。
+            拒绝泛泛而谈的通用记事本，CoreForge 为 408 计算机、考研数学、考研政治与考研英语提供深度学科工具链。
           </p>
         </div>
 
@@ -1102,16 +1199,16 @@ export default function LandingPage() {
                       setActiveMode(subj.mode)
                       scrollToSection('#preview')
                     }}
-                    className="font-semibold text-slate-600 hover:text-slate-900 cursor-pointer"
+                    className="font-semibold text-emerald-700 hover:text-emerald-800 cursor-pointer"
                   >
-                    试玩该科沙盒
+                    免登录试玩该科
                   </button>
                   <button
                     type="button"
                     onClick={() => handleLaunchModule(subj.path, subj.title)}
                     className="inline-flex items-center gap-1 font-bold text-indigo-600 hover:text-indigo-700 cursor-pointer"
                   >
-                    <span>进入专区</span>
+                    <span>{isAuthenticated ? '进入专区' : '登录进入'}</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -1121,8 +1218,21 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* 八大研学功能舱全景导流矩阵 (#hub) */}
+      <InteractiveBentoShowcase
+        mode="hub-only"
+        isAuthenticated={isAuthenticated}
+        onLaunchModule={handleLaunchModule}
+        onOpenRegister={(hint) => openAuthWithIntent('register', undefined, hint)}
+      />
+
       {/* =====================================================================
-          7. 全平台多端同步与下载中心 (#download) —— 智能识别手机端/桌面端场景
+          第四幕：信任背书 —— 历年真题年份明细 · 云同步与本地导出 · 学长学姐评价 (#trust)
+         ===================================================================== */}
+      <TrustAndTestimonialsSection />
+
+      {/* =====================================================================
+          第五幕：多端下载与注册转化 (#download) —— 明确免登录预览与登录入口边界
          ===================================================================== */}
       <section
         id="download"
@@ -1131,148 +1241,20 @@ export default function LandingPage() {
         <div className="w-full max-w-[1280px] mx-auto px-3.5 sm:px-8 min-w-0">
           <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-14">
             <h2 className="text-2xl sm:text-4xl font-bold text-[#18181b] tracking-[-0.03em]">
-              全平台无缝接力 · 随时随地进入心流
+              选择你的备考终端 · 随时随地进入心流
             </h2>
             <p className="mt-2.5 text-xs sm:text-base text-[#71717a] landing-pretty-copy">
-              自习室电脑大屏深度推导，排队睡前掏出手机单手翻闪卡，同一账号学习进度实时同步。
+              桌面客户端专注深潜，手机端碎片化刷卡，网页版跨设备即开即用，同一账号实时同步。
             </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 items-stretch">
-            {/* 1. 网页在线与云同步版（零门槛主力入口） */}
-            <div className="landing-bento-card rounded-2xl p-5 sm:p-7 flex flex-col justify-between relative border-2 border-indigo-500/20">
-              <div className="absolute -top-3 left-6 px-3 py-0.5 rounded-full bg-indigo-600 text-white text-2xs font-bold tracking-wide shadow-xs">
-                零门槛即开即用
+            {/* 1. Windows 桌面独立旗舰端 */}
+            <div className="landing-bento-card rounded-2xl p-5 sm:p-7 flex flex-col justify-between relative border-2 border-slate-900/10">
+              <div className="absolute -top-3 left-6 px-3 py-0.5 rounded-full bg-[#18181b] text-white text-2xs font-bold tracking-wide shadow-xs">
+                书桌深度学习推荐
               </div>
 
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-5">
-                  <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                    <Globe className="w-6 h-6" />
-                  </div>
-                  <span className="text-xs font-mono text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-200/60">
-                    {downloadInfo?.web?.version ? `在线版 v${downloadInfo.web.version}` : '免安装云端版'}
-                  </span>
-                </div>
-
-                <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-2">全功能网页在线版</h3>
-                <p className="text-xs text-slate-500 leading-relaxed mb-5 landing-pretty-copy">
-                  无需下载安装任何安装包。无论在图书馆公用电脑、平板还是手机浏览器中，登录账号即可立刻接续上次刷题进度。
-                </p>
-
-                <ul className="space-y-2.5 text-xs text-slate-700 mb-7 font-medium">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span>10 秒创建独立研学沙盒，立享新人 5.0 积分</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span>错题本、艾宾浩斯闪卡与双链笔记跨设备实时同步</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span>支持一键打包导出全部本地标准 Markdown 笔记</span>
-                  </li>
-                </ul>
-              </div>
-
-              <div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (isAuthenticated) navigate('/dashboard')
-                    else openAuthWithIntent('register', undefined, '立即创建专属账号 · 跨设备实时同步研学进度')
-                  }}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl landing-cta-primary py-3 px-4 text-xs sm:text-sm font-bold text-white cursor-pointer"
-                >
-                  <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>{isAuthenticated ? '立即进入我的研学空间' : '免费注册 · 立即在线使用'}</span>
-                </button>
-                <div className="mt-2 text-center text-2xs text-slate-400">
-                  全面兼容电脑、iPad 平板与手机主流浏览器
-                </div>
-              </div>
-            </div>
-
-            {/* 2. 手机 / 移动伴学端（电脑端展示扫码，手机端智能展示添加到主屏幕与分享链接！） */}
-            <div className="landing-bento-card rounded-2xl p-5 sm:p-7 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-5">
-                  <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                    <Smartphone className="w-6 h-6" />
-                  </div>
-                  <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200/60">
-                    原生级全屏适配
-                  </span>
-                </div>
-
-                <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-2">手机 / 平板随身伴学端</h3>
-                <p className="text-xs text-slate-500 leading-relaxed mb-4 landing-pretty-copy">
-                  专为食堂排队、通勤与睡前碎片化复习优化。单手即可丝滑翻转记忆闪卡、刷政治千题与倾听白噪音。
-                </p>
-
-                {/* 桌面端显示扫码框；手机端显示贴心的“添加到手机桌面全屏图标”三步指引 */}
-                <div className="hidden sm:flex my-4 rounded-xl bg-slate-50 p-4 border border-slate-200/90 items-center gap-4">
-                  <div className="bg-white p-2 rounded-lg shrink-0 border border-slate-200 shadow-2xs">
-                    {qrCodeDataUrl ? (
-                      <img src={qrCodeDataUrl} alt="手机扫码访问研核" className="h-24 w-24 object-contain" />
-                    ) : (
-                      <div className="h-24 w-24 flex items-center justify-center text-2xs text-slate-400">
-                        二维码加载中
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-left text-xs space-y-1.5">
-                    <p className="font-bold text-slate-900">手机扫码 · 装进桌面：</p>
-                    <p className="text-slate-500 text-2xs">1. 用手机相机或微信扫描左侧二维码</p>
-                    <p className="text-slate-500 text-2xs">
-                      2. 点击浏览器菜单 <strong className="text-slate-900">「添加到主屏幕」</strong>
-                    </p>
-                    <p className="text-emerald-700 text-2xs font-bold">
-                      桌面生成独立研核图标，秒享全屏沉浸体验！
-                    </p>
-                  </div>
-                </div>
-
-                {/* 手机端专属指引卡片（避免让手机用户对着自己屏幕扫码） */}
-                <div className="sm:hidden my-4 rounded-xl bg-emerald-50/60 p-3.5 border border-emerald-200/80 text-left space-y-2 text-xs">
-                  <div className="font-bold text-emerald-950 flex items-center gap-1.5">
-                    <Layers className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>将「研核」生成手机桌面全屏图标：</span>
-                  </div>
-                  <p className="text-2xs text-slate-600 leading-relaxed">
-                    点击当前手机浏览器底部的 <strong>「分享 / 菜单」</strong> 按钮，选择{' '}
-                    <strong className="text-slate-900">「添加到主屏幕」</strong>，即可获得无地址栏遮挡的原生全屏刷题体验！
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  onClick={handleCopyCurrentUrl}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 py-3 px-4 text-xs font-bold text-slate-800 transition-all cursor-pointer"
-                >
-                  {copiedUrl ? (
-                    <>
-                      <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>网址已复制 · 可发至电脑或好友</span>
-                    </>
-                  ) : (
-                    <>
-                      <Share2 className="w-4 h-4 text-slate-600 shrink-0" />
-                      <span>一键复制网址（发送到电脑/平板打开）</span>
-                    </>
-                  )}
-                </button>
-                <div className="text-center text-2xs text-slate-400">
-                  全面支持 iOS / 鸿蒙 / 安卓移动端手势与安全区适配
-                </div>
-              </div>
-            </div>
-
-            {/* 3. Windows 桌面独立旗舰端 */}
-            <div className="landing-bento-card rounded-2xl p-5 sm:p-7 flex flex-col justify-between">
               <div>
                 <div className="flex items-center justify-between gap-2 mb-5">
                   <div className="w-12 h-12 rounded-xl bg-slate-100 text-slate-900 flex items-center justify-center shrink-0">
@@ -1285,21 +1267,21 @@ export default function LandingPage() {
 
                 <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-2">Windows 桌面客户端</h3>
                 <p className="text-xs text-slate-500 leading-relaxed mb-5 landing-pretty-copy">
-                  专为书桌长时间沉浸备考打造。独立窗口隔离浏览器娱乐标签页干扰，深度直连本地 Obsidian 知识库文件夹。
+                  专为书桌长时间沉浸备考打造。独立软件窗口隔绝浏览器娱乐干扰，深度直连本地 Obsidian 知识库目录。
                 </p>
 
                 <ul className="space-y-2.5 text-xs text-slate-700 mb-7 font-medium">
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span>独立应用窗口沉浸运行，告别网页弹窗分心</span>
+                    <span>独立应用窗口全屏沉浸复习，告别网页分心</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span>支持本地文件夹双向实时监听与离线查阅讲义</span>
+                    <span>本地 Markdown 笔记双向实时监听与一键备份</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span>一键安装开箱即用，支持本机命令行智能体桥接</span>
+                    <span>下载安装包直接运行，支持本机智能体桥接</span>
                   </li>
                 </ul>
               </div>
@@ -1315,11 +1297,151 @@ export default function LandingPage() {
                   <span>
                     {downloading
                       ? '正在拉取安装包...'
-                      : `下载 Windows 客户端${downloadInfo?.desktop?.size ? ` (${downloadInfo.desktop.size})` : ''}`}
+                      : `直接下载 Windows 安装包${downloadInfo?.desktop?.size ? ` (${downloadInfo.desktop.size})` : ''}`}
                   </span>
                 </button>
                 <div className="mt-2 text-center text-2xs text-slate-400">
-                  支持 Windows 10 / 11 (64位系统)
+                  免登录即可直接下载安装包 · 支持 Windows 10 / 11 (64位)
+                </div>
+              </div>
+            </div>
+
+            {/* 2. 手机 / 移动伴学端（提供真正的免登录手机端交互预览 + 明确登录入口边界！） */}
+            <div className="landing-bento-card rounded-2xl p-5 sm:p-7 flex flex-col justify-between border-2 border-emerald-500/20 relative">
+              <div className="absolute -top-3 left-6 px-3 py-0.5 rounded-full bg-emerald-600 text-white text-2xs font-bold tracking-wide shadow-xs">
+                支持免登录真机预览
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-5">
+                  <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                    <Smartphone className="w-6 h-6" />
+                  </div>
+                  <span className="text-xs font-mono text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200/60">
+                    {OFFICIAL_DOMAIN_HOST}
+                  </span>
+                </div>
+
+                <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-2">手机 / 平板随身伴学端</h3>
+                <p className="text-xs text-slate-500 leading-relaxed mb-4 landing-pretty-copy">
+                  专为排队、通勤与睡前碎片时间打造。可先免登录打开手机预览视图体验单手刷题与背词手感！
+                </p>
+
+                {/* 桌面端显示扫码框；手机端显示添加到主屏幕指引 */}
+                <div className="hidden sm:flex my-4 rounded-xl bg-slate-50 p-3.5 border border-slate-200/90 items-center gap-3.5">
+                  <div className="bg-white p-2 rounded-lg shrink-0 border border-slate-200 shadow-2xs">
+                    {qrCodeDataUrl ? (
+                      <img src={qrCodeDataUrl} alt="手机扫码访问研核官网" className="h-22 w-22 object-contain" />
+                    ) : (
+                      <div className="h-22 w-22 flex items-center justify-center text-2xs text-slate-400">
+                        二维码加载中
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-left text-xs space-y-1">
+                    <p className="font-bold text-slate-900">手机扫码访问官网：</p>
+                    <p className="text-slate-500 text-2xs font-mono">{OFFICIAL_DOMAIN}</p>
+                    <p className="text-slate-500 text-2xs">
+                      浏览器菜单点 <strong className="text-slate-900">「添加到主屏幕」</strong>
+                    </p>
+                    <p className="text-emerald-700 text-2xs font-bold">
+                      即刻生成桌面图标，畅享全屏刷卡！
+                    </p>
+                  </div>
+                </div>
+
+                <div className="sm:hidden my-4 rounded-xl bg-emerald-50/60 p-3.5 border border-emerald-200/80 text-left space-y-1.5 text-xs">
+                  <div className="font-bold text-emerald-950 flex items-center gap-1.5">
+                    <Layers className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>添加到手机主屏幕（免安装全屏体验）：</span>
+                  </div>
+                  <p className="text-2xs text-slate-600 leading-relaxed">
+                    点击当前浏览器菜单中的 <strong className="text-slate-900">「添加到主屏幕」</strong>，即可在手机桌面生成独立「研核」全屏图标。
+                  </p>
+                </div>
+              </div>
+
+              {/* 边界清晰的双按钮：主按钮 100% 免登录直接打开手机预览器；副按钮明确标注登录/注册 */}
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setMobilePreviewOpen(true)}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] py-3 px-4 text-xs sm:text-sm font-bold text-white shadow-xs transition-all cursor-pointer"
+                >
+                  <Play className="w-4 h-4 shrink-0" />
+                  <span>免登录预览手机伴学界面</span>
+                </button>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isAuthenticated) navigate('/dashboard')
+                      else openAuthWithIntent('login', undefined, '登录后自动同步您的手机与电脑研学进度')
+                    }}
+                    className="py-2 px-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-2xs sm:text-xs font-bold text-slate-800 transition-colors cursor-pointer"
+                  >
+                    {isAuthenticated ? '进入手机正式版' : '登录 / 注册正式版'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCopySiteUrl}
+                    className="py-2 px-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-2xs sm:text-xs font-bold text-slate-700 inline-flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                  >
+                    {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Share2 className="w-3.5 h-3.5" />}
+                    <span>{copiedUrl ? '已复制官网链接' : '复制官网地址'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. 全功能网页在线版（明确标注注册/登录引导文案） */}
+            <div className="landing-bento-card rounded-2xl p-5 sm:p-7 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-5">
+                  <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                    <Globe className="w-6 h-6" />
+                  </div>
+                  <span className="text-xs font-mono text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-200/60">
+                    {downloadInfo?.web?.version ? `在线版 v${downloadInfo.web.version}` : '云端多租户版'}
+                  </span>
+                </div>
+
+                <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-2">全功能网页在线空间</h3>
+                <p className="text-xs text-slate-500 leading-relaxed mb-5 landing-pretty-copy">
+                  无需安装软件，在图书馆公用电脑、iPad 或笔记本浏览器访问 <span className="font-mono text-slate-700">{OFFICIAL_DOMAIN_HOST}</span> 登录账号即可开始学习。
+                </p>
+
+                <ul className="space-y-2.5 text-xs text-slate-700 mb-7 font-medium">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span>10 秒免手机号注册，自动继承上方试玩问答与错题</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span>做题进度、错题归因与双链笔记跨设备实时云端同步</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span>支持随时一键打包导出个人全部标准 Markdown 笔记</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isAuthenticated) navigate('/dashboard')
+                    else openAuthWithIntent('register')
+                  }}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl landing-cta-primary py-3 px-4 text-xs sm:text-sm font-bold text-white cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>{isAuthenticated ? '立即进入我的网页空间' : '注册 / 登录网页研学空间'}</span>
+                </button>
+                <div className="mt-2 text-center text-2xs text-slate-400">
+                  注册即赠 5.0 初始研学积分 · 独立沙盒安全存储
                 </div>
               </div>
             </div>
@@ -1327,9 +1449,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* =====================================================================
-          8. 页脚前终极召唤横幅 (Final Conversion Callout)
-         ===================================================================== */}
+      {/* 页脚前终极冲刺召唤横幅 */}
       <section className="w-full max-w-[1280px] mx-auto px-3.5 sm:px-8 py-12 sm:py-16">
         <div className="rounded-3xl bg-gradient-to-br from-[#12131a] via-[#191c2e] to-[#0f172a] text-white p-6 sm:p-12 shadow-[0_24px_60px_rgba(15,23,42,0.22)] border border-white/10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative overflow-hidden">
           <div className="space-y-2.5 max-w-2xl text-left relative z-10">
@@ -1341,7 +1461,10 @@ export default function LandingPage() {
               现在开启你的 CoreForge 研核专属备考空间
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 leading-relaxed landing-pretty-copy">
-              距离 {countdown.targetLabel} 还有 {countdown.days} 天。立即用 10 秒钟创建账号，领取 5.0 初始研学积分，把零散的刷题与笔记收拢成无懈可击的知识体系。
+              距离 {countdown.targetLabel} 还有 {countdown.days} 天。
+              {trialSummary.totalFootprints > 0
+                ? `立即注册即可永久保存您刚才产生的 ${trialSummary.totalFootprints} 项试玩问答与错题，并获赠 5.0 初始积分！`
+                : '立即用 10 秒钟创建账号，领取 5.0 初始研学积分，把零散的刷题与笔记收拢成无懈可击的知识体系。'}
             </p>
           </div>
 
@@ -1350,49 +1473,57 @@ export default function LandingPage() {
               type="button"
               onClick={() => {
                 if (isAuthenticated) navigate('/dashboard')
-                else openAuthWithIntent('register', undefined, '欢迎加入研核！注册即赠 5.0 积分与专属救援码')
+                else openAuthWithIntent('register')
               }}
               className="px-6 py-3.5 rounded-2xl bg-white hover:bg-slate-100 text-slate-950 font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 cursor-pointer"
             >
               <UserPlus className="w-4 h-4 text-indigo-600" />
-              <span>{isAuthenticated ? '进入研学工作台' : '免费注册账号 (赠 5 积分)'}</span>
+              <span>
+                {isAuthenticated
+                  ? '进入研学工作台'
+                  : trialSummary.totalFootprints > 0
+                  ? `免费注册并继承 ${trialSummary.totalFootprints} 项记录`
+                  : '免费注册账号 (赠 5 积分)'}
+              </span>
             </button>
             <button
               type="button"
-              onClick={() => scrollToSection('#hub')}
+              onClick={() => setMobilePreviewOpen(true)}
               className="px-5 py-3.5 rounded-2xl bg-white/10 hover:bg-white/15 text-white border border-white/20 font-bold text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer"
             >
-              <Compass className="w-4 h-4" />
-              <span>浏览八大功能舱</span>
+              <Smartphone className="w-4 h-4 text-emerald-300" />
+              <span>免登录预览手机版</span>
             </button>
           </div>
         </div>
       </section>
 
       {/* =====================================================================
-          9. 品牌页脚 (Footer)
+          品牌权威页脚（含官方品牌域名 https://claudexxb.online）
          ===================================================================== */}
       <footer className="border-t border-slate-200/90 bg-white py-8 sm:py-10 text-slate-500 text-xs">
-        <div className="max-w-[1280px] mx-auto px-4 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 text-center sm:text-left">
+        <div className="max-w-[1280px] mx-auto px-4 sm:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 text-center md:text-left">
             <div className="w-5 h-5 rounded bg-[#18181b] text-white flex items-center justify-center text-2xs font-bold shrink-0">
               研
             </div>
-            <span className="font-bold text-slate-800">CoreForge 研核</span>
-            <span>· 408 计算机与考研数/英/政全栈智能研学操作系统</span>
+            <span className="font-bold text-slate-800">CoreForge 研核官网</span>
+            <span>·</span>
+            <a
+              href={OFFICIAL_DOMAIN}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 font-mono font-semibold text-indigo-600 hover:text-indigo-700"
+            >
+              <span>{OFFICIAL_DOMAIN_HOST}</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
+            <span className="hidden sm:inline text-slate-400">
+              · 408 计算机与考研数/英/政智能研学操作系统
+            </span>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-5 text-slate-600 font-semibold">
-            <a
-              href="#hub"
-              onClick={(e) => {
-                e.preventDefault()
-                scrollToSection('#hub')
-              }}
-              className="hover:text-slate-900 transition-colors"
-            >
-              全景导航舱
-            </a>
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-5 text-slate-600 font-semibold">
             <a
               href="#preview"
               onClick={(e) => {
@@ -1401,7 +1532,27 @@ export default function LandingPage() {
               }}
               className="hover:text-slate-900 transition-colors"
             >
-              动手试玩
+              免登录试玩
+            </a>
+            <a
+              href="#subjects"
+              onClick={(e) => {
+                e.preventDefault()
+                scrollToSection('#subjects')
+              }}
+              className="hover:text-slate-900 transition-colors"
+            >
+              考研四核
+            </a>
+            <a
+              href="#trust"
+              onClick={(e) => {
+                e.preventDefault()
+                scrollToSection('#trust')
+              }}
+              className="hover:text-slate-900 transition-colors"
+            >
+              真题年份与导出说明
             </a>
             <a
               href="#download"
@@ -1424,36 +1575,43 @@ export default function LandingPage() {
         </div>
       </footer>
 
-      {/* =====================================================================
-          10. 移动端滚动感知底部悬浮转化栏 (Sticky Mobile Conversion Bar)
-         ===================================================================== */}
-      {!isAuthenticated && showMobileStickyCta && !authModalOpen && !fullScreenSandbox && (
+      {/* 移动端滚动感知底部悬浮转化栏 */}
+      {!isAuthenticated && showMobileStickyCta && !authModalOpen && !fullScreenSandbox && !mobilePreviewOpen && (
         <div className="md:hidden fixed inset-x-0 bottom-0 z-40 px-3 pt-2.5 pb-[max(0.65rem,env(safe-area-inset-bottom,0px))] bg-white/92 backdrop-blur-xl border-t border-slate-200/90 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] flex items-center gap-2 animate-fade-in-up">
           <button
             type="button"
-            onClick={() => setFullScreenSandbox(true)}
-            className="px-3.5 py-2.5 rounded-xl bg-slate-100 active:bg-slate-200 text-slate-800 border border-slate-200/90 text-xs font-bold flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+            onClick={() => setMobilePreviewOpen(true)}
+            className="px-3 py-2.5 rounded-xl bg-slate-100 active:bg-slate-200 text-slate-800 border border-slate-200/90 text-xs font-bold flex items-center justify-center gap-1 shrink-0 cursor-pointer"
           >
-            <Play className="w-3.5 h-3.5 text-indigo-600" />
-            <span>全屏试玩</span>
+            <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
+            <span>免登录预览</span>
           </button>
           <button
             type="button"
-            onClick={() =>
-              openAuthWithIntent('register', undefined, '10 秒极速注册 · 立赠 5.0 研学积分与独立知识库')
-            }
-            className="flex-1 py-2.5 px-4 rounded-xl landing-cta-primary text-white text-xs font-extrabold flex items-center justify-center gap-1.5 cursor-pointer"
+            onClick={() => openAuthWithIntent('register')}
+            className="flex-1 py-2.5 px-3.5 rounded-xl landing-cta-primary text-white text-xs font-extrabold flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <Gift className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-            <span className="truncate">免费注册领 5 积分</span>
+            <span className="truncate">
+              {trialSummary.totalFootprints > 0
+                ? `注册并保存 ${trialSummary.totalFootprints} 项试玩`
+                : '免费注册领 5 积分'}
+            </span>
             <ArrowRight className="w-3.5 h-3.5 shrink-0" />
           </button>
         </div>
       )}
 
-      {/* =====================================================================
-          11. 双栏高转化注册/登录模态框 + 新人欢迎与救援码备份卡 (Portal)
-         ===================================================================== */}
+      {/* 免登录移动端伴学界面预览模态框 */}
+      <MobilePreviewModal
+        open={mobilePreviewOpen}
+        isAuthenticated={isAuthenticated}
+        onClose={() => setMobilePreviewOpen(false)}
+        onOpenRegister={(hint) => openAuthWithIntent('register', undefined, hint)}
+        onEnterWorkspace={() => navigate('/dashboard')}
+      />
+
+      {/* 双栏高转化注册/登录模态框 + 试玩状态继承回执 + 新人救援码备份卡 */}
       {authModalOpen &&
         createPortal(
           <div
@@ -1468,7 +1626,6 @@ export default function LandingPage() {
             aria-labelledby="auth-modal-heading"
           >
             <div className="relative w-full max-w-[960px] max-h-[calc(100dvh-1.5rem)] sm:max-h-[min(92dvh,760px)] rounded-3xl bg-[#e3e4e8] p-2 sm:p-3 shadow-[0_28px_70px_rgba(0,0,0,0.48)] border border-white/70 grid grid-cols-1 lg:grid-cols-12 gap-3 overflow-hidden my-auto animate-in zoom-in-95 duration-200">
-              {/* 右上角大触控关闭按钮 */}
               {!registeredWelcome && (
                 <button
                   type="button"
@@ -1481,11 +1638,10 @@ export default function LandingPage() {
                 </button>
               )}
 
-              {/* ── 左栏：核心注册 / 登录 / 找回密码 / 新人欢迎仪式卡 ── */}
+              {/* 左栏：注册 / 登录 / 找回密码 / 注册成功欢迎卡 */}
               <div className="lg:col-span-6 bg-[#f6f6f8] rounded-2xl p-4 sm:p-7 flex flex-col justify-between text-left border border-white/90 overflow-y-auto max-h-[calc(100dvh-2.5rem)] lg:max-h-none modal-scroll-contain overscroll-contain">
                 {registeredWelcome ? (
-                  /* 注册成功：尊享礼遇与专属应急救援码备份仪式屏 */
-                  <div className="space-y-4 my-auto py-2">
+                  <div className="space-y-3.5 my-auto py-1">
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                       <span>研学空间创建成功 · 已自动登入</span>
@@ -1499,9 +1655,29 @@ export default function LandingPage() {
                         欢迎加入研核，{registeredWelcome.username}！
                       </h2>
                       <p className="mt-1 text-xs text-slate-600 leading-relaxed">
-                        系统已为您开通独立双链笔记沙盒，并自动发放新人研学礼遇：
+                        您的独立双链知识库与新人研学礼遇已全部就绪：
                       </p>
                     </div>
+
+                    {/* 若成功继承了试玩成果，展示醒目回执卡片 */}
+                    {registeredWelcome.inheritResult?.inherited && (
+                      <div className="p-3.5 rounded-2xl bg-indigo-50 border border-indigo-200 text-xs text-indigo-950 space-y-1">
+                        <div className="font-extrabold flex items-center gap-1.5 text-indigo-800">
+                          <BookmarkCheck className="w-4 h-4 text-indigo-600" />
+                          <span>已自动继承您的首页试玩学习记录！</span>
+                        </div>
+                        <p className="text-[11.5px] text-indigo-900/85 leading-relaxed">
+                          系统已为您生成首篇双链笔记{' '}
+                          <code className="px-1 py-0.5 rounded bg-white border border-indigo-200 text-indigo-800">
+                            00-试玩留存笔记/首篇研学试玩精华.md
+                          </code>
+                          {registeredWelcome.inheritResult.conversationsSynced > 0 && '、同步 AI 导师试玩会话'}
+                          {registeredWelcome.inheritResult.errorsSaved > 0 &&
+                            `、并录入 ${registeredWelcome.inheritResult.errorsSaved} 道待复盘错题`}
+                          。
+                        </p>
+                      </div>
+                    )}
 
                     <div className="p-3.5 rounded-2xl bg-white border border-emerald-200/90 flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
@@ -1519,7 +1695,7 @@ export default function LandingPage() {
                     </div>
 
                     {registeredWelcome.recoveryCode && (
-                      <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-300/80 space-y-2">
+                      <div className="p-3.5 rounded-2xl bg-amber-50/90 border border-amber-300/80 space-y-2">
                         <div className="flex items-center justify-between gap-2">
                           <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-950">
                             <KeyRound className="w-4 h-4 text-amber-700" />
@@ -1546,30 +1722,41 @@ export default function LandingPage() {
                         <div className="py-2 px-3 rounded-xl bg-white border border-amber-200 font-mono text-sm font-extrabold text-slate-900 tracking-wider text-center select-all">
                           {registeredWelcome.recoveryCode}
                         </div>
-                        <p className="text-2xs text-amber-900/80 leading-relaxed">
-                          当您遗忘登录密码时，凭此救援码即可在登录窗零门槛自助重置新密码。
-                        </p>
                       </div>
                     )}
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const dest = registeredWelcome.targetPath
-                        setRegisteredWelcome(null)
-                        setAuthModalOpen(false)
-                        navigate(dest, { replace: true })
-                      }}
-                      className="w-full py-3.5 px-5 rounded-xl landing-cta-primary text-white text-sm font-bold flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      <span>立即进入「{registeredWelcome.targetLabel}」</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const dest = registeredWelcome.targetPath
+                          setRegisteredWelcome(null)
+                          setAuthModalOpen(false)
+                          navigate(dest, { replace: true })
+                        }}
+                        className="py-3 px-4 rounded-xl landing-cta-primary text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <span className="truncate">进入{registeredWelcome.targetLabel}</span>
+                        <ArrowRight className="w-4 h-4 shrink-0" />
+                      </button>
+                      {registeredWelcome.inheritResult?.notesCreated ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRegisteredWelcome(null)
+                            setAuthModalOpen(false)
+                            navigate('/editor', { replace: true })
+                          }}
+                          className="py-3 px-4 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <span>查看首篇试玩笔记</span>
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                 ) : (
                   <>
                     <div>
-                      {/* 品牌顶栏 */}
                       <div className="flex items-center gap-2 mb-3.5">
                         <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl overflow-hidden flex items-center justify-center shadow-2xs ring-1 ring-rose-200/70 shrink-0">
                           <img src="/icon-192.png?v=dango" alt="研核" className="h-full w-full object-cover" />
@@ -1577,7 +1764,6 @@ export default function LandingPage() {
                         <span className="font-extrabold text-sm text-slate-900">CoreForge 研核工作台</span>
                       </div>
 
-                      {/* 目标跳转意图或福利横幅 */}
                       {contextBannerHint && modalTab !== 'forgot' && (
                         <div className="mb-3.5 px-3 py-2 rounded-xl bg-indigo-50 border border-indigo-200/80 text-indigo-900 text-xs font-medium flex items-center gap-2">
                           <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
@@ -1585,7 +1771,6 @@ export default function LandingPage() {
                         </div>
                       )}
 
-                      {/* 顶部高可见分段 Tab 切换（新用户注册优先展示，大幅提升注册转化率） */}
                       {initialized && modalTab !== 'forgot' && (
                         <div className="mb-4 grid grid-cols-2 gap-1 p-1 rounded-xl bg-[#e4e5e9] border border-black/[0.05]">
                           <button
@@ -1637,7 +1822,7 @@ export default function LandingPage() {
                         {modalTab === 'forgot'
                           ? '支持安全密保问答或 8 位专属救援码自助重置'
                           : modalTab === 'register'
-                          ? '无需手机号验证，注册即刻开通独立知识库与 5.0 积分'
+                          ? '无需手机号验证，试玩记录自动继承并立赠 5.0 积分'
                           : '登录后自动同步您的刷题记录、错题归因与闪卡进度'}
                       </p>
 
@@ -1661,7 +1846,6 @@ export default function LandingPage() {
                         </div>
                       )}
 
-                      {/* 登录与注册统一高可访问性表单（移动端 16px 字号防 iOS 自动放大） */}
                       {modalTab !== 'forgot' ? (
                         <form noValidate onSubmit={handleModalAuthSubmit} className="space-y-3">
                           <div>
@@ -1796,11 +1980,15 @@ export default function LandingPage() {
                             className="w-full py-3 px-4 rounded-xl landing-cta-primary text-white text-sm font-bold transition-all cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 mt-1"
                           >
                             {modalLoading ? (
-                              <span>正在安全处理...</span>
+                              <span>正在安全处理并同步试玩记录...</span>
                             ) : modalTab === 'register' ? (
                               <>
                                 <Gift className="w-4 h-4 text-amber-300" />
-                                <span>立即创建账号 · 领取 5.0 积分</span>
+                                <span>
+                                  {trialSummary.totalFootprints > 0
+                                    ? `创建账号 · 继承 ${trialSummary.totalFootprints} 项试玩并领积分`
+                                    : '立即创建账号 · 领取 5.0 积分'}
+                                </span>
                               </>
                             ) : (
                               <>
@@ -1811,7 +1999,6 @@ export default function LandingPage() {
                           </button>
                         </form>
                       ) : (
-                        /* 找回密码表单 */
                         <div className="space-y-3">
                           {forgotStep === 1 ? (
                             <form onSubmit={handleQuerySecurityQuestion} className="space-y-3">
@@ -1960,14 +2147,14 @@ export default function LandingPage() {
                     </div>
 
                     <div className="pt-3 border-t border-slate-200/90 mt-4 flex items-center justify-between text-2xs text-slate-500">
-                      <span>本地优先存储 · 账号沙盒严格隔离</span>
-                      <span>密保与救援码双轨守护</span>
+                      <span>标准 Markdown 随时导出 · 独立沙盒隔离</span>
+                      <span className="font-mono">{OFFICIAL_DOMAIN_HOST}</span>
                     </div>
                   </>
                 )}
               </div>
 
-              {/* ── 右栏：新人注册四大专属权益看板与实时画板预览（桌面端展现） ── */}
+              {/* 右栏：新人注册专属权益与试玩状态继承看板 */}
               <div className="hidden lg:flex lg:col-span-6 flex-col justify-between rounded-2xl bg-gradient-to-br from-[#12141f] via-[#171b2e] to-[#0f172a] text-white p-7 border border-white/10">
                 <div className="space-y-5 text-left">
                   <div className="flex items-center justify-between">
@@ -1981,30 +2168,30 @@ export default function LandingPage() {
 
                   <div>
                     <h3 className="text-xl font-extrabold tracking-tight text-white">
-                      一套研学系统，打通考研全周期
+                      试玩成果无缝继承，沉淀终身知识库
                     </h3>
                     <p className="mt-1 text-xs text-slate-300 leading-relaxed">
-                      不再在刷题软件、零散 PDF 与背词工具之间来回切换，所有努力沉淀为终身受用的知识资产。
+                      您在首页试玩实验室产生的提问解答、做题草稿与错因收藏，注册后自动写入个人空间。
                     </p>
                   </div>
 
                   <div className="space-y-3">
                     {[
                       {
+                        title: '自动保留试玩首篇笔记与错题记录',
+                        desc: '无缝继承刚才的 AI 导师解答、高数判分与闪卡自评，拒绝重头再来',
+                      },
+                      {
                         title: '立赠 5.0 初始 AI 研学积分',
-                        desc: '畅享 408/高数大题逐级启发点拨与考研英语 20 分制智能精批',
+                        desc: '畅享 408/数学大题逐级启发点拨与考研英语 20 分制智能精批',
                       },
                       {
-                        title: '独立本地优先 Markdown 双链知识库',
-                        desc: '原生支持 KaTeX 数学公式渲染，随时一键打包导出本地文件',
+                        title: '1987–2024 统考真题库 + 艾宾浩斯闪卡',
+                        desc: '做错真题自动三维归因，每日按遗忘曲线精准推送待巩固卡片',
                       },
                       {
-                        title: '智能错题三维归因与艾宾浩斯闪卡',
-                        desc: '做错真题自动录入个人错题本，按遗忘曲线科学调度每日复习',
-                      },
-                      {
-                        title: '电脑、平板与手机全平台实时同步',
-                        desc: '书桌大屏深度推导，排队睡前手机单手刷卡，无缝接力',
+                        title: '多端云同步 + 100% 本地 Markdown 导出',
+                        desc: '手机电脑实时接力，所有笔记随时一键打包导出到本地硬盘或 Obsidian',
                       },
                     ].map((benefit) => (
                       <div
@@ -2028,7 +2215,7 @@ export default function LandingPage() {
                       alt="伴学桌宠"
                       className="w-7 h-7 object-contain"
                     />
-                    <span className="text-slate-300 font-medium">内置奶龙伴学桌宠与 Lofi 沉浸自习电台</span>
+                    <span className="text-slate-300 font-medium">官方认证域名：{OFFICIAL_DOMAIN_HOST}</span>
                   </div>
                   <span className="text-emerald-300 font-bold">免费开放注册</span>
                 </div>
@@ -2038,9 +2225,7 @@ export default function LandingPage() {
           document.body
         )}
 
-      {/* =====================================================================
-          12. 全屏沉浸式试玩视窗模态框 (document.body Portal, 适配移动端动态视口)
-         ===================================================================== */}
+      {/* 全屏沉浸式试玩视窗模态框（与内嵌试玩共享同一份持久化状态，来回切换零丢失！） */}
       {fullScreenSandbox &&
         createPortal(
           <div
@@ -2049,18 +2234,22 @@ export default function LandingPage() {
             aria-modal="true"
             aria-label="全屏沉浸试玩实验室"
           >
-            {/* 全屏顶栏（适配刘海安全区） */}
             <div className="min-h-12 px-2.5 sm:px-5 py-1.5 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 flex items-center justify-between gap-1.5 shrink-0 pt-[max(0.375rem,env(safe-area-inset-top,0px))]">
               <div className="flex items-center gap-2 shrink-0">
                 <div className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center overflow-hidden rounded-lg border border-rose-200/30 shadow-xs shrink-0">
                   <img src="/icon-192.png?v=dango" alt="研核" className="h-full w-full object-cover" />
                 </div>
                 <span className="hidden sm:inline font-extrabold text-white text-sm whitespace-nowrap">
-                  免登录试玩实验室
+                  全屏试玩实验室
                 </span>
+                {trialSummary.totalFootprints > 0 && (
+                  <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-2xs font-bold">
+                    <BookmarkCheck className="w-3 h-3" />
+                    <span>已同步暂存 {trialSummary.totalFootprints} 项记录</span>
+                  </span>
+                )}
               </div>
 
-              {/* 中间：五科切换胶囊 */}
               <div className="flex-1 min-w-0 flex justify-center">
                 <div className="flex items-center gap-0.5 sm:gap-1 p-0.5 rounded-xl bg-slate-800/90 border border-slate-700 text-2xs sm:text-xs max-w-full overflow-x-auto no-scrollbar">
                   {[
@@ -2085,40 +2274,44 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* 右侧：一键注册转化 + 退出全屏 */}
               <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                 {!isAuthenticated && (
                   <button
                     type="button"
                     onClick={() => {
                       setFullScreenSandbox(false)
-                      openAuthWithIntent(
-                        'register',
-                        {
-                          path: modeConfigs[activeMode].targetPath,
-                          label: modeConfigs[activeMode].targetLabel,
-                        },
-                        `注册立赠 5.0 积分 · 解锁完整「${modeConfigs[activeMode].targetLabel}」`
-                      )
+                      openAuthWithIntent('register', {
+                        path:
+                          trialSummary.aiTurnsCount > 0
+                            ? '/chat'
+                            : modeConfigs[activeMode].targetPath,
+                        label:
+                          trialSummary.aiTurnsCount > 0
+                            ? 'AI 伴学工作台'
+                            : modeConfigs[activeMode].targetLabel,
+                      })
                     }}
                     className="hidden xs:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-2xs sm:text-xs font-extrabold transition-all cursor-pointer"
                   >
-                    <span>免费注册</span>
+                    <span>
+                      {trialSummary.totalFootprints > 0
+                        ? `注册保存(${trialSummary.totalFootprints})`
+                        : '免费注册'}
+                    </span>
                   </button>
                 )}
                 <button
                   type="button"
                   onClick={() => setFullScreenSandbox(false)}
                   className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-500/40 text-2xs sm:text-xs font-bold transition-all active:scale-95 cursor-pointer shrink-0"
-                  title="退出全屏试玩 (ESC)"
+                  title="退出全屏返回页面（当前问答与草稿进度自动保留）"
                 >
                   <Minimize2 className="w-3.5 h-3.5" />
-                  <span>退出</span>
+                  <span>返回页面</span>
                 </button>
               </div>
             </div>
 
-            {/* 全屏主体试玩内容 */}
             <div className="flex-1 w-full min-h-0 bg-slate-950 relative overflow-hidden flex flex-col pb-[env(safe-area-inset-bottom,0px)]">
               {activeMode === '408' ? (
                 <div className="w-full h-full flex flex-col overflow-hidden">

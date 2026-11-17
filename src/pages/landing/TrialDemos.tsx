@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { taylorApproxCourseware } from '../../data/coursewares/taylorApprox'
 import { matrixEigenCourseware } from '../../data/coursewares/matrixEigen'
+import {
+  loadTrialBridgeState,
+  subscribeTrialBridge,
+  updateTrialBridgeState,
+} from '../../utils/trialStateBridge'
 
 /**
  * 落地页「免登录动手试玩」：考研数学真实功能实验室 & AI 导师互动沙盒。
@@ -78,16 +83,56 @@ const MATH_PRACTICE_ITEMS: MathPracticeItem[] = [
 ]
 
 export function MathTrialDemo({ fullscreen, onEnter }: DemoProps) {
-  const [subTab, setSubTab] = useState<MathSubTab>('taylor')
-  const [qIdx, setQIdx] = useState(0)
-  const [selectedOpt, setSelectedOpt] = useState<'A' | 'B' | 'C' | 'D' | null>(null)
-  const [submitted, setSubmitted] = useState(false)
+  const initBridge = loadTrialBridgeState()
+  const initQ = MATH_PRACTICE_ITEMS[initBridge.mathQIdx] || MATH_PRACTICE_ITEMS[0]
+  const initAns = initBridge.mathAnswers[initQ.id]
+
+  const [subTab, setSubTabState] = useState<MathSubTab>(initBridge.mathSubTab || 'taylor')
+  const [qIdx, setQIdx] = useState<number>(initBridge.mathQIdx || 0)
+  const [selectedOpt, setSelectedOpt] = useState<'A' | 'B' | 'C' | 'D' | null>(
+    initAns?.selectedOpt ?? null
+  )
+  const [submitted, setSubmitted] = useState<boolean>(Boolean(initAns?.submitted))
   const [showScratchpad, setShowScratchpad] = useState(true)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const drawingRef = useRef(false)
 
-  const currentQ = MATH_PRACTICE_ITEMS[qIdx]
+  const currentQ = MATH_PRACTICE_ITEMS[qIdx] || MATH_PRACTICE_ITEMS[0]
   const isCorrect = submitted && selectedOpt === currentQ.correct
+
+  const setSubTab = (nextTab: MathSubTab) => {
+    setSubTabState(nextTab)
+    updateTrialBridgeState({ mathSubTab: nextTab })
+  }
+
+  // 恢复电子草稿画布快照
+  useEffect(() => {
+    if (subTab !== 'quiz' || !showScratchpad) return
+    const savedUrl = loadTrialBridgeState().mathScratchpadDataUrl
+    const canvas = canvasRef.current
+    if (!canvas || !savedUrl) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    const img = new Image()
+    img.onload = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+    }
+    img.src = savedUrl
+  }, [subTab, showScratchpad, fullscreen])
+
+  // 监听跨视窗（内嵌 <-> 全屏）状态同步
+  useEffect(() => {
+    return subscribeTrialBridge((next) => {
+      setSubTabState(next.mathSubTab || 'taylor')
+      const nextIdx = next.mathQIdx || 0
+      setQIdx(nextIdx)
+      const q = MATH_PRACTICE_ITEMS[nextIdx] || MATH_PRACTICE_ITEMS[0]
+      const savedAns = next.mathAnswers[q.id]
+      setSelectedOpt(savedAns?.selectedOpt ?? null)
+      setSubmitted(Boolean(savedAns?.submitted))
+    })
+  }, [])
 
   const clearCanvas = () => {
     const canvas = canvasRef.current
@@ -95,6 +140,7 @@ export function MathTrialDemo({ fullscreen, onEnter }: DemoProps) {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
     ctx.clearRect(0, 0, canvas.width, canvas.height)
+    updateTrialBridgeState({ mathScratchpadDataUrl: undefined })
   }
 
   const getPointerPos = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -132,14 +178,46 @@ export function MathTrialDemo({ fullscreen, onEnter }: DemoProps) {
   }
 
   const handlePointerUp = () => {
+    if (drawingRef.current && canvasRef.current) {
+      try {
+        updateTrialBridgeState({ mathScratchpadDataUrl: canvasRef.current.toDataURL('image/png') })
+      } catch {}
+    }
     drawingRef.current = false
   }
 
+  const persistQuestionState = (
+    q: MathPracticeItem,
+    opt: 'A' | 'B' | 'C' | 'D' | null,
+    isSub: boolean,
+    nextQIdx = qIdx
+  ) => {
+    updateTrialBridgeState((prev) => ({
+      mathQIdx: nextQIdx,
+      mathAnswers: {
+        ...prev.mathAnswers,
+        [q.id]: {
+          questionId: q.id,
+          tag: q.tag,
+          title: q.title,
+          stem: q.stem,
+          selectedOpt: opt,
+          correctOpt: q.correct,
+          submitted: isSub,
+          explanation: q.steps.map((s, idx) => `${idx + 1}. ${s}`).join('\n'),
+          trap: q.trap,
+        },
+      },
+    }))
+  }
+
   const switchQuestion = (nextIdx: number) => {
+    const nextQ = MATH_PRACTICE_ITEMS[nextIdx] || MATH_PRACTICE_ITEMS[0]
+    const saved = loadTrialBridgeState().mathAnswers[nextQ.id]
     setQIdx(nextIdx)
-    setSelectedOpt(null)
-    setSubmitted(false)
-    clearCanvas()
+    setSelectedOpt(saved?.selectedOpt ?? null)
+    setSubmitted(Boolean(saved?.submitted))
+    updateTrialBridgeState({ mathQIdx: nextIdx })
   }
 
   return (
@@ -277,7 +355,10 @@ export function MathTrialDemo({ fullscreen, onEnter }: DemoProps) {
                     key={opt.key}
                     type="button"
                     onClick={() => {
-                      if (!submitted) setSelectedOpt(opt.key)
+                      if (!submitted) {
+                        setSelectedOpt(opt.key)
+                        persistQuestionState(currentQ, opt.key, false)
+                      }
                     }}
                     className={`p-2.5 rounded-xl border text-left text-xs flex items-center gap-2 transition-all cursor-pointer ${style}`}
                   >
@@ -296,7 +377,10 @@ export function MathTrialDemo({ fullscreen, onEnter }: DemoProps) {
                 <button
                   type="button"
                   disabled={!selectedOpt}
-                  onClick={() => setSubmitted(true)}
+                  onClick={() => {
+                    setSubmitted(true)
+                    persistQuestionState(currentQ, selectedOpt, true)
+                  }}
                   className="px-4 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 disabled:opacity-40 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
                 >
                   {selectedOpt ? `提交选项 ${selectedOpt} 并核对踩分点` : '请先点选一个答案选项'}
@@ -319,6 +403,7 @@ export function MathTrialDemo({ fullscreen, onEnter }: DemoProps) {
                     onClick={() => {
                       setSubmitted(false)
                       setSelectedOpt(null)
+                      persistQuestionState(currentQ, null, false)
                     }}
                     className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-2xs text-slate-200 cursor-pointer"
                   >
@@ -590,29 +675,63 @@ function buildDemoAnswer(
 }
 
 export function AgentTrialDemo({ fullscreen, onEnter }: DemoProps) {
-  const [agentId, setAgentId] = useState<DemoAgentId>('408')
-  const [tone, setTone] = useState<DemoTone>('rigorous')
-  const [dualMode, setDualMode] = useState(false)
+  const initBridge = loadTrialBridgeState()
+  const initAgentId: DemoAgentId = initBridge.aiAgentId || '408'
+
+  const [agentId, setAgentId] = useState<DemoAgentId>(initAgentId)
+  const [tone, setToneState] = useState<DemoTone>(initBridge.aiTone || 'rigorous')
+  const [dualMode, setDualModeState] = useState<boolean>(Boolean(initBridge.aiDualMode))
   const [inputText, setInputText] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
-  const [messages, setMessages] = useState<DemoChatMessage[]>(() => [
-    {
-      id: 'init-welcome',
-      role: 'assistant',
-      agentName: DEMO_AGENTS['408'].name,
-      agentIcon: DEMO_AGENTS['408'].icon,
-      content: DEMO_AGENTS['408'].welcome,
-    },
-  ])
+  const isStreamingRef = useRef(false)
+  const [messages, setMessages] = useState<DemoChatMessage[]>(() =>
+    initBridge.aiMessages && initBridge.aiMessages.length > 0
+      ? (initBridge.aiMessages as DemoChatMessage[])
+      : [
+          {
+            id: 'init-welcome',
+            role: 'assistant',
+            agentName: DEMO_AGENTS[initAgentId].name,
+            agentIcon: DEMO_AGENTS[initAgentId].icon,
+            content: DEMO_AGENTS[initAgentId].welcome,
+          },
+        ]
+  )
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const timerRef = useRef<number | null>(null)
 
   const activeAgent = DEMO_AGENTS[agentId]
 
+  const setTone = (nextTone: DemoTone) => {
+    setToneState(nextTone)
+    updateTrialBridgeState({ aiTone: nextTone })
+  }
+
+  const toggleDualMode = () => {
+    setDualModeState((prev) => {
+      const next = !prev
+      updateTrialBridgeState({ aiDualMode: next })
+      return next
+    })
+  }
+
   useEffect(() => {
     return () => {
       if (timerRef.current) window.clearInterval(timerRef.current)
     }
+  }, [])
+
+  // 订阅跨视窗（内嵌试玩 <-> 全屏试玩）实时对话与错题收藏同步
+  useEffect(() => {
+    return subscribeTrialBridge((next) => {
+      if (isStreamingRef.current) return
+      setAgentId(next.aiAgentId || '408')
+      setToneState(next.aiTone || 'rigorous')
+      setDualModeState(Boolean(next.aiDualMode))
+      if (next.aiMessages && next.aiMessages.length > 0) {
+        setMessages(next.aiMessages as DemoChatMessage[])
+      }
+    })
   }, [])
 
   useEffect(() => {
@@ -623,18 +742,35 @@ export function AgentTrialDemo({ fullscreen, onEnter }: DemoProps) {
 
   const handleSelectAgent = (nextId: DemoAgentId) => {
     if (timerRef.current) window.clearInterval(timerRef.current)
+    isStreamingRef.current = false
     setIsStreaming(false)
     setAgentId(nextId)
     const next = DEMO_AGENTS[nextId]
-    setMessages([
-      {
-        id: `welcome-${nextId}-${Date.now()}`,
-        role: 'assistant',
-        agentName: next.name,
-        agentIcon: next.icon,
-        content: next.welcome,
-      },
-    ])
+    setMessages((prev) => {
+      const hasUserTurns = prev.some((m) => m.role === 'user')
+      const nextList: DemoChatMessage[] = hasUserTurns
+        ? [
+            ...prev,
+            {
+              id: `welcome-${nextId}-${Date.now()}`,
+              role: 'assistant',
+              agentName: next.name,
+              agentIcon: next.icon,
+              content: `已为您无缝接力切换至 ${next.name}（${next.role}），您先前的提问记录已保留。${next.welcome}`,
+            },
+          ]
+        : [
+            {
+              id: `welcome-${nextId}-${Date.now()}`,
+              role: 'assistant',
+              agentName: next.name,
+              agentIcon: next.icon,
+              content: next.welcome,
+            },
+          ]
+      updateTrialBridgeState({ aiAgentId: nextId, aiMessages: nextList })
+      return nextList
+    })
   }
 
   const handleSend = (rawQuestion?: string) => {
@@ -659,7 +795,23 @@ export function AgentTrialDemo({ fullscreen, onEnter }: DemoProps) {
       content: '',
     }
 
-    setMessages(prev => [...prev, userMsg, placeholderMsg])
+    setMessages((prev) => {
+      const seeded = [
+        ...prev,
+        userMsg,
+        {
+          ...placeholderMsg,
+          content: result.content,
+          noteRef: result.noteRef,
+          peerReply: result.peerReply,
+        },
+      ]
+      // 先将完整解答写入桥接存储，即使流式动画中途切换至全屏也 100% 不丢失！
+      updateTrialBridgeState({ aiAgentId: agentId, aiMessages: seeded })
+      return [...prev, userMsg, placeholderMsg]
+    })
+
+    isStreamingRef.current = true
     setIsStreaming(true)
 
     let cursor = 0
@@ -669,8 +821,8 @@ export function AgentTrialDemo({ fullscreen, onEnter }: DemoProps) {
       const slice = fullText.slice(0, cursor)
       const done = cursor >= fullText.length
 
-      setMessages(prev =>
-        prev.map(m =>
+      setMessages((prev) => {
+        const updated = prev.map((m) =>
           m.id === aiId
             ? {
                 ...m,
@@ -679,18 +831,27 @@ export function AgentTrialDemo({ fullscreen, onEnter }: DemoProps) {
               }
             : m
         )
-      )
+        if (done) {
+          updateTrialBridgeState({ aiAgentId: agentId, aiMessages: updated })
+        }
+        return updated
+      })
 
       if (done) {
         if (timerRef.current) window.clearInterval(timerRef.current)
         timerRef.current = null
+        isStreamingRef.current = false
         setIsStreaming(false)
       }
     }, 28)
   }
 
   const toggleSaveToReview = (id: string) => {
-    setMessages(prev => prev.map(m => (m.id === id ? { ...m, savedToReview: !m.savedToReview } : m)))
+    setMessages((prev) => {
+      const updated = prev.map((m) => (m.id === id ? { ...m, savedToReview: !m.savedToReview } : m))
+      updateTrialBridgeState({ aiMessages: updated })
+      return updated
+    })
   }
 
   return (
@@ -745,7 +906,7 @@ export function AgentTrialDemo({ fullscreen, onEnter }: DemoProps) {
 
           <button
             type="button"
-            onClick={() => setDualMode(v => !v)}
+            onClick={toggleDualMode}
             className={`px-2 py-1 rounded-lg font-bold border transition-colors cursor-pointer ${
               dualMode
                 ? 'bg-orange-500/20 border-orange-400/70 text-orange-300'
