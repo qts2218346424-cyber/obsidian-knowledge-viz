@@ -508,7 +508,7 @@ function getReleaseFiles() {
       const filePath = path.join(releaseDir, filename)
       const stat = fs.statSync(filePath)
       const match = filename.match(/(\d+\.\d+\.\d+)/)
-      const version = match ? match[1] : '1.4.0'
+      const version = match ? match[1] : '1.5.0'
       const sizeMb = (stat.size / (1024 * 1024)).toFixed(1)
       return {
         filename,
@@ -532,7 +532,7 @@ function getReleaseFiles() {
       const filePath = path.join(releaseDir, filename)
       const stat = fs.statSync(filePath)
       const match = filename.match(/(\d+\.\d+\.\d+)/)
-      const version = match ? match[1] : '1.4.0'
+      const version = match ? match[1] : '1.5.0'
       const sizeMb = (stat.size / (1024 * 1024)).toFixed(1)
       return {
         filename,
@@ -585,7 +585,7 @@ systemRouter.get('/downloads/info', (_req, res) => {
       },
       web: {
         available: true,
-        version: '1.4.0',
+        version: '1.5.0',
         pwaSupported: true,
       },
     })

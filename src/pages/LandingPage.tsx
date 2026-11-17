@@ -1,5 +1,5 @@
 import { avlTreeCourseware } from '../data/coursewares/avlTree'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
@@ -8,18 +8,10 @@ import {
   Laptop,
   Smartphone,
   Globe,
-  Sparkles,
   CheckCircle2,
   ArrowRight,
-  BookOpen,
-  Cpu,
-  GraduationCap,
-  Landmark,
-  Clock,
+  ChevronRight,
   X,
-  LogIn,
-  UserPlus,
-  Play,
   KeyRound,
   ShieldAlert,
   Maximize2,
@@ -29,13 +21,10 @@ import {
   EyeOff,
   Copy,
   Check,
-  Gift,
-  Compass,
-  Layers,
   Binary,
   Calculator,
+  Landmark,
   Languages,
-  Award,
   Share2,
   BookmarkCheck,
   ExternalLink,
@@ -49,7 +38,7 @@ import { MobilePreviewModal } from './landing/MobilePreviewModal'
 import { TrustAndTestimonialsSection } from './landing/TrustAndTestimonialsSection'
 import { getSecurityQuestion, resetPassword, getStoredUser } from '../services/auth'
 import { useExamCountdown } from '../utils/examDate'
-import { prefetchRoute } from '../app/routes'
+import { prefetchRoute, safeLazy } from '../app/routes'
 import {
   getTrialActivitySummary,
   inheritTrialDataToUserWorkspace,
@@ -57,6 +46,8 @@ import {
   type InheritResult,
   type TrialActivitySummary,
 } from '../utils/trialStateBridge'
+
+const UserGuideModal = safeLazy(() => import('../components/UserGuideModal'), 'landing-user-guide')
 
 const OFFICIAL_DOMAIN = 'https://claudexxb.online'
 const OFFICIAL_DOMAIN_HOST = 'claudexxb.online'
@@ -101,25 +92,84 @@ interface RegisteredWelcomeInfo {
   inheritResult?: InheritResult
 }
 
-// 严格对齐页面从上到下的黄金叙事顺序：建立认知 -> 动手试玩 -> 了解全科覆盖 -> 信任背书 -> 多端下载转化
+// 严格对齐页面从上到下的明暗节奏：试玩巨幕 -> 全景导航 -> 四核学科 -> 黑科技深空剧场 -> 权威题库 -> 多端下载
 const NAV_LINKS = [
-  { href: '#preview', label: '动手试玩' },
-  { href: '#features', label: '互动黑科技' },
-  { href: '#subjects', label: '考研四核' },
-  { href: '#hub', label: '全景功能舱' },
-  { href: '#trust', label: '真题与口碑' },
+  { href: '#preview', label: '试玩舞台' },
+  { href: '#hub', label: '全景导航' },
+  { href: '#subjects', label: '四核学科' },
+  { href: '#features', label: '互动体验' },
+  { href: '#trust', label: '真题与安全' },
   { href: '#download', label: '多端下载' },
 ] as const
+
+const FLYWHEEL_STEPS: Array<{
+  step: string
+  shortLabel: string
+  title: string
+  painPoint: string
+  solution: string
+  trialMode: ModeType
+  manualCategory: string
+  manualFeatureId: string
+}> = [
+  {
+    step: '01',
+    shortLabel: 'PDF 双栏精读',
+    title: '讲义精读与双链沉淀合一',
+    painPoint: '电子讲义与笔记软件频繁切屏，微积分与矩阵公式手敲繁琐，阅读时还容易误触改乱排版。',
+    solution: '左看高清 PDF 讲义、右写双链笔记，Σ 一键插入公式并自动抽取闪卡，实时同步本地 Obsidian。',
+    trialMode: 'math',
+    manualCategory: 'system_collab',
+    manualFeatureId: 'pdf-reader-extract',
+  },
+  {
+    step: '02',
+    shortLabel: '动态仿真推演',
+    title: '22+ 算法与高数机理单步交互',
+    painPoint: 'AVL 平衡旋转、页面置换、TCP 拥塞窗口与泰勒余项仅靠静态书本插图死记硬背，极易遗忘。',
+    solution: '单步回放指针变换与函数逼近过程，支持自定义测试序列，把抽象原理转化为直觉记忆。',
+    trialMode: '408',
+    manualCategory: 'courseware_tools',
+    manualFeatureId: 'interactive-courseware',
+  },
+  {
+    step: '03',
+    shortLabel: '整卷模考精批',
+    title: '真题整卷演草与启发式点拨',
+    painPoint: '普通题库只有冷冰冰的对错判定，大题卡壳无人引导破题思路，英语大小作文难以客观自评。',
+    solution: '配备分色答题卡与顺滑演草白板，随时唤起分科 AI 导师逐级点拨，作文 1.2 秒四维批改升格。',
+    trialMode: 'english',
+    manualCategory: 'quick_start',
+    manualFeatureId: 'quiz-modes',
+  },
+  {
+    step: '04',
+    shortLabel: '热力靶向急救',
+    title: '掌握度拓扑与 5 题定点清零',
+    painPoint: '中后期复习容易陷入低效重复，熟题反复刷，真正考场失分的高危盲区却藏在视野死角。',
+    solution: '三维掌握度星图自动定位薄弱红点，单击即刻开启“看错题 → 看仿真 → 练 5 题”靶向抢救。',
+    trialMode: 'ai',
+    manualCategory: 'spectrum_graph',
+    manualFeatureId: 'mastery-spectrum',
+  },
+  {
+    step: '05',
+    shortLabel: 'SM-2 抗遗忘',
+    title: '艾宾浩斯排期与双宠语音伴学',
+    painPoint: '史纲会议、408 协议细节与核心词汇背了又忘，数百天独自冲刺枯燥漫长、难以维持心流。',
+    solution: '每日清晨精准推送处于遗忘临界点的卡片，搭配大肥鱼与奶龙真人语音陪伴直至考前最后一刻。',
+    trialMode: 'politics',
+    manualCategory: 'ai_agent',
+    manualFeatureId: 'dual-pet-companion',
+  },
+]
 
 export default function LandingPage() {
   const { isAuthenticated, login, register, initAdmin, initialized } = useAuth()
   const navigate = useNavigate()
   const countdown = useExamCountdown()
 
-  // 3D 金属胶囊当前切换模式
   const [activeMode, setActiveMode] = useState<ModeType>('408')
-
-  // 试玩足迹实时统计（驱动“注册后自动继承 N 项试玩成果”提示）
   const [trialSummary, setTrialSummary] = useState<TrialActivitySummary>(() =>
     getTrialActivitySummary()
   )
@@ -130,16 +180,20 @@ export default function LandingPage() {
     })
   }, [])
 
-  // 顶栏滚动感知、移动端折叠菜单与底部悬浮转化栏状态
   const [isScrolled, setIsScrolled] = useState(false)
   const [showMobileStickyCta, setShowMobileStickyCta] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
-  // 全屏沉浸试玩视窗 & 免登录手机伴学预览视窗显隐
   const [fullScreenSandbox, setFullScreenSandbox] = useState(false)
   const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false)
+  const [guideModalOpen, setGuideModalOpen] = useState(false)
+  const [guideModalConfig, setGuideModalConfig] = useState<{
+    tab: 'tour' | 'doc' | 'roadmap'
+    category?: string
+    featureId?: string
+  }>({ tab: 'tour' })
+  const [flywheelIdx, setFlywheelIdx] = useState(0)
 
-  // 下载信息与二维码
   const [downloadInfo, setDownloadInfo] = useState<DownloadInfo | null>(null)
   const [downloading, setDownloading] = useState(false)
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('')
@@ -148,7 +202,6 @@ export default function LandingPage() {
   const downloadSectionRef = useRef<HTMLElement | null>(null)
   const downloadInfoFetchedRef = useRef(false)
 
-  // 双栏高转化认证弹窗控制与意图路由记忆
   const [authModalOpen, setAuthModalOpen] = useState(false)
   const [modalTab, setModalTab] = useState<'login' | 'register' | 'forgot'>('register')
   const [pendingTarget, setPendingTarget] = useState<PendingTarget>({
@@ -165,11 +218,9 @@ export default function LandingPage() {
   const [modalError, setModalError] = useState<string | null>(null)
   const [modalLoading, setModalLoading] = useState(false)
 
-  // 新人注册成功后的仪式感欢迎、试玩成果继承与救援码备份状态
   const [registeredWelcome, setRegisteredWelcome] = useState<RegisteredWelcomeInfo | null>(null)
   const [copiedRecovery, setCopiedRecovery] = useState(false)
 
-  // 找回密码相关交互状态
   const [forgotStep, setForgotStep] = useState<1 | 2>(1)
   const [forgotUsername, setForgotUsername] = useState('')
   const [securityQuestion, setSecurityQuestion] = useState<string | null>(null)
@@ -182,7 +233,6 @@ export default function LandingPage() {
   const [useRecoveryCodeMode, setUseRecoveryCodeMode] = useState(false)
   const [resetSuccessMessage, setResetSuccessMessage] = useState<string | null>(null)
 
-  // 吐司反馈提示
   const [toastMessage, setToastMessage] = useState<string | null>(null)
 
   const showToast = (msg: string) => {
@@ -192,20 +242,37 @@ export default function LandingPage() {
     }, 3000)
   }
 
-  // 监听滚动：驱动动态吸顶毛玻璃导航头与移动端底部悬浮转化栏
+  const [activeSectionHref, setActiveSectionHref] = useState<string>('')
+
   useEffect(() => {
+    const sectionIds = ['preview', 'hub', 'subjects', 'features', 'trust', 'download']
     const onScroll = () => {
       const y = window.scrollY
-      setIsScrolled(y > 20)
+      setIsScrolled(y > 12)
       const nearBottom = window.innerHeight + y >= document.documentElement.scrollHeight - 260
-      setShowMobileStickyCta(y > 380 && !nearBottom)
+      setShowMobileStickyCta(y > 420 && !nearBottom)
+
+      if (y < 220) {
+        setActiveSectionHref('')
+        return
+      }
+      let current = ''
+      for (const id of sectionIds) {
+        const el = document.getElementById(id)
+        if (el) {
+          const top = el.getBoundingClientRect().top
+          if (top <= 160) {
+            current = `#${id}`
+          }
+        }
+      }
+      setActiveSectionHref(current)
     }
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  // 监听模态框或全屏试玩时的背景滚动锁定与 Esc 退出
   useEffect(() => {
     if (!fullScreenSandbox && !authModalOpen) return
     const origOverflow = document.body.style.overflow
@@ -242,13 +309,12 @@ export default function LandingPage() {
             platform: 'Windows 64位',
           },
           android: { available: false, pwaSupported: true },
-          web: { available: true, version: '1.4.0' },
+          web: { available: true, version: '1.5.0' },
         })
       })
   }, [])
 
   useEffect(() => {
-    // 若在公网或 IP 访问，优先使用官方域名生成扫码链接，本地 localhost 调试则保留当前地址以便局域网联调
     const origin = window.location.origin
     const isLocalDev = /localhost|127\.0\.0\.1/.test(origin)
     const targetQrUrl = isLocalDev ? origin : OFFICIAL_DOMAIN
@@ -257,7 +323,7 @@ export default function LandingPage() {
       width: 176,
       margin: 1,
       color: {
-        dark: '#18181b',
+        dark: '#1d1d1f',
         light: '#ffffff',
       },
     })
@@ -265,7 +331,6 @@ export default function LandingPage() {
       .catch(() => {})
   }, [])
 
-  // 按需懒加载下载信息：仅当用户滚动接近 #download 区域时才请求 /api/downloads/info，消除首屏不必要回源
   useEffect(() => {
     const targetEl = downloadSectionRef.current
     if (!targetEl) return
@@ -286,7 +351,6 @@ export default function LandingPage() {
     return () => observer.disconnect()
   }, [loadDownloadInfo])
 
-  // 浏览器空闲预热：已登录用户在首屏渲染完成后空闲预热工作台入口，实现秒开跳转
   useEffect(() => {
     if (!isAuthenticated) return
     const win = window as Window & {
@@ -301,7 +365,6 @@ export default function LandingPage() {
     return () => window.clearTimeout(timer)
   }, [isAuthenticated])
 
-  // 统一打开认证弹窗辅助函数（支持目标路由记忆与试玩成果自动继承提示）
   const openAuthWithIntent = (
     tab: 'login' | 'register',
     target: PendingTarget = { path: '/dashboard', label: '研核全景工作台' },
@@ -311,7 +374,7 @@ export default function LandingPage() {
     const footprints = getTrialActivitySummary().totalFootprints
     const defaultHint =
       footprints > 0
-        ? `检测到您有 ${footprints} 项试玩问答/做题记录，完成后将自动同步至您的个人空间`
+        ? `检测到您有 ${footprints} 项试玩记录，完成后将自动同步至个人空间`
         : undefined
     setModalTab(tab)
     setPendingTarget(target)
@@ -322,7 +385,6 @@ export default function LandingPage() {
     setAuthModalOpen(true)
   }
 
-  // 全景导航舱或功能模块直达器：已登录直接进，未登录带意图记忆唤起极速注册
   const handleLaunchModule = (path: string, label: string) => {
     if (isAuthenticated) {
       navigate(path)
@@ -337,7 +399,6 @@ export default function LandingPage() {
     }
   }
 
-  // 平滑锚点跳转
   const scrollToSection = (id: string) => {
     setMobileMenuOpen(false)
     const el = document.getElementById(id.replace('#', ''))
@@ -346,19 +407,17 @@ export default function LandingPage() {
     }
   }
 
-  // 复制官方网址
   const handleCopySiteUrl = async () => {
     try {
       await navigator.clipboard.writeText(shareSiteUrl)
       setCopiedUrl(true)
-      showToast(`已复制官方网址 ${shareSiteUrl}，可发送至微信或电脑浏览器打开`)
+      showToast(`已复制官方网址 ${shareSiteUrl}`)
       setTimeout(() => setCopiedUrl(false), 2400)
     } catch {
       showToast(`请手动复制官方域名：${OFFICIAL_DOMAIN}`)
     }
   }
 
-  // 复制新人应急救援码
   const handleCopyRecoveryCode = async (code: string) => {
     try {
       await navigator.clipboard.writeText(code)
@@ -366,24 +425,22 @@ export default function LandingPage() {
       showToast('专属应急救援码已复制到剪贴板')
       setTimeout(() => setCopiedRecovery(false), 2500)
     } catch {
-      showToast('复制失败，请长按手动记录该救援码')
+      showToast('复制失败，请手动记录该救援码')
     }
   }
 
-  // 触发桌面端下载
   const handleDownloadDesktop = () => {
     setDownloading(true)
     showToast('正在为您拉取 Windows 客户端安装包...')
     const link = document.createElement('a')
     link.href = '/api/downloads/desktop'
-    link.download = downloadInfo?.desktop?.filename || 'Knowledge-Viz-Setup-1.4.0.exe'
+    link.download = downloadInfo?.desktop?.filename || 'Knowledge-Viz-Setup-1.5.0.exe'
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
     setTimeout(() => setDownloading(false), 2600)
   }
 
-  // 模态框登录/注册快速提交 + 自动执行试玩成果状态继承！
   const handleModalAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setModalError(null)
@@ -422,7 +479,6 @@ export default function LandingPage() {
         await register(cleanUser, modalPassword, modalDisplayName.trim() || undefined)
         const stored = getStoredUser()
         const inheritRes = await inheritTrialDataToUserWorkspace(stored?.id)
-        // 若用户刚在 AI 试玩区提问过且未专门指定其他舱室，引导他可直达包含该会话或首篇笔记的工作台
         const smartTarget: PendingTarget =
           pendingTarget.path === '/dashboard' && inheritRes.conversationsSynced > 0
             ? { path: '/chat', label: 'AI 伴学工作台（含刚才的试玩问答）' }
@@ -438,8 +494,8 @@ export default function LandingPage() {
         })
         showToast(
           inheritRes.inherited
-            ? '账号创建成功！已为您自动导入试玩问答与错题笔记'
-            : '账号创建成功！已为您发放新人 5.0 研学积分'
+            ? '账号创建成功，已为您自动导入试玩问答与错题笔记'
+            : '账号创建成功，已为您发放新人 5.0 研学积分'
         )
       } else {
         await login(cleanUser, modalPassword)
@@ -447,7 +503,7 @@ export default function LandingPage() {
         const inheritRes = await inheritTrialDataToUserWorkspace(stored?.id)
         showToast(
           inheritRes.inherited
-            ? `验证通过！已将刚才的试玩问答与错题同步至您的空间`
+            ? '验证通过，已将刚才的试玩问答与错题同步至您的空间'
             : `验证通过，正在为您打开${pendingTarget.label}...`
         )
         setAuthModalOpen(false)
@@ -464,7 +520,6 @@ export default function LandingPage() {
     }
   }
 
-  // 找回密码第一步：查询密保问题
   const handleQuerySecurityQuestion = async (e: React.FormEvent) => {
     e.preventDefault()
     setModalError(null)
@@ -487,7 +542,6 @@ export default function LandingPage() {
     }
   }
 
-  // 找回密码第二步：提交验证并重置新密码
   const handleResetPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setModalError(null)
@@ -537,13 +591,11 @@ export default function LandingPage() {
     }
   }
 
-  // 3D 模式切换配置映射
   const modeConfigs: Record<
     ModeType,
     {
       title: string
       subtitle: string
-      badge: string
       heroSubject: string
       targetPath: string
       targetLabel: string
@@ -551,153 +603,153 @@ export default function LandingPage() {
   > = {
     '408': {
       title: '研你所学，核力致胜。',
-      subtitle: '408 计算机与考研全科 · 本地优先智能研学工作台',
-      badge: '408 计算机综合：数据结构、计组、操作系统与计网历年真题分步拆解与双链错题本',
+      subtitle:
+        '专为 408 计算机与考研全科打造的本地优先智能工作台。历年真题推演、动态算法仿真与双链笔记无缝合一。',
       heroSubject: '408 计算机学科专业基础综合',
       targetPath: '/quiz?domain=cs_408',
       targetLabel: '408 计算机真题实战舱',
     },
     math: {
       title: '定理推导，一步不漏。',
-      subtitle: '全国考研数学 · 高数、线代与概率大题启发式拆解',
-      badge: '考研数学（数一/二/三）：出版级 KaTeX 公式渲染，泰勒展开与矩阵特征值动态可视化仿真',
-      heroSubject: '全国硕士研究生考研数学 (数一/二/三)',
+      subtitle:
+        '出版级 KaTeX 公式排版与顺滑演草白板。覆盖 1987–2024 年统考数学真题，为大题证明提供苏格拉底式逐级启发。',
+      heroSubject: '全国硕士研究生考研数学（数一/二/三）',
       targetPath: '/quiz?domain=math',
       targetLabel: '考研数学推导实战舱',
     },
     politics: {
       title: '时空浩瀚，史纲通达。',
-      subtitle: '考研政治 · 1840–2024 史纲时空轴与千题遮罩精练',
-      badge: '考研政治百炼中枢：近代史重大会议时空编年对照、肖秀荣精选千题与混淆考点辨析',
-      heroSubject: '考研政治 · 史纲时空大本营与千题精粹',
+      subtitle:
+        '高精度中国历史地图串联 1839–2026 核心史实，涵盖同城多史实对比、十五五时政要点与精选千题遮罩自测。',
+      heroSubject: '考研政治 · 1839–2026 史纲全景大本营',
       targetPath: '/politics',
       targetLabel: '考研政治史纲大本营',
     },
     english: {
       title: '笔耕不辍，下笔有神。',
-      subtitle: '考研英语 · 大小作文黄金模板与 20 分制智能精批',
-      badge: '考研英语实战舱：图画/图表万能三段论模板、平庸词一键升格与 2000+ 大纲核心词艾宾浩斯复盘',
+      subtitle:
+        '完形、阅读与新题型全真排版点词即查，大小作文约 1.2 秒四维阅卷精批，配齐拼写默写与耳机巡航背词系统。',
       heroSubject: '考研英语 · 全题型研学与智能批改舱',
       targetPath: '/english',
       targetLabel: '考研英语作文精批舱',
     },
     ai: {
-      title: '分科名师，随时陪学。',
-      subtitle: '直连个人错题本与双链笔记，多智能体协同答疑推演',
-      badge: '分科专属 AI 导师：涵盖 408、高数、英语、政治四大导师双师同台研讨，错因直接沉淀闪卡',
+      title: '四科导师，思考可见。',
+      subtitle:
+        '内置研小核、数小通、英小研、政小思专属智能体，DeepSeek 破题思考流逐字直出，更有双宠语音温暖伴学。',
       heroSubject: '分科专属 AI 导师协同工作台',
       targetPath: '/chat',
       targetLabel: '多智能体伴学工作台',
     },
   }
 
+  const activeFlywheel = FLYWHEEL_STEPS[flywheelIdx] || FLYWHEEL_STEPS[0]
+
   return (
     <div
-      className={`min-h-dvh subframe-landing-bg text-[#171719] font-sans flex flex-col selection:bg-slate-900 selection:text-white relative w-full max-w-full ${
+      className={`min-h-dvh apple-page-canvas font-sans flex flex-col selection:bg-[#0071e3] selection:text-white relative w-full max-w-full ${
         !isAuthenticated ? 'pb-20 md:pb-0' : ''
       }`}
     >
-      {/* 建筑级微米坐标暗纹顶层装饰 */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-[680px] landing-architectural-grid z-0"
-      />
-
       {/* 浮动吐司通知 */}
       {toastMessage && (
         <div
           role="status"
           aria-live="polite"
-          className="fixed bottom-20 md:bottom-6 right-4 sm:right-6 z-[130] flex items-center gap-2.5 bg-[#18181b] text-white text-xs font-medium px-4 py-2.5 rounded-xl shadow-xl border border-white/15 animate-fade-in-up max-w-[calc(100vw-2rem)]"
+          className="fixed bottom-20 md:bottom-6 right-4 sm:right-6 z-[130] flex items-center gap-2.5 bg-[#1d1d1f] text-[#f5f5f7] text-xs font-medium px-4 py-2.5 rounded-full shadow-xl border border-white/10 animate-fade-in-up max-w-[calc(100vw-2rem)]"
         >
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+          <span className="w-1.5 h-1.5 rounded-full bg-[#30d158] shrink-0" />
           <span className="break-words">{toastMessage}</span>
         </div>
       )}
 
       {/* =====================================================================
-          第一幕：建立认知 —— 动态吸顶导航栏 + 首屏五核 Hero 舞台
+          Apple Global Nav 极简冰晶磨砂顶栏
          ===================================================================== */}
       <header
-        className={`sticky top-0 z-40 w-full transition-all duration-200 pt-[env(safe-area-inset-top,0px)] ${
-          isScrolled || mobileMenuOpen
-            ? 'bg-white/88 backdrop-blur-xl border-b border-slate-200/80 shadow-[0_4px_20px_rgba(15,23,42,0.05)]'
-            : 'bg-transparent'
+        className={`sticky top-0 z-40 w-full transition-colors duration-200 pt-[env(safe-area-inset-top,0px)] ${
+          isScrolled || mobileMenuOpen ? 'apple-glass-nav' : 'bg-[#fbfbfd]/90 backdrop-blur-md'
         }`}
       >
-        <div className="w-full max-w-[1280px] mx-auto px-3.5 sm:px-8 h-14 sm:h-16 flex items-center justify-between gap-2">
-          {/* 左侧：品牌标识 + 考研初试实时倒计时胶囊 */}
-          <div className="flex items-center gap-2.5 min-w-0">
-            <Link to="/" className="group flex items-center gap-2 focus:outline-none shrink-0">
-              <div className="w-8 h-8 rounded-xl overflow-hidden flex items-center justify-center shadow-xs ring-1 ring-rose-200/80 group-hover:scale-105 transition-transform shrink-0">
-                <img src="/icon-192.png?v=dango" alt="研核图标" className="h-full w-full object-cover" />
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-[15px] sm:text-base tracking-tight text-[#171719]">
-                  CoreForge
-                </span>
-                <span className="text-2xs font-bold text-slate-700 bg-slate-900/[0.06] px-1.5 py-0.5 rounded-md border border-slate-900/[0.08]">
-                  研核
-                </span>
-              </div>
-            </Link>
-
-            <div className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50/90 border border-amber-200/80 text-2xs font-semibold text-amber-900">
-              <Clock className="w-3 h-3 text-amber-600 shrink-0" />
-              <span>
-                距 {countdown.targetLabel.split(' ')[0]} 初试仅剩{' '}
-                <strong className="font-extrabold text-rose-600 tabular-nums">{countdown.days}</strong> 天
-              </span>
+        <div className="w-full max-w-[1200px] mx-auto px-4 sm:px-8 min-h-12 sm:min-h-[52px] flex items-center justify-between gap-4">
+          {/* 左侧：克制纯净的品牌标识 */}
+          <Link to="/" className="group flex items-center gap-2.5 focus:outline-none shrink-0">
+            <div className="w-7 h-7 rounded-lg overflow-hidden flex items-center justify-center ring-1 ring-black/[0.08] shrink-0">
+              <img src="/icon-192.png?v=dango" alt="研核图标" className="h-full w-full object-cover" />
             </div>
-          </div>
+            <span className="font-semibold text-[15px] tracking-[-0.02em] text-[#1d1d1f]">
+              CoreForge <span className="text-[#6e6e73] font-normal">研核</span>
+            </span>
+          </Link>
 
-          {/* 中部：桌面端磨砂玻璃胶囊导航（顺序与下方板块严格一致） */}
-          <nav
-            aria-label="主页分区导航"
-            className="hidden lg:flex items-center gap-0.5 px-2 py-1 rounded-2xl bg-white/65 backdrop-blur-md border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)]"
-          >
-            {NAV_LINKS.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                onClick={(e) => {
-                  e.preventDefault()
-                  scrollToSection(link.href)
-                }}
-                className="px-3 py-1.5 rounded-xl text-[12.5px] font-semibold text-[#52525b] hover:text-[#171719] hover:bg-slate-900/[0.05] transition-colors whitespace-nowrap"
-              >
-                {link.label}
-              </a>
-            ))}
+          {/* 中部：Apple 纯文字章节导航（带 aria-current 与底部微点指示） */}
+          <nav aria-label="主页分区导航" className="hidden lg:flex items-center gap-7">
+            {NAV_LINKS.map((link) => {
+              const isCurrent = activeSectionHref === link.href
+              return (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  aria-current={isCurrent ? 'location' : undefined}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setActiveSectionHref(link.href)
+                    scrollToSection(link.href)
+                  }}
+                  className={`relative py-1 text-xs transition-colors whitespace-nowrap ${
+                    isCurrent
+                      ? 'text-[#1d1d1f] font-semibold'
+                      : 'text-[#515154] hover:text-[#1d1d1f] font-normal'
+                  }`}
+                >
+                  {link.label}
+                  {isCurrent && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute inset-x-1 -bottom-1 h-[2px] rounded-full bg-[#1d1d1f]"
+                    />
+                  )}
+                </a>
+              )
+            })}
           </nav>
 
-          {/* 右侧：转化动作组 + 移动端折叠导航触发器 */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* 右侧：干净利落的文字链 + Apple Blue 胶囊按钮 */}
+          <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setGuideModalConfig({ tab: 'tour' })
+                setGuideModalOpen(true)
+              }}
+              className="hidden sm:inline-flex items-center text-xs font-normal text-[#515154] hover:text-[#1d1d1f] transition-colors cursor-pointer"
+            >
+              产品导览
+            </button>
+
             {isAuthenticated ? (
               <button
                 type="button"
                 onClick={() => navigate('/dashboard')}
-                className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-[13px] font-bold bg-[#18181b] text-white hover:bg-[#27272a] transition-all shadow-sm cursor-pointer"
+                className="min-h-8 px-4 py-1.5 rounded-full text-xs font-medium bg-[#0071e3] hover:bg-[#0077ed] text-white transition-colors cursor-pointer"
               >
-                <span>进入研学空间</span>
-                <ArrowRight className="h-3.5 w-3.5" />
+                进入工作台
               </button>
             ) : (
               <>
                 <button
                   type="button"
                   onClick={() => openAuthWithIntent('login')}
-                  className="px-2.5 sm:px-3.5 py-2 rounded-xl text-xs sm:text-[13px] font-semibold text-[#27272a] hover:bg-black/[0.05] transition-colors cursor-pointer"
+                  className="text-xs font-normal text-[#515154] hover:text-[#1d1d1f] transition-colors cursor-pointer px-1"
                 >
                   登录
                 </button>
                 <button
                   type="button"
                   onClick={() => openAuthWithIntent('register')}
-                  className="landing-cta-primary inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-[13px] font-bold text-white active:scale-[0.98] cursor-pointer"
+                  className="min-h-8 px-4 py-1.5 rounded-full text-xs font-medium bg-[#0071e3] hover:bg-[#0077ed] text-white transition-colors cursor-pointer"
                 >
-                  <Gift className="w-3.5 h-3.5 text-amber-300 shrink-0 hidden xs:inline" />
-                  <span>免费注册</span>
+                  免费开始
                 </button>
               </>
             )}
@@ -707,29 +759,21 @@ export default function LandingPage() {
               onClick={() => setMobileMenuOpen((v) => !v)}
               aria-expanded={mobileMenuOpen}
               aria-controls="mobile-site-menu"
-              aria-label={mobileMenuOpen ? '收起页面导航菜单' : '展开页面导航菜单'}
-              className="lg:hidden w-10 h-10 rounded-xl bg-white/80 hover:bg-white border border-slate-200/90 flex items-center justify-center text-slate-800 shadow-2xs transition-colors cursor-pointer"
+              aria-label={mobileMenuOpen ? '收起导航菜单' : '展开导航菜单'}
+              className="lg:hidden w-9 h-9 rounded-full hover:bg-black/[0.05] flex items-center justify-center text-[#1d1d1f] transition-colors cursor-pointer"
             >
               {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
             </button>
           </div>
         </div>
 
-        {/* 移动端展开式快捷导航面板 */}
+        {/* 移动端极简下拉面板 */}
         {mobileMenuOpen && (
           <div
             id="mobile-site-menu"
-            className="lg:hidden border-t border-slate-200/80 bg-white/95 backdrop-blur-xl px-4 pt-3 pb-4 shadow-xl animate-fade-in-up"
+            className="lg:hidden border-t border-black/[0.06] bg-[#fbfbfd]/98 backdrop-blur-2xl px-6 py-5 shadow-lg animate-fade-in-up"
           >
-            <div className="mb-3 px-3 py-2 rounded-xl bg-amber-50/90 border border-amber-200/80 flex items-center justify-between text-xs text-amber-950">
-              <span className="inline-flex items-center gap-1.5 font-semibold">
-                <Clock className="w-3.5 h-3.5 text-amber-600" />
-                <span>{countdown.targetLabel}</span>
-              </span>
-              <span className="font-extrabold text-rose-600">剩余 {countdown.days} 天</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 mb-3">
+            <div className="divide-y divide-black/[0.06] mb-4">
               {NAV_LINKS.map((link) => (
                 <a
                   key={link.href}
@@ -738,260 +782,202 @@ export default function LandingPage() {
                     e.preventDefault()
                     scrollToSection(link.href)
                   }}
-                  className="px-3.5 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-xs font-bold text-slate-800 flex items-center justify-between"
+                  className="py-3 text-sm font-medium text-[#1d1d1f] flex items-center justify-between"
                 >
                   <span>{link.label}</span>
-                  <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
+                  <ChevronRight className="w-4 h-4 text-[#86868b]" />
                 </a>
               ))}
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false)
+                  setGuideModalConfig({ tab: 'tour' })
+                  setGuideModalOpen(true)
+                }}
+                className="min-h-10 py-2.5 px-3 rounded-full bg-[#f5f5f7] text-[#1d1d1f] text-xs font-medium cursor-pointer"
+              >
+                1 分钟产品导览
+              </button>
               <button
                 type="button"
                 onClick={() => {
                   setMobileMenuOpen(false)
                   setMobilePreviewOpen(true)
                 }}
-                className="py-2.5 px-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                className="min-h-10 py-2.5 px-3 rounded-full bg-[#f5f5f7] text-[#1d1d1f] text-xs font-medium cursor-pointer"
               >
-                <Smartphone className="w-3.5 h-3.5" />
-                <span>免登录手机预览</span>
+                预览手机界面
               </button>
-              {!isAuthenticated ? (
-                <button
-                  type="button"
-                  onClick={() => openAuthWithIntent('register')}
-                  className="py-2.5 px-3 rounded-xl landing-cta-primary text-white text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <Gift className="w-3.5 h-3.5 text-amber-300" />
-                  <span>免费注册领5积分</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => navigate('/dashboard')}
-                  className="py-2.5 px-3 rounded-xl bg-slate-900 text-white text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <span>进入正式空间</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              )}
             </div>
           </div>
         )}
       </header>
 
-      {/* 首屏 Hero 舞台 */}
-      <section className="relative z-10 w-full min-w-0 flex flex-col items-center justify-center px-3.5 sm:px-6 pt-5 sm:pt-11 pb-8 sm:pb-14 text-center">
-        <div className="mb-4 sm:mb-6 inline-flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-full bg-white/80 backdrop-blur-md border border-slate-200/90 shadow-2xs text-2xs sm:text-xs">
-          <span className="inline-flex items-center gap-1 font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200/70">
-            <Clock className="w-3 h-3" />
-            <span>考研冲刺倒计时 {countdown.days} 天</span>
+      {/* =====================================================================
+          第一幕：Apple Hero 居中大留白舞台 + Studio Display 真机试玩巨幕 (#preview)
+         ===================================================================== */}
+      <section className="w-full min-w-0 flex flex-col items-center px-4 sm:px-8 pt-12 sm:pt-20 pb-8 sm:pb-12 text-center">
+        {/* 克制清雅的倒计时眉标 */}
+        <p className="text-xs sm:text-[13px] font-medium tracking-wide text-[#6e6e73] mb-5">
+          <span>{countdown.targetLabel.split(' ')[0]} 初试冲刺</span>
+          <span className="mx-2 text-[#d2d2d7]">·</span>
+          <span>
+            剩余 <strong className="font-semibold text-[#1d1d1f] tabular-nums">{countdown.days}</strong> 天
           </span>
-          <span className="text-slate-600 font-medium">
-            新用户免费注册赠 <strong className="text-slate-900 font-bold">5.0 研学积分</strong> · 试玩问答自动继承
-          </span>
+        </p>
+
+        {/* Apple 原生滑动质感五核分段胶囊 */}
+        <div
+          role="group"
+          aria-label="切换预览学科模式"
+          className="apple-segmented-track max-w-full overflow-x-auto no-scrollbar mb-7 sm:mb-9"
+        >
+          {[
+            { id: '408' as const, label: '408 计算机', mobileLabel: '408' },
+            { id: 'math' as const, label: '考研数学', mobileLabel: '数学' },
+            { id: 'politics' as const, label: '考研政治', mobileLabel: '政治' },
+            { id: 'english' as const, label: '考研英语', mobileLabel: '英语' },
+            { id: 'ai' as const, label: 'AI 导师', mobileLabel: 'AI 导师' },
+          ].map((tab) => {
+            const active = activeMode === tab.id
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveMode(tab.id)}
+                aria-pressed={active}
+                className={`apple-segmented-pill whitespace-nowrap shrink-0 cursor-pointer ${
+                  active ? 'apple-segmented-pill-active' : ''
+                }`}
+              >
+                <span className="sm:hidden">{tab.mobileLabel}</span>
+                <span className="hidden sm:inline">{tab.label}</span>
+              </button>
+            )
+          })}
         </div>
 
-        {/* 3D 镀铬金属硬件药丸切换器 */}
-        <div className="relative w-full max-w-full flex justify-center mb-5 sm:mb-9 select-none">
-          <div className="metallic-ambient-glow max-w-full" />
-
-          <div className="metallic-housing relative z-10 max-w-full">
-            <div className="metallic-bezel flex items-center gap-1 sm:gap-1.5 p-1 max-w-full overflow-x-auto no-scrollbar">
-              {[
-                { id: '408' as const, label: '408 计算机', mobileLabel: '408', icon: Cpu },
-                { id: 'math' as const, label: '考研数学', mobileLabel: '数学', icon: GraduationCap },
-                { id: 'politics' as const, label: '考研政治', mobileLabel: '政治', icon: Landmark },
-                { id: 'english' as const, label: '考研英语', mobileLabel: '英语', icon: BookOpen },
-                { id: 'ai' as const, label: 'AI 导师', mobileLabel: 'AI 导师', icon: Sparkles },
-              ].map((tab) => {
-                const Icon = tab.icon
-                const active = activeMode === tab.id
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveMode(tab.id)}
-                    aria-pressed={active}
-                    className={`mode-switch-btn relative flex items-center justify-center gap-1 sm:gap-2 px-2.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap shrink-0 transition-all duration-200 cursor-pointer ${
-                      active ? 'metal-tab-active' : 'metal-tab-inactive'
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-                    <span className="sm:hidden">{tab.mobileLabel}</span>
-                    <span className="hidden sm:inline">{tab.label}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-
-        <h1 className="landing-hero-title text-[clamp(1.85rem,6vw,4.5rem)] font-extrabold tracking-[-0.04em] leading-[1.12] sm:leading-[1.05] mb-3 sm:mb-4 max-w-4xl mx-auto px-1">
+        {/* Apple Display 锋利大标题 */}
+        <h1 className="apple-display-hero max-w-4xl mx-auto px-1 mb-4 sm:mb-5">
           {modeConfigs[activeMode].title}
         </h1>
 
-        <p className="text-sm sm:text-[22px] md:text-[26px] font-medium tracking-[-0.015em] leading-[1.42] sm:leading-[1.3] text-[#686b73] max-w-[740px] mb-4 sm:mb-6 px-2 sm:px-0 landing-pretty-copy">
+        {/* 清透副标题（控制在 60 字符最佳阅读行宽内） */}
+        <p className="text-[15px] sm:text-[19px] md:text-[21px] font-normal tracking-[-0.012em] text-[#6e6e73] max-w-[58ch] mx-auto mb-8 sm:mb-9 landing-pretty-copy">
           {modeConfigs[activeMode].subtitle}
         </p>
 
-        <div className="mb-6 sm:mb-8 inline-flex items-center gap-2 px-3.5 sm:px-4 py-1.5 rounded-full bg-white/75 border border-slate-200/90 text-2xs sm:text-xs text-slate-700 max-w-full sm:max-w-2xl shadow-2xs">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-          <span className="min-w-0 truncate font-medium">{modeConfigs[activeMode].badge}</span>
+        {/* Apple 标志性双圆角胶囊行动组 */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4 w-full sm:w-auto px-4 sm:px-0 mb-5">
+          <button
+            type="button"
+            onClick={() => {
+              if (isAuthenticated) {
+                navigate(modeConfigs[activeMode].targetPath)
+              } else {
+                openAuthWithIntent('register', {
+                  path: modeConfigs[activeMode].targetPath,
+                  label: modeConfigs[activeMode].targetLabel,
+                })
+              }
+            }}
+            className="apple-btn-blue cursor-pointer"
+          >
+            <span>
+              {isAuthenticated
+                ? `进入${modeConfigs[activeMode].targetLabel}`
+                : '免费开启专属空间'}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => scrollToSection('#preview')}
+            className="apple-btn-outline cursor-pointer"
+          >
+            <span>免登录试玩体验</span>
+          </button>
         </div>
 
-        {/* 首屏主次 CTA（明确区分“免登录动手试玩”与“免费注册开启个人空间”） */}
-        <div className="w-full max-w-xl mx-auto flex flex-col items-center gap-3 px-2 mb-7 sm:mb-10">
-          <div className="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 sm:gap-3.5">
-            <button
-              type="button"
-              onClick={() => scrollToSection('#preview')}
-              className="py-3.5 px-6 sm:px-7 rounded-2xl bg-white hover:bg-slate-50 text-[#18181b] text-sm sm:text-[15px] font-bold border border-slate-300/90 shadow-xs flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
-            >
-              <Play className="w-4 h-4 text-indigo-600 shrink-0" />
-              <span>免登录动手试玩</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                if (isAuthenticated) {
-                  navigate(modeConfigs[activeMode].targetPath)
-                } else {
-                  openAuthWithIntent('register', {
-                    path: modeConfigs[activeMode].targetPath,
-                    label: modeConfigs[activeMode].targetLabel,
-                  })
-                }
-              }}
-              className="landing-cta-primary py-3.5 px-6 sm:px-8 rounded-2xl text-white text-sm sm:text-[15px] font-bold flex items-center justify-center gap-2.5 active:scale-[0.98] cursor-pointer"
-            >
-              <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>
-                {isAuthenticated
-                  ? `进入${modeConfigs[activeMode].targetLabel}`
-                  : '免费注册开启专属空间'}
-              </span>
-              <ArrowRight className="w-4 h-4 text-slate-300 shrink-0" />
-            </button>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[11px] sm:text-xs text-slate-500">
-            <span className="inline-flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>试玩问答与错题注册后自动继承</span>
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>新人立赠 5.0 研学积分</span>
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>标准 Markdown 本地随时导出</span>
-            </span>
-          </div>
-        </div>
-
-        {/* 四大硬核实证数据条 */}
-        <div className="w-full max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-4 px-1">
-          {[
-            { value: '1987–2024', label: '统考历年真题覆盖', sub: '数学38年 · 408全套精校' },
-            { value: '43 套+', label: '整卷模考与名师密押', sub: '1900+ 道高频精析题' },
-            { value: 'SM-2 算法', label: '艾宾浩斯抗遗忘调度', sub: '每日智能推送待复习卡' },
-            { value: '100% 导出', label: '云端同步 + 本地主权', sub: '无缝兼容本地 Obsidian' },
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              className="landing-bento-card rounded-2xl p-3 sm:p-4 text-left flex flex-col justify-between"
-            >
-              <div className="text-base sm:text-xl font-extrabold text-slate-900 tracking-tight tabular-nums">
-                {stat.value}
-              </div>
-              <div className="mt-1">
-                <div className="text-xs sm:text-[13px] font-bold text-slate-800">{stat.label}</div>
-                <div className="text-[11px] text-slate-500 mt-0.5">{stat.sub}</div>
-              </div>
-            </div>
-          ))}
+        {/* 次级导览文字链 */}
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs sm:text-[13px] text-[#6e6e73]">
+          <button
+            type="button"
+            onClick={() => {
+              setGuideModalConfig({ tab: 'tour' })
+              setGuideModalOpen(true)
+            }}
+            className="inline-flex items-center gap-0.5 text-[#0066cc] hover:underline font-medium cursor-pointer"
+          >
+            <span>观看 1 分钟视觉功能巡礼</span>
+            <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+          </button>
+          <span className="hidden sm:inline text-[#d2d2d7]">|</span>
+          <span>免手机号 10 秒注册 · 试玩记录自动继承 · 本地 Markdown 自由导出</span>
         </div>
       </section>
 
-      {/* =====================================================================
-          第二幕：动手试玩（100% 免登录零打扰体验 · 内嵌/全屏/注册后全链路状态继承）
-         ===================================================================== */}
-      <section id="preview" className="w-full min-w-0 max-w-[1280px] mx-auto px-3.5 sm:px-8 pt-4 pb-16 sm:pb-20">
-        {/* 手机端专属沉浸全屏试玩推荐横幅 */}
-        <div className="sm:hidden w-full min-w-0 mb-3 p-3 rounded-2xl bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 text-white border border-indigo-400/40 flex items-center justify-between gap-2.5 shadow-sm">
-          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-            <div className="w-8 h-8 rounded-xl bg-indigo-500/25 border border-indigo-400/30 flex items-center justify-center shrink-0">
-              <Maximize2 className="w-4 h-4 text-indigo-300" />
-            </div>
-            <div className="min-w-0 flex-1 text-left">
-              <div className="text-xs font-bold text-white flex items-center gap-1.5">
-                <span className="truncate">手机端全屏沉浸试玩</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-400 text-amber-950 font-extrabold shrink-0">
-                  状态实时同步
-                </span>
-              </div>
-              <div className="text-[11px] text-indigo-200/90 truncate">问答与草稿切换全屏不丢失 · 注册自动继承</div>
-            </div>
+      {/* Studio Display 阳极氧化黑窄边框免登录真机试玩巨幕 */}
+      <section id="preview" className="w-full min-w-0 max-w-[1200px] mx-auto px-3.5 sm:px-8 pt-2 pb-20 sm:pb-28">
+        {/* 手机端极简全屏切换条 */}
+        <div className="sm:hidden w-full min-w-0 mb-3 px-4 py-3 rounded-2xl bg-[#1d1d1f] text-[#f5f5f7] flex items-center justify-between gap-3">
+          <div className="min-w-0 text-left">
+            <div className="text-xs font-semibold">全屏沉浸试玩模式</div>
+            <div className="text-[11px] text-[#a1a1a6] truncate">问答与演草进度实时同步保留</div>
           </div>
           <button
             type="button"
             onClick={() => setFullScreenSandbox(true)}
-            className="px-3 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-sky-500 text-white text-xs font-bold shadow-xs active:scale-95 transition-all shrink-0 cursor-pointer"
+            className="min-h-8 px-3.5 py-1.5 rounded-full bg-[#0071e3] text-white text-xs font-medium shrink-0 cursor-pointer"
           >
-            全屏打开
+            全屏展开
           </button>
         </div>
 
-        {/* 试玩顶部状态与就地切科胶囊栏 */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3.5">
-          <div className="flex flex-wrap items-center gap-2 min-w-0">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/90 text-xs font-bold text-emerald-700 shadow-2xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-              <span>免登录互动试玩实验室</span>
+        {/* 视窗顶栏状态行 */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3.5 px-1">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-[#6e6e73]">
+            <span className="inline-flex items-center gap-1.5 font-medium text-[#1d1d1f]">
+              <span className="w-2 h-2 rounded-full bg-[#30d158]" />
+              <span>免登录互动沙盒</span>
             </span>
-
-            {trialSummary.totalFootprints > 0 ? (
+            {trialSummary.totalFootprints > 0 && (
               <button
                 type="button"
                 onClick={() => {
                   if (!isAuthenticated) openAuthWithIntent('register')
                 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-xs font-bold text-indigo-700 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1 text-[#0066cc] hover:underline font-medium cursor-pointer"
               >
-                <BookmarkCheck className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                <BookmarkCheck className="w-3.5 h-3.5 shrink-0" />
                 <span>
-                  已自动暂存 {trialSummary.totalFootprints} 项试玩问答/错题
-                  {!isAuthenticated ? '（点击注册即可导入个人空间 →）' : ''}
+                  已暂存 {trialSummary.totalFootprints} 项试玩记录
+                  {!isAuthenticated ? '，注册即自动归档 ›' : ''}
                 </span>
               </button>
-            ) : (
-              <span className="text-xs text-slate-500 hidden xl:inline">
-                · 切换全屏或注册账号时，您在下方产生的问答与错题将自动保留继承
-              </span>
             )}
           </div>
 
-          <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-white/85 border border-slate-200/90 shadow-2xs max-w-full overflow-x-auto no-scrollbar">
+          <div className="inline-flex items-center gap-1 p-1 rounded-full bg-[#f5f5f7] max-w-full overflow-x-auto no-scrollbar">
             {[
               { id: '408' as const, label: '408 仿真' },
-              { id: 'math' as const, label: '数学草稿判分' },
-              { id: 'english' as const, label: '英语点词升格' },
-              { id: 'politics' as const, label: '史纲时空轴' },
-              { id: 'ai' as const, label: '双师 AI 答疑' },
+              { id: 'math' as const, label: '数学判分' },
+              { id: 'english' as const, label: '英语精批' },
+              { id: 'politics' as const, label: '史纲地图' },
+              { id: 'ai' as const, label: 'AI 导师' },
             ].map((item) => (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => setActiveMode(item.id)}
-                className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
                   activeMode === item.id
-                    ? 'bg-slate-900 text-white shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    ? 'bg-white text-[#1d1d1f] shadow-2xs font-semibold'
+                    : 'text-[#6e6e73] hover:text-[#1d1d1f]'
                 }`}
               >
                 {item.label}
@@ -1000,19 +986,19 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* 精密视窗外壳 */}
-        <div className="w-full min-w-0 rounded-3xl bg-[#e3e4e8] p-2 sm:p-3 shadow-[0_24px_64px_rgba(15,23,42,0.12)] border border-white/80">
-          <div className="w-full min-w-0 bg-white rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.06)] border border-black/[0.08] overflow-hidden text-left">
-            {/* 工作台顶部仿桌面窗口导航条 */}
-            <div className="h-10 px-3 sm:px-4 bg-[#fafafa] border-b border-slate-200/80 flex items-center justify-between gap-2 text-xs text-slate-500">
+        {/* Studio Display 深空黑硬件窄边框视窗 */}
+        <div className="cinema-dark-lock w-full min-w-0 rounded-[28px] bg-[#1d1d1f] p-1.5 sm:p-2.5 shadow-[0_32px_80px_-16px_rgba(0,0,0,0.22)]">
+          <div className="w-full min-w-0 rounded-[20px] bg-[#0b0d13] border border-white/[0.08] overflow-hidden text-left">
+            {/* macOS 深空窗口标题栏 */}
+            <div className="min-h-11 px-4 bg-[#161618] border-b border-white/[0.07] flex items-center justify-between gap-2 text-xs text-[#a1a1a6]">
               <div className="flex items-center gap-2 min-w-0 flex-1">
-                <div className="hidden xs:flex items-center gap-1.5 shrink-0">
-                  <span className="w-2.5 h-2.5 rounded-full bg-rose-400/80" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400/80" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
+                <div className="hidden xs:flex items-center gap-1.5 shrink-0 mr-1">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f56]" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#ffbd2e]" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#27c93f]" />
                 </div>
-                <span className="font-bold text-slate-900 truncate text-xs">
-                  CoreForge 免登录沙盒 · {modeConfigs[activeMode].heroSubject}
+                <span className="font-medium text-[#f5f5f7] truncate text-xs">
+                  {modeConfigs[activeMode].heroSubject}
                 </span>
               </div>
 
@@ -1020,11 +1006,10 @@ export default function LandingPage() {
                 <button
                   type="button"
                   onClick={() => setFullScreenSandbox(true)}
-                  className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 font-bold text-2xs transition-all active:scale-95 flex items-center gap-1 cursor-pointer"
-                  title="切换至全屏视图，当前问答与草稿进度将自动同步保留"
+                  className="px-3 py-1 rounded-full bg-white/[0.08] hover:bg-white/[0.14] text-[#f5f5f7] font-medium text-[11px] transition-colors flex items-center gap-1.5 cursor-pointer"
                 >
-                  <Maximize2 className="w-3 h-3 text-indigo-600" />
-                  <span>全屏试玩 (保留当前进度)</span>
+                  <Maximize2 className="w-3 h-3" />
+                  <span>全屏展开</span>
                 </button>
                 <button
                   type="button"
@@ -1034,9 +1019,9 @@ export default function LandingPage() {
                       modeConfigs[activeMode].targetLabel
                     )
                   }
-                  className="hidden sm:inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-slate-900 text-white font-bold text-2xs hover:bg-slate-800 transition-colors cursor-pointer"
+                  className="hidden sm:inline-flex items-center gap-1 px-3.5 py-1 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white font-medium text-[11px] transition-colors cursor-pointer"
                 >
-                  <span>{isAuthenticated ? '进入完整舱室' : '登录进入完整舱室'}</span>
+                  <span>{isAuthenticated ? '进入完整舱室' : '开启完整舱室'}</span>
                   <ArrowRight className="w-3 h-3" />
                 </button>
               </div>
@@ -1046,17 +1031,15 @@ export default function LandingPage() {
             <div className="w-full min-w-0 min-h-[500px] bg-slate-950 text-white relative overflow-hidden">
               {activeMode === '408' ? (
                 <div className="flex flex-col h-[520px] w-full min-w-0">
-                  <div className="px-3.5 py-2.5 bg-slate-900/95 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs min-w-0">
-                    <div className="flex items-center gap-2 min-w-0 max-w-full">
-                      <span className="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 font-bold font-mono text-2xs shrink-0">
-                        408 数据结构实验室
-                      </span>
-                      <span className="text-slate-200 font-semibold truncate min-w-0">
-                        AVL 平衡二叉树四种自平衡旋转 (LL / RR / LR / RL)
+                  <div className="px-4 py-2.5 bg-[#121318] border-b border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-xs min-w-0">
+                    <div className="flex items-center gap-2.5 min-w-0 max-w-full">
+                      <span className="text-[#2997ff] font-medium shrink-0">数据结构动态仿真</span>
+                      <span className="text-[#d2d2d7] truncate min-w-0">
+                        AVL 平衡二叉树自平衡旋转（LL / RR / LR / RL）
                       </span>
                     </div>
-                    <span className="text-2xs text-slate-400">
-                      可在下方画布中直接点击插入节点、单步观察旋转平衡因子变化
+                    <span className="text-[11px] text-[#86868b]">
+                      点击下方画布插入节点，单步观察平衡因子变化
                     </span>
                   </div>
                   <iframe
@@ -1085,24 +1068,17 @@ export default function LandingPage() {
               )}
             </div>
 
-            {/* 试玩视窗底部：动态感知试玩足迹的状态继承转化条 */}
+            {/* 视窗底部：克制的深空状态继承条 */}
             {!isAuthenticated && (
-              <div className="px-4 sm:px-6 py-3.5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-t border-indigo-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-white">
-                <div className="flex items-center gap-2.5 text-xs sm:text-[13px]">
-                  <span className="w-7 h-7 rounded-lg bg-emerald-400/20 border border-emerald-400/40 flex items-center justify-center shrink-0">
-                    {trialSummary.totalFootprints > 0 ? (
-                      <BookmarkCheck className="w-4 h-4 text-emerald-300" />
-                    ) : (
-                      <Gift className="w-4 h-4 text-amber-300" />
-                    )}
-                  </span>
+              <div className="px-5 sm:px-6 py-3.5 bg-[#161618] border-t border-white/[0.07] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-[#f5f5f7]">
+                <div className="text-xs sm:text-[13px] text-[#a1a1a6]">
                   {trialSummary.totalFootprints > 0 ? (
-                    <span className="text-slate-100 leading-snug">
-                      系统已为您实时暂存 <strong className="text-emerald-300">{trialSummary.totalFootprints} 项试玩成果</strong>！现在注册将自动为您生成<strong className="text-white">首篇双链笔记与个人错题记录</strong>，绝不白做。
+                    <span>
+                      已实时暂存 <strong className="text-[#f5f5f7] font-semibold">{trialSummary.totalFootprints} 项试玩成果</strong>，创建账号后将自动生成首篇双链笔记与错题记录。
                     </span>
                   ) : (
-                    <span className="text-slate-200 leading-snug">
-                      在上方试玩产生的提问解答与错题，注册后将<strong className="text-white">自动继承至您的专属知识库</strong>，并立赠 <strong className="text-amber-300">5.0 研学积分</strong>！
+                    <span>
+                      在上方产生的提问、演草与错题，注册后将<strong className="text-[#f5f5f7] font-medium">自动同步至个人知识库</strong>，并赠 5.0 初始积分。
                     </span>
                   )}
                 </div>
@@ -1120,11 +1096,11 @@ export default function LandingPage() {
                           : modeConfigs[activeMode].targetLabel,
                     })
                   }
-                  className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs whitespace-nowrap transition-all active:scale-95 cursor-pointer shrink-0 shadow-sm"
+                  className="min-h-8 px-4 py-1.5 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white font-medium text-xs whitespace-nowrap transition-colors cursor-pointer shrink-0 self-start sm:self-auto"
                 >
                   {trialSummary.totalFootprints > 0
-                    ? `免费注册并保存这 ${trialSummary.totalFootprints} 项记录 →`
-                    : '10 秒免费注册解锁全功能 →'}
+                    ? `保存这 ${trialSummary.totalFootprints} 项记录`
+                    : '免费创建专属账号'}
                 </button>
               </div>
             )}
@@ -1132,137 +1108,9 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* 免登录互动 Bento 体验区 (#features：紧接试玩实验室，强化免登录使用兴趣) */}
-      <InteractiveBentoShowcase
-        mode="features-only"
-        isAuthenticated={isAuthenticated}
-        onLaunchModule={handleLaunchModule}
-        onOpenRegister={(hint) => openAuthWithIntent('register', undefined, hint)}
-      />
-
       {/* =====================================================================
-          第三幕：了解全科覆盖 —— 四大主力科目生态 (#subjects) + 八大功能舱 (#hub)
-          （严格置于信任背书与多端下载区上方！）
+          第二幕：全景工作台导览 (#hub · Apple Highlights 非对称 Bento 导航墙)
          ===================================================================== */}
-      <section id="subjects" className="w-full min-w-0 pt-16 sm:pt-22 pb-10 sm:pb-14 max-w-[1280px] mx-auto px-3.5 sm:px-8">
-        <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-14">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/[0.05] border border-slate-900/[0.08] text-2xs font-bold text-slate-700 mb-2">
-            <Award className="w-3.5 h-3.5 text-indigo-600" />
-            <span>全面覆盖考研四大主力科目</span>
-          </span>
-          <h2 className="mt-1 text-2xl sm:text-4xl font-bold text-[#18181b] tracking-[-0.03em]">
-            为每一门统考核心课量身定制的四核生态
-          </h2>
-          <p className="mt-2.5 text-xs sm:text-sm text-[#71717a] landing-pretty-copy">
-            拒绝泛泛而谈的通用记事本，CoreForge 为 408 计算机、考研数学、考研政治与考研英语提供深度学科工具链。
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">
-          {[
-            {
-              mode: '408' as const,
-              path: '/quiz?domain=cs_408',
-              title: '408 计算机基础综合',
-              sub: '数据结构 · 计组 · 操作系统 · 计网',
-              desc: '2009–2024 统考真题逐题精析。平衡树旋转、Cache 组相联映射、PV 信号量同步与 TCP 拥塞窗口全链路贯通。',
-              icon: Binary,
-              badgeBg: 'bg-sky-50 text-sky-700 border-sky-200/80',
-              tags: ['树与图算法沙盒', '流水线与存储层次', 'PV 互斥死锁排查', 'TCP/IP 协议栈精解'],
-            },
-            {
-              mode: 'math' as const,
-              path: '/quiz?domain=math',
-              title: '全国考研数学 (一/二/三)',
-              sub: '高等数学 · 线性代数 · 概率统计',
-              desc: '原生集成出版级 KaTeX 公式引擎。针对中值定理证明、多元微积分、特征值二次型提供分步踩分启发点拨。',
-              icon: Calculator,
-              badgeBg: 'bg-purple-50 text-purple-700 border-purple-200/80',
-              tags: ['泰勒与中值定理', '特征值空间变换', '多维随机变量分布', '电子草稿分步批改'],
-            },
-            {
-              mode: 'politics' as const,
-              path: '/politics',
-              title: '考研政治百炼中枢',
-              sub: '史纲时空轴 · 肖秀荣千题 · 遮罩背诵',
-              desc: '1840–2024 近现代史重大会议与历史转折全屏滑动对照，客观单选多选即做即改，必背框架一键遮罩自测。',
-              icon: Landmark,
-              badgeBg: 'bg-rose-50 text-rose-700 border-rose-200/80',
-              tags: ['1840–2024 时空轴', '重大会议横向对比', '精选千题错项辨析', '核心考点遮罩速记'],
-            },
-            {
-              mode: 'english' as const,
-              path: '/english',
-              title: '考研英语实战中枢',
-              sub: '作文模板 · 20分制精批 · 大纲词库',
-              desc: '涵盖英语一图画与英语二图表黄金三段论。AI 秒级识别平庸词汇并给出高阶替换句型，串联 2000+ 真题核心词。',
-              icon: Languages,
-              badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
-              tags: ['图画/图表高分模板', '20 分制四维批改', '长难句语法树拆解', '词根词缀衍生拓扑'],
-            },
-          ].map((subj) => {
-            const Icon = subj.icon
-            return (
-              <div
-                key={subj.mode}
-                className="landing-bento-card rounded-2xl p-5 sm:p-6 flex flex-col justify-between gap-5 text-left"
-              >
-                <div>
-                  <div className="flex items-center gap-3 mb-3.5">
-                    <div
-                      className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${subj.badgeBg}`}
-                    >
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="text-base font-bold text-slate-900 truncate">{subj.title}</h3>
-                      <span className="text-2xs text-slate-500 block truncate">{subj.sub}</span>
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-slate-600 leading-relaxed mb-4 landing-pretty-copy">
-                    {subj.desc}
-                  </p>
-
-                  <div className="grid grid-cols-2 gap-1.5 text-2xs">
-                    {subj.tags.map((t) => (
-                      <div
-                        key={t}
-                        className="px-2.5 py-2 rounded-lg bg-slate-50/90 border border-slate-200/80 font-semibold text-slate-700 truncate"
-                      >
-                        {t}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveMode(subj.mode)
-                      scrollToSection('#preview')
-                    }}
-                    className="font-semibold text-emerald-700 hover:text-emerald-800 cursor-pointer"
-                  >
-                    免登录试玩该科
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleLaunchModule(subj.path, subj.title)}
-                    className="inline-flex items-center gap-1 font-bold text-indigo-600 hover:text-indigo-700 cursor-pointer"
-                  >
-                    <span>{isAuthenticated ? '进入专区' : '登录进入'}</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </section>
-
-      {/* 八大研学功能舱全景导流矩阵 (#hub) */}
       <InteractiveBentoShowcase
         mode="hub-only"
         isAuthenticated={isAuthenticated}
@@ -1271,381 +1119,545 @@ export default function LandingPage() {
       />
 
       {/* =====================================================================
-          第四幕：信任背书 —— 历年真题年份明细 · 云同步与本地导出 · 学长学姐评价 (#trust)
+          第三幕：考研四核产品阵列 (#subjects · 纯白 #FFFFFF 画布 + 无框钛灰长卡)
+         ===================================================================== */}
+      <section id="subjects" className="w-full min-w-0 apple-section-white py-20 sm:py-28">
+        <div className="w-full max-w-[1200px] mx-auto px-4 sm:px-8 space-y-16 sm:space-y-22">
+          <div>
+            <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
+              <p className="text-xs sm:text-[13px] font-semibold tracking-wider text-[#6e6e73] mb-2.5">
+                四大统考核心科目
+              </p>
+              <h2 className="apple-section-headline text-[#1d1d1f]">
+                为每一门硬仗，量身定制专业工具链。
+              </h2>
+              <p className="mt-3.5 text-sm sm:text-base text-[#6e6e73] landing-pretty-copy">
+                告别泛泛而谈的通用记事本，针对 408 计算机、数学、政治与英语的学科特性深度打磨。
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+              {[
+                {
+                  mode: '408' as const,
+                  eyebrow: 'CS · 408 统考综合',
+                  path: '/quiz?domain=cs_408',
+                  title: '计算机专业基础',
+                  desc: '2009–2024 年真题逐题精析，将平衡树旋转、Cache 映射、PV 信号量与 TCP 拥塞窗口全链路贯通。',
+                  icon: Binary,
+                  specs: ['树与图动态算法沙盒', '指令流水线与存储层次', 'PV 同步死锁推演', 'TCP/IP 协议栈精解'],
+                },
+                {
+                  mode: 'math' as const,
+                  eyebrow: 'MATH · 数一 / 二 / 三',
+                  path: '/quiz?domain=math',
+                  title: '全国考研数学',
+                  desc: '原生出版级 KaTeX 公式引擎，针对中值定理证明、多元微积分与特征值二次型提供按步踩分启发。',
+                  icon: Calculator,
+                  specs: ['38 年统考整卷精校', '泰勒与中值定理仿真', '特征值空间变换推演', '屏幕演草分步启发'],
+                },
+                {
+                  mode: 'politics' as const,
+                  eyebrow: 'POLITICS · 1839–2026',
+                  path: '/politics',
+                  title: '考研思想政治',
+                  desc: '高精度矢量中国地图同城史实循环联动，涵盖“史上第一次”汇总、十五五时政热点与千题遮罩自测。',
+                  icon: Landmark,
+                  specs: ['1839–2026 史纲全景图', '同城多史实循环联动', '十五五规划时政要点', '精选千题错项排雷'],
+                },
+                {
+                  mode: 'english' as const,
+                  eyebrow: 'ENGLISH · 英一 / 英二',
+                  path: '/english',
+                  title: '全国考研英语',
+                  desc: '完形、阅读、新题型与翻译整卷点词即查，大小作文约 1.2 秒四维批改升格，配默写与巡航词库。',
+                  icon: Languages,
+                  specs: ['真题整卷点词生词本', '20 分制四维阅卷精批', '拼写默写与耳机巡航', '5 阶词根衍生色谱'],
+                },
+              ].map((subj) => {
+                const Icon = subj.icon
+                return (
+                  <div
+                    key={subj.mode}
+                    className="apple-tile-gray p-7 sm:p-8 flex flex-col justify-between gap-7 text-left"
+                  >
+                    <div>
+                      <div className="w-11 h-11 rounded-2xl bg-white text-[#1d1d1f] shadow-2xs flex items-center justify-center mb-5">
+                        <Icon className="w-5 h-5 stroke-[1.75]" aria-hidden="true" />
+                      </div>
+
+                      <p className="text-[11px] font-semibold tracking-wider text-[#86868b]">
+                        {subj.eyebrow}
+                      </p>
+                      <h3 className="mt-1 text-xl font-semibold tracking-[-0.022em] text-[#1d1d1f]">
+                        {subj.title}
+                      </h3>
+                      <p className="mt-2.5 text-[13px] text-[#6e6e73] leading-relaxed landing-pretty-copy">
+                        {subj.desc}
+                      </p>
+
+                      <ul className="mt-5 divide-y divide-black/[0.06] border-t border-black/[0.06] text-xs text-[#1d1d1f]/85 font-medium">
+                        {subj.specs.map((sp) => (
+                          <li key={sp} className="py-2.5">
+                            {sp}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="flex items-center gap-4 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => handleLaunchModule(subj.path, subj.title)}
+                        className="min-h-9 px-4 py-1.5 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-medium transition-colors cursor-pointer"
+                      >
+                        {isAuthenticated ? '进入专区' : '开启学习'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveMode(subj.mode)
+                          scrollToSection('#preview')
+                        }}
+                        className="inline-flex items-center gap-0.5 text-xs font-medium text-[#0066cc] hover:underline cursor-pointer"
+                      >
+                        <span>试玩体验</span>
+                        <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* 极简五步提分闭环流转台（Apple Editorial Stepper） */}
+          <div className="apple-tile-gray p-7 sm:p-10 text-left">
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-5 pb-7 border-b border-black/[0.06]">
+              <div>
+                <p className="text-xs font-semibold tracking-wider text-[#6e6e73] mb-1.5">
+                  五步提分闭环
+                </p>
+                <h3 className="text-2xl sm:text-3xl font-semibold tracking-[-0.03em] text-[#1d1d1f]">
+                  从啃透讲义到考场抢分，环环相扣。
+                </h3>
+              </div>
+
+              <div
+                role="tablist"
+                aria-label="备考闭环五步切换"
+                className="apple-segmented-track max-w-full overflow-x-auto no-scrollbar self-start lg:self-auto"
+              >
+                {FLYWHEEL_STEPS.map((st, idx) => {
+                  const active = flywheelIdx === idx
+                  return (
+                    <button
+                      key={st.step}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => setFlywheelIdx(idx)}
+                      className={`apple-segmented-pill whitespace-nowrap cursor-pointer ${
+                        active ? 'apple-segmented-pill-active' : ''
+                      }`}
+                    >
+                      {st.step} {st.shortLabel}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="pt-7 grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-center">
+              <div className="lg:col-span-5 space-y-2">
+                <p className="text-xs font-semibold text-[#86868b]">传统碎片化备考瓶颈</p>
+                <p className="text-sm text-[#6e6e73] leading-relaxed landing-pretty-copy">
+                  {activeFlywheel.painPoint}
+                </p>
+              </div>
+
+              <div className="lg:col-span-5 space-y-2 lg:border-l lg:border-black/[0.08] lg:pl-8">
+                <p className="text-xs font-semibold text-[#0066cc]">
+                  CoreForge 研核 · {activeFlywheel.title}
+                </p>
+                <p className="text-sm sm:text-[15px] font-medium text-[#1d1d1f] leading-relaxed landing-pretty-copy">
+                  {activeFlywheel.solution}
+                </p>
+              </div>
+
+              <div className="lg:col-span-2 flex flex-row lg:flex-col items-center lg:items-end justify-start gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveMode(activeFlywheel.trialMode)
+                    scrollToSection('#preview')
+                  }}
+                  className="min-h-9 px-4 py-1.5 rounded-full bg-[#1d1d1f] hover:bg-[#333336] text-white text-xs font-medium transition-colors cursor-pointer whitespace-nowrap"
+                >
+                  试玩该环节
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGuideModalConfig({
+                      tab: 'doc',
+                      category: activeFlywheel.manualCategory,
+                      featureId: activeFlywheel.manualFeatureId,
+                    })
+                    setGuideModalOpen(true)
+                  }}
+                  className="inline-flex items-center gap-0.5 text-xs font-medium text-[#0066cc] hover:underline cursor-pointer whitespace-nowrap"
+                >
+                  <span>查阅图文说明</span>
+                  <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* =====================================================================
+          第四幕：交互黑科技深空剧场 (#features · 纯黑 #000000 沉浸交互画廊)
+         ===================================================================== */}
+      <InteractiveBentoShowcase
+        mode="features-only"
+        isAuthenticated={isAuthenticated}
+        onLaunchModule={handleLaunchModule}
+        onOpenRegister={(hint) => openAuthWithIntent('register', undefined, hint)}
+      />
+
+      {/* =====================================================================
+          第五幕：权威题库规格与真实口碑 (#trust · 浅钛灰 #F5F5F7 画布)
          ===================================================================== */}
       <TrustAndTestimonialsSection />
 
       {/* =====================================================================
-          第五幕：多端下载与注册转化 (#download) —— 明确免登录预览与登录入口边界
+          第六幕：多端无缝接力与终极召唤 (#download · 纯白 #FFFFFF 画布)
          ===================================================================== */}
       <section
         id="download"
         ref={downloadSectionRef}
-        className="w-full min-w-0 py-16 sm:py-22 border-t border-slate-200/80 bg-[#f1f2f6]/80 relative overflow-hidden"
+        className="w-full min-w-0 apple-section-white py-20 sm:py-28"
       >
-        <div className="w-full max-w-[1280px] mx-auto px-3.5 sm:px-8 min-w-0">
-          <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-14">
-            <h2 className="text-2xl sm:text-4xl font-bold text-[#18181b] tracking-[-0.03em]">
-              选择你的备考终端 · 随时随地进入心流
-            </h2>
-            <p className="mt-2.5 text-xs sm:text-base text-[#71717a] landing-pretty-copy">
-              桌面客户端专注深潜，手机端碎片化刷卡，网页版跨设备即开即用，同一账号实时同步。
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 items-stretch">
-            {/* 1. Windows 桌面独立旗舰端 */}
-            <div className="landing-bento-card rounded-2xl p-5 sm:p-7 flex flex-col justify-between relative border-2 border-slate-900/10">
-              <div className="absolute -top-3 left-6 px-3 py-0.5 rounded-full bg-[#18181b] text-white text-2xs font-bold tracking-wide shadow-xs">
-                书桌深度学习推荐
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-5">
-                  <div className="w-12 h-12 rounded-xl bg-slate-100 text-slate-900 flex items-center justify-center shrink-0">
-                    <Laptop className="w-6 h-6" />
-                  </div>
-                  <span className="text-xs font-mono text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md">
-                    {downloadInfo?.desktop?.version ? `客户端 v${downloadInfo.desktop.version}` : '桌面独立版'}
-                  </span>
-                </div>
-
-                <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-2">Windows 桌面客户端</h3>
-                <p className="text-xs text-slate-500 leading-relaxed mb-5 landing-pretty-copy">
-                  专为书桌长时间沉浸备考打造。独立软件窗口隔绝浏览器娱乐干扰，深度直连本地 Obsidian 知识库目录。
-                </p>
-
-                <ul className="space-y-2.5 text-xs text-slate-700 mb-7 font-medium">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span>独立应用窗口全屏沉浸复习，告别网页分心</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span>本地 Markdown 笔记双向实时监听与一键备份</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span>下载安装包直接运行，支持本机智能体桥接</span>
-                  </li>
-                </ul>
-              </div>
-
-              <div>
-                <button
-                  type="button"
-                  onClick={handleDownloadDesktop}
-                  disabled={downloading}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-slate-900 hover:bg-slate-800 active:scale-[0.98] py-3 px-4 text-xs sm:text-sm font-bold text-white shadow-xs transition-all cursor-pointer disabled:opacity-60"
-                >
-                  <Download className="w-4 h-4 shrink-0" />
-                  <span>
-                    {downloading
-                      ? '正在拉取安装包...'
-                      : `直接下载 Windows 安装包${downloadInfo?.desktop?.size ? ` (${downloadInfo.desktop.size})` : ''}`}
-                  </span>
-                </button>
-                <div className="mt-2 text-center text-2xs text-slate-400">
-                  免登录即可直接下载安装包 · 支持 Windows 10 / 11 (64位)
-                </div>
-              </div>
+        <div className="w-full max-w-[1200px] mx-auto px-4 sm:px-8 space-y-16 sm:space-y-22">
+          <div>
+            <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
+              <p className="text-xs sm:text-[13px] font-semibold tracking-wider text-[#6e6e73] mb-2.5">
+                多端无缝协同
+              </p>
+              <h2 className="apple-section-headline text-[#1d1d1f]">
+                全场景终端，随时切入心流。
+              </h2>
+              <p className="mt-3.5 text-sm sm:text-base text-[#6e6e73] landing-pretty-copy">
+                书桌客户端专注深潜，手机端通勤刷卡，网页端即开即用，同一账号进度实时接力。
+              </p>
             </div>
 
-            {/* 2. 手机 / 移动伴学端（提供真正的免登录手机端交互预览 + 明确登录入口边界！） */}
-            <div className="landing-bento-card rounded-2xl p-5 sm:p-7 flex flex-col justify-between border-2 border-emerald-500/20 relative">
-              <div className="absolute -top-3 left-6 px-3 py-0.5 rounded-full bg-emerald-600 text-white text-2xs font-bold tracking-wide shadow-xs">
-                支持免登录真机预览
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-5">
-                  <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                    <Smartphone className="w-6 h-6" />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6 items-stretch">
+              {/* 1. Windows 桌面客户端 */}
+              <div className="apple-tile-gray p-7 sm:p-9 flex flex-col justify-between gap-8 text-left">
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-6">
+                    <div className="w-12 h-12 rounded-2xl bg-white text-[#1d1d1f] shadow-2xs flex items-center justify-center shrink-0">
+                      <Laptop className="w-6 h-6 stroke-[1.75]" />
+                    </div>
+                    <span className="text-xs font-mono text-[#6e6e73]">
+                      {downloadInfo?.desktop?.version
+                        ? `Windows v${downloadInfo.desktop.version}`
+                        : 'Windows 64 位'}
+                    </span>
                   </div>
-                  <span className="text-xs font-mono text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200/60">
-                    {OFFICIAL_DOMAIN_HOST}
-                  </span>
+
+                  <p className="text-xs font-semibold tracking-wider text-[#86868b]">
+                    书桌深度备考首选
+                  </p>
+                  <h3 className="mt-1 text-xl sm:text-2xl font-semibold tracking-[-0.025em] text-[#1d1d1f]">
+                    Windows 桌面端
+                  </h3>
+                  <p className="mt-2.5 text-[13.5px] text-[#6e6e73] leading-relaxed landing-pretty-copy">
+                    独立原生窗口隔绝浏览器娱乐干扰，支持直连本机 Obsidian 知识库目录与本地 CLI 智能体。
+                  </p>
+
+                  <ul className="mt-6 space-y-2.5 text-xs text-[#1d1d1f]/85 border-t border-black/[0.06] pt-5">
+                    <li>· 独立全屏专注窗口，告别网页标签页分心</li>
+                    <li>· 本地 Markdown 笔记实时双向同步与备份</li>
+                    <li>· 支持桥接本机 Claude Code 与 Codex CLI</li>
+                  </ul>
                 </div>
 
-                <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-2">手机 / 平板随身伴学端</h3>
-                <p className="text-xs text-slate-500 leading-relaxed mb-4 landing-pretty-copy">
-                  专为排队、通勤与睡前碎片时间打造。可先免登录打开手机预览视图体验单手刷题与背词手感！
-                </p>
-
-                {/* 桌面端显示扫码框；手机端显示添加到主屏幕指引 */}
-                <div className="hidden sm:flex my-4 rounded-xl bg-slate-50 p-3.5 border border-slate-200/90 items-center gap-3.5">
-                  <div className="bg-white p-2 rounded-lg shrink-0 border border-slate-200 shadow-2xs">
-                    {qrCodeDataUrl ? (
-                      <img src={qrCodeDataUrl} alt="手机扫码访问研核官网" className="h-22 w-22 object-contain" />
-                    ) : (
-                      <div className="h-22 w-22 flex items-center justify-center text-2xs text-slate-400">
-                        二维码加载中
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-left text-xs space-y-1">
-                    <p className="font-bold text-slate-900">手机扫码访问官网：</p>
-                    <p className="text-slate-500 text-2xs font-mono">{OFFICIAL_DOMAIN}</p>
-                    <p className="text-slate-500 text-2xs">
-                      浏览器菜单点 <strong className="text-slate-900">「添加到主屏幕」</strong>
-                    </p>
-                    <p className="text-emerald-700 text-2xs font-bold">
-                      即刻生成桌面图标，畅享全屏刷卡！
-                    </p>
-                  </div>
-                </div>
-
-                <div className="sm:hidden my-4 rounded-xl bg-emerald-50/60 p-3.5 border border-emerald-200/80 text-left space-y-1.5 text-xs">
-                  <div className="font-bold text-emerald-950 flex items-center gap-1.5">
-                    <Layers className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>添加到手机主屏幕（免安装全屏体验）：</span>
-                  </div>
-                  <p className="text-2xs text-slate-600 leading-relaxed">
-                    点击当前浏览器菜单中的 <strong className="text-slate-900">「添加到主屏幕」</strong>，即可在手机桌面生成独立「研核」全屏图标。
+                <div>
+                  <button
+                    type="button"
+                    onClick={handleDownloadDesktop}
+                    disabled={downloading}
+                    className="w-full min-h-11 rounded-full bg-[#1d1d1f] hover:bg-[#333336] py-3 px-5 text-xs sm:text-sm font-medium text-white flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-60"
+                  >
+                    <Download className="w-4 h-4 shrink-0" />
+                    <span>
+                      {downloading
+                        ? '正在拉取安装包...'
+                        : `下载 Windows 安装包${
+                            downloadInfo?.desktop?.size ? ` (${downloadInfo.desktop.size})` : ''
+                          }`}
+                    </span>
+                  </button>
+                  <p className="mt-2.5 text-center text-[11px] text-[#86868b]">
+                    免登录直接下载 · 支持 Windows 10 / 11
                   </p>
                 </div>
               </div>
 
-              {/* 边界清晰的双按钮：主按钮 100% 免登录直接打开手机预览器；副按钮明确标注登录/注册 */}
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  onClick={() => setMobilePreviewOpen(true)}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] py-3 px-4 text-xs sm:text-sm font-bold text-white shadow-xs transition-all cursor-pointer"
-                >
-                  <Play className="w-4 h-4 shrink-0" />
-                  <span>免登录预览手机伴学界面</span>
-                </button>
+              {/* 2. 手机 / 平板随身端 */}
+              <div className="apple-tile-gray p-7 sm:p-9 flex flex-col justify-between gap-8 text-left">
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-6">
+                    <div className="w-12 h-12 rounded-2xl bg-white text-[#1d1d1f] shadow-2xs flex items-center justify-center shrink-0">
+                      <Smartphone className="w-6 h-6 stroke-[1.75]" />
+                    </div>
+                    <span className="text-xs font-mono text-[#6e6e73]">{OFFICIAL_DOMAIN_HOST}</span>
+                  </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                  <p className="text-xs font-semibold tracking-wider text-[#86868b]">
+                    通勤与睡前碎片刷卡
+                  </p>
+                  <h3 className="mt-1 text-xl sm:text-2xl font-semibold tracking-[-0.025em] text-[#1d1d1f]">
+                    手机与平板随身端
+                  </h3>
+                  <p className="mt-2.5 text-[13.5px] text-[#6e6e73] leading-relaxed landing-pretty-copy">
+                    支持免安装添加到主屏幕全屏运行，单手即可流畅刷闪卡、做 5 题急救与耳机巡航听单词。
+                  </p>
+
+                  {/* 桌面端显示纯净二维码卡；手机端显示主屏幕添加提示 */}
+                  <div className="hidden sm:flex mt-5 rounded-2xl bg-white p-3.5 items-center gap-4 border border-black/[0.04]">
+                    <div className="p-1.5 rounded-xl bg-white shrink-0 border border-black/[0.06]">
+                      {qrCodeDataUrl ? (
+                        <img
+                          src={qrCodeDataUrl}
+                          alt="手机扫码访问研核官网"
+                          className="h-20 w-20 object-contain"
+                        />
+                      ) : (
+                        <div className="h-20 w-20 flex items-center justify-center text-xs text-[#86868b]">
+                          加载中
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-xs space-y-1 text-[#6e6e73]">
+                      <div className="font-semibold text-[#1d1d1f]">扫码在手机打开</div>
+                      <div className="font-mono text-[11px]">{OFFICIAL_DOMAIN_HOST}</div>
+                      <div>浏览器菜单选择「添加到主屏幕」即可生成独立全屏图标</div>
+                    </div>
+                  </div>
+
+                  <div className="sm:hidden mt-5 rounded-2xl bg-white p-4 border border-black/[0.04] text-xs text-[#6e6e73] leading-relaxed">
+                    点击当前浏览器菜单中的 <strong className="text-[#1d1d1f]">「添加到主屏幕」</strong>，即可在手机桌面生成独立全屏应用图标。
+                  </div>
+                </div>
+
+                <div className="space-y-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setMobilePreviewOpen(true)}
+                    className="w-full min-h-11 rounded-full bg-[#0071e3] hover:bg-[#0077ed] py-3 px-5 text-xs sm:text-sm font-medium text-white flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <span>免登录预览手机界面</span>
+                  </button>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isAuthenticated) navigate('/dashboard')
+                        else openAuthWithIntent('login', undefined, '登录后自动同步手机与电脑进度')
+                      }}
+                      className="min-h-9 py-2 px-3 rounded-full bg-white hover:bg-black/[0.03] border border-black/[0.08] text-xs font-medium text-[#1d1d1f] transition-colors cursor-pointer"
+                    >
+                      {isAuthenticated ? '进入正式版' : '登录正式版'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCopySiteUrl}
+                      className="min-h-9 py-2 px-3 rounded-full bg-white hover:bg-black/[0.03] border border-black/[0.08] text-xs font-medium text-[#1d1d1f] inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      {copiedUrl ? (
+                        <Check className="w-3.5 h-3.5 text-[#30d158]" />
+                      ) : (
+                        <Share2 className="w-3.5 h-3.5 text-[#6e6e73]" />
+                      )}
+                      <span>{copiedUrl ? '已复制链接' : '复制网址'}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Web 云端空间 */}
+              <div className="apple-tile-gray p-7 sm:p-9 flex flex-col justify-between gap-8 text-left">
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-6">
+                    <div className="w-12 h-12 rounded-2xl bg-white text-[#1d1d1f] shadow-2xs flex items-center justify-center shrink-0">
+                      <Globe className="w-6 h-6 stroke-[1.75]" />
+                    </div>
+                    <span className="text-xs font-mono text-[#6e6e73]">
+                      {downloadInfo?.web?.version ? `Cloud v${downloadInfo.web.version}` : '即开即用'}
+                    </span>
+                  </div>
+
+                  <p className="text-xs font-semibold tracking-wider text-[#86868b]">
+                    跨设备零安装启动
+                  </p>
+                  <h3 className="mt-1 text-xl sm:text-2xl font-semibold tracking-[-0.025em] text-[#1d1d1f]">
+                    全功能网页在线空间
+                  </h3>
+                  <p className="mt-2.5 text-[13.5px] text-[#6e6e73] leading-relaxed landing-pretty-copy">
+                    在图书馆电脑、Mac 或 iPad 浏览器打开官网登录账号，所有笔记、错题与闪卡即刻就位。
+                  </p>
+
+                  <ul className="mt-6 space-y-2.5 text-xs text-[#1d1d1f]/85 border-t border-black/[0.06] pt-5">
+                    <li>· 10 秒免手机号创建账号，自动继承试玩记录</li>
+                    <li>· 独立多租户存储空间，跨设备实时云端接力</li>
+                    <li>· 支持随时一键打包导出全部标准 Markdown 笔记</li>
+                  </ul>
+                </div>
+
+                <div>
                   <button
                     type="button"
                     onClick={() => {
                       if (isAuthenticated) navigate('/dashboard')
-                      else openAuthWithIntent('login', undefined, '登录后自动同步您的手机与电脑研学进度')
+                      else openAuthWithIntent('register')
                     }}
-                    className="py-2 px-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-2xs sm:text-xs font-bold text-slate-800 transition-colors cursor-pointer"
+                    className="w-full min-h-11 rounded-full bg-[#0071e3] hover:bg-[#0077ed] py-3 px-5 text-xs sm:text-sm font-medium text-white flex items-center justify-center gap-2 transition-colors cursor-pointer"
                   >
-                    {isAuthenticated ? '进入手机正式版' : '登录 / 注册正式版'}
+                    <span>{isAuthenticated ? '进入我的网页空间' : '免费开启网页空间'}</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={handleCopySiteUrl}
-                    className="py-2 px-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-2xs sm:text-xs font-bold text-slate-700 inline-flex items-center justify-center gap-1 transition-colors cursor-pointer"
-                  >
-                    {copiedUrl ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Share2 className="w-3.5 h-3.5" />}
-                    <span>{copiedUrl ? '已复制官网链接' : '复制官网地址'}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* 3. 全功能网页在线版（明确标注注册/登录引导文案） */}
-            <div className="landing-bento-card rounded-2xl p-5 sm:p-7 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-5">
-                  <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                    <Globe className="w-6 h-6" />
-                  </div>
-                  <span className="text-xs font-mono text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-200/60">
-                    {downloadInfo?.web?.version ? `在线版 v${downloadInfo.web.version}` : '云端多租户版'}
-                  </span>
-                </div>
-
-                <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-2">全功能网页在线空间</h3>
-                <p className="text-xs text-slate-500 leading-relaxed mb-5 landing-pretty-copy">
-                  无需安装软件，在图书馆公用电脑、iPad 或笔记本浏览器访问 <span className="font-mono text-slate-700">{OFFICIAL_DOMAIN_HOST}</span> 登录账号即可开始学习。
-                </p>
-
-                <ul className="space-y-2.5 text-xs text-slate-700 mb-7 font-medium">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span>10 秒免手机号注册，自动继承上方试玩问答与错题</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span>做题进度、错题归因与双链笔记跨设备实时云端同步</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span>支持随时一键打包导出个人全部标准 Markdown 笔记</span>
-                  </li>
-                </ul>
-              </div>
-
-              <div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (isAuthenticated) navigate('/dashboard')
-                    else openAuthWithIntent('register')
-                  }}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl landing-cta-primary py-3 px-4 text-xs sm:text-sm font-bold text-white cursor-pointer"
-                >
-                  <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>{isAuthenticated ? '立即进入我的网页空间' : '注册 / 登录网页研学空间'}</span>
-                </button>
-                <div className="mt-2 text-center text-2xs text-slate-400">
-                  注册即赠 5.0 初始研学积分 · 独立沙盒安全存储
+                  <p className="mt-2.5 text-center text-[11px] text-[#86868b]">
+                    新人赠 5.0 初始积分 · 数据随时可导出
+                  </p>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* 页脚前终极冲刺召唤横幅 */}
-      <section className="w-full max-w-[1280px] mx-auto px-3.5 sm:px-8 py-12 sm:py-16">
-        <div className="rounded-3xl bg-gradient-to-br from-[#12131a] via-[#191c2e] to-[#0f172a] text-white p-6 sm:p-12 shadow-[0_24px_60px_rgba(15,23,42,0.22)] border border-white/10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative overflow-hidden">
-          <div className="space-y-2.5 max-w-2xl text-left relative z-10">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-amber-300 text-2xs font-bold">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>每一道弄懂的错题，都是考场上的底气</span>
+          {/* 页脚前曜石黑收官横幅 */}
+          <div className="cinema-dark-lock apple-tile-dark p-8 sm:p-14 text-center flex flex-col items-center justify-center gap-6">
+            <div className="max-w-2xl space-y-3">
+              <p className="text-xs font-semibold tracking-wider text-[#86868b]">
+                每一道吃透的错题，都是考场上的底气
+              </p>
+              <h2 className="text-2xl sm:text-4xl font-semibold tracking-[-0.03em] text-[#f5f5f7]">
+                现在开启你的 CoreForge 研核备考空间。
+              </h2>
+              <p className="text-xs sm:text-sm text-[#a1a1a6] leading-relaxed landing-pretty-copy">
+                距离 {countdown.targetLabel} 还有 {countdown.days} 天。
+                {trialSummary.totalFootprints > 0
+                  ? `立即创建账号即可永久保存刚才产生的 ${trialSummary.totalFootprints} 项试玩成果，并获赠 5.0 初始积分。`
+                  : '用 10 秒钟创建专属账号，将零散的刷题与笔记收拢为清晰坚固的知识体系。'}
+              </p>
             </div>
-            <h2 className="text-xl sm:text-3xl font-extrabold tracking-tight">
-              现在开启你的 CoreForge 研核专属备考空间
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed landing-pretty-copy">
-              距离 {countdown.targetLabel} 还有 {countdown.days} 天。
-              {trialSummary.totalFootprints > 0
-                ? `立即注册即可永久保存您刚才产生的 ${trialSummary.totalFootprints} 项试玩问答与错题，并获赠 5.0 初始积分！`
-                : '立即用 10 秒钟创建账号，领取 5.0 初始研学积分，把零散的刷题与笔记收拢成无懈可击的知识体系。'}
-            </p>
-          </div>
 
-          <div className="flex flex-col xs:flex-row items-stretch xs:items-center gap-3 w-full lg:w-auto shrink-0 relative z-10">
-            <button
-              type="button"
-              onClick={() => {
-                if (isAuthenticated) navigate('/dashboard')
-                else openAuthWithIntent('register')
-              }}
-              className="px-6 py-3.5 rounded-2xl bg-white hover:bg-slate-100 text-slate-950 font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 cursor-pointer"
-            >
-              <UserPlus className="w-4 h-4 text-indigo-600" />
-              <span>
+            <div className="flex flex-col xs:flex-row items-stretch xs:items-center justify-center gap-3 w-full xs:w-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  if (isAuthenticated) navigate('/dashboard')
+                  else openAuthWithIntent('register')
+                }}
+                className="min-h-11 px-7 py-3 rounded-full bg-[#f5f5f7] hover:bg-white text-[#1d1d1f] font-semibold text-sm transition-colors cursor-pointer"
+              >
                 {isAuthenticated
                   ? '进入研学工作台'
                   : trialSummary.totalFootprints > 0
                   ? `免费注册并继承 ${trialSummary.totalFootprints} 项记录`
-                  : '免费注册账号 (赠 5 积分)'}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setMobilePreviewOpen(true)}
-              className="px-5 py-3.5 rounded-2xl bg-white/10 hover:bg-white/15 text-white border border-white/20 font-bold text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-            >
-              <Smartphone className="w-4 h-4 text-emerald-300" />
-              <span>免登录预览手机版</span>
-            </button>
+                  : '免费创建账号'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobilePreviewOpen(true)}
+                className="min-h-11 px-6 py-3 rounded-full bg-white/[0.1] hover:bg-white/[0.16] text-[#f5f5f7] font-medium text-sm transition-colors cursor-pointer"
+              >
+                预览移动端界面
+              </button>
+            </div>
           </div>
         </div>
       </section>
 
       {/* =====================================================================
-          品牌权威页脚（含官方品牌域名 https://claudexxb.online）
+          Apple 风格极简细字页脚
          ===================================================================== */}
-      <footer className="border-t border-slate-200/90 bg-white py-8 sm:py-10 text-slate-500 text-xs">
-        <div className="max-w-[1280px] mx-auto px-4 sm:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
+      <footer className="border-t border-black/[0.08] apple-section-gray py-8 sm:py-10 text-[#6e6e73] text-xs">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 text-center md:text-left">
-            <div className="w-5 h-5 rounded bg-[#18181b] text-white flex items-center justify-center text-2xs font-bold shrink-0">
-              研
-            </div>
-            <span className="font-bold text-slate-800">CoreForge 研核官网</span>
-            <span>·</span>
+            <span className="font-semibold text-[#1d1d1f]">CoreForge 研核</span>
+            <span className="text-[#d2d2d7]">|</span>
             <a
               href={OFFICIAL_DOMAIN}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 font-mono font-semibold text-indigo-600 hover:text-indigo-700"
+              className="inline-flex items-center gap-1 font-mono text-[#515154] hover:text-[#1d1d1f]"
             >
               <span>{OFFICIAL_DOMAIN_HOST}</span>
               <ExternalLink className="w-3 h-3" />
             </a>
-            <span className="hidden sm:inline text-slate-400">
-              · 408 计算机与考研数/英/政智能研学操作系统
+            <span className="hidden sm:inline text-[#86868b]">
+              · 408 计算机与考研全科智能研学工作台
             </span>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-5 text-slate-600 font-semibold">
-            <a
-              href="#preview"
-              onClick={(e) => {
-                e.preventDefault()
-                scrollToSection('#preview')
-              }}
-              className="hover:text-slate-900 transition-colors"
-            >
-              免登录试玩
-            </a>
-            <a
-              href="#subjects"
-              onClick={(e) => {
-                e.preventDefault()
-                scrollToSection('#subjects')
-              }}
-              className="hover:text-slate-900 transition-colors"
-            >
-              考研四核
-            </a>
-            <a
-              href="#trust"
-              onClick={(e) => {
-                e.preventDefault()
-                scrollToSection('#trust')
-              }}
-              className="hover:text-slate-900 transition-colors"
-            >
-              真题年份与导出说明
-            </a>
-            <a
-              href="#download"
-              onClick={(e) => {
-                e.preventDefault()
-                scrollToSection('#download')
-              }}
-              className="hover:text-slate-900 transition-colors"
-            >
-              多端下载
-            </a>
+          <div className="flex flex-wrap items-center justify-center gap-5 text-[#515154]">
+            {NAV_LINKS.map((item) => (
+              <a
+                key={item.href}
+                href={item.href}
+                onClick={(e) => {
+                  e.preventDefault()
+                  scrollToSection(item.href)
+                }}
+                className="hover:text-[#1d1d1f] transition-colors"
+              >
+                {item.label}
+              </a>
+            ))}
             <button
               type="button"
               onClick={() => openAuthWithIntent(isAuthenticated ? 'login' : 'register')}
-              className="hover:text-slate-900 transition-colors cursor-pointer"
+              className="text-[#0066cc] hover:underline font-medium cursor-pointer"
             >
-              {isAuthenticated ? '进入工作台' : '免费注册 / 登录'}
+              {isAuthenticated ? '进入工作台' : '登录 / 注册'}
             </button>
           </div>
         </div>
       </footer>
 
-      {/* 移动端滚动感知底部悬浮转化栏 */}
-      {!isAuthenticated && showMobileStickyCta && !authModalOpen && !fullScreenSandbox && !mobilePreviewOpen && (
-        <div className="md:hidden fixed inset-x-0 bottom-0 z-40 px-3 pt-2.5 pb-[max(0.65rem,env(safe-area-inset-bottom,0px))] bg-white/92 backdrop-blur-xl border-t border-slate-200/90 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] flex items-center gap-2 animate-fade-in-up">
-          <button
-            type="button"
-            onClick={() => setMobilePreviewOpen(true)}
-            className="px-3 py-2.5 rounded-xl bg-slate-100 active:bg-slate-200 text-slate-800 border border-slate-200/90 text-xs font-bold flex items-center justify-center gap-1 shrink-0 cursor-pointer"
-          >
-            <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
-            <span>免登录预览</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => openAuthWithIntent('register')}
-            className="flex-1 py-2.5 px-3.5 rounded-xl landing-cta-primary text-white text-xs font-extrabold flex items-center justify-center gap-1.5 cursor-pointer"
-          >
-            <Gift className="w-3.5 h-3.5 text-amber-300 shrink-0" />
-            <span className="truncate">
-              {trialSummary.totalFootprints > 0
-                ? `注册并保存 ${trialSummary.totalFootprints} 项试玩`
-                : '免费注册领 5 积分'}
-            </span>
-            <ArrowRight className="w-3.5 h-3.5 shrink-0" />
-          </button>
-        </div>
-      )}
+      {/* 移动端底部极简磨砂转化栏 */}
+      {!isAuthenticated &&
+        showMobileStickyCta &&
+        !authModalOpen &&
+        !fullScreenSandbox &&
+        !mobilePreviewOpen && (
+          <div className="md:hidden fixed inset-x-0 bottom-0 z-40 px-4 pt-2.5 pb-[max(0.65rem,env(safe-area-inset-bottom,0px))] apple-glass-nav border-t border-black/[0.08] flex items-center gap-2.5 animate-fade-in-up">
+            <button
+              type="button"
+              onClick={() => setMobilePreviewOpen(true)}
+              className="min-h-10 px-4 py-2 rounded-full bg-[#f5f5f7] text-[#1d1d1f] text-xs font-medium shrink-0 cursor-pointer"
+            >
+              手机预览
+            </button>
+            <button
+              type="button"
+              onClick={() => openAuthWithIntent('register')}
+              className="flex-1 min-h-10 py-2 px-4 rounded-full bg-[#0071e3] text-white text-xs font-medium flex items-center justify-center gap-1 cursor-pointer"
+            >
+              <span className="truncate">
+                {trialSummary.totalFootprints > 0
+                  ? `免费注册并继承 ${trialSummary.totalFootprints} 项记录`
+                  : '免费开启专属空间'}
+              </span>
+              <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+            </button>
+          </div>
+        )}
 
       {/* 免登录移动端伴学界面预览模态框 */}
       <MobilePreviewModal
@@ -1656,7 +1668,25 @@ export default function LandingPage() {
         onEnterWorkspace={() => navigate('/dashboard')}
       />
 
-      {/* 双栏高转化注册/登录模态框 + 试玩状态继承回执 + 新人救援码备份卡 */}
+      {/* 免登录视觉使用手册模态框 */}
+      {guideModalOpen && (
+        <Suspense fallback={null}>
+          <UserGuideModal
+            isOpen={guideModalOpen}
+            onClose={() => setGuideModalOpen(false)}
+            initialTab={guideModalConfig.tab}
+            initialCategory={guideModalConfig.category}
+            initialFeatureId={guideModalConfig.featureId}
+            isGuestMode={!isAuthenticated}
+            onRequireAuth={(targetPath, targetLabel) => {
+              setGuideModalOpen(false)
+              handleLaunchModule(targetPath, targetLabel)
+            }}
+          />
+        </Suspense>
+      )}
+
+      {/* Apple Sheet 风格纯净双栏认证模态框 */}
       {authModalOpen &&
         createPortal(
           <div
@@ -1665,17 +1695,17 @@ export default function LandingPage() {
                 setAuthModalOpen(false)
               }
             }}
-            className="fixed inset-0 z-[120] bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto modal-scroll-contain overscroll-contain animate-in fade-in duration-200"
+            className="fixed inset-0 z-[120] bg-black/45 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-y-auto modal-scroll-contain overscroll-contain animate-in fade-in duration-200"
             role="dialog"
             aria-modal="true"
             aria-labelledby="auth-modal-heading"
           >
-            <div className="relative w-full max-w-[960px] max-h-[calc(100dvh-1.5rem)] sm:max-h-[min(92dvh,760px)] rounded-3xl bg-[#e3e4e8] p-2 sm:p-3 shadow-[0_28px_70px_rgba(0,0,0,0.48)] border border-white/70 grid grid-cols-1 lg:grid-cols-12 gap-3 overflow-hidden my-auto animate-in zoom-in-95 duration-200">
+            <div className="relative w-full max-w-[920px] max-h-[calc(100dvh-1.5rem)] sm:max-h-[min(92dvh,740px)] rounded-[28px] bg-white shadow-[0_32px_80px_rgba(0,0,0,0.32)] border border-black/[0.06] grid grid-cols-1 lg:grid-cols-12 overflow-hidden my-auto animate-in zoom-in-95 duration-200">
               {!registeredWelcome && (
                 <button
                   type="button"
                   onClick={() => setAuthModalOpen(false)}
-                  className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 z-50 w-9 h-9 rounded-full bg-black/10 hover:bg-black/20 active:scale-90 text-slate-800 flex items-center justify-center transition-all cursor-pointer border border-white/50"
+                  className="absolute top-4 right-4 z-50 w-8 h-8 rounded-full bg-black/[0.06] hover:bg-black/[0.12] lg:bg-white/[0.12] lg:hover:bg-white/[0.2] text-[#1d1d1f] lg:text-white flex items-center justify-center transition-colors cursor-pointer"
                   title="关闭窗口 (ESC)"
                   aria-label="关闭认证窗口"
                 >
@@ -1683,94 +1713,91 @@ export default function LandingPage() {
                 </button>
               )}
 
-              {/* 左栏：注册 / 登录 / 找回密码 / 注册成功欢迎卡 */}
-              <div className="lg:col-span-6 bg-[#f6f6f8] rounded-2xl p-4 sm:p-7 flex flex-col justify-between text-left border border-white/90 overflow-y-auto max-h-[calc(100dvh-2.5rem)] lg:max-h-none modal-scroll-contain overscroll-contain">
+              {/* 左栏：注册 / 登录 / 找回密码 / 注册成功欢迎回执 */}
+              <div className="lg:col-span-6 bg-white p-6 sm:p-9 flex flex-col justify-between text-left overflow-y-auto max-h-[calc(100dvh-2rem)] lg:max-h-none modal-scroll-contain overscroll-contain">
                 {registeredWelcome ? (
-                  <div className="space-y-3.5 my-auto py-1">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                      <span>研学空间创建成功 · 已自动登入</span>
+                  <div className="space-y-4 my-auto py-1">
+                    <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#248a3d]">
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>空间创建成功 · 已自动登入</span>
                     </div>
 
                     <div>
                       <h2
                         id="auth-modal-heading"
-                        className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight"
+                        className="text-2xl font-semibold tracking-[-0.025em] text-[#1d1d1f]"
                       >
-                        欢迎加入研核，{registeredWelcome.username}！
+                        欢迎加入研核，{registeredWelcome.username}。
                       </h2>
-                      <p className="mt-1 text-xs text-slate-600 leading-relaxed">
-                        您的独立双链知识库与新人研学礼遇已全部就绪：
+                      <p className="mt-1 text-xs text-[#6e6e73]">
+                        您的独立双链知识库与初始研学礼遇已准备就绪：
                       </p>
                     </div>
 
-                    {/* 若成功继承了试玩成果，展示醒目回执卡片 */}
                     {registeredWelcome.inheritResult?.inherited && (
-                      <div className="p-3.5 rounded-2xl bg-indigo-50 border border-indigo-200 text-xs text-indigo-950 space-y-1">
-                        <div className="font-extrabold flex items-center gap-1.5 text-indigo-800">
-                          <BookmarkCheck className="w-4 h-4 text-indigo-600" />
-                          <span>已自动继承您的首页试玩学习记录！</span>
+                      <div className="p-4 rounded-2xl bg-[#f5f5f7] text-xs text-[#1d1d1f] space-y-1">
+                        <div className="font-semibold flex items-center gap-1.5 text-[#0066cc]">
+                          <BookmarkCheck className="w-4 h-4" />
+                          <span>已自动继承您的试玩学习记录</span>
                         </div>
-                        <p className="text-[11.5px] text-indigo-900/85 leading-relaxed">
-                          系统已为您生成首篇双链笔记{' '}
-                          <code className="px-1 py-0.5 rounded bg-white border border-indigo-200 text-indigo-800">
+                        <p className="text-[11.5px] text-[#6e6e73] leading-relaxed">
+                          系统已生成首篇笔记{' '}
+                          <code className="px-1.5 py-0.5 rounded bg-white text-[#1d1d1f]">
                             00-试玩留存笔记/首篇研学试玩精华.md
                           </code>
-                          {registeredWelcome.inheritResult.conversationsSynced > 0 && '、同步 AI 导师试玩会话'}
+                          {registeredWelcome.inheritResult.conversationsSynced > 0 &&
+                            '、同步 AI 导师会话'}
                           {registeredWelcome.inheritResult.errorsSaved > 0 &&
-                            `、并录入 ${registeredWelcome.inheritResult.errorsSaved} 道待复盘错题`}
+                            `、录入 ${registeredWelcome.inheritResult.errorsSaved} 道错题`}
                           。
                         </p>
                       </div>
                     )}
 
-                    <div className="p-3.5 rounded-2xl bg-white border border-emerald-200/90 flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                          <Gift className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <div className="text-xs font-bold text-slate-900">新人初始研学积分已到账</div>
-                          <div className="text-2xs text-slate-500">可用于 AI 导师深度答疑与英语作文精批</div>
+                    <div className="p-4 rounded-2xl bg-[#f5f5f7] flex items-center justify-between">
+                      <div>
+                        <div className="text-xs font-semibold text-[#1d1d1f]">新人初始积分已到账</div>
+                        <div className="text-[11px] text-[#6e6e73] mt-0.5">
+                          可用于 AI 导师深度答疑与英语作文精批
                         </div>
                       </div>
-                      <span className="text-lg font-extrabold text-emerald-600 tabular-nums">
-                        +{registeredWelcome.points.toFixed(1)} 积分
+                      <span className="text-lg font-semibold text-[#1d1d1f] tabular-nums">
+                        +{registeredWelcome.points.toFixed(1)}
                       </span>
                     </div>
 
                     {registeredWelcome.recoveryCode && (
-                      <div className="p-3.5 rounded-2xl bg-amber-50/90 border border-amber-300/80 space-y-2">
+                      <div className="p-4 rounded-2xl bg-[#f5f5f7] space-y-2.5">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-950">
-                            <KeyRound className="w-4 h-4 text-amber-700" />
-                            <span>您的专属应急救援码（建议复制保存）</span>
+                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#1d1d1f]">
+                            <KeyRound className="w-3.5 h-3.5 text-[#6e6e73]" />
+                            <span>专属应急救援码（建议复制保存）</span>
                           </span>
                           <button
                             type="button"
                             onClick={() => handleCopyRecoveryCode(registeredWelcome.recoveryCode!)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white hover:bg-amber-100 text-amber-950 border border-amber-300 text-2xs font-bold transition-colors cursor-pointer"
+                            className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white border border-black/[0.08] text-[11px] font-medium text-[#1d1d1f] cursor-pointer"
                           >
                             {copiedRecovery ? (
                               <>
-                                <Check className="w-3 h-3 text-emerald-600" />
+                                <Check className="w-3 h-3 text-[#248a3d]" />
                                 <span>已复制</span>
                               </>
                             ) : (
                               <>
                                 <Copy className="w-3 h-3" />
-                                <span>一键复制</span>
+                                <span>复制</span>
                               </>
                             )}
                           </button>
                         </div>
-                        <div className="py-2 px-3 rounded-xl bg-white border border-amber-200 font-mono text-sm font-extrabold text-slate-900 tracking-wider text-center select-all">
+                        <div className="py-2 px-3 rounded-xl bg-white border border-black/[0.06] font-mono text-sm font-semibold text-[#1d1d1f] tracking-wider text-center select-all">
                           {registeredWelcome.recoveryCode}
                         </div>
                       </div>
                     )}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
                       <button
                         type="button"
                         onClick={() => {
@@ -1779,7 +1806,7 @@ export default function LandingPage() {
                           setAuthModalOpen(false)
                           navigate(dest, { replace: true })
                         }}
-                        className="py-3 px-4 rounded-xl landing-cta-primary text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                        className="apple-btn-blue text-xs sm:text-sm cursor-pointer"
                       >
                         <span className="truncate">进入{registeredWelcome.targetLabel}</span>
                         <ArrowRight className="w-4 h-4 shrink-0" />
@@ -1792,9 +1819,9 @@ export default function LandingPage() {
                             setAuthModalOpen(false)
                             navigate('/editor', { replace: true })
                           }}
-                          className="py-3 px-4 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                          className="min-h-11 py-2.5 px-4 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] text-xs sm:text-sm font-medium cursor-pointer"
                         >
-                          <span>查看首篇试玩笔记</span>
+                          查看首篇试玩笔记
                         </button>
                       ) : null}
                     </div>
@@ -1802,36 +1829,34 @@ export default function LandingPage() {
                 ) : (
                   <>
                     <div>
-                      <div className="flex items-center gap-2 mb-3.5">
-                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl overflow-hidden flex items-center justify-center shadow-2xs ring-1 ring-rose-200/70 shrink-0">
+                      <div className="flex items-center gap-2 mb-5">
+                        <div className="w-7 h-7 rounded-lg overflow-hidden ring-1 ring-black/[0.08] shrink-0">
                           <img src="/icon-192.png?v=dango" alt="研核" className="h-full w-full object-cover" />
                         </div>
-                        <span className="font-extrabold text-sm text-slate-900">CoreForge 研核工作台</span>
+                        <span className="font-semibold text-sm text-[#1d1d1f]">CoreForge 研核</span>
                       </div>
 
                       {contextBannerHint && modalTab !== 'forgot' && (
-                        <div className="mb-3.5 px-3 py-2 rounded-xl bg-indigo-50 border border-indigo-200/80 text-indigo-900 text-xs font-medium flex items-center gap-2">
-                          <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                          <span>{contextBannerHint}</span>
+                        <div className="mb-4 px-3.5 py-2.5 rounded-2xl bg-[#f5f5f7] text-[#1d1d1f] text-xs leading-relaxed">
+                          {contextBannerHint}
                         </div>
                       )}
 
                       {initialized && modalTab !== 'forgot' && (
-                        <div className="mb-4 grid grid-cols-2 gap-1 p-1 rounded-xl bg-[#e4e5e9] border border-black/[0.05]">
+                        <div className="mb-5 grid grid-cols-2 gap-1 p-1 rounded-full bg-[#f5f5f7]">
                           <button
                             type="button"
                             onClick={() => {
                               setModalTab('register')
                               setModalError(null)
                             }}
-                            className={`py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                            className={`min-h-9 py-1.5 px-3 rounded-full text-xs font-medium transition-all cursor-pointer ${
                               modalTab === 'register'
-                                ? 'bg-white text-slate-900 shadow-xs'
-                                : 'text-slate-600 hover:text-slate-900'
+                                ? 'bg-white text-[#1d1d1f] font-semibold shadow-2xs'
+                                : 'text-[#6e6e73] hover:text-[#1d1d1f]'
                             }`}
                           >
-                            <UserPlus className="w-3.5 h-3.5 text-indigo-600" />
-                            <span>极速注册 (赠5积分)</span>
+                            创建新账号
                           </button>
                           <button
                             type="button"
@@ -1839,42 +1864,41 @@ export default function LandingPage() {
                               setModalTab('login')
                               setModalError(null)
                             }}
-                            className={`py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                            className={`min-h-9 py-1.5 px-3 rounded-full text-xs font-medium transition-all cursor-pointer ${
                               modalTab === 'login'
-                                ? 'bg-white text-slate-900 shadow-xs'
-                                : 'text-slate-600 hover:text-slate-900'
+                                ? 'bg-white text-[#1d1d1f] font-semibold shadow-2xs'
+                                : 'text-[#6e6e73] hover:text-[#1d1d1f]'
                             }`}
                           >
-                            <LogIn className="w-3.5 h-3.5" />
-                            <span>已有账号登录</span>
+                            已有账号登录
                           </button>
                         </div>
                       )}
 
                       <h2
                         id="auth-modal-heading"
-                        className="text-lg sm:text-[22px] leading-tight tracking-tight font-extrabold text-[#18181b] mb-1"
+                        className="text-xl sm:text-2xl tracking-[-0.025em] font-semibold text-[#1d1d1f] mb-1"
                       >
                         {!initialized
-                          ? '初始化首位管理员空间'
+                          ? '初始化管理员空间'
                           : modalTab === 'forgot'
-                          ? '安全找回研学密码'
+                          ? '找回研学密码'
                           : modalTab === 'register'
-                          ? '10 秒创建个人专属研学账号'
-                          : '欢迎回到研核备考空间'}
+                          ? '创建个人专属空间'
+                          : '登录研核备考空间'}
                       </h2>
-                      <p className="text-xs text-slate-500 mb-4">
+                      <p className="text-xs text-[#6e6e73] mb-5">
                         {modalTab === 'forgot'
                           ? '支持安全密保问答或 8 位专属救援码自助重置'
                           : modalTab === 'register'
-                          ? '无需手机号验证，试玩记录自动继承并立赠 5.0 积分'
-                          : '登录后自动同步您的刷题记录、错题归因与闪卡进度'}
+                          ? '免手机号注册，试玩记录自动继承并赠 5.0 初始积分'
+                          : '登录后自动同步您的刷题进度、错题本与闪卡队列'}
                       </p>
 
                       {modalError && (
                         <div
                           role="alert"
-                          className="mb-3.5 p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2"
+                          className="mb-4 p-3 rounded-2xl bg-rose-50 text-rose-700 text-xs flex items-center gap-2"
                         >
                           <ShieldAlert className="w-4 h-4 shrink-0 text-rose-500" />
                           <span>{modalError}</span>
@@ -1884,7 +1908,7 @@ export default function LandingPage() {
                       {resetSuccessMessage && (
                         <div
                           role="status"
-                          className="mb-3.5 p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs flex items-center gap-2"
+                          className="mb-4 p-3 rounded-2xl bg-emerald-50 text-emerald-700 text-xs flex items-center gap-2"
                         >
                           <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
                           <span>{resetSuccessMessage}</span>
@@ -1892,13 +1916,13 @@ export default function LandingPage() {
                       )}
 
                       {modalTab !== 'forgot' ? (
-                        <form noValidate onSubmit={handleModalAuthSubmit} className="space-y-3">
+                        <form noValidate onSubmit={handleModalAuthSubmit} className="space-y-3.5">
                           <div>
                             <label
                               htmlFor="landing-auth-username"
-                              className="block text-xs font-bold text-slate-700 mb-1"
+                              className="block text-xs font-medium text-[#1d1d1f] mb-1.5"
                             >
-                              研学账号名称 <span aria-hidden="true" className="text-rose-500">*</span>
+                              账号名称
                             </label>
                             <input
                               id="landing-auth-username"
@@ -1916,10 +1940,10 @@ export default function LandingPage() {
                               }}
                               placeholder={
                                 modalTab === 'register'
-                                  ? '字母或数字组合，至少 3 位 (如 kaoyan27)'
-                                  : '请输入您的研学账号'
+                                  ? '字母或数字组合，至少 3 位'
+                                  : '请输入您的账号名称'
                               }
-                              className="w-full py-2.5 px-3 rounded-xl bg-white border border-slate-300/90 text-[#18181b] placeholder-[#9ca3af] text-base sm:text-[13px] focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all"
+                              className="w-full py-2.5 px-3.5 rounded-xl bg-[#f5f5f7] focus:bg-white border border-transparent focus:border-[#0071e3] text-[#1d1d1f] placeholder-[#86868b] text-base sm:text-[13px] focus:outline-none focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
                             />
                           </div>
 
@@ -1927,9 +1951,9 @@ export default function LandingPage() {
                             <div>
                               <label
                                 htmlFor="landing-auth-nickname"
-                                className="block text-xs font-bold text-slate-700 mb-1"
+                                className="block text-xs font-medium text-[#1d1d1f] mb-1.5"
                               >
-                                研学昵称 <span className="font-normal text-slate-400">(选填，用于伴学称呼)</span>
+                                伴学昵称 <span className="text-[#86868b]">(选填)</span>
                               </label>
                               <input
                                 id="landing-auth-nickname"
@@ -1938,19 +1962,19 @@ export default function LandingPage() {
                                 autoComplete="nickname"
                                 value={modalDisplayName}
                                 onChange={(e) => setModalDisplayName(e.target.value)}
-                                placeholder="例如：一战成硕的小研"
-                                className="w-full py-2.5 px-3 rounded-xl bg-white border border-slate-300/90 text-[#18181b] placeholder-[#9ca3af] text-base sm:text-[13px] focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all"
+                                placeholder="用于工作台与伴学称呼"
+                                className="w-full py-2.5 px-3.5 rounded-xl bg-[#f5f5f7] focus:bg-white border border-transparent focus:border-[#0071e3] text-[#1d1d1f] placeholder-[#86868b] text-base sm:text-[13px] focus:outline-none focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
                               />
                             </div>
                           )}
 
                           <div>
-                            <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center justify-between mb-1.5">
                               <label
                                 htmlFor="landing-auth-password"
-                                className="block text-xs font-bold text-slate-700"
+                                className="block text-xs font-medium text-[#1d1d1f]"
                               >
-                                登录密码 <span aria-hidden="true" className="text-rose-500">*</span>
+                                登录密码
                               </label>
                               {modalTab === 'login' && (
                                 <button
@@ -1961,7 +1985,7 @@ export default function LandingPage() {
                                     setForgotStep(1)
                                     setForgotUsername(modalUsername)
                                   }}
-                                  className="text-2xs font-semibold text-indigo-600 hover:text-indigo-700 cursor-pointer"
+                                  className="text-xs font-normal text-[#0066cc] hover:underline cursor-pointer"
                                 >
                                   忘记密码？
                                 </button>
@@ -1973,23 +1997,29 @@ export default function LandingPage() {
                                 name="password"
                                 type={showModalPassword ? 'text' : 'password'}
                                 required
-                                autoComplete={modalTab === 'register' ? 'new-password' : 'current-password'}
+                                autoComplete={
+                                  modalTab === 'register' ? 'new-password' : 'current-password'
+                                }
                                 value={modalPassword}
                                 onChange={(e) => {
                                   setModalPassword(e.target.value)
                                   if (modalError) setModalError(null)
                                 }}
                                 placeholder="至少 6 位字符"
-                                className="w-full py-2.5 pl-3 pr-10 rounded-xl bg-white border border-slate-300/90 text-[#18181b] placeholder-[#9ca3af] text-base sm:text-[13px] focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all"
+                                className="w-full py-2.5 pl-3.5 pr-10 rounded-xl bg-[#f5f5f7] focus:bg-white border border-transparent focus:border-[#0071e3] text-[#1d1d1f] placeholder-[#86868b] text-base sm:text-[13px] focus:outline-none focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
                               />
                               <button
                                 type="button"
                                 onClick={() => setShowModalPassword((v) => !v)}
                                 aria-pressed={showModalPassword}
-                                aria-label={showModalPassword ? '隐藏密码文本' : '显示密码文本'}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 flex items-center justify-center cursor-pointer"
+                                aria-label={showModalPassword ? '隐藏密码' : '显示密码'}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg text-[#86868b] hover:text-[#1d1d1f] flex items-center justify-center cursor-pointer"
                               >
-                                {showModalPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                {showModalPassword ? (
+                                  <EyeOff className="w-4 h-4" />
+                                ) : (
+                                  <Eye className="w-4 h-4" />
+                                )}
                               </button>
                             </div>
                           </div>
@@ -1998,9 +2028,9 @@ export default function LandingPage() {
                             <div>
                               <label
                                 htmlFor="landing-auth-confirm"
-                                className="block text-xs font-bold text-slate-700 mb-1"
+                                className="block text-xs font-medium text-[#1d1d1f] mb-1.5"
                               >
-                                确认登录密码 <span aria-hidden="true" className="text-rose-500">*</span>
+                                确认密码
                               </label>
                               <input
                                 id="landing-auth-confirm"
@@ -2014,7 +2044,7 @@ export default function LandingPage() {
                                   if (modalError) setModalError(null)
                                 }}
                                 placeholder="再次输入登录密码"
-                                className="w-full py-2.5 px-3 rounded-xl bg-white border border-slate-300/90 text-[#18181b] placeholder-[#9ca3af] text-base sm:text-[13px] focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 transition-all"
+                                className="w-full py-2.5 px-3.5 rounded-xl bg-[#f5f5f7] focus:bg-white border border-transparent focus:border-[#0071e3] text-[#1d1d1f] placeholder-[#86868b] text-base sm:text-[13px] focus:outline-none focus:ring-2 focus:ring-[#0071e3]/20 transition-all"
                               />
                             </div>
                           )}
@@ -2022,35 +2052,29 @@ export default function LandingPage() {
                           <button
                             type="submit"
                             disabled={modalLoading}
-                            className="w-full py-3 px-4 rounded-xl landing-cta-primary text-white text-sm font-bold transition-all cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 mt-1"
+                            className="w-full apple-btn-blue text-sm cursor-pointer disabled:opacity-60 mt-2"
                           >
                             {modalLoading ? (
-                              <span>正在安全处理并同步试玩记录...</span>
+                              <span>正在处理并同步记录...</span>
                             ) : modalTab === 'register' ? (
-                              <>
-                                <Gift className="w-4 h-4 text-amber-300" />
-                                <span>
-                                  {trialSummary.totalFootprints > 0
-                                    ? `创建账号 · 继承 ${trialSummary.totalFootprints} 项试玩并领积分`
-                                    : '立即创建账号 · 领取 5.0 积分'}
-                                </span>
-                              </>
+                              <span>
+                                {trialSummary.totalFootprints > 0
+                                  ? `创建账号并继承 ${trialSummary.totalFootprints} 项试玩记录`
+                                  : '立即创建专属账号'}
+                              </span>
                             ) : (
-                              <>
-                                <span>登入并打开{pendingTarget.label}</span>
-                                <ArrowRight className="w-4 h-4" />
-                              </>
+                              <span>登录并打开{pendingTarget.label}</span>
                             )}
                           </button>
                         </form>
                       ) : (
-                        <div className="space-y-3">
+                        <div className="space-y-3.5">
                           {forgotStep === 1 ? (
-                            <form onSubmit={handleQuerySecurityQuestion} className="space-y-3">
+                            <form onSubmit={handleQuerySecurityQuestion} className="space-y-3.5">
                               <div>
                                 <label
                                   htmlFor="forgot-username"
-                                  className="block text-xs font-bold text-slate-700 mb-1"
+                                  className="block text-xs font-medium text-[#1d1d1f] mb-1.5"
                                 >
                                   需要找回的账号名称
                                 </label>
@@ -2064,21 +2088,21 @@ export default function LandingPage() {
                                   value={forgotUsername}
                                   onChange={(e) => setForgotUsername(e.target.value)}
                                   placeholder="请输入您的用户名"
-                                  className="w-full py-2.5 px-3 rounded-xl bg-white border border-slate-300 text-[#18181b] text-base sm:text-[13px] focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                                  className="w-full py-2.5 px-3.5 rounded-xl bg-[#f5f5f7] focus:bg-white border border-transparent focus:border-[#0071e3] text-[#1d1d1f] text-base sm:text-[13px] focus:outline-none"
                                 />
                               </div>
 
                               <button
                                 type="submit"
                                 disabled={modalLoading}
-                                className="w-full py-3 px-4 rounded-xl bg-[#1c1c1f] hover:bg-[#2a2a2e] text-white text-sm font-bold transition-all cursor-pointer disabled:opacity-60"
+                                className="w-full apple-btn-blue text-sm cursor-pointer disabled:opacity-60"
                               >
                                 {modalLoading ? '正在检索安全通道...' : '下一步：验证身份'}
                               </button>
                             </form>
                           ) : (
-                            <form onSubmit={handleResetPasswordSubmit} className="space-y-2.5">
-                              <div className="flex items-center justify-between text-xs px-3 py-2 rounded-xl bg-slate-200/80 text-slate-700 font-semibold">
+                            <form onSubmit={handleResetPasswordSubmit} className="space-y-3">
+                              <div className="flex items-center justify-between text-xs px-3.5 py-2.5 rounded-xl bg-[#f5f5f7] text-[#1d1d1f] font-medium">
                                 <span>目标账号：{forgotUsername}</span>
                                 <button
                                   type="button"
@@ -2086,16 +2110,16 @@ export default function LandingPage() {
                                     setForgotStep(1)
                                     setModalError(null)
                                   }}
-                                  className="text-indigo-600 hover:underline cursor-pointer text-2xs"
+                                  className="text-[#0066cc] hover:underline cursor-pointer text-xs"
                                 >
-                                  更换账号
+                                  更换
                                 </button>
                               </div>
 
                               {!useRecoveryCodeMode && hasSecurityQuestion ? (
                                 <div className="space-y-2">
-                                  <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-950 text-xs">
-                                    <span className="font-bold">预设密保问题：</span>
+                                  <div className="p-3 rounded-xl bg-[#f5f5f7] text-[#1d1d1f] text-xs">
+                                    <span className="text-[#6e6e73]">密保问题：</span>
                                     <div className="mt-0.5 font-medium">{securityQuestion}</div>
                                   </div>
                                   <input
@@ -2103,23 +2127,23 @@ export default function LandingPage() {
                                     required
                                     value={securityAnswer}
                                     onChange={(e) => setSecurityAnswer(e.target.value)}
-                                    placeholder="请输入密保问题答案"
-                                    className="w-full py-2.5 px-3 rounded-xl bg-white border border-slate-300 text-[#18181b] text-base sm:text-[13px]"
+                                    placeholder="请输入密保答案"
+                                    className="w-full py-2.5 px-3.5 rounded-xl bg-[#f5f5f7] focus:bg-white border border-transparent focus:border-[#0071e3] text-[#1d1d1f] text-base sm:text-[13px] focus:outline-none"
                                   />
                                   <div className="text-right">
                                     <button
                                       type="button"
                                       onClick={() => setUseRecoveryCodeMode(true)}
-                                      className="text-2xs text-slate-600 hover:text-slate-900 underline cursor-pointer"
+                                      className="text-xs text-[#0066cc] hover:underline cursor-pointer"
                                     >
-                                      改用 8 位专属救援码验证 →
+                                      改用 8 位救援码验证 ›
                                     </button>
                                   </div>
                                 </div>
                               ) : (
                                 <div className="space-y-2">
-                                  <div className="p-2.5 rounded-xl bg-sky-50 border border-sky-200 text-sky-950 text-xs leading-relaxed">
-                                    请输入注册时系统颁发的专属救援码（格式如 CF-XXXX-XXXX）：
+                                  <div className="p-3 rounded-xl bg-[#f5f5f7] text-[#6e6e73] text-xs leading-relaxed">
+                                    请输入注册时生成的专属救援码（如 CF-XXXX-XXXX）：
                                   </div>
                                   <input
                                     type="text"
@@ -2129,17 +2153,17 @@ export default function LandingPage() {
                                     spellCheck={false}
                                     value={recoveryCodeInput}
                                     onChange={(e) => setRecoveryCodeInput(e.target.value)}
-                                    placeholder="例如 CF-78A9-2B4C"
-                                    className="w-full py-2.5 px-3 rounded-xl bg-white border border-slate-300 text-[#18181b] text-base sm:text-[13px] font-mono uppercase"
+                                    placeholder="CF-78A9-2B4C"
+                                    className="w-full py-2.5 px-3.5 rounded-xl bg-[#f5f5f7] focus:bg-white border border-transparent focus:border-[#0071e3] text-[#1d1d1f] text-base sm:text-[13px] font-mono uppercase focus:outline-none"
                                   />
                                   {hasSecurityQuestion && (
                                     <div className="text-right">
                                       <button
                                         type="button"
                                         onClick={() => setUseRecoveryCodeMode(false)}
-                                        className="text-2xs text-slate-600 hover:text-slate-900 underline cursor-pointer"
+                                        className="text-xs text-[#0066cc] hover:underline cursor-pointer"
                                       >
-                                        ← 改用密保问题验证
+                                        ‹ 改用密保问题验证
                                       </button>
                                     </div>
                                   )}
@@ -2153,7 +2177,7 @@ export default function LandingPage() {
                                 value={newPasswordInput}
                                 onChange={(e) => setNewPasswordInput(e.target.value)}
                                 placeholder="设置新密码 (至少 6 位)"
-                                className="w-full py-2.5 px-3 rounded-xl bg-white border border-slate-300 text-[#18181b] text-base sm:text-[13px]"
+                                className="w-full py-2.5 px-3.5 rounded-xl bg-[#f5f5f7] focus:bg-white border border-transparent focus:border-[#0071e3] text-[#1d1d1f] text-base sm:text-[13px] focus:outline-none"
                               />
 
                               <input
@@ -2163,13 +2187,13 @@ export default function LandingPage() {
                                 value={confirmPasswordInput}
                                 onChange={(e) => setConfirmPasswordInput(e.target.value)}
                                 placeholder="再次输入确认新密码"
-                                className="w-full py-2.5 px-3 rounded-xl bg-white border border-slate-300 text-[#18181b] text-base sm:text-[13px]"
+                                className="w-full py-2.5 px-3.5 rounded-xl bg-[#f5f5f7] focus:bg-white border border-transparent focus:border-[#0071e3] text-[#1d1d1f] text-base sm:text-[13px] focus:outline-none"
                               />
 
                               <button
                                 type="submit"
                                 disabled={modalLoading}
-                                className="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold transition-all cursor-pointer disabled:opacity-60"
+                                className="w-full apple-btn-blue text-sm cursor-pointer disabled:opacity-60"
                               >
                                 {modalLoading ? '正在重置密码...' : '确认重置新密码'}
                               </button>
@@ -2183,88 +2207,93 @@ export default function LandingPage() {
                               setModalError(null)
                               setForgotStep(1)
                             }}
-                            className="text-xs text-slate-600 hover:text-slate-900 underline cursor-pointer font-semibold"
+                            className="text-xs text-[#0066cc] hover:underline cursor-pointer font-medium"
                           >
-                            ← 返回账号登录
+                            ‹ 返回账号登录
                           </button>
                         </div>
                       )}
                     </div>
 
-                    <div className="pt-3 border-t border-slate-200/90 mt-4 flex items-center justify-between text-2xs text-slate-500">
-                      <span>标准 Markdown 随时导出 · 独立沙盒隔离</span>
+                    <div className="pt-4 border-t border-black/[0.06] mt-5 flex items-center justify-between text-[11px] text-[#86868b]">
+                      <span>开放标准 Markdown 随时导出</span>
                       <span className="font-mono">{OFFICIAL_DOMAIN_HOST}</span>
                     </div>
                   </>
                 )}
               </div>
 
-              {/* 右栏：新人注册专属权益与试玩状态继承看板 */}
-              <div className="hidden lg:flex lg:col-span-6 flex-col justify-between rounded-2xl bg-gradient-to-br from-[#12141f] via-[#171b2e] to-[#0f172a] text-white p-7 border border-white/10">
-                <div className="space-y-5 text-left">
-                  <div className="flex items-center justify-between">
-                    <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-2xs font-bold">
-                      新用户立享全部核心权益
-                    </span>
-                    <span className="text-2xs font-mono text-slate-400">
-                      距初试 {countdown.days} 天
-                    </span>
-                  </div>
+              {/* 右栏：Apple Pro 深空黑权益展示面 */}
+              <div className="cinema-dark-lock hidden lg:flex lg:col-span-6 flex-col justify-between bg-[#161618] text-[#f5f5f7] p-9">
+                <div className="space-y-6 text-left">
+                  <p className="text-xs font-semibold tracking-wider text-[#86868b]">
+                    个人专属研学空间
+                  </p>
 
                   <div>
-                    <h3 className="text-xl font-extrabold tracking-tight text-white">
-                      试玩成果无缝继承，沉淀终身知识库
+                    <h3 className="text-2xl font-semibold tracking-[-0.025em] text-[#f5f5f7] leading-snug">
+                      试玩成果无缝继承，
+                      <br />
+                      沉淀属于你的终身知识库。
                     </h3>
-                    <p className="mt-1 text-xs text-slate-300 leading-relaxed">
-                      您在首页试玩实验室产生的提问解答、做题草稿与错因收藏，注册后自动写入个人空间。
+                    <p className="mt-2 text-xs text-[#a1a1a6] leading-relaxed">
+                      您在试玩舞台产生的提问、演草与错因收藏，创建账号后将自动归入私有空间。
                     </p>
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-4 pt-2 border-t border-white/[0.08]">
                     {[
                       {
-                        title: '自动保留试玩首篇笔记与错题记录',
-                        desc: '无缝继承刚才的 AI 导师解答、高数判分与闪卡自评，拒绝重头再来',
+                        title: '自动生成试玩首篇笔记与错题记录',
+                        desc: '无缝保留刚才的 AI 导师解答、高数判分与闪卡自评',
                       },
                       {
-                        title: '立赠 5.0 初始 AI 研学积分',
-                        desc: '畅享 408/数学大题逐级启发点拨与考研英语 20 分制智能精批',
+                        title: '立赠 5.0 初始研学积分',
+                        desc: '畅享 408/数学大题逐级启发点拨与英语 20 分制智能精批',
                       },
                       {
-                        title: '1987–2024 统考真题库 + 艾宾浩斯闪卡',
-                        desc: '做错真题自动三维归因，每日按遗忘曲线精准推送待巩固卡片',
+                        title: '1987–2024 统考真题库 + SM-2 记忆队列',
+                        desc: '做错真题自动三维归因，每日按遗忘曲线精准推送待背卡片',
                       },
                       {
                         title: '多端云同步 + 100% 本地 Markdown 导出',
-                        desc: '手机电脑实时接力，所有笔记随时一键打包导出到本地硬盘或 Obsidian',
+                        desc: '手机电脑实时接力，所有笔记随时打包下载或直连本地 Obsidian',
                       },
                     ].map((benefit) => (
-                      <div
-                        key={benefit.title}
-                        className="p-3 rounded-xl bg-white/[0.06] border border-white/10 flex items-start gap-2.5"
-                      >
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                      <div key={benefit.title} className="flex items-start gap-3">
+                        <CheckCircle2 className="w-4 h-4 text-[#30d158] shrink-0 mt-0.5" />
                         <div>
-                          <div className="text-xs font-bold text-white">{benefit.title}</div>
-                          <div className="text-2xs text-slate-300 mt-0.5">{benefit.desc}</div>
+                          <div className="text-[13px] font-semibold text-[#f5f5f7]">
+                            {benefit.title}
+                          </div>
+                          <div className="text-xs text-[#86868b] mt-0.5">{benefit.desc}</div>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-white/10 flex items-center justify-between text-2xs text-slate-400">
-                  <div className="flex items-center gap-2">
-                    <img
-                      src="/pets/nailong_happy.webp"
-                      alt="伴学桌宠"
-                      loading="lazy"
-                      decoding="async"
-                      className="w-7 h-7 object-contain"
-                    />
-                    <span className="text-slate-300 font-medium">官方认证域名：{OFFICIAL_DOMAIN_HOST}</span>
+                <div className="pt-5 border-t border-white/[0.08] flex items-center justify-between text-xs text-[#86868b]">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex -space-x-1.5">
+                      <img
+                        src="/pets/feiyu_happy.webp"
+                        alt="大肥鱼伴学桌宠"
+                        loading="lazy"
+                        decoding="async"
+                        className="w-7 h-7 rounded-full bg-white/95 p-0.5 object-contain"
+                      />
+                      <img
+                        src="/pets/nailong_happy.webp"
+                        alt="奶龙伴学桌宠"
+                        loading="lazy"
+                        decoding="async"
+                        className="w-7 h-7 rounded-full bg-white/95 p-0.5 object-contain"
+                      />
+                    </div>
+                    <span className="text-[#d2d2d7]">大肥鱼 × 奶龙伴学</span>
                   </div>
-                  <span className="text-emerald-300 font-bold">免费开放注册</span>
+                  <span>距初试 {countdown.days} 天</span>
                 </div>
               </div>
             </div>
@@ -2272,46 +2301,47 @@ export default function LandingPage() {
           document.body
         )}
 
-      {/* 全屏沉浸式试玩视窗模态框（与内嵌试玩共享同一份持久化状态，来回切换零丢失！） */}
+      {/* 全屏沉浸式试玩视窗模态框 */}
       {fullScreenSandbox &&
         createPortal(
           <div
-            className="fixed inset-0 z-[100] bg-slate-950 flex flex-col w-screen h-dvh overflow-hidden select-none animate-fade-in"
+            className="cinema-dark-lock fixed inset-0 z-[100] bg-[#0b0d13] flex flex-col w-screen h-dvh overflow-hidden select-none animate-fade-in"
             role="dialog"
             aria-modal="true"
             aria-label="全屏沉浸试玩实验室"
           >
-            <div className="min-h-12 px-2.5 sm:px-5 py-1.5 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 flex items-center justify-between gap-1.5 shrink-0 pt-[max(0.375rem,env(safe-area-inset-top,0px))]">
-              <div className="flex items-center gap-2 shrink-0">
-                <div className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center overflow-hidden rounded-lg border border-rose-200/30 shadow-xs shrink-0">
+            <div className="min-h-12 px-3 sm:px-5 py-1.5 bg-[#161618] border-b border-white/[0.08] flex items-center justify-between gap-2 shrink-0 pt-[max(0.375rem,env(safe-area-inset-top,0px))]">
+              <div className="flex items-center gap-2.5 shrink-0">
+                <div className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-md ring-1 ring-white/15 shrink-0">
                   <img src="/icon-192.png?v=dango" alt="研核" className="h-full w-full object-cover" />
                 </div>
-                <span className="hidden sm:inline font-extrabold text-white text-sm whitespace-nowrap">
-                  全屏试玩实验室
+                <span className="hidden sm:inline font-semibold text-[#f5f5f7] text-xs whitespace-nowrap">
+                  全屏试玩舞台
                 </span>
                 {trialSummary.totalFootprints > 0 && (
-                  <span className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-2xs font-bold">
-                    <BookmarkCheck className="w-3 h-3" />
-                    <span>已同步暂存 {trialSummary.totalFootprints} 项记录</span>
+                  <span className="hidden md:inline text-[11px] text-[#30d158] font-medium">
+                    · 已暂存 {trialSummary.totalFootprints} 项记录
                   </span>
                 )}
               </div>
 
               <div className="flex-1 min-w-0 flex justify-center">
-                <div className="flex items-center gap-0.5 sm:gap-1 p-0.5 rounded-xl bg-slate-800/90 border border-slate-700 text-2xs sm:text-xs max-w-full overflow-x-auto no-scrollbar">
+                <div className="flex items-center gap-1 p-1 rounded-full bg-white/[0.08] text-xs max-w-full overflow-x-auto no-scrollbar">
                   {[
-                    { id: '408' as const, short: '408', full: '408 仿真', activeCls: 'bg-indigo-600 text-white' },
-                    { id: 'math' as const, short: '数学', full: '数学判分', activeCls: 'bg-pink-600 text-white' },
-                    { id: 'english' as const, short: '英语', full: '英语升格', activeCls: 'bg-sky-600 text-white' },
-                    { id: 'politics' as const, short: '史纲', full: '史纲时空', activeCls: 'bg-amber-500 text-slate-950 font-black' },
-                    { id: 'ai' as const, short: 'AI 导师', full: 'AI 导师', activeCls: 'bg-violet-600 text-white' },
+                    { id: '408' as const, short: '408', full: '408 仿真' },
+                    { id: 'math' as const, short: '数学', full: '数学判分' },
+                    { id: 'english' as const, short: '英语', full: '英语精批' },
+                    { id: 'politics' as const, short: '史纲', full: '史纲地图' },
+                    { id: 'ai' as const, short: 'AI 导师', full: 'AI 导师' },
                   ].map((tab) => (
                     <button
                       key={tab.id}
                       type="button"
                       onClick={() => setActiveMode(tab.id)}
-                      className={`px-2 sm:px-3 py-1 rounded-lg font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer ${
-                        activeMode === tab.id ? `${tab.activeCls} shadow-xs` : 'text-slate-400 hover:text-white'
+                      className={`px-3 py-1 rounded-full font-medium whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+                        activeMode === tab.id
+                          ? 'bg-[#f5f5f7] text-[#1d1d1f] font-semibold'
+                          : 'text-[#a1a1a6] hover:text-white'
                       }`}
                     >
                       <span className="sm:hidden">{tab.short}</span>
@@ -2321,7 +2351,7 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0">
                 {!isAuthenticated && (
                   <button
                     type="button"
@@ -2338,23 +2368,21 @@ export default function LandingPage() {
                             : modeConfigs[activeMode].targetLabel,
                       })
                     }}
-                    className="hidden xs:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-2xs sm:text-xs font-extrabold transition-all cursor-pointer"
+                    className="hidden xs:inline-flex items-center px-3.5 py-1.5 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-medium transition-colors cursor-pointer"
                   >
-                    <span>
-                      {trialSummary.totalFootprints > 0
-                        ? `注册保存(${trialSummary.totalFootprints})`
-                        : '免费注册'}
-                    </span>
+                    {trialSummary.totalFootprints > 0
+                      ? `注册并保存 (${trialSummary.totalFootprints})`
+                      : '免费注册'}
                   </button>
                 )}
                 <button
                   type="button"
                   onClick={() => setFullScreenSandbox(false)}
-                  className="inline-flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border border-rose-500/40 text-2xs sm:text-xs font-bold transition-all active:scale-95 cursor-pointer shrink-0"
-                  title="退出全屏返回页面（当前问答与草稿进度自动保留）"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/[0.1] hover:bg-white/[0.16] text-[#f5f5f7] text-xs font-medium transition-colors cursor-pointer shrink-0"
+                  title="退出全屏返回页面（当前进度自动保留）"
                 >
                   <Minimize2 className="w-3.5 h-3.5" />
-                  <span>返回页面</span>
+                  <span>退出全屏</span>
                 </button>
               </div>
             </div>

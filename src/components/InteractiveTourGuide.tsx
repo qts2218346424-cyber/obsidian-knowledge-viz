@@ -1,11 +1,12 @@
 import { createPortal } from 'react-dom'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
   Compass,
   X,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   ArrowRight,
   CheckCircle2,
   Circle,
@@ -18,7 +19,6 @@ import {
   Minimize2,
   Maximize2,
   Flame,
-  Music,
   Play,
   Send,
   MoveHorizontal,
@@ -31,12 +31,16 @@ import {
   RotateCcw,
   Layers,
   MapPin,
+  Award,
+  Zap,
+  ListChecks,
 } from 'lucide-react'
 import { useAudioContext } from '../contexts/AudioContext'
 import { ALL_RADIO_STATIONS } from '../data/ambientSounds'
 
 export interface TourStep {
   id: number
+  isCore?: boolean // 是否纳入「5站极速精华路线」
   title: string
   route: string
   icon: any
@@ -67,242 +71,253 @@ export interface TourStep {
 export const TOUR_STEPS: TourStep[] = [
   {
     id: 1,
-    title: '首页工作台 · 每天复习总览',
+    isCore: true,
+    title: '首页全景总台 · 每日冲刺起点',
     route: '/dashboard',
     icon: Home,
-    badge: '第 1 站 · 每天起点',
-    highlightColor: 'text-indigo-600 bg-indigo-50 border-indigo-200',
+    badge: '必看核心 · 每日总览',
+    highlightColor: 'text-indigo-700 bg-indigo-50 border-indigo-200',
     summary:
-      '每天打开平台先来这里瞄一眼：距离考研还有多少天、四门统考入口、薄弱点提醒和常用工具全在首屏摆好了。',
+      '每天打开研核先看一眼这里：初试精准倒计时、408/数学/英语/政治四核直达舱、薄弱盲区预警与每日积分打卡全部就绪。',
     whereHint: '点击顶部导航栏「总览」（手机端底部第 1 个「首页」图标）',
     checklist: [
-      '看看页面顶部的考研倒计时与今日打卡状态',
-      '认识 408 / 数学 / 政治 / 英语四张科目直达卡片',
-      '点一下右上角「算力积分」徽章可每日签到领积分',
+      '确认页面顶部的考研初试倒计时与今日学习概览',
+      '浏览 408 / 数学 / 政治 / 英语四张主力学科直达卡',
+      '点击顶栏右上角「算力积分」徽章可每日签到领免费积分',
     ],
-    tips: ['右上角风格胶囊可以一键切换「极简 / 鲜艳 / 护眼 / 暗黑」四种护眼外观'],
+    tips: ['顶栏右侧风格胶囊支持一键切换「极简 / 鲜艳 / 护眼 / 暗黑」四种舒适主题'],
     targetSelectors: ['[data-tour="nav-dashboard"]', '[data-tour="nav-mobile-home"]'],
-    pointerLabel: '点这里回首页工作台',
+    pointerLabel: '点这里随时回到首页总览总台',
     actionLabel: '切换到首页工作台看看',
   },
   {
     id: 2,
-    title: '全站搜索 & 随手记 · 灵感秒记',
+    isCore: false,
+    title: '全站秒搜 (Ctrl+K) & 极速随手记',
     route: '/dashboard',
     icon: PenLine,
-    badge: '第 2 站 · 高效入口',
-    highlightColor: 'text-emerald-600 bg-emerald-50 border-emerald-200',
+    badge: '效率神器 · 灵感不中断',
+    highlightColor: 'text-emerald-700 bg-emerald-50 border-emerald-200',
     summary:
-      '刷题或看书时想搜某个定理，按 Ctrl+K 一秒找到；突然冒出好思路或易错点，用「随手记」滑出窗口直接存，不用切页面。',
-    whereHint: '顶栏「搜索...」按钮（Ctrl+K）；「更多功能 → 极速随手记」或下方一键体验',
+      '想找某道真题或定理按 Ctrl+K 一秒定位；刷题半路冒出好思路或易错结论，唤出「随手记」侧栏写完即存，绝不打断做题节奏。',
+    whereHint: '顶栏「搜索...」按钮（Ctrl+K）；「更多功能 → 极速随手记」',
     checklist: [
-      '点击下方按钮当场弹出「随手记」抽屉体验',
-      '试着点一下上方学科标签（如 408、高数）自动打标签',
-      '体验完关掉抽屉，记住搜全站笔记/真题直接按 Ctrl+K',
+      '点击下方体验按钮当场滑出「随手记」闪电便签抽屉',
+      '试着点选顶部学科胶囊（如 408、高数）自动打好分类标签',
+      '记住在全站任何界面按 Ctrl+K 都能秒搜笔记与历年真题',
     ],
-    tips: ['随手记的内容会自动保存到本地笔记库的「随手记」文件夹，支持传图与数学公式'],
+    tips: ['随手记支持直接粘贴截图与插入公式，自动归档至本地「随手记」目录'],
     targetSelectors: ['[data-tour="btn-search"]', '[data-tour="btn-mobile-search"]'],
-    pointerLabel: '点这里全站秒搜（快捷键 Ctrl+K）',
+    pointerLabel: '全站极速搜索入口（快捷键 Ctrl+K）',
     actionLabel: '立即弹出随手记抽屉试试',
     actionType: 'open_quicknote',
   },
   {
     id: 3,
-    title: '刷题中心 · 真题、专项与答题卡',
+    isCore: true,
+    title: '刷题中心 · 历年整卷、答题卡与草稿纸',
     route: '/quiz',
     icon: ClipboardList,
-    badge: '第 3 站 · 刷真题',
-    highlightColor: 'text-amber-600 bg-amber-50 border-amber-200',
+    badge: '必看核心 · 刷真题主阵地',
+    highlightColor: 'text-amber-800 bg-amber-50 border-amber-200',
     summary:
-      '想成套做历年真题就选「真题整卷」，想单练某章题型就选「题型专项」，想随便抽几题测验就选「自由组卷」。做题时右边就是答题卡与草稿纸。',
+      '收录 1987–2024 考研数学与 2009–2024 统考 408 精校卷！支持整卷模考、章节专项与自由抽题，做题右侧自带分色答题卡与屏幕演草白板。',
     whereHint: '点击顶部导航栏「刷题中心」（手机端底部点「刷题」）',
     checklist: [
-      '观察页面顶部的 4 个模式切换按钮（真题整卷 / 题型专项 / 自由组卷 / 错题本）',
-      '点开任意一套题或「自由组卷 → 立即开始」进入做题面板',
-      '在右侧（或手机底部）试着点「答题卡」跳题号、切到「草稿纸」手写演算',
+      '查看顶部的 4 大模式标签（真题整卷 / 题型专项 / 自由组卷 / 错题本）',
+      '点开任意一套真题或「自由组卷 → 立即开始」进入沉浸做题面板',
+      '在右侧面板试试点题号跳转、切到「草稿纸」手写推演或看「定理速查」',
     ],
-    tips: ['做题拿不准时，点一下「追问 AI」或者按 Ctrl+J，AI 老师直接对着当前题目给你讲'],
+    tips: ['做题卡壳时按 Ctrl+J（或点「追问 AI」），导师直接盯着当前题干给你拆解步骤！'],
     targetSelectors: ['[data-tour="nav-quiz"]', '[data-tour="nav-mobile-quiz"]'],
-    pointerLabel: '这里是刷题主阵地：刷题中心',
-    actionLabel: '前往刷题中心看看',
+    pointerLabel: '刷真题与专项模考主阵地：刷题中心',
+    actionLabel: '前往刷题中心实景体验',
     actionType: 'open_quiz',
   },
   {
     id: 4,
-    title: '错题本 · 自动收录与变式强化',
+    isCore: false,
+    title: '智能错题本 · 三维归因与变式斩题',
     route: '/quiz?tab=errors',
     icon: Flame,
-    badge: '第 4 站 · 消灭错题',
-    highlightColor: 'text-rose-600 bg-rose-50 border-rose-200',
+    badge: '查漏闭环 · 消灭失分点',
+    highlightColor: 'text-rose-700 bg-rose-50 border-rose-200',
     summary:
-      '平时刷题答错的题都会自动存进这里，不用手抄错题本。支持把错题重新组卷再考一遍，也能叫 AI 出几道同类变式题检验是否真会了。',
-    whereHint: '在「刷题中心」顶部栏点击第 4 个红色「错题本」标签',
+      '刷题答错自动按学科、考点与错因归档，告别低效手抄。支持一键抽题重考，还能召唤 AI 命制同考点变式新题检验是否真学透。',
+    whereHint: '在「刷题中心」顶部栏点击第 4 个「错题本」标签',
     checklist: [
-      '查看错题列表里的错误答案对照与分步解析',
-      '勾选或补充错因标签，方便二轮复习避开同类坑',
-      '点「错题重练」或「AI 变式强化」，彻底把错题消灭掉',
+      '浏览错题列表中的原选答案对比与分步踩分解析',
+      '按错因类型（概念混淆 / 计算失误等）筛选高频易错项',
+      '点击「错题重练」或「AI 变式强化」，彻底拔除顽固错题',
     ],
-    tips: ['交卷结算页点击「存入错题本」可以把重点难题直接归档成 Markdown 错题笔记'],
+    tips: ['在交卷结算页点击「存入错题本」可将典型难题一键保存为双链 Markdown 笔记'],
     targetSelectors: ['[data-tour="nav-quiz"]', '[data-tour="nav-mobile-quiz"]'],
-    pointerLabel: '错题本就在「刷题中心」第 4 个标签里',
-    actionLabel: '直达错题本面板',
+    pointerLabel: '智能错题本位于「刷题中心」第 4 个标签',
+    actionLabel: '直达智能错题本面板',
     actionType: 'open_errors',
   },
   {
     id: 5,
-    title: '研学中心 · 讲义、教材与研学进度',
+    isCore: false,
+    title: '研学中心 · 讲义、PDF双栏啃书与提取',
     route: '/study',
     icon: BookOpen,
-    badge: '第 5 站 · 讲义学习',
-    highlightColor: 'text-blue-600 bg-blue-50 border-blue-200',
+    badge: '啃书神器 · 8合1研学舱',
+    highlightColor: 'text-blue-700 bg-blue-50 border-blue-200',
     summary:
-      '「研学中心」把各科核心讲义、真题电子教材、全景图谱和个人学习进度汇集在一处，看讲义遇到重点还能在右上角开启「记批注」随手画线。',
+      '集结核心讲义、PDF 电子教材书架、11 级考点色谱与学习进度。支持高清 PDF 双栏伴读，并能从教材讲义中一键智能提取题库与闪卡！',
     whereHint: '点击顶部导航栏「研学中心」（手机端底部点「研学」）',
     checklist: [
-      '点开左侧或顶部的科目筛选（如 408 数据结构 / 考研数学）',
-      '点开任意一篇「核心讲义」或切到「真题教材」查看 PDF',
-      '点一下顶部的「研学进度」标签，看看各科当前完成百分比',
+      '浏览各科「核心讲义」或切换到「真题教材」打开高清 PDF 阅读器',
+      '试试右上角「记批注」透明荧光笔画板，直接在讲义上圈画重点',
+      '点开「考点色谱」或「研学进度」，掌握 22 大核心枢纽推进度',
     ],
-    tips: ['右上角「记批注」可在当前页面拉起透明画板，用荧光笔勾画讲义关键条件'],
+    tips: ['支持导入你自己的名师 PDF 讲义或押题卷，一键提取知识点卡片入库'],
     targetSelectors: ['[data-tour="nav-study"]', '[data-tour="nav-mobile-study"]'],
-    pointerLabel: '讲义、闪卡、课件都在「研学中心」',
-    actionLabel: '前往研学中心',
+    pointerLabel: '讲义、PDF教材、课件与闪卡都在「研学中心」',
+    actionLabel: '前往研学中心总台',
     actionType: 'open_study',
   },
   {
     id: 6,
-    title: '仿真课件 · 看动画搞懂 408 难点',
+    isCore: true,
+    title: '22+ 动态仿真课件 & SM-2 记忆闪卡',
     route: '/study?tab=coursewares',
     icon: Cpu,
-    badge: '第 6 站 · 动态演示',
-    highlightColor: 'text-cyan-600 bg-cyan-50 border-cyan-200',
+    badge: '必看核心 · 动画破难点',
+    highlightColor: 'text-cyan-800 bg-cyan-50 border-cyan-200',
     summary:
-      '红黑树旋转、LRU 页面置换、TCP 拥塞控制太抽象？在「仿真课件」里可以像放电影一样“上一步 / 下一步”单步播放，甚至自己填测试数据跑一遍。',
-    whereHint: '在「研学中心」子导航栏点击「仿真课件」（或点下方按钮直达）',
+      'AVL/红黑树旋转、LRU 页面置换、TCP 拥塞窗口与泰勒逼近全都可单步回放、自定义填数据推演！搭配「记忆闪卡」在遗忘临界点自动提醒复盘。',
+    whereHint: '在「研学中心」子标签点击「仿真课件」或「记忆闪卡」',
     checklist: [
-      '在下方列表任意点开一个仿真课件（如「页面置换」或「KMP 匹配」）',
-      '点击底部的「单步前进 / 自动演示」，盯着动画和代码高亮行一起看',
-      '试着改动输入序列，观察内部状态是如何一步步推演的',
+      '点开任意一个仿真实验（如 AVL 树或页面置换），体验单步前进与代码同步高亮',
+      '试着修改输入测试序列，亲眼观察算法指针与数据结构每一步如何演变',
+      '顺手切到旁边「记忆闪卡」翻开一张卡片，体验「生疏/模糊/掌握」智能排期',
     ],
-    tips: ['数据结构和大题算法原理看懂一遍动画，比死背十遍文字记得还牢'],
+    tips: ['408 综合算法与机理大题亲手跑一遍动画，比死背十遍文字记得更牢'],
     targetSelectors: ['[data-tour="nav-study"]', '[data-tour="nav-mobile-study"]'],
-    pointerLabel: '仿真课件在「研学中心 → 仿真课件」',
-    actionLabel: '一键切换查看仿真课件',
+    pointerLabel: '动画仿真课件与抗遗忘闪卡入口',
+    actionLabel: '一键直达动态仿真课件区',
     actionType: 'open_coursewares',
   },
   {
     id: 7,
-    title: '记忆闪卡 · 快忘记时提醒你复习',
+    isCore: false,
+    title: 'SM-2 抗遗忘闪卡 · 每天 15 分钟锁分',
     route: '/study?tab=flashcards',
     icon: GraduationCap,
-    badge: '第 7 站 · 抗遗忘卡片',
-    highlightColor: 'text-teal-600 bg-teal-50 border-teal-200',
+    badge: '科学记忆 · 告别反复重背',
+    highlightColor: 'text-teal-800 bg-teal-50 border-teal-200',
     summary:
-      '就像随身带着一叠核心考点问答卡：正面看问题想答案，翻面核对后选「忘记 / 模糊 / 记得」。系统会自动安排复习节奏，越不熟推得越勤。',
+      '正面看问题默想答案，翻面核对后诚实打分。系统按艾宾浩斯遗忘曲线动态计算下次复习间隔：生疏卡高频强化，熟练卡自动延后。',
     whereHint: '在「研学中心」子导航栏点击「记忆闪卡」',
     checklist: [
-      '点开一张今日到期的记忆闪卡，先自己在脑子里回忆答案',
-      '点击卡片翻面查看标准解析',
-      '诚实选择「忘记 / 模糊 / 记得」，让系统自动排好下次复习时间',
+      '查看今日到期需要复习的闪卡队列数量',
+      '点击卡片丝滑翻面，核对印刷级 KaTeX 公式与标准解析',
+      '点选「忘记 / 模糊 / 掌握」，把今日待复习队列清零',
     ],
-    tips: ['建议每天早晚花 10~15 分钟把待复习闪卡清零，琐碎协议和公式就不容易忘'],
+    tips: ['在笔记编辑器或考研背词页，均可把重点公式和难词一键转存为闪卡'],
     targetSelectors: ['[data-tour="nav-study"]', '[data-tour="nav-mobile-study"]'],
-    pointerLabel: '记忆闪卡在「研学中心 → 记忆闪卡」',
-    actionLabel: '一键切换进入记忆闪卡',
+    pointerLabel: '每日抗遗忘闪卡队列入口',
+    actionLabel: '切换到记忆闪卡体验翻转',
     actionType: 'open_flashcards',
   },
   {
     id: 8,
-    title: '掌握热力图 & 知识关系网',
+    isCore: true,
+    title: '红黄绿掌握热力图 & 提分急救舱',
     route: '/graph',
     icon: Network,
-    badge: '第 8 站 · 查漏地图',
-    highlightColor: 'text-purple-600 bg-purple-50 border-purple-200',
+    badge: '必看核心 · 靶向排雷星图',
+    highlightColor: 'text-purple-800 bg-purple-50 border-purple-200',
     summary:
-      '这里有两张王牌图：切到「掌握热力图」，红黄绿三色直接告诉你哪块没学透，点红点就能进急救舱做 5 题补救；切到「关系图谱」，看清全部笔记是怎么串联起来的。',
-    whereHint: '顶栏「更多功能 → 知识图谱网络」（或手机端首页常用入口「知识图谱」）',
+      '两张王牌视图：在「掌握热力图」一眼揪出闪烁红灯盲区，点红点即开急救舱看课件+练5题救绿；切到「关系图谱」纵览全库双链脉络！',
+    whereHint: '顶栏「更多功能 → 知识图谱网络」（手机端首页点「知识图谱」）',
     checklist: [
-      '在顶部切换热力图/关系网，用鼠标滚轮缩放或拖动画面看看',
-      '单击任意红色闪烁圆点，体验弹出「提分急救舱」查看错题与 5 题突击',
-      '切换到关系图谱时，双击任意圆点试试在右侧直接打开笔记原文',
+      '切换「掌握热力图」与「双链关系网」，用滚轮缩放或拖拽漫游星图',
+      '单击任意闪烁红色盲区节点，体验弹出「提分急救舱」5 题靶向突击',
+      '在关系图谱双击任意节点，在右侧抽屉直接就地阅读原笔记',
     ],
-    tips: ['关系图谱里带橙色边线的圆点代表还没有跟其他笔记连上线，复习时建议用 [[双链]] 串起来'],
+    tips: ['带橙色呼吸边框的圆点是尚未连线的孤岛笔记，建议用 [[双链]] 织入主干网'],
     targetSelectors: ['[data-tour="btn-more"]', '[data-tour="nav-mobile-all"]'],
-    pointerLabel: '知识图谱收在「更多功能」菜单里',
-    actionLabel: '打开图谱并查看热力说明',
+    pointerLabel: '热力图与双链星空图位于「更多功能」菜单',
+    actionLabel: '打开热力星图并查看诊断说明',
     actionType: 'inspect_mastery',
   },
   {
     id: 9,
-    title: '笔记系统 · 优先预览、公式排版与 Obsidian 同步',
+    isCore: false,
+    title: '双链公式笔记系统 · Obsidian 实时同步',
     route: '/editor',
     icon: FileEdit,
-    badge: '第 9 站 · 知识大脑',
-    highlightColor: 'text-indigo-600 bg-indigo-50 border-indigo-200',
+    badge: '知识大脑 · 100%本地主权',
+    highlightColor: 'text-sky-800 bg-sky-50 border-sky-200',
     summary:
-      '点击目录笔记默认优先进入防误触预览模式；一键切换写作模式支持富文本顺滑打字和源码切换，还能新建多级分类目录、插数学公式、提笔批注，并与本地 Obsidian 实时同步！',
-    whereHint: '顶栏「更多功能 → 笔记编辑」（或手机端「全部 → 笔记编辑」）',
+      '默认优先进入防误触学术预览；切写作态支持富文本顺滑打字与源码互切、新建多级文件夹、Σ 公式速插、即学即练 3 题自测与本地 Obsidian 秒级同步！',
+    whereHint: '顶栏「更多功能 → 笔记编辑」（手机端「全部 → 笔记编辑」）',
     checklist: [
-      '点击左侧目录里的任意笔记，体验默认优先预览阅读；点右上角「切换写作模式」再进入编辑',
-      '点顶栏「新建目录」创建新文件夹，再点「新建」并在标题下方下拉选择保存目录',
-      '写作时试试富文本顺滑打字、点 Σ 插入数学公式、或点页面内「笔记导览」按钮体验专属分步引导',
+      '点击左侧目录任意笔记体验纯净预览，再点右上角「切换写作模式」编辑',
+      '试试「新建目录」建立多级学科文件夹，并用 Σ 菜单速插微积分矩阵公式',
+      '点击下方按钮直达笔记编辑器，可衔接开启 7 步编辑器专属精讲导览',
     ],
-    tips: ['写完总结可点「即学即练」现场生成 3 道真题测验，所有笔记均以标准 .md 落盘本地。'],
+    tips: ['所有笔记以通用 .md 纯文本落盘本机硬盘，绝无封闭格式锁定'],
     targetSelectors: ['[data-tour="btn-more"]', '[data-tour="nav-mobile-all"]'],
-    pointerLabel: '笔记编辑器入口在这里',
-    actionLabel: '直达笔记编辑器并查看页面导览',
+    pointerLabel: '双链 Markdown 笔记工作台入口',
+    actionLabel: '进入笔记工作台并开启专属导览',
     actionType: 'open_editor',
   },
   {
     id: 10,
-    title: '英语背词 & 政治史纲时空轴',
+    isCore: false,
+    title: '全新背词巡航默写 & 1839–2026 史纲地图',
     route: '/english',
     icon: Layers,
-    badge: '第 10 站 · 公共课专项',
-    highlightColor: 'text-violet-600 bg-violet-50 border-violet-200',
+    badge: '公共课王牌 · 语政双绝杀',
+    highlightColor: 'text-rose-700 bg-rose-50 border-rose-200',
     summary:
-      '除了 408 和数学，公共课也很趁手：考研英语支持词汇色谱记忆和 AI 逐句批改作文；考研政治把近代史纲重要事件排成了时间轴，下面直接配 1000 题。',
-    whereHint: '点击顶部导航栏「学科专项」下拉菜单（手机端底部点「背词」或在首页点政治/英语卡片）',
+      '考研英语配齐整卷点词即查、20分制 AI 四维精批与「拼写默写 + 耳机随身巡航背词」；考研政治升级 1839–2026 矢量中国地图、同城史实联动与“十五五”时政千题！',
+    whereHint: '点击顶部导航栏「学科专项」下拉菜单（手机端底部点「背词」或首页卡片）',
     checklist: [
-      '打开「学科专项」菜单，看看 408、数学、政治、英语四大独立入口',
-      '在考研英语页试着输入作文或浏览长难句/词汇表',
-      '也可以点下面按钮去「考研政治」划一划近代史纲时间轴',
+      '打开「学科专项」菜单，认识 408、数学、政治、英语、背词五大独立入口',
+      '在考研英语页体验 20 分制 AI 四维批改，或去背词页试试「拼写默写/随身巡航」',
+      '点击下方按钮前往「考研政治」，漫游 1839–2026 史纲全景地图与千题精粹',
     ],
-    tips: ['背单词时可以筛选“高危生词”，先把不认识的红黄词优先攻克'],
+    tips: ['史纲地图支持点击同一城市循环查看不同时期的重大会议，彻底告别张冠李戴'],
     targetSelectors: ['[data-tour="nav-subjects"]', '[data-tour="nav-mobile-vocab"]'],
-    pointerLabel: '公共课与四科入口都在「学科专项」',
-    actionLabel: '顺便去看看考研政治时间轴',
+    pointerLabel: '英语、背词与政治史纲地图均在「学科专项」',
+    actionLabel: '前往漫游 1839–2026 史纲全景地图',
     actionType: 'open_politics',
   },
   {
     id: 11,
-    title: 'AI 伴学导师 & 白噪音自习室',
+    isCore: true,
+    title: '分科 AI 导师思考流 & 奶龙×大肥鱼伴学',
     route: '/chat',
     icon: MessageCircle,
-    badge: '第 11 站 · 伴学与专注',
-    highlightColor: 'text-cyan-600 bg-cyan-50 border-cyan-200',
+    badge: '必看核心 · 名师与双宠伴学',
+    highlightColor: 'text-violet-800 bg-violet-50 border-violet-200',
     summary:
-      '遇到不会证的高数题或吃不透的 408 概念，在「AI 伴学」随时发问；学习前点一首「白噪音」电台，离开音乐页切回刷题声音照样放！',
-    whereHint: '顶栏「AI 伴学」（快捷键 Ctrl+Shift+A）；「更多功能」里还能开「白噪音」和「番茄专注」',
+      '4 位分科导师支持 DeepSeek 思考链零缓冲流式直出、划词追问与 6 款沉浸背景；右下角更有「奶龙🍗」与「大肥鱼🍚」30+ 真人语音陪伴及自由缩放随身聊，开着 Lofi 电台专注到底！',
+    whereHint: '顶栏「AI 伴学」（Ctrl+Shift+A）；屏幕右下角切换奶龙/大肥鱼随身聊',
     checklist: [
-      '点击下方任意一个高频考研问题，看 AI 导师如何分步拆解回答',
-      '想安静学习时，试着点下面按钮一键开启精选自习白噪音电台',
-      '完成所有引导啦！今后忘记任何功能怎么用，随时点「使用手册」查大白话指南',
+      '点击下方任一考研经典真题提问，观察 AI 导师如何透明展开思考链逐步推导',
+      '点击右下角萌宠试试摸头语音互动，或拖动/八向缩放「随身聊」自由视窗',
+      '点击下方按钮一键开启跨页面不断流的精选自习室 Lofi 白噪音电台',
     ],
-    tips: ['屏幕右下角还有伴学小萌宠，点开它可以帮你做大纲重构、提取挖空等小任务'],
+    tips: ['恭喜走完导览！今后任何功能不确定怎么用，随时点顶栏「使用手册」查视觉百科'],
     targetSelectors: ['[data-tour="nav-chat"]', '[data-tour="btn-theme"]'],
-    pointerLabel: 'AI 伴学入口在这里（Ctrl+Shift+A 随时呼出）',
-    actionLabel: '顺便开启白噪音自习电台试试',
+    pointerLabel: '分科 AI 伴学工作台（快捷键 Ctrl+Shift+A 随时呼出）',
+    actionLabel: '一键开启自习室白噪音电台试试',
     actionType: 'play_music',
     sampleQuestions: [
-      '考研高数：用通俗的话帮我分步讲清楚柯西中值定理，并说说做证明大题常见切入点。',
-      '408计网：详细对比 TCP 拥塞控制四个阶段（慢开始、拥塞避免、快重传、快恢复）怎么切换的？',
-      '408操作系统：32位逻辑地址在做两级分页时，是怎么分成顶级页号、二级页号和页内偏移量的？',
+      '考研高数：用通俗语言分步讲透拉格朗日与柯西中值定理的构造辅助函数切入点。',
+      '408计网：详细对比 TCP 拥塞控制四个阶段（慢开始、拥塞避免、快重传、快恢复）的窗口切换细节。',
+      '408操作系统：32位逻辑地址在两级页表机制下如何拆分为外层页号、页表索引与页内偏移量？',
     ],
   },
 ]
 
-interface InteractiveTourGuideProps {
+export interface InteractiveTourGuideProps {
   isOpen: boolean
   onClose: () => void
 }
@@ -313,6 +328,21 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
   const navigate = useNavigate()
   const location = useLocation()
   const { setQueue, play } = useAudioContext()
+
+  // 路线模式：'core' (5站极速精华) | 'full' (11站全景通关)
+  const [tourMode, setTourMode] = useState<'core' | 'full'>(() => {
+    try {
+      const saved = localStorage.getItem('coreforge_tour_mode')
+      return saved === 'core' ? 'core' : 'full'
+    } catch {
+      return 'full'
+    }
+  })
+
+  const activeSteps = useMemo(
+    () => (tourMode === 'core' ? TOUR_STEPS.filter((s) => s.isCore) : TOUR_STEPS),
+    [tourMode]
+  )
 
   const [dockSide, setDockSide] = useState<'left' | 'right'>(() => {
     try {
@@ -333,7 +363,6 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
     }
   })
 
-  // 记录每一站勾选完成了哪些实操小清单
   const [checkedMap, setCheckedMap] = useState<Record<string, boolean>>(() => {
     try {
       const raw = localStorage.getItem(CHECKLIST_STORAGE_KEY)
@@ -344,36 +373,62 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
   })
 
   const [isMinimized, setIsMinimized] = useState(false)
+  const [showStepMap, setShowStepMap] = useState(false)
+  const [showCelebration, setShowCelebration] = useState(false)
   const [spotlightEnabled, setSpotlightEnabled] = useState(true)
   const [spotlightRect, setSpotlightRect] = useState<DOMRect | null>(null)
   const [actionFeedback, setActionFeedback] = useState<string | null>(null)
 
-  const step = TOUR_STEPS[currentStepIndex] || TOUR_STEPS[0]
-  const isLastStep = currentStepIndex === TOUR_STEPS.length - 1
+  const safeIndex = Math.min(currentStepIndex, Math.max(0, activeSteps.length - 1))
+  const step = activeSteps[safeIndex] || activeSteps[0]
+  const isLastStep = safeIndex === activeSteps.length - 1
+
   const currentBaseRoute = location.pathname + (location.search || '')
   const targetRoutePath = step.route.split('?')[0]
-  const isCurrentRoute =
-    step.route.includes('?')
-      ? currentBaseRoute === step.route || location.pathname === targetRoutePath
-      : location.pathname.startsWith(targetRoutePath)
+  const isCurrentRoute = step.route.includes('?')
+    ? currentBaseRoute === step.route || location.pathname === targetRoutePath
+    : location.pathname.startsWith(targetRoutePath)
 
-  // 保存步骤索引
   useEffect(() => {
     try {
-      localStorage.setItem('coreforge_tour_step', currentStepIndex.toString())
+      localStorage.setItem('coreforge_tour_step', safeIndex.toString())
     } catch {}
-  }, [currentStepIndex])
+  }, [safeIndex])
 
-  // 保存勾选进度
+  useEffect(() => {
+    try {
+      localStorage.setItem('coreforge_tour_mode', tourMode)
+    } catch {}
+  }, [tourMode])
+
   useEffect(() => {
     try {
       localStorage.setItem(CHECKLIST_STORAGE_KEY, JSON.stringify(checkedMap))
     } catch {}
   }, [checkedMap])
 
-  // 查找并实时追踪当前引导目标 DOM 元素位置
+  // 切换路线模式时重置索引至合法范围
+  const handleSwitchMode = (nextMode: 'core' | 'full') => {
+    if (nextMode === tourMode) return
+    setTourMode(nextMode)
+    setCurrentStepIndex(0)
+    setShowCelebration(false)
+    setActionFeedback(
+      nextMode === 'core'
+        ? '已切换为「5 站极速核心路线」，2 分钟掌握最关键提分闭环！'
+        : '已切换为「11 站全景深度路线」，完整探索每一项研学神器！'
+    )
+  }
+
+  // 追踪当前引导目标 DOM 元素矩形坐标
   const updateSpotlightRect = useCallback(() => {
-    if (!isOpen || isMinimized || !spotlightEnabled || !step.targetSelectors?.length) {
+    if (
+      !isOpen ||
+      isMinimized ||
+      showCelebration ||
+      !spotlightEnabled ||
+      !step.targetSelectors?.length
+    ) {
       setSpotlightRect(null)
       return
     }
@@ -389,7 +444,7 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
       }
     }
     setSpotlightRect(foundRect)
-  }, [isOpen, isMinimized, spotlightEnabled, step])
+  }, [isOpen, isMinimized, showCelebration, spotlightEnabled, step])
 
   useEffect(() => {
     updateSpotlightRect()
@@ -402,6 +457,35 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
       window.removeEventListener('scroll', updateSpotlightRect, true)
     }
   }, [updateSpotlightRect, location.pathname, location.search])
+
+  // 支持键盘左右方向键快速翻站（避开输入框焦点）
+  useEffect(() => {
+    if (!isOpen || isMinimized || showCelebration) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName
+      if (
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        tag === 'SELECT' ||
+        (e.target as HTMLElement | null)?.isContentEditable
+      ) {
+        return
+      }
+      if (e.key === 'ArrowRight' && safeIndex < activeSteps.length - 1) {
+        const nextIdx = safeIndex + 1
+        setCurrentStepIndex(nextIdx)
+        navigate(activeSteps[nextIdx].route)
+        setActionFeedback(null)
+      } else if (e.key === 'ArrowLeft' && safeIndex > 0) {
+        const prevIdx = safeIndex - 1
+        setCurrentStepIndex(prevIdx)
+        navigate(activeSteps[prevIdx].route)
+        setActionFeedback(null)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [isOpen, isMinimized, showCelebration, safeIndex, activeSteps, navigate])
 
   const toggleDockSide = () => {
     const nextSide = dockSide === 'left' ? 'right' : 'left'
@@ -419,7 +503,7 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
     }))
   }
 
-  const completedStepsCount = TOUR_STEPS.filter((s) =>
+  const completedStepsCount = activeSteps.filter((s) =>
     s.checklist.every((_, idx) => Boolean(checkedMap[`${s.id}-${idx}`]))
   ).length
 
@@ -430,11 +514,12 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
 
   if (!isOpen) return null
 
-  const handleSkipTour = () => {
+  const handleFinishAndDismiss = () => {
     try {
       localStorage.setItem('coreforge_onboarding_dismissed', 'true')
       localStorage.setItem('coreforge_tour_skipped', 'true')
     } catch {}
+    setShowCelebration(false)
     onClose()
   }
 
@@ -445,32 +530,39 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
 
   const handleNext = () => {
     if (isLastStep) {
-      handleSkipTour()
+      setShowCelebration(true)
     } else {
-      const nextIndex = currentStepIndex + 1
+      const nextIndex = safeIndex + 1
       setCurrentStepIndex(nextIndex)
-      navigate(TOUR_STEPS[nextIndex].route)
+      navigate(activeSteps[nextIndex].route)
       setActionFeedback(null)
+      setShowStepMap(false)
     }
   }
 
   const handlePrev = () => {
-    if (currentStepIndex > 0) {
-      const prevIndex = currentStepIndex - 1
+    if (showCelebration) {
+      setShowCelebration(false)
+      return
+    }
+    if (safeIndex > 0) {
+      const prevIndex = safeIndex - 1
       setCurrentStepIndex(prevIndex)
-      navigate(TOUR_STEPS[prevIndex].route)
+      navigate(activeSteps[prevIndex].route)
       setActionFeedback(null)
+      setShowStepMap(false)
     }
   }
 
   const handleResetProgress = () => {
     setCheckedMap({})
     setCurrentStepIndex(0)
-    navigate(TOUR_STEPS[0].route)
-    setActionFeedback('已重置导览进度，从第 1 站重新开始。')
+    setShowCelebration(false)
+    navigate(activeSteps[0].route)
+    setActionFeedback('已重置打卡进度，从第 1 站重新启程！')
   }
 
-  // 执行对应引导站的快捷演示动作
+  // 执行对应引导站的快捷实操动作
   const handlePerformAction = (customQuestion?: string) => {
     if (customQuestion) {
       if (!location.pathname.startsWith('/chat')) {
@@ -483,7 +575,7 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
           })
         )
       }, 300)
-      setActionFeedback('已将问题发给 AI 伴学导师，正在为您分步演算...')
+      setActionFeedback('已将真题发给分科 AI 导师，正在为您零缓冲流式拆解...')
       return
     }
 
@@ -493,7 +585,7 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
           const s = ALL_RADIO_STATIONS[0]
           setQueue(ALL_RADIO_STATIONS, 0)
           play(s)
-          setActionFeedback(`已开始播放「${s.title}」，切去别的页面音乐也会一直陪着你。`)
+          setActionFeedback(`已开启「${s.title}」，切去任何页面刷题声音都会全程陪伴！`)
         } else {
           navigate('/music?tab=radio')
         }
@@ -502,7 +594,7 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
       case 'ask_ai': {
         const q =
           (step.sampleQuestions && step.sampleQuestions[0]) ||
-          '帮我分步讲清楚柯西中值定理的证明思路。'
+          '帮我分步讲清楚柯西中值定理的证明构造切入点。'
         if (!location.pathname.startsWith('/chat')) {
           navigate('/chat')
         }
@@ -513,12 +605,12 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
             })
           )
         }, 300)
-        setActionFeedback('已向 AI 伴学导师发送问题，正在解答...')
+        setActionFeedback('已向分科 AI 导师发送问题，正在流式解答...')
         break
       }
       case 'open_quicknote': {
         window.dispatchEvent(new CustomEvent('open-quick-note'))
-        setActionFeedback('已为您打开随手记抽屉，可以试着选个标签写两句并保存。')
+        setActionFeedback('已滑出随手记抽屉，试试点选科目标签写两句保存吧！')
         break
       }
       case 'inspect_mastery': {
@@ -534,32 +626,32 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
       }
       case 'open_quiz': {
         navigate('/quiz')
-        setActionFeedback('已来到刷题中心，可以挑选「真题整卷」「题型专项」或「自由组卷」。')
+        setActionFeedback('已来到刷题中心，可自由挑选「真题整卷」「题型专项」或「自由组卷」。')
         break
       }
       case 'open_errors': {
         navigate('/quiz?tab=errors')
-        setActionFeedback('已直达错题本，可查看错因统计或点按钮开启错题重练。')
+        setActionFeedback('已直达智能错题本，可查看三维错因统计或开启错题重练。')
         break
       }
       case 'open_study': {
         navigate('/study')
-        setActionFeedback('已来到研学中心，顶部一排标签可随时切换讲义、教材与进度。')
+        setActionFeedback('已来到研学中心，顶部一排标签可随时切换讲义、PDF教材与考点色谱。')
         break
       }
       case 'open_coursewares': {
         navigate('/study?tab=coursewares')
-        setActionFeedback('已切换到仿真课件区，挑一个模块点开就能体验单步动画演示。')
+        setActionFeedback('已进入动态仿真课件实验室，挑一个算法模块即可体验单步推演！')
         break
       }
       case 'open_flashcards': {
         navigate('/study?tab=flashcards')
-        setActionFeedback('已切换到记忆闪卡区，翻开卡片自评掌握程度即可。')
+        setActionFeedback('已切换到 SM-2 记忆闪卡区，点击卡片翻面自评即可。')
         break
       }
       case 'open_politics': {
         navigate('/politics')
-        setActionFeedback('已前往考研政治中心，上方是近代史纲时间轴，下方是 1000 题专项。')
+        setActionFeedback('已来到考研政治大本营，上方是 1839–2026 史纲全景地图，下方是千题精粹！')
         break
       }
       case 'open_editor': {
@@ -577,11 +669,11 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
     }
   }
 
-  // 最小化胶囊
+  // 最小化边角悬浮胶囊
   if (isMinimized) {
     return (
       <aside
-        aria-label="细致引导快捷胶囊"
+        aria-label="实景引导快捷胶囊"
         className={`fixed z-[55] animate-fade-in ${
           dockSide === 'left'
             ? 'bottom-[calc(4.15rem+env(safe-area-inset-bottom,0px))] left-2.5 sm:bottom-6 sm:left-6'
@@ -589,15 +681,20 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
         }`}
       >
         <button
+          type="button"
           onClick={() => setIsMinimized(false)}
-          className="flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-full bg-slate-900 text-white shadow-xl hover:bg-slate-800 transition-all cursor-pointer font-sans text-[11px] sm:text-xs border border-slate-700 active:scale-95"
-          title="展开细致新手引导"
+          className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-full bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shadow-xl hover:opacity-95 transition-all cursor-pointer font-sans text-xs border border-indigo-400/40 active:scale-95"
+          title="展开手把手实景新手引导"
         >
-          <Compass className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-400" />
-          <span className="font-semibold">
-            新手引导 ({currentStepIndex + 1}/{TOUR_STEPS.length})
+          <img
+            src="/pets/feiyu_happy.webp"
+            alt="导览助手"
+            className="w-5 h-5 rounded-full bg-white/90 object-contain shrink-0"
+          />
+          <span className="font-bold">
+            实景导览 ({safeIndex + 1}/{activeSteps.length})
           </span>
-          <Maximize2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-slate-400" />
+          <Maximize2 className="h-3.5 w-3.5 text-amber-300" aria-hidden="true" />
         </button>
       </aside>
     )
@@ -608,37 +705,62 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
       ? 'bottom-[calc(4.1rem+env(safe-area-inset-bottom,0px))] left-2 right-2 mx-auto sm:mx-0 sm:right-auto sm:bottom-6 sm:left-6'
       : 'bottom-[calc(4.1rem+env(safe-area-inset-bottom,0px))] left-2 right-2 mx-auto sm:mx-0 sm:left-auto sm:bottom-6 sm:right-6'
 
-  // 屏幕元素实时聚光框与指示标签（Portal 渲染，不阻挡用户点击目标按钮）
+  // 聚光灯 2.0：SVG 柔光镂空暗角 + 双层流光聚焦框 + 智能防裁切指路胶囊（全程 pointer-events-none 不挡真实操作）
   const spotlightOverlay =
-    spotlightEnabled && spotlightRect && typeof document !== 'undefined'
+    spotlightEnabled && !showCelebration && spotlightRect && typeof document !== 'undefined'
       ? createPortal(
           <div className="fixed inset-0 z-[54] pointer-events-none">
-            {/* 目标外围脉冲框 */}
+            <svg className="fixed inset-0 w-full h-full" aria-hidden="true">
+              <defs>
+                <mask id="coreforge-tour-spotlight-mask">
+                  <rect x="0" y="0" width="100%" height="100%" fill="white" />
+                  <rect
+                    x={Math.max(2, spotlightRect.left - 6)}
+                    y={Math.max(2, spotlightRect.top - 6)}
+                    width={spotlightRect.width + 12}
+                    height={spotlightRect.height + 12}
+                    rx="14"
+                    fill="black"
+                  />
+                </mask>
+              </defs>
+              <rect
+                x="0"
+                y="0"
+                width="100%"
+                height="100%"
+                fill="rgba(15, 23, 42, 0.16)"
+                mask="url(#coreforge-tour-spotlight-mask)"
+              />
+            </svg>
+
+            {/* 目标外围双层流光框 */}
             <div
-              className="fixed rounded-xl ring-2 ring-indigo-500 ring-offset-1 sm:ring-offset-2 ring-offset-white/80 bg-indigo-500/10 shadow-[0_0_20px_rgba(99,102,241,0.35)] transition-all duration-200 animate-pulse"
+              className="fixed rounded-2xl ring-2 ring-indigo-500 ring-offset-2 ring-offset-white/90 bg-indigo-500/10 shadow-[0_0_28px_rgba(99,102,241,0.48)] transition-all duration-200"
               style={{
-                top: Math.max(4, spotlightRect.top - 3),
-                left: Math.max(4, spotlightRect.left - 3),
-                width: spotlightRect.width + 6,
-                height: spotlightRect.height + 6,
+                top: Math.max(2, spotlightRect.top - 5),
+                left: Math.max(2, spotlightRect.left - 5),
+                width: spotlightRect.width + 10,
+                height: spotlightRect.height + 10,
               }}
             />
-            {/* 指向标签：智能避开顶部/底部边缘 */}
+
+            {/* 智能防溢出指向气泡 */}
             {step.pointerLabel && (
               <div
-                className="fixed px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg bg-slate-900 text-white text-[10px] sm:text-[11px] font-bold shadow-lg flex items-center gap-1 sm:gap-1.5 whitespace-nowrap border border-indigo-400/50 transition-all duration-200 max-w-[calc(100vw-16px)] truncate"
+                className="fixed px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white text-[10.5px] sm:text-xs font-bold shadow-xl flex items-center gap-1.5 whitespace-nowrap border border-indigo-400/50 transition-all duration-200 max-w-[calc(100vw-16px)] truncate"
                 style={{
                   top:
-                    spotlightRect.bottom + 38 < window.innerHeight
-                      ? spotlightRect.bottom + 8
-                      : Math.max(8, spotlightRect.top - 30),
+                    spotlightRect.bottom + 42 < window.innerHeight
+                      ? spotlightRect.bottom + 10
+                      : Math.max(8, spotlightRect.top - 36),
                   left: Math.min(
                     Math.max(8, spotlightRect.left),
-                    Math.max(8, window.innerWidth - 195)
+                    Math.max(8, window.innerWidth - 230)
                   ),
                 }}
               >
-                <Crosshair className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-400 shrink-0" />
+                <Crosshair className="w-3 h-3 text-amber-300 shrink-0" aria-hidden="true" />
                 <span className="truncate">{step.pointerLabel}</span>
               </div>
             )}
@@ -652,44 +774,61 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
       {spotlightOverlay}
 
       <aside
-        aria-label="手把手细致功能引导"
-        className={`fixed z-[55] w-[calc(100vw-1.25rem)] max-w-[348px] sm:max-w-[420px] sm:w-[420px] rounded-xl sm:rounded-2xl bg-white/98 backdrop-blur-md border border-slate-200/90 shadow-[0_14px_35px_-10px_rgba(0,0,0,0.22)] overflow-hidden animate-fade-in font-sans text-slate-900 flex flex-col max-h-[42dvh] sm:max-h-[82vh] ${dockPositionClass}`}
+        aria-label="手把手实景功能向导"
+        className={`fixed z-[55] w-[calc(100vw-1.25rem)] max-w-[360px] sm:max-w-[435px] sm:w-[435px] rounded-2xl sm:rounded-3xl bg-white/98 backdrop-blur-xl border border-slate-200/90 shadow-[0_20px_50px_-12px_rgba(15,23,42,0.28)] overflow-hidden animate-fade-in font-sans text-slate-900 flex flex-col max-h-[48dvh] sm:max-h-[84vh] ${dockPositionClass}`}
       >
-        {/* 头部控制栏 */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-2.5 py-1.5 sm:px-4 sm:py-2.5 bg-slate-50/95 shrink-0">
-          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-            <span className="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-md sm:rounded-lg bg-slate-900 text-white shrink-0">
-              <Compass className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-amber-400" />
-            </span>
+        {/* 头部深色科技伴学控制栏 */}
+        <div className="flex items-center justify-between px-3 py-2 sm:px-4 sm:py-2.5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shrink-0">
+          <button
+            type="button"
+            onClick={() => setShowStepMap((v) => !v)}
+            className="flex items-center gap-2 min-w-0 hover:opacity-90 transition-opacity cursor-pointer text-left"
+            title="点击展开或收起全部导览站点目录"
+          >
+            <img
+              src={safeIndex % 2 === 0 ? '/pets/nailong_wave.webp' : '/pets/feiyu_happy.webp'}
+              alt="伴学向导"
+              className="h-6 w-6 sm:h-7 sm:w-7 rounded-lg bg-white/95 p-0.5 object-contain shrink-0 ring-1 ring-amber-300/60"
+            />
             <div className="min-w-0">
-              <div className="text-[11px] sm:text-xs font-bold text-slate-900 truncate">
-                细致导览 · 第 {step.id}/{TOUR_STEPS.length} 站
+              <div className="text-[11px] sm:text-xs font-extrabold text-white flex items-center gap-1">
+                <span className="truncate">
+                  {showCelebration
+                    ? '🎉 新手训练营通关'
+                    : `实景向导 · 第 ${safeIndex + 1}/${activeSteps.length} 站`}
+                </span>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 text-amber-300 transition-transform shrink-0 ${
+                    showStepMap ? 'rotate-180' : ''
+                  }`}
+                  aria-hidden="true"
+                />
               </div>
             </div>
-          </div>
+          </button>
 
-          <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             <button
               type="button"
               onClick={() => setSpotlightEnabled((v) => !v)}
-              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold transition-colors cursor-pointer ${
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold transition-colors cursor-pointer ${
                 spotlightEnabled
-                  ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/80'
-                  : 'text-slate-400 hover:text-slate-700 hover:bg-slate-200/60'
+                  ? 'bg-indigo-500/30 text-amber-200 border border-indigo-400/40'
+                  : 'text-slate-300 hover:text-white hover:bg-white/10'
               }`}
-              title={spotlightEnabled ? '点击关闭屏幕位置红框指示' : '点击开启屏幕位置高亮指示'}
+              title={spotlightEnabled ? '关闭屏幕聚光指路框' : '开启屏幕聚光指路框'}
             >
-              <Crosshair className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-              <span className="hidden sm:inline">{spotlightEnabled ? '指路开' : '指路关'}</span>
+              <Crosshair className="w-3 h-3" aria-hidden="true" />
+              <span className="hidden sm:inline">{spotlightEnabled ? '聚光开' : '聚光关'}</span>
             </button>
 
             <button
               type="button"
               onClick={toggleDockSide}
-              className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] text-slate-500 hover:text-slate-800 hover:bg-slate-200/60 transition-colors cursor-pointer"
-              title={dockSide === 'left' ? '移到右下角' : '移到左下角'}
+              className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[10px] text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              title={dockSide === 'left' ? '移到右下角停靠' : '移到左下角停靠'}
             >
-              <MoveHorizontal className="w-3 h-3" />
+              <MoveHorizontal className="w-3 h-3" aria-hidden="true" />
               <span>{dockSide === 'left' ? '靠左' : '靠右'}</span>
             </button>
 
@@ -700,223 +839,110 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
                   new CustomEvent('open-user-guide', { detail: { tab: 'doc' } })
                 )
               }
-              className="p-1 rounded-md text-slate-400 hover:text-indigo-700 hover:bg-indigo-50 transition-colors cursor-pointer"
-              title="打开使用手册"
+              className="p-1 rounded-lg text-slate-300 hover:text-amber-300 hover:bg-white/10 transition-colors cursor-pointer"
+              title="打开全功能视觉手册"
+              aria-label="打开全功能视觉手册"
             >
-              <BookOpen className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+              <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
 
             <button
               type="button"
               onClick={() => setIsMinimized(true)}
-              className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors cursor-pointer"
-              title="收起为小胶囊"
+              className="p-1 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              title="收起为边角迷你胶囊"
+              aria-label="收起为边角迷你胶囊"
             >
-              <Minimize2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+              <Minimize2 className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
 
             <button
               type="button"
-              onClick={handleSkipTour}
-              className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors cursor-pointer"
+              onClick={handleFinishAndDismiss}
+              className="p-1 rounded-lg text-slate-300 hover:text-rose-300 hover:bg-white/10 transition-colors cursor-pointer"
               title="结束导览"
+              aria-label="结束导览"
             >
-              <X className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+              <X className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
           </div>
         </div>
 
-        {/* 导览总进度条 */}
-        <div className="px-2.5 py-1 sm:px-4 sm:py-1.5 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between gap-2 text-[10px] sm:text-[11px] shrink-0">
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
-            <span className="text-slate-500 font-medium whitespace-nowrap">
-              完成 {completedStepsCount}/{TOUR_STEPS.length} 站
-            </span>
-            <div className="flex-1 h-1 sm:h-1.5 rounded-full bg-slate-200/80 overflow-hidden">
-              <div
-                className="h-full bg-emerald-500 rounded-full transition-all duration-300"
-                style={{ width: `${Math.round((completedStepsCount / TOUR_STEPS.length) * 100)}%` }}
-              />
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleResetProgress}
-            className="text-slate-400 hover:text-slate-700 inline-flex items-center gap-0.5 cursor-pointer shrink-0"
-            title="重置实操打卡进度"
-          >
-            <RotateCcw className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-            <span>重置</span>
-          </button>
-        </div>
-
-        {/* 主体引导区 */}
-        <div className="p-2.5 sm:p-4 space-y-2 sm:space-y-3 overflow-y-auto overscroll-contain flex-1">
-          {/* 标题与位置 */}
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <span
-                className={`inline-block px-1.5 py-0.5 sm:px-2 rounded text-[10px] sm:text-2xs font-bold border ${step.highlightColor}`}
-              >
-                {step.badge}
-              </span>
-              <h4 className="mt-0.5 sm:mt-1 text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-1 sm:gap-1.5">
-                <step.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-700 shrink-0" />
-                <span className="truncate">{step.title}</span>
-              </h4>
-            </div>
-
-            {!isCurrentRoute && (
+        {/* 路线模式切换 + 打卡进度条 */}
+        {!showCelebration && (
+          <div className="px-3 py-1.5 sm:px-4 sm:py-2 bg-slate-50 border-b border-slate-200/80 flex items-center justify-between gap-2 text-[10.5px] sm:text-[11px] shrink-0">
+            {/* 极速 5 站 vs 全景 11 站 切换胶囊 */}
+            <div className="inline-flex items-center p-0.5 rounded-lg bg-slate-200/80 text-[10px] font-bold shrink-0">
               <button
                 type="button"
-                onClick={() => handleGoToRoute()}
-                className="shrink-0 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-[10px] sm:text-2xs font-semibold transition-all shadow-xs flex items-center gap-1 cursor-pointer active:scale-95"
+                onClick={() => handleSwitchMode('core')}
+                className={`px-2 py-0.5 rounded-md transition-all cursor-pointer flex items-center gap-0.5 ${
+                  tourMode === 'core'
+                    ? 'bg-white text-indigo-700 shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
               >
-                <span>去这页</span>
-                <ArrowRight className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                <Zap className="w-2.5 h-2.5" aria-hidden="true" />
+                <span>5站精华</span>
               </button>
-            )}
-          </div>
-
-          {/* 入口在哪里 */}
-          <div className="px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg bg-indigo-50/70 border border-indigo-200/60 text-indigo-900 text-[10.5px] sm:text-[11px] flex items-start gap-1 sm:gap-1.5 leading-snug">
-            <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-indigo-600 shrink-0 mt-0.5" />
-            <span>
-              <strong className="font-semibold">入口：</strong>
-              {step.whereHint}
-            </span>
-          </div>
-
-          {/* 大白话概要 */}
-          <p className="text-[11px] sm:text-xs text-slate-600 leading-snug sm:leading-relaxed">{step.summary}</p>
-
-          {/* 手把手实操打卡清单 */}
-          <div className="p-2 sm:p-2.5 rounded-lg sm:rounded-xl bg-amber-50/70 border border-amber-200/80 space-y-1 sm:space-y-2">
-            <div className="flex items-center justify-between text-[10.5px] sm:text-[11px] font-bold text-amber-900">
-              <span className="flex items-center gap-1">
-                <Sparkles className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-amber-600 shrink-0" />
-                <span>跟着做一做（点一项打卡）：</span>
-              </span>
-              <span className="font-mono text-amber-700">
-                {currentStepDoneCount}/{step.checklist.length}
-              </span>
+              <button
+                type="button"
+                onClick={() => handleSwitchMode('full')}
+                className={`px-2 py-0.5 rounded-md transition-all cursor-pointer ${
+                  tourMode === 'full'
+                    ? 'bg-white text-slate-900 shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                11站全景
+              </button>
             </div>
 
-            <div className="space-y-1 sm:space-y-1.5">
-              {step.checklist.map((itemText, idx) => {
-                const checked = Boolean(checkedMap[`${step.id}-${idx}`])
-                return (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => toggleCheckItem(step.id, idx)}
-                    className={`w-full text-left flex items-start gap-1.5 sm:gap-2 px-2 py-1 sm:py-1.5 rounded-md sm:rounded-lg border text-[10.5px] sm:text-[11.5px] leading-snug transition-all cursor-pointer ${
-                      checked
-                        ? 'bg-emerald-50/90 border-emerald-200 text-emerald-900'
-                        : 'bg-white/90 border-amber-200/70 text-slate-800 hover:bg-white'
-                    }`}
-                  >
-                    {checked ? (
-                      <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                    ) : (
-                      <Circle className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-500 shrink-0 mt-0.5" />
-                    )}
-                    <span className={checked ? 'line-through opacity-80' : ''}>{itemText}</span>
-                  </button>
-                )
-              })}
-            </div>
-
-            {isCurrentStepAllChecked && (
-              <div className="text-[10.5px] sm:text-[11px] font-semibold text-emerald-700 flex items-center gap-1 pt-0.5">
-                <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
-                <span>已完成本站操作，点「下一站」继续！</span>
+            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+              <div className="flex-1 h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 rounded-full transition-all duration-300"
+                  style={{
+                    width: `${Math.max(8, Math.round(((safeIndex + 1) / activeSteps.length) * 100))}%`,
+                  }}
+                />
               </div>
-            )}
-          </div>
+              <span className="text-slate-500 font-mono text-[10px] shrink-0">
+                已打卡 {completedStepsCount}
+              </span>
+            </div>
 
-          {/* 快捷体验动作按钮 */}
-          {step.actionLabel && (
-            <div className="space-y-1.5 sm:space-y-2">
+            <button
+              type="button"
+              onClick={handleResetProgress}
+              className="text-slate-400 hover:text-slate-700 inline-flex items-center gap-0.5 cursor-pointer shrink-0"
+              title="重置实操打卡进度"
+            >
+              <RotateCcw className="w-3 h-3" aria-hidden="true" />
+            </button>
+          </div>
+        )}
+
+        {/* 下拉站点全览地图抽屉 */}
+        {showStepMap && !showCelebration && (
+          <div className="border-b border-slate-200 bg-slate-50/95 p-2.5 max-h-52 overflow-y-auto overscroll-contain space-y-1">
+            <div className="px-1.5 pb-1 flex items-center justify-between text-[10.5px] font-bold text-slate-500">
+              <span className="flex items-center gap-1">
+                <ListChecks className="w-3.5 h-3.5 text-indigo-600" aria-hidden="true" />
+                <span>点击任意站点可直接空降体验：</span>
+              </span>
               <button
                 type="button"
-                onClick={() => handlePerformAction()}
-                className="w-full flex items-center justify-center gap-1.5 sm:gap-2 py-1.5 px-2.5 sm:py-2 sm:px-3 rounded-lg sm:rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-[11px] sm:text-xs font-bold shadow-xs active:scale-[0.98] transition-all cursor-pointer"
+                onClick={() => setShowStepMap(false)}
+                className="text-indigo-600 hover:underline cursor-pointer"
               >
-                {step.actionType === 'play_music' ? (
-                  <Play className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current text-sky-400" />
-                ) : step.actionType === 'ask_ai' ? (
-                  <MessageCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-cyan-400" />
-                ) : step.actionType === 'open_quicknote' ? (
-                  <PenLine className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-400" />
-                ) : (
-                  <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400" />
-                )}
-                <span>{step.actionLabel}</span>
+                收起列表
               </button>
-
-              {/* AI 示例提问快捷按钮 */}
-              {step.sampleQuestions && step.sampleQuestions.length > 0 && (
-                <div className="space-y-1 sm:space-y-1.5 pt-0.5">
-                  <span className="text-[10px] sm:text-2xs font-bold text-slate-500 flex items-center gap-1">
-                    <Lightbulb className="w-3 h-3 text-amber-500" />
-                    <span>点一个例题直接发给 AI 导师：</span>
-                  </span>
-                  <div className="space-y-1">
-                    {step.sampleQuestions.map((q, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => handlePerformAction(q)}
-                        className="w-full text-left p-1.5 sm:p-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200/70 text-[10.5px] sm:text-2xs text-slate-800 transition-colors flex items-center justify-between gap-2 group cursor-pointer"
-                      >
-                        <span className="truncate">{q}</span>
-                        <Send className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-slate-400 group-hover:text-cyan-600 shrink-0" />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* 实时操作反馈 */}
-              {actionFeedback && (
-                <div className="p-1.5 sm:p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10.5px] sm:text-2xs font-medium animate-fade-in flex items-start gap-1.5">
-                  <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                  <span>{actionFeedback}</span>
-                </div>
-              )}
             </div>
-          )}
-
-          {/* 小贴士 */}
-          {step.tips.length > 0 && (
-            <div className="space-y-1 pt-1 border-t border-slate-100">
-              {step.tips.map((t, idx) => (
-                <div key={idx} className="flex items-start gap-1 text-[10px] sm:text-2xs text-slate-500 leading-snug sm:leading-relaxed">
-                  <Lightbulb className="h-3 w-3 text-amber-500 shrink-0 mt-0.5" />
-                  <span>{t}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* 底部翻页栏 */}
-        <div className="flex items-center justify-between border-t border-slate-100 px-2.5 py-1.5 sm:px-4 sm:py-2.5 bg-slate-50/80 text-[11px] sm:text-xs shrink-0">
-          <button
-            type="button"
-            onClick={handlePrev}
-            disabled={currentStepIndex === 0}
-            className="inline-flex items-center gap-0.5 sm:gap-1 text-slate-500 hover:text-slate-900 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
-          >
-            <ChevronLeft className="h-3.5 w-3.5" />
-            <span>上一站</span>
-          </button>
-
-          {/* 步骤圆点 */}
-          <div className="flex items-center gap-1">
-            {TOUR_STEPS.map((s, idx) => {
+            {activeSteps.map((s, idx) => {
               const stepDone = s.checklist.every((_, cIdx) => Boolean(checkedMap[`${s.id}-${cIdx}`]))
+              const active = idx === safeIndex
+              const Icon = s.icon
               return (
                 <button
                   key={s.id}
@@ -925,29 +951,333 @@ export default function InteractiveTourGuide({ isOpen, onClose }: InteractiveTou
                     setCurrentStepIndex(idx)
                     navigate(s.route)
                     setActionFeedback(null)
+                    setShowStepMap(false)
                   }}
-                  className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                    idx === currentStepIndex
-                      ? 'w-3.5 sm:w-4 bg-slate-900'
-                      : stepDone
-                        ? 'w-1.5 sm:w-2 bg-emerald-500 hover:bg-emerald-600'
-                        : 'w-1.5 bg-slate-300 hover:bg-slate-400'
+                  className={`w-full px-2.5 py-1.5 rounded-xl text-left flex items-center justify-between gap-2 text-xs transition-all cursor-pointer ${
+                    active
+                      ? 'bg-slate-900 text-white font-bold'
+                      : 'bg-white hover:bg-indigo-50/70 text-slate-700 border border-slate-200/70'
                   }`}
-                  title={`第 ${s.id} 站：${s.title}`}
-                />
+                >
+                  <span className="flex items-center gap-2 min-w-0">
+                    <span className="font-mono text-[10px] opacity-75">0{idx + 1}</span>
+                    <Icon className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                    <span className="truncate">{s.title}</span>
+                  </span>
+                  {stepDone ? (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" aria-hidden="true" />
+                  ) : (
+                    <ArrowRight className="w-3 h-3 opacity-40 shrink-0" aria-hidden="true" />
+                  )}
+                </button>
               )
             })}
           </div>
+        )}
 
-          <button
-            type="button"
-            onClick={handleNext}
-            className="inline-flex items-center gap-0.5 sm:gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-md sm:rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold transition-all shadow-2xs cursor-pointer active:scale-95"
-          >
-            <span>{isLastStep ? '完成' : '下一站'}</span>
-            <ChevronRight className="h-3.5 w-3.5" />
-          </button>
-        </div>
+        {/* 主体内容区：通关庆祝界面 OR 当前站详情 */}
+        {showCelebration ? (
+          <div className="p-4 sm:p-5 space-y-4 overflow-y-auto overscroll-contain text-center">
+            <div className="inline-flex items-center justify-center gap-2 mx-auto px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-extrabold">
+              <Award className="w-4 h-4 text-amber-600" aria-hidden="true" />
+              <span>恭喜通关 CoreForge 研核新手训练营！</span>
+            </div>
+
+            <div className="flex items-center justify-center gap-3 py-1">
+              <img
+                src="/pets/nailong_happy.webp"
+                alt="奶龙祝贺"
+                className="w-14 h-14 rounded-2xl bg-amber-50 p-1 object-contain border border-amber-200 shadow-xs"
+              />
+              <img
+                src="/pets/feiyu_dance.webp"
+                alt="大肥鱼祝贺"
+                className="w-14 h-14 rounded-2xl bg-sky-50 p-1 object-contain border border-sky-200 shadow-xs"
+              />
+            </div>
+
+            <div>
+              <h4 className="text-base sm:text-lg font-extrabold text-slate-900">
+                全套提分装备已解锁，准备发车！
+              </h4>
+              <p className="mt-1 text-xs text-slate-600 leading-relaxed">
+                你已经摸清了研核的核心工作流。接下来挑一个你今天最想推进的目标立即开练吧：
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-2 text-left">
+              {[
+                {
+                  label: '去刷一套历年统考真题 / 专项测验',
+                  sub: '进入刷题中心，右侧自带答题卡与演草白板',
+                  route: '/quiz',
+                  cls: 'bg-indigo-50 hover:bg-indigo-100 border-indigo-200 text-indigo-950',
+                },
+                {
+                  label: '打开双链公式笔记写今日复盘',
+                  sub: '支持 Σ 数学公式速插与本地 Obsidian 实时同步',
+                  route: '/editor',
+                  cls: 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-950',
+                },
+                {
+                  label: '向分科 AI 导师提问重难点推导',
+                  sub: '研小核、数小通、英小研、政小思随时在线',
+                  route: '/chat',
+                  cls: 'bg-purple-50 hover:bg-purple-100 border-purple-200 text-purple-950',
+                },
+              ].map((act) => (
+                <button
+                  key={act.route}
+                  type="button"
+                  onClick={() => {
+                    navigate(act.route)
+                    handleFinishAndDismiss()
+                  }}
+                  className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-2 cursor-pointer ${act.cls}`}
+                >
+                  <div>
+                    <div className="text-xs font-extrabold">{act.label}</div>
+                    <div className="text-[11px] opacity-80 mt-0.5">{act.sub}</div>
+                  </div>
+                  <ArrowRight className="w-4 h-4 shrink-0" aria-hidden="true" />
+                </button>
+              ))}
+            </div>
+
+            <div className="pt-1 flex items-center justify-between text-xs">
+              <button
+                type="button"
+                onClick={() => setShowCelebration(false)}
+                className="text-slate-500 hover:text-slate-800 font-semibold cursor-pointer"
+              >
+                ← 返回查看站点
+              </button>
+              <button
+                type="button"
+                onClick={handleFinishAndDismiss}
+                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold cursor-pointer"
+              >
+                开启高效备考 ✓
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="p-3 sm:p-4 space-y-2.5 sm:space-y-3 overflow-y-auto overscroll-contain flex-1">
+              {/* 标题与跳转页按钮 */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <span
+                    className={`inline-block px-2 py-0.5 rounded-md text-[10px] sm:text-2xs font-extrabold border ${step.highlightColor}`}
+                  >
+                    {step.badge}
+                  </span>
+                  <h4 className="mt-1 text-xs sm:text-[15px] font-extrabold text-slate-900 flex items-center gap-1.5">
+                    <step.icon className="h-4 w-4 text-indigo-600 shrink-0" aria-hidden="true" />
+                    <span className="truncate">{step.title}</span>
+                  </h4>
+                </div>
+
+                {!isCurrentRoute && (
+                  <button
+                    type="button"
+                    onClick={() => handleGoToRoute()}
+                    className="shrink-0 px-2.5 py-1 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-[10.5px] sm:text-2xs font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer active:scale-95"
+                  >
+                    <span>跳到该页</span>
+                    <ArrowRight className="h-3 w-3" aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+
+              {/* 入口位置定位条 */}
+              <div className="px-2.5 py-1.5 rounded-xl bg-indigo-50/75 border border-indigo-200/70 text-indigo-950 text-[10.5px] sm:text-[11.5px] flex items-start gap-1.5 leading-snug">
+                <MapPin className="w-3.5 h-3.5 text-indigo-600 shrink-0 mt-0.5" aria-hidden="true" />
+                <span>
+                  <strong className="font-extrabold">位置：</strong>
+                  {step.whereHint}
+                </span>
+              </div>
+
+              {/* 大白话精讲 */}
+              <p className="text-[11px] sm:text-xs text-slate-600 leading-relaxed">{step.summary}</p>
+
+              {/* 手把手实操打卡清单 */}
+              <div className="p-2.5 rounded-xl bg-amber-50/65 border border-amber-200/80 space-y-1.5">
+                <div className="flex items-center justify-between text-[10.5px] sm:text-[11px] font-extrabold text-amber-950">
+                  <span className="flex items-center gap-1">
+                    <Sparkles className="h-3.5 w-3.5 text-amber-600 shrink-0" aria-hidden="true" />
+                    <span>跟着试一试（点击即可打勾）：</span>
+                  </span>
+                  <span className="font-mono text-amber-700">
+                    {currentStepDoneCount}/{step.checklist.length}
+                  </span>
+                </div>
+
+                <div className="space-y-1.5">
+                  {step.checklist.map((itemText, idx) => {
+                    const checked = Boolean(checkedMap[`${step.id}-${idx}`])
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => toggleCheckItem(step.id, idx)}
+                        className={`w-full text-left flex items-start gap-2 px-2.5 py-1.5 rounded-lg border text-[10.5px] sm:text-[11.5px] leading-snug transition-all cursor-pointer ${
+                          checked
+                            ? 'bg-emerald-50/90 border-emerald-200 text-emerald-900'
+                            : 'bg-white/95 border-amber-200/70 text-slate-800 hover:bg-white'
+                        }`}
+                      >
+                        {checked ? (
+                          <CheckCircle2
+                            className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5"
+                            aria-hidden="true"
+                          />
+                        ) : (
+                          <Circle
+                            className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5"
+                            aria-hidden="true"
+                          />
+                        )}
+                        <span className={checked ? 'line-through opacity-80' : ''}>{itemText}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {isCurrentStepAllChecked && (
+                  <div className="text-[11px] font-bold text-emerald-700 flex items-center gap-1 pt-0.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                    <span>本站实操全部达成！点右下角「下一站」继续闯关</span>
+                  </div>
+                )}
+              </div>
+
+              {/* 快捷演示动作按钮 */}
+              {step.actionLabel && (
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => handlePerformAction()}
+                    className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 hover:opacity-95 text-white text-[11px] sm:text-xs font-bold shadow-xs active:scale-[0.98] transition-all cursor-pointer"
+                  >
+                    {step.actionType === 'play_music' ? (
+                      <Play className="w-3.5 h-3.5 fill-current text-sky-400" aria-hidden="true" />
+                    ) : step.actionType === 'ask_ai' ? (
+                      <MessageCircle className="w-3.5 h-3.5 text-cyan-400" aria-hidden="true" />
+                    ) : step.actionType === 'open_quicknote' ? (
+                      <PenLine className="w-3.5 h-3.5 text-emerald-400" aria-hidden="true" />
+                    ) : (
+                      <ArrowRight className="w-3.5 h-3.5 text-amber-300" aria-hidden="true" />
+                    )}
+                    <span>{step.actionLabel}</span>
+                  </button>
+
+                  {step.sampleQuestions && step.sampleQuestions.length > 0 && (
+                    <div className="space-y-1.5 pt-0.5">
+                      <span className="text-[10.5px] font-bold text-slate-500 flex items-center gap-1">
+                        <Lightbulb className="w-3 h-3 text-amber-500" aria-hidden="true" />
+                        <span>点选一道考研真题，当场发给 AI 导师拆解：</span>
+                      </span>
+                      <div className="space-y-1">
+                        {step.sampleQuestions.map((q, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => handlePerformAction(q)}
+                            className="w-full text-left p-2 rounded-xl bg-slate-50 hover:bg-indigo-50/70 border border-slate-200/80 hover:border-indigo-300 text-[10.5px] sm:text-2xs text-slate-800 transition-colors flex items-center justify-between gap-2 group cursor-pointer"
+                          >
+                            <span className="truncate">{q}</span>
+                            <Send
+                              className="w-3 h-3 text-slate-400 group-hover:text-indigo-600 shrink-0"
+                              aria-hidden="true"
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {actionFeedback && (
+                    <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10.5px] sm:text-2xs font-semibold animate-fade-in flex items-start gap-1.5">
+                      <CheckCircle2
+                        className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5"
+                        aria-hidden="true"
+                      />
+                      <span>{actionFeedback}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 小锦囊 */}
+              {step.tips.length > 0 && (
+                <div className="space-y-1 pt-1 border-t border-slate-100">
+                  {step.tips.map((t, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-start gap-1.5 text-[10.5px] sm:text-2xs text-slate-500 leading-relaxed"
+                    >
+                      <Lightbulb className="h-3 w-3 text-amber-500 shrink-0 mt-0.5" aria-hidden="true" />
+                      <span>{t}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 底部翻站栏 */}
+            <div className="flex items-center justify-between border-t border-slate-100 px-3 py-2 sm:px-4 sm:py-2.5 bg-slate-50/90 text-[11px] sm:text-xs shrink-0">
+              <button
+                type="button"
+                onClick={handlePrev}
+                disabled={safeIndex === 0}
+                className="inline-flex items-center gap-1 text-slate-600 hover:text-slate-900 font-semibold disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>上一站</span>
+              </button>
+
+              {/* 步骤圆点轨道 */}
+              <div className="flex items-center gap-1">
+                {activeSteps.map((s, idx) => {
+                  const stepDone = s.checklist.every((_, cIdx) =>
+                    Boolean(checkedMap[`${s.id}-${cIdx}`])
+                  )
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => {
+                        setCurrentStepIndex(idx)
+                        navigate(s.route)
+                        setActionFeedback(null)
+                      }}
+                      className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                        idx === safeIndex
+                          ? 'w-4 bg-indigo-600'
+                          : stepDone
+                          ? 'w-2 bg-emerald-500 hover:bg-emerald-600'
+                          : 'w-1.5 bg-slate-300 hover:bg-slate-400'
+                      }`}
+                      title={`第 ${idx + 1} 站：${s.title}`}
+                      aria-label={`跳转到第 ${idx + 1} 站：${s.title}`}
+                    />
+                  )
+                })}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleNext}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
+              >
+                <span>{isLastStep ? '完成通关 🎉' : '下一站'}</span>
+                {!isLastStep && <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />}
+              </button>
+            </div>
+          </>
+        )}
       </aside>
     </>
   )

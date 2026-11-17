@@ -71,22 +71,23 @@ interface NavItem {
 }
 
 const subjectSpecialties = [
-  { to: '/quiz?domain=cs_408', label: '408 计算机', badge: '核心大题', icon: Cpu, iconBg: 'bg-blue-50', iconColor: 'text-blue-600', desc: '数构 · 计组 · OS · 网络' },
-  { to: '/quiz?domain=math', label: '考研数学', badge: '数一/二/三', icon: Calculator, iconBg: 'bg-purple-50', iconColor: 'text-purple-600', desc: '高数 · 线代 · 概率论' },
-  { to: '/politics', label: '考研政治', badge: '史纲千题', icon: Landmark, iconBg: 'bg-rose-50', iconColor: 'text-rose-600', desc: '时空编年 · 肖秀荣1000题' },
-  { to: '/english', label: '考研英语', badge: '作文批改', icon: BookOpen, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600', desc: '真题精读 · 作文批改 · 词库' },
+  { to: '/quiz?domain=cs_408', label: '408 计算机', badge: '统考四科', icon: Cpu, iconBg: 'bg-blue-50', iconColor: 'text-blue-600', desc: '数构 · 计组 · OS · 计网仿真' },
+  { to: '/quiz?domain=math', label: '考研数学', badge: '数一/二/三', icon: Calculator, iconBg: 'bg-purple-50', iconColor: 'text-purple-600', desc: '1987–2024真题 · KaTeX分步推导' },
+  { to: '/politics', label: '考研政治', badge: '1839–2026', icon: Landmark, iconBg: 'bg-rose-50', iconColor: 'text-rose-600', desc: '史纲中国地图 · 十五五时政 · 千题' },
+  { to: '/english', label: '考研英语', badge: '20分制精批', icon: BookOpen, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600', desc: '整卷点词即查 · 四维批改 · 外刊' },
+  { to: '/vocabulary', label: '考研背词', badge: 'NEW 默写巡航', icon: Headphones, iconBg: 'bg-sky-50', iconColor: 'text-sky-600', desc: '拼写默写 · 随身巡航 · 5阶词根色谱' },
 ]
 
 const primaryNavItems: NavItem[] = [
-  { to: '/dashboard', label: '首页', shortLabel: '首页', icon: Home, iconBg: 'bg-slate-100', iconColor: 'text-slate-700', desc: '备考概览与每日计划' },
-  { to: '/quiz', label: '刷题中心', shortLabel: '刷题', icon: ClipboardList, iconBg: 'bg-indigo-50', iconColor: 'text-indigo-600', badge: '真题+错题', desc: '真题试卷、自由组卷与错题本' },
-  { to: '/study', label: '研学中心', shortLabel: '研学', icon: GraduationCap, iconBg: 'bg-amber-50', iconColor: 'text-amber-600', desc: '核心讲义、闪卡与仿真课件' },
-  { to: '/vocabulary', label: '考研背词', shortLabel: '单词', icon: Headphones, iconBg: 'bg-sky-50', iconColor: 'text-sky-600', badge: '2000+词汇', desc: '大纲词库与艾宾浩斯复盘' },
-  { to: '/english', label: '考研英语', shortLabel: '英语', icon: BookOpen, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600', badge: '作文批改', desc: '真题精读与写作智能批改' },
-  { to: '/politics', label: '考研政治', shortLabel: '政治', icon: Landmark, iconBg: 'bg-rose-50', iconColor: 'text-rose-600', badge: '史纲千题', desc: '史纲时空轴与千题库训练' },
-  { to: '/graph', label: '知识图谱', shortLabel: '图谱', icon: Network, iconBg: 'bg-violet-50', iconColor: 'text-violet-600', desc: '双链考点网络可视化' },
-  { to: '/editor', label: '笔记编辑', shortLabel: '笔记', icon: FileEdit, iconBg: 'bg-teal-50', iconColor: 'text-teal-600', desc: 'Markdown 写作与公式批注' },
-  { to: '/chat', label: 'AI 伴学', shortLabel: '伴学', icon: MessageCircle, iconBg: 'bg-amber-50', iconColor: 'text-amber-600', desc: '智能体导师答疑与推导' },
+  { to: '/dashboard', label: '首页', shortLabel: '首页', icon: Home, iconBg: 'bg-slate-100', iconColor: 'text-slate-700', desc: '备考驾驶舱与每日计划' },
+  { to: '/quiz', label: '刷题中心', shortLabel: '刷题', icon: ClipboardList, iconBg: 'bg-indigo-50', iconColor: 'text-indigo-600', badge: '真题+错题', desc: '历年整卷、演草白板与错题本' },
+  { to: '/study', label: '研学中心', shortLabel: '研学', icon: GraduationCap, iconBg: 'bg-amber-50', iconColor: 'text-amber-600', desc: '讲义、PDF提取、闪卡与仿真课件' },
+  { to: '/vocabulary', label: '考研背词', shortLabel: '单词', icon: Headphones, iconBg: 'bg-sky-50', iconColor: 'text-sky-600', badge: '默写巡航', desc: '拼写默写、随身连播与词根色谱' },
+  { to: '/english', label: '考研英语', shortLabel: '英语', icon: BookOpen, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600', badge: '20分精批', desc: '整卷点词精读与四维智能批改' },
+  { to: '/politics', label: '考研政治', shortLabel: '政治', icon: Landmark, iconBg: 'bg-rose-50', iconColor: 'text-rose-600', badge: '1839–2026', desc: '史纲全景中国地图与千题精粹' },
+  { to: '/graph', label: '知识图谱', shortLabel: '图谱', icon: Network, iconBg: 'bg-violet-50', iconColor: 'text-violet-600', desc: '红黄绿掌握热力图与急救舱' },
+  { to: '/editor', label: '笔记编辑', shortLabel: '笔记', icon: FileEdit, iconBg: 'bg-teal-50', iconColor: 'text-teal-600', desc: '双模写作、Σ公式与Obsidian同步' },
+  { to: '/chat', label: 'AI 伴学', shortLabel: '伴学', icon: MessageCircle, iconBg: 'bg-amber-50', iconColor: 'text-amber-600', desc: '思考流四师会诊与双宠伴学' },
 ]
 
 const moreNavItems: NavItem[] = [
@@ -422,7 +423,7 @@ export default function Layout({ children }: LayoutProps) {
   }, [])
 
   const isSubjectActive =
-    ['/politics', '/english'].includes(location.pathname) ||
+    ['/politics', '/english', '/vocabulary'].includes(location.pathname) ||
     location.search.includes('domain=') ||
     location.search.includes('subject=')
 
@@ -580,7 +581,7 @@ export default function Layout({ children }: LayoutProps) {
             <button
               type="button"
               onClick={() => {
-                setGuideOptions({ tab: 'doc' })
+                setGuideOptions({ tab: 'tour' })
                 setGuideOpen(true)
                 openModal('user-guide')
               }}
@@ -775,13 +776,14 @@ export default function Layout({ children }: LayoutProps) {
                   <div className="rounded-2xl border border-slate-200/80 bg-white/95 p-2 shadow-[0_12px_32px_rgba(0,0,0,0.08)] backdrop-blur-xl animate-fade-in-up">
                     <div className="px-2.5 py-1 text-2xs font-semibold uppercase tracking-wider text-slate-400 flex items-center justify-between">
                       <span>考研统考专项</span>
-                      <span className="text-2xs text-indigo-500 font-mono">4 大科目</span>
+                      <span className="text-2xs text-indigo-500 font-mono">5 大专项</span>
                     </div>
                     <div className="space-y-1 mt-1">
                       {subjectSpecialties.map(sub => {
                         const isSubActive =
                           (sub.to === '/politics' && location.pathname === '/politics') ||
                           (sub.to === '/english' && location.pathname === '/english') ||
+                          (sub.to === '/vocabulary' && location.pathname === '/vocabulary') ||
                           (location.pathname === '/quiz' && sub.to.includes(location.search) && location.search.length > 0)
                         const SubIcon = sub.icon
                         return (
@@ -909,12 +911,12 @@ export default function Layout({ children }: LayoutProps) {
               type="button"
               data-tour="btn-guide"
               onClick={() => {
-                setGuideOptions({ tab: 'doc' })
+                setGuideOptions({ tab: 'tour' })
                 setGuideOpen(true)
                 openModal('user-guide')
               }}
               className="hidden 2xl:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-xl border border-slate-200/80 bg-slate-50/80 hover:bg-white hover:border-indigo-300 text-slate-600 hover:text-indigo-700 text-xs font-medium shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
-              title="打开全功能通俗使用手册与新手导览"
+              title="打开 1 分钟视觉巡礼与全功能使用手册"
             >
               <BookOpen className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
               <span>手册</span>
@@ -1123,6 +1125,20 @@ export default function Layout({ children }: LayoutProps) {
                         type="button"
                         onClick={() => {
                           setMoreOpen(false)
+                          setGuideOptions({ tab: 'tour' })
+                          setGuideOpen(true)
+                          openModal('user-guide')
+                        }}
+                        className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                      >
+                        <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                        <span className="font-medium">1 分钟视觉巡礼手册</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMoreOpen(false)
                           setGuideOptions({ tab: 'doc' })
                           setGuideOpen(true)
                           openModal('user-guide')
@@ -1130,7 +1146,7 @@ export default function Layout({ children }: LayoutProps) {
                         className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                       >
                         <HelpCircle className="h-3.5 w-3.5 text-slate-500" />
-                        <span className="font-medium">全功能使用手册</span>
+                        <span className="font-medium">全功能百科与快捷键</span>
                       </button>
 
                       <button
@@ -1142,7 +1158,7 @@ export default function Layout({ children }: LayoutProps) {
                         className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                       >
                         <Compass className="h-3.5 w-3.5 text-indigo-500" />
-                        <span className="font-medium">开启手把手细致导览</span>
+                        <span className="font-medium">开启手把手实景导览</span>
                       </button>
                     </div>
                   </div>
@@ -1685,7 +1701,7 @@ export default function Layout({ children }: LayoutProps) {
                   <span className="text-base">🎓</span>
                   <span className="text-sm font-extrabold text-slate-900">考研学科专攻</span>
                   <span className="text-2xs px-1.5 py-0.5 rounded-full bg-indigo-50 border border-indigo-200/80 text-indigo-700 font-bold font-mono">
-                    4 大专项
+                    5 大专项
                   </span>
                 </div>
                 <button
@@ -1699,12 +1715,13 @@ export default function Layout({ children }: LayoutProps) {
               </div>
             </div>
 
-            {/* 4 大学科卡片列表 */}
+            {/* 5 大学科卡片列表 */}
             <div className="grid grid-cols-1 gap-2">
               {subjectSpecialties.map(sub => {
                 const isSubActive =
                   (sub.to === '/politics' && location.pathname === '/politics') ||
                   (sub.to === '/english' && location.pathname === '/english') ||
+                  (sub.to === '/vocabulary' && location.pathname === '/vocabulary') ||
                   (location.pathname === '/quiz' && sub.to.includes('?') && location.search.includes(sub.to.split('?')[1]))
                 const SubIcon = sub.icon
 

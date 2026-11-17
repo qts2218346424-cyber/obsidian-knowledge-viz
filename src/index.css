@@ -1202,92 +1202,232 @@ html {
   }
 }
 
-.subframe-landing-bg {
-  background-color: #f6f7f9;
-  background-image:
-    radial-gradient(65% 42% at 50% 0%, rgba(99, 102, 241, 0.08) 0%, rgba(99, 102, 241, 0) 72%),
-    radial-gradient(48% 36% at 82% 8%, rgba(16, 185, 129, 0.06) 0%, rgba(16, 185, 129, 0) 70%),
-    radial-gradient(125% 88% at 50% 16%, #dfe1e6 0%, #eaebee 46%, #f5f6f8 78%, #ffffff 100%);
+.subframe-landing-bg,
+.apple-page-canvas {
+  background-color: #fbfbfd;
+  color: #1d1d1f;
 }
 
-/* 建筑级精密坐标暗纹遮罩层 */
-.landing-architectural-grid {
-  background-size: 36px 36px;
-  background-image:
-    linear-gradient(to right, rgba(24, 24, 27, 0.038) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(24, 24, 27, 0.038) 1px, transparent 1px);
-  -webkit-mask-image: radial-gradient(85% 58% at 50% 18%, #000 25%, transparent 92%);
-  mask-image: radial-gradient(85% 58% at 50% 18%, #000 25%, transparent 92%);
+/* Apple Global Navigation 冰晶半透明磨砂顶栏 */
+.apple-glass-nav {
+  background-color: rgba(251, 251, 253, 0.82);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-/* 旗舰级主页主标题微金属质感与平衡排版 */
+/* Apple 流体大字阶排版体系 (遵循 WCAG 1.4.4：max <= 2.5 * min，使用无单位 line-height) */
+.apple-display-hero {
+  font-size: clamp(2.35rem, 1.45rem + 4.1vw, 4.75rem);
+  line-height: 1.06;
+  letter-spacing: -0.038em;
+  font-weight: 600;
+  color: #1d1d1f;
+  text-wrap: balance;
+}
+
+.apple-section-headline {
+  font-size: clamp(1.85rem, 1.25rem + 2.4vw, 3.25rem);
+  line-height: 1.1;
+  letter-spacing: -0.032em;
+  font-weight: 600;
+  text-wrap: balance;
+}
+
 .landing-hero-title {
   text-wrap: balance;
-  background: linear-gradient(180deg, #09090b 0%, #18181b 58%, #3f3f46 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: #171719;
+  color: #1d1d1f;
 }
 
 .landing-pretty-copy {
   text-wrap: pretty;
+  line-height: 1.55;
 }
 
-/* 光学折射玻璃 Bento 导航卡片 */
-.landing-bento-card {
-  background: rgba(255, 255, 255, 0.86);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.9);
+/* Apple Segmented Pill Control (取代传统拟物厚边框切换条) */
+.apple-segmented-track {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 9999px;
+  background-color: rgba(118, 118, 128, 0.12);
+}
+
+.apple-segmented-pill {
+  min-block-size: 2.25rem;
+  padding: 0.45rem 1.1rem;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  line-height: 1.25;
+  font-weight: 500;
+  color: #515154;
+  background: transparent;
+  transition: background-color 200ms ease, color 200ms ease, box-shadow 200ms ease;
+}
+
+.apple-segmented-pill:hover {
+  color: #1d1d1f;
+}
+
+.apple-segmented-pill-active {
+  background-color: #ffffff;
+  color: #1d1d1f;
+  font-weight: 600;
   box-shadow:
-    0 1px 2px rgba(15, 23, 42, 0.04),
-    0 8px 24px -6px rgba(15, 23, 42, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.95);
-  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1), border-color 220ms ease;
+    0 2px 8px rgba(0, 0, 0, 0.08),
+    0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
-.landing-bento-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(99, 102, 241, 0.28);
-  box-shadow:
-    0 4px 12px rgba(15, 23, 42, 0.05),
-    0 20px 38px -12px rgba(79, 70, 229, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 1);
+/* Apple 三原色画布与无框大圆角 Bento 表面系统 */
+.apple-section-gray {
+  background-color: #f5f5f7;
+  color: #1d1d1f;
 }
 
-/* 高转化黑曜石流光主按钮 */
-.landing-cta-primary {
+.apple-section-white {
+  background-color: #ffffff;
+  color: #1d1d1f;
+}
+
+/* 遵循 component-specific-light-dark-theme：强制局部暗色上下文时必须显式指定背景色与前景色 */
+.apple-section-dark {
+  color-scheme: only dark;
+  background-color: #000000;
+  color: #f5f5f7;
+}
+
+.apple-tile-white,
+.landing-bento-card,
+.hub-deck-card {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(180deg, #27272a 0%, #141417 52%, #09090b 100%);
-  box-shadow:
-    0 10px 26px -6px rgba(9, 9, 11, 0.38),
-    0 2px 6px rgba(9, 9, 11, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.26);
-  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 180ms ease;
+  background-color: #ffffff;
+  border-radius: 1.75rem;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.025);
+  transition: transform 280ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 280ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.apple-tile-gray {
+  position: relative;
+  overflow: hidden;
+  background-color: #f5f5f7;
+  border-radius: 1.75rem;
+  border: 1px solid rgba(0, 0, 0, 0.025);
+  transition: transform 280ms cubic-bezier(0.16, 1, 0.3, 1), background-color 240ms ease, box-shadow 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.apple-tile-dark {
+  position: relative;
+  overflow: hidden;
+  color-scheme: only dark;
+  background: linear-gradient(180deg, #1d1d1f 0%, #141416 100%);
+  color: #f5f5f7;
+  border-radius: 1.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 18px 44px -12px rgba(0, 0, 0, 0.36);
+  transition: transform 280ms cubic-bezier(0.16, 1, 0.3, 1), border-color 240ms ease, box-shadow 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .apple-tile-white:hover,
+  .landing-bento-card:hover,
+  .hub-deck-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.065);
+  }
+
+  .apple-tile-gray:hover {
+    transform: translateY(-3px);
+    background-color: #f0f0f3;
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.05);
+  }
+
+  .apple-tile-dark:hover {
+    transform: translateY(-3px);
+    border-color: rgba(255, 255, 255, 0.18);
+    box-shadow: 0 24px 52px -12px rgba(0, 0, 0, 0.48);
+  }
+}
+
+/* Apple 标志性胶囊行动按钮与卡片圆形角标键 */
+.apple-btn-blue,
+.landing-cta-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-block-size: 2.75rem;
+  padding: 0.625rem 1.5rem;
+  border-radius: 9999px;
+  background-color: #0071e3;
+  color: #ffffff;
+  font-size: 0.9375rem;
+  line-height: 1.25;
+  font-weight: 500;
+  transition: background-color 180ms ease, transform 160ms ease;
+}
+
+.apple-btn-blue:hover,
 .landing-cta-primary:hover {
-  box-shadow:
-    0 14px 32px -6px rgba(79, 70, 229, 0.32),
-    0 4px 10px rgba(9, 9, 11, 0.25),
-    inset 0 1px 0 rgba(255, 255, 255, 0.38);
+  background-color: #0077ed;
 }
 
-.landing-cta-primary::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -120%;
-  width: 65%;
-  height: 100%;
-  background: linear-gradient(105deg, transparent 20%, rgba(255, 255, 255, 0.18) 50%, transparent 80%);
-  transition: left 650ms cubic-bezier(0.16, 1, 0.3, 1);
-  pointer-events: none;
+.apple-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-block-size: 2.75rem;
+  padding: 0.625rem 1.45rem;
+  border-radius: 9999px;
+  border: 1px solid #0071e3;
+  background-color: transparent;
+  color: #0066cc;
+  font-size: 0.9375rem;
+  line-height: 1.25;
+  font-weight: 500;
+  transition: background-color 180ms ease, color 180ms ease;
 }
 
-.landing-cta-primary:hover::after {
-  left: 145%;
+.apple-btn-outline:hover {
+  background-color: #0071e3;
+  color: #ffffff;
+}
+
+.apple-circle-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 2.25rem;
+  min-block-size: 2.25rem;
+  border-radius: 9999px;
+  background-color: #f5f5f7;
+  color: #1d1d1f;
+  transition: background-color 200ms ease, color 200ms ease, transform 200ms ease;
+}
+
+.group:hover .apple-circle-action {
+  background-color: #0071e3;
+  color: #ffffff;
+}
+
+.apple-circle-action-dark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 2.25rem;
+  min-block-size: 2.25rem;
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #f5f5f7;
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+.group:hover .apple-circle-action-dark {
+  background-color: #0071e3;
+  color: #ffffff;
 }
 
 /* 3D 镀铬金属硬件外框 (3D Metallic Chrome Hardware Pill Outer Frame) */

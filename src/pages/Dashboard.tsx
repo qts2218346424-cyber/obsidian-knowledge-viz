@@ -13,6 +13,7 @@ import {
   FileText,
   Flame,
   GraduationCap,
+  Headphones,
   HeartPulse,
   Landmark,
   Link2,
@@ -325,46 +326,46 @@ export default function Dashboard() {
       actionSecondaryLabel: 'AI 严谨公式分步推导',
     },
     politics: {
-      headline: '考研政治 史纲时空大本营',
-      subheadline: '全屏史纲时空轴 · 阿里 DataV 高精矢量中国地图 · 肖秀荣 1000 题精选',
+      headline: '考研政治 1839–2026 史纲大本营',
+      subheadline: '高精矢量中国历史地图 · 同城多史实循环联动 · 十五五时政与千题遮罩精粹',
       badge: (
         <>
           <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
-          <span>当前激活：<strong>政治总攻舱</strong> — 1840~2024 近代史会议、真题考点收藏与发光地图</span>
+          <span>当前激活：<strong>政治总攻舱</strong> — 1839–2026 史纲全景地图、“史上第一次”专题与千题排雷</span>
         </>
       ),
       actionPrimary: '/politics',
-      actionPrimaryLabel: '开启史纲时空大屏',
+      actionPrimaryLabel: '漫游史纲全景地图',
       actionSecondary: '/politics',
-      actionSecondaryLabel: '刷肖秀荣精选题',
+      actionSecondaryLabel: '刷五大模块千题',
     },
     english: {
-      headline: '考研英语 全题型研学中枢',
-      subheadline: '大小作文高分模板 · AI 作文四维智能批改 · 历年真题精读与长难句透析',
+      headline: '考研英语 全题型与默写巡航中枢',
+      subheadline: '完形阅读整卷点词即查 · 20分制四维智能精批 · 拼写默写与随身巡航词库',
       badge: (
         <>
           <span className="w-1.5 h-1.5 rounded-full bg-purple-600" />
-          <span>当前激活：<strong>英语总攻舱</strong> — 英语一/二双轨作文三段论、考研 20 分标准换算与大纲词库</span>
+          <span>当前激活：<strong>英语总攻舱</strong> — 英一/二三段论模板、1.2s 四维作文批改与 5 阶词根色谱</span>
         </>
       ),
       actionPrimary: '/english',
-      actionPrimaryLabel: '进入英语作战舱',
-      actionSecondary: '/english',
-      actionSecondaryLabel: 'AI 作文智能批改',
+      actionPrimaryLabel: '进入英语实战舱',
+      actionSecondary: '/vocabulary',
+      actionSecondaryLabel: '开启背词默写/巡航',
     },
     ai: {
-      headline: '研考 AI 导师多智能体伴学',
-      subheadline: '基于本地知识库的精准检索增强 (RAG) 与错题归因推理',
+      headline: '分科 AI 导师思考流 & 双宠伴学',
+      subheadline: 'DeepSeek 破题思考链零缓冲流式直出 · 奶龙×大肥鱼真人语音随身聊',
       badge: (
         <>
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-          <span>当前激活：<strong>AI 伴学中心</strong> — 多智能体协同答疑、思维链推导与知识图谱溯源</span>
+          <span>当前激活：<strong>AI 伴学工作台</strong> — 研小核/数小通/英小研/政小思双师会诊与八向缩放随身窗</span>
         </>
       ),
       actionPrimary: '/chat',
-      actionPrimaryLabel: '进入 AI 导师答疑',
-      actionSecondary: '/politics',
-      actionSecondaryLabel: '考研政治史纲与1000题',
+      actionPrimaryLabel: '召唤分科 AI 导师',
+      actionSecondary: '/study?tab=mastery',
+      actionSecondaryLabel: '11级考点色谱 · AI出卷',
     },
   }
 
@@ -390,212 +391,168 @@ export default function Dashboard() {
 
   return (
     <div className="mx-auto max-w-[1560px] space-y-6 animate-fade-in-up">
-      {/* ── Subframe Screen 3 Floating Corner Pills Bar ── */}
+      {/* ── Apple Studio 风格精炼状态顶栏 ── */}
       <div className="w-full flex items-center justify-between gap-3 flex-wrap">
-        {/* Top-Left Pill: Vault Logo + Real-time Review Queue */}
-        <div className="inline-flex items-center gap-2 p-1.5 rounded-2xl bg-white shadow-[0_2px_12px_rgba(0,0,0,0.05)] border border-slate-200/80">
-          <Link to="/graph" className="w-6 h-6 rounded-lg overflow-hidden hover:scale-105 transition-transform shrink-0 shadow-xs ring-1 ring-rose-200/70" title="进入全景知识图谱">
-            <img src="/icon-192.png?v=dango" alt="研核" className="h-full w-full object-cover" />
-          </Link>
+        <div className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white border border-black/[0.06] text-xs">
           <Link
             to="/study?tab=flashcards"
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-xs font-medium text-slate-800 transition-colors"
-            title="点击立即进入艾宾浩斯今日待复盘队列"
+            className="inline-flex items-center gap-1.5 font-medium text-slate-800 hover:text-[#0066cc] transition-colors"
+            title="点击进入艾宾浩斯今日待复盘队列"
           >
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            <span className="w-2 h-2 rounded-full bg-[#30d158] shrink-0" />
             <span>
               {dueFlashcardsCount !== null && dueFlashcardsCount > 0
                 ? `${dueFlashcardsCount} 张今日待复盘闪卡`
                 : `${getTimeGreeting()}`}
             </span>
           </Link>
+          <span className="h-3 w-px bg-slate-200" aria-hidden="true" />
+          <span className="text-slate-500">
+            距初试 <strong className="font-semibold text-slate-900 tabular-nums">{daysToExam}</strong> 天
+          </span>
         </div>
 
-        {/* Top-Center Pill: 考研初试真实动态倒计时 */}
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-white shadow-[0_2px_12px_rgba(0,0,0,0.05)] border border-rose-200/80 text-xs">
-          <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse shrink-0" />
-          <span className="text-slate-600 font-medium">{countdown.targetLabel} 倒计时</span>
-          <span className="font-mono font-extrabold text-sm text-rose-600">{daysToExam} 天</span>
-        </div>
-
-        {/* Style Switcher Pill: 视觉风格鲜艳风 / 极简风 / 护眼风 / 暗黑风 一键切换 */}
-        <button
-          type="button"
-          onClick={toggleThemeStyle}
-          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.05)] border text-xs font-bold transition-all active:scale-95 cursor-pointer ${
-            isDark
-              ? 'border-sky-500/50 text-sky-400 bg-slate-900 hover:border-sky-400 shadow-sky-500/20'
-              : isEyecare
-              ? 'border-emerald-300 text-emerald-800 bg-gradient-to-r from-emerald-50 via-teal-50 to-green-50 hover:border-emerald-400 shadow-emerald-500/10'
-              : isVibrant
-              ? 'border-indigo-300 text-indigo-700 bg-gradient-to-r from-indigo-50/90 via-purple-50/70 to-pink-50/90 hover:border-indigo-400'
-              : 'border-slate-200/80 text-slate-700 bg-white hover:bg-slate-50'
-          }`}
-          title={`当前风格：${currentThemeMeta.name}（点击循环切换为下一模式）`}
-        >
-          {isDark ? (
-            <Moon className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
-          ) : isEyecare ? (
-            <Leaf className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
-          ) : isVibrant ? (
-            <Palette className="w-3.5 h-3.5 text-indigo-600 animate-pulse" />
-          ) : (
-            <Palette className="w-3.5 h-3.5 text-slate-500" />
-          )}
-          <span>{currentThemeMeta.icon} {currentThemeMeta.shortName}</span>
-        </button>
-
-        {/* Top-Right Pill: Multi-AI Connection Icons + Avatar */}
-        <div className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-2xl bg-white shadow-[0_2px_12px_rgba(0,0,0,0.05)] border border-slate-200/80">
-          <Link
-            to="/chat"
-            className="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded-lg hover:bg-slate-100 transition-colors text-xs font-medium text-slate-800"
-            title="推理引擎已连接：Antigravity · Codex · Claude"
+        <div className="inline-flex items-center gap-2">
+          {/* 视觉主题循环切换胶囊 */}
+          <button
+            type="button"
+            onClick={toggleThemeStyle}
+            className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border text-xs font-medium transition-colors cursor-pointer ${
+              isDark
+                ? 'border-slate-700 text-sky-400 bg-slate-900 hover:border-slate-600'
+                : isEyecare
+                ? 'border-emerald-200/90 text-emerald-800 bg-emerald-50/70 hover:bg-emerald-50'
+                : 'border-black/[0.06] text-slate-700 bg-white hover:bg-slate-50'
+            }`}
+            title={`当前风格：${currentThemeMeta.name}（点击切换下一主题）`}
           >
-            {/* Anthropic / Spark Icon */}
-            <svg className="w-3.5 h-3.5 text-[#d97757]" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-              <path d="M8 1.5V14.5M1.5 8H14.5M3.4 3.4L12.6 12.6M12.6 3.4L3.4 12.6" />
-            </svg>
-            {/* Cube Codex Icon */}
-            <svg className="w-3.5 h-3.5 text-slate-700" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round">
-              <path d="M8 1.8L13.5 5V11L8 14.2L2.5 11V5L8 1.8Z" />
-              <path d="M2.5 5L8 8.2L13.5 5M8 8.2V14.2" />
-            </svg>
-            {/* OpenAI Swirl Icon */}
-            <svg className="w-3.5 h-3.5 text-slate-700" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
-              <circle cx="8" cy="8" r="5.5" />
-              <circle cx="8" cy="8" r="2.2" />
-            </svg>
-            <span className="ml-0.5 hidden sm:inline">AI 伴学舱就绪</span>
-          </Link>
-          <DangoAvatar
-            seed={user?.username || user?.displayName}
-            size="sm"
-            className="shadow-xs"
-            title={`${user?.displayName || user?.username || '考研上岸人'} · 专属团子头像`}
-          />
+            {isDark ? (
+              <Moon className="w-3.5 h-3.5 text-sky-400" />
+            ) : isEyecare ? (
+              <Leaf className="w-3.5 h-3.5 text-emerald-600" />
+            ) : (
+              <Palette className="w-3.5 h-3.5 text-slate-500" />
+            )}
+            <span>{currentThemeMeta.shortName}</span>
+          </button>
+
+          {/* 产品导览 + AI 中枢 + 头像 */}
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-black/[0.06]">
+            <button
+              type="button"
+              onClick={() =>
+                window.dispatchEvent(new CustomEvent('open-user-guide', { detail: { tab: 'tour' } }))
+              }
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full hover:bg-slate-100 text-slate-700 text-xs font-medium transition-colors cursor-pointer"
+              title="查看 1 分钟视觉巡礼与使用手册"
+            >
+              <Compass className="w-3.5 h-3.5 text-[#0071e3]" />
+              <span>产品导览</span>
+            </button>
+
+            <span className="h-3 w-px bg-slate-200" aria-hidden="true" />
+
+            <Link
+              to="/chat"
+              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full hover:bg-slate-100 transition-colors text-xs font-medium text-slate-800"
+              title="推理引擎已就绪：DeepSeek 思考流 · Claude · Codex"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-[#0071e3]" />
+              <span className="hidden sm:inline">AI 导师</span>
+            </Link>
+            <DangoAvatar
+              seed={user?.username || user?.displayName}
+              size="sm"
+              className="shadow-2xs"
+              title={`${user?.displayName || user?.username || '考研上岸人'}`}
+            />
+          </div>
         </div>
       </div>
 
-      {/* ── Subframe Hero Studio Section with 3D Metallic Hardware Switcher ── */}
-      <section className="relative overflow-hidden rounded-2xl subframe-bg border border-black/10 py-10 sm:py-14 px-4 sm:px-8 text-center flex flex-col items-center justify-center shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
-        
-        {/* 3D Metallic Chrome Hardware Pill Switcher (Exact Replica from Subframe UI) */}
-        <div className="relative mb-7 select-none">
-          <div className="metallic-ambient-glow" />
-
-          <div className="metallic-housing relative z-10 scale-95 sm:scale-100">
-            <div className="metallic-bezel flex items-center gap-1 sm:gap-2">
-
-              {/* Tab 1: 408 计算机 */}
+      {/* ── Apple Studio 纯净主控导航台 ── */}
+      <section
+        className={`relative overflow-hidden rounded-[28px] py-10 sm:py-14 px-4 sm:px-8 text-center flex flex-col items-center justify-center border transition-colors ${
+          isDark
+            ? 'bg-slate-900/90 border-slate-800'
+            : isEyecare
+            ? 'bg-[#f1f5ef] border-emerald-200/60'
+            : 'bg-white border-black/[0.04] shadow-[0_4px_24px_rgba(0,0,0,0.025)]'
+        }`}
+      >
+        {/* Apple Segmented Control 五核切换胶囊 */}
+        <div
+          role="group"
+          aria-label="切换工作台学科焦点"
+          className={`inline-flex items-center gap-1 p-1 rounded-full max-w-full overflow-x-auto no-scrollbar mb-7 select-none ${
+            isDark ? 'bg-slate-800/90' : 'bg-[#f5f5f7]'
+          }`}
+        >
+          {[
+            { id: 'cs' as const, label: '408 计算机' },
+            { id: 'math' as const, label: '考研数学' },
+            { id: 'politics' as const, label: '考研政治' },
+            { id: 'english' as const, label: '考研英语' },
+            { id: 'ai' as const, label: 'AI 伴学' },
+          ].map((tab) => {
+            const active = activeMode === tab.id
+            return (
               <button
+                key={tab.id}
                 type="button"
-                onClick={() => setActiveMode('cs')}
-                className={`relative flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl text-xs sm:text-[13px] font-medium transition-all duration-200 cursor-pointer ${
-                  activeMode === 'cs' ? 'metal-tab-active' : 'metal-tab-inactive'
+                aria-pressed={active}
+                onClick={() => setActiveMode(tab.id)}
+                className={`min-h-9 px-4 sm:px-5 py-1.5 rounded-full text-xs sm:text-[13px] whitespace-nowrap transition-all cursor-pointer ${
+                  active
+                    ? isDark
+                      ? 'bg-sky-600 text-white font-semibold shadow-xs'
+                      : 'bg-white text-[#1d1d1f] font-semibold shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
+                    : isDark
+                    ? 'text-slate-400 hover:text-white font-medium'
+                    : 'text-[#515154] hover:text-[#1d1d1f] font-medium'
                 }`}
               >
-                <Cpu className={`h-3.5 w-3.5 ${activeMode === 'cs' ? 'text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.8)]' : ''}`} />
-                <span>408 计算机</span>
+                {tab.label}
               </button>
-
-              {/* Tab 2: 考研数学 */}
-              <button
-                type="button"
-                onClick={() => setActiveMode('math')}
-                className={`relative flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl text-xs sm:text-[13px] font-medium transition-all duration-200 cursor-pointer ${
-                  activeMode === 'math' ? 'metal-tab-active' : 'metal-tab-inactive'
-                }`}
-              >
-                <Sigma className={`h-3.5 w-3.5 ${activeMode === 'math' ? 'text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.8)]' : ''}`} />
-                <span>考研数学</span>
-              </button>
-
-                            {/* Tab 3: 考研政治 */}
-              <button
-                type="button"
-                onClick={() => setActiveMode('politics')}
-                className={`relative flex items-center justify-center gap-1.5 px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-[13px] font-medium transition-all duration-200 cursor-pointer ${
-                  activeMode === 'politics' ? 'metal-tab-active' : 'metal-tab-inactive'
-                }`}
-              >
-                <Landmark className={`h-3.5 w-3.5 ${activeMode === 'politics' ? 'text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.8)]' : ''}`} />
-                <span>考研政治</span>
-              </button>
-
-              {/* Tab 4: 考研英语 */}
-              <button
-                type="button"
-                onClick={() => setActiveMode('english')}
-                className={`relative flex items-center justify-center gap-1.5 px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-[13px] font-medium transition-all duration-200 cursor-pointer ${
-                  activeMode === 'english' ? 'metal-tab-active' : 'metal-tab-inactive'
-                }`}
-              >
-                <BookOpen className={`h-3.5 w-3.5 ${activeMode === 'english' ? 'text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.8)]' : ''}`} />
-                <span>考研英语</span>
-              </button>
-
-              {/* Tab 5: AI 伴学 */}
-              <button
-                type="button"
-                onClick={() => setActiveMode('ai')}
-                className={`relative flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl text-xs sm:text-[13px] font-medium transition-all duration-200 cursor-pointer ${
-                  activeMode === 'ai' ? 'metal-tab-active' : 'metal-tab-inactive'
-                }`}
-              >
-                <Sparkles className={`h-3.5 w-3.5 ${activeMode === 'ai' ? 'text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.8)]' : ''}`} />
-                <span>AI 伴学</span>
-              </button>
-
-            </div>
-          </div>
+            )
+          })}
         </div>
 
-        {/* Hero Headline & Subtitle (全主题自适应高对比度学术标题) */}
-        <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight text-slate-900 mb-3 transition-all duration-300">
+        {/* 主标题与清透副标题 */}
+        <h1 className="text-2xl sm:text-4xl md:text-[44px] font-semibold tracking-[-0.032em] leading-[1.12] text-slate-900 mb-3">
           {currentModeData.headline}
         </h1>
 
-        <p className="text-sm sm:text-base md:text-lg font-normal tracking-tight text-slate-500 max-w-[680px] mb-6 transition-all duration-300">
+        <p className="text-sm sm:text-base md:text-[17px] font-normal tracking-[-0.01em] text-slate-500 max-w-[640px] mb-6">
           {currentModeData.subheadline}
         </p>
 
-        {/* Dynamic Mode Live Status Pill */}
-        <div
-          className={`mb-7 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs shadow-xs transition-colors ${
-            isDark
-              ? 'bg-slate-900/75 border-slate-700/80 text-slate-300'
-              : isEyecare
-                ? 'bg-white/75 border-emerald-200/80 text-emerald-900'
-                : 'bg-white/80 border-slate-200/90 text-slate-600 backdrop-blur-xs'
-          }`}
-        >
+        {/* 克制状态说明行 */}
+        <div className="mb-7 inline-flex items-center gap-2 text-xs text-slate-500">
           {currentModeData.badge}
         </div>
 
-        {/* Subframe CTA Button Pair */}
+        {/* Apple 双圆角胶囊按钮组 */}
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Link
             to={currentModeData.actionPrimary}
-            className={`px-5 py-2.5 rounded-xl text-white text-xs sm:text-sm font-semibold transition-all active:scale-[0.98] inline-flex items-center gap-2 ${
-              isVibrant
-                ? 'bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-sm shadow-indigo-500/25'
-                : 'subframe-btn-black px-5! py-2.5! text-xs! sm:text-sm!'
-            }`}
+            className="min-h-10 px-6 py-2.5 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs sm:text-sm font-medium transition-colors inline-flex items-center gap-1.5"
           >
-            <Flame className="h-4 w-4 text-amber-400" />
             <span>{currentModeData.actionPrimaryLabel}</span>
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
 
           <Link
             to={currentModeData.actionSecondary}
-            className="subframe-btn-secondary px-5! py-2.5! rounded-xl! text-xs! sm:text-sm! font-medium inline-flex items-center gap-2"
+            className={`min-h-10 px-6 py-2.5 rounded-full border text-xs sm:text-sm font-medium transition-colors inline-flex items-center gap-1.5 ${
+              isDark
+                ? 'border-slate-700 text-slate-200 hover:bg-slate-800'
+                : 'border-[#0071e3] text-[#0066cc] hover:bg-[#0071e3] hover:text-white'
+            }`}
           >
             <span>{currentModeData.actionSecondaryLabel}</span>
           </Link>
         </div>
-
       </section>
 
       {/* ── Subframe Metric Grid ── */}
@@ -751,7 +708,7 @@ export default function Dashboard() {
                     考研政治 专项研习室
                   </h3>
                   <p className={`text-2xs ${isVibrant ? 'text-rose-600/80' : 'text-slate-400'}`}>
-                    全屏史纲时空轴 · 肖秀荣精选真题
+                    1839–2026 史纲全景地图 · 十五五时政
                   </p>
                 </div>
               </div>
@@ -764,19 +721,19 @@ export default function Dashboard() {
               <div className={`rounded-md py-2 px-1 border transition-colors ${
                 isVibrant ? 'bg-white/95 border-rose-100 shadow-xs' : 'bg-white/90 border-slate-200/50'
               }`}>
-                <div className={`text-2xs font-medium ${isVibrant ? 'text-rose-500' : 'text-slate-400'}`}>全屏时空轴</div>
-                <div className={`text-xs font-semibold mt-0.5 ${isVibrant ? 'text-rose-900' : 'text-slate-800'}`}>发光地图·配图</div>
+                <div className={`text-2xs font-medium ${isVibrant ? 'text-rose-500' : 'text-slate-400'}`}>1839–2026地图</div>
+                <div className={`text-xs font-semibold mt-0.5 ${isVibrant ? 'text-rose-900' : 'text-slate-800'}`}>同城史实联动</div>
               </div>
               <div className={`rounded-md py-2 px-1 border transition-colors ${
                 isVibrant ? 'bg-white/95 border-rose-100 shadow-xs' : 'bg-white/90 border-slate-200/50'
               }`}>
-                <div className={`text-2xs font-medium ${isVibrant ? 'text-rose-500' : 'text-slate-400'}`}>肖秀荣1000题</div>
-                <div className={`text-xs font-semibold mt-0.5 ${isVibrant ? 'text-rose-900' : 'text-slate-800'}`}>单选/多选判分</div>
+                <div className={`text-2xs font-medium ${isVibrant ? 'text-rose-500' : 'text-slate-400'}`}>十五五与千题</div>
+                <div className={`text-xs font-semibold mt-0.5 ${isVibrant ? 'text-rose-900' : 'text-slate-800'}`}>单选/多选排雷</div>
               </div>
               <div className={`rounded-md py-2 px-1 border transition-colors ${
                 isVibrant ? 'bg-white/95 border-rose-100 shadow-xs' : 'bg-white/90 border-slate-200/50'
               }`}>
-                <div className={`text-2xs font-medium ${isVibrant ? 'text-rose-500' : 'text-slate-400'}`}>考点收藏夹</div>
+                <div className={`text-2xs font-medium ${isVibrant ? 'text-rose-500' : 'text-slate-400'}`}>史上第一次</div>
                 <div className={`text-xs font-semibold mt-0.5 ${isVibrant ? 'text-rose-900' : 'text-slate-800'}`}>遮罩背诵自测</div>
               </div>
             </div>
@@ -784,8 +741,8 @@ export default function Dashboard() {
 
           {/* Bottom Card Footer - 优化排版防挤压换行 */}
           <div className="pt-3 border-t border-slate-150/70 flex flex-col gap-2.5 mt-auto">
-            <div className={`text-xs truncate ${isVibrant ? 'text-rose-800/80 font-medium' : 'text-slate-500'}`} title="全屏时空大地图 · 历次会议对比">
-              全屏时空大地图 · 历次会议对比
+            <div className={`text-xs truncate ${isVibrant ? 'text-rose-800/80 font-medium' : 'text-slate-500'}`} title="1839–2026 全景中国地图 · 同城多史实对比">
+              1839–2026 全景中国地图 · 同城多史实对比
             </div>
             <div className="flex items-center gap-2">
               <Link
@@ -915,12 +872,12 @@ export default function Dashboard() {
                     考研英语 专项研习室
                   </h3>
                   <p className={`text-2xs ${isVibrant ? 'text-emerald-600/80' : 'text-slate-400'}`}>
-                    大纲词库 · 高分作文 · AI批改
+                    全题型点词 · 默写巡航 · 20分制精批
                   </p>
                 </div>
               </div>
               <span className={isVibrant ? 'text-2xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200' : 'subframe-pill text-2xs'}>
-                全套写作模板
+                整卷+词库全通
               </span>
             </div>
 
@@ -928,35 +885,35 @@ export default function Dashboard() {
               <div className={`rounded-md py-2 px-1 border transition-colors ${
                 isVibrant ? 'bg-white/95 border-emerald-100 shadow-xs' : 'bg-white/90 border-slate-200/50'
               }`}>
-                <div className={`text-2xs font-medium ${isVibrant ? 'text-emerald-500' : 'text-slate-400'}`}>高分模板</div>
-                <div className={`text-xs font-semibold mt-0.5 ${isVibrant ? 'text-emerald-900' : 'text-slate-800'}`}>图画·图表·书信</div>
+                <div className={`text-2xs font-medium ${isVibrant ? 'text-emerald-500' : 'text-slate-400'}`}>整卷点词即查</div>
+                <div className={`text-xs font-semibold mt-0.5 ${isVibrant ? 'text-emerald-900' : 'text-slate-800'}`}>完形·阅读·外刊</div>
               </div>
               <div className={`rounded-md py-2 px-1 border transition-colors ${
                 isVibrant ? 'bg-white/95 border-emerald-100 shadow-xs' : 'bg-white/90 border-slate-200/50'
               }`}>
-                <div className={`text-2xs font-medium ${isVibrant ? 'text-emerald-500' : 'text-slate-400'}`}>AI 智能批改</div>
-                <div className={`text-xs font-semibold mt-0.5 ${isVibrant ? 'text-emerald-900' : 'text-slate-800'}`}>10/20分·润色</div>
+                <div className={`text-2xs font-medium ${isVibrant ? 'text-emerald-500' : 'text-slate-400'}`}>20分制精批</div>
+                <div className={`text-xs font-semibold mt-0.5 ${isVibrant ? 'text-emerald-900' : 'text-slate-800'}`}>四维打分·升格</div>
               </div>
               <div className={`rounded-md py-2 px-1 border transition-colors ${
                 isVibrant ? 'bg-white/95 border-emerald-100 shadow-xs' : 'bg-white/90 border-slate-200/50'
               }`}>
-                <div className={`text-2xs font-medium ${isVibrant ? 'text-emerald-500' : 'text-slate-400'}`}>真题与词汇</div>
-                <div className={`text-xs font-semibold mt-0.5 ${isVibrant ? 'text-emerald-900' : 'text-slate-800'}`}>长难句·艾宾浩斯</div>
+                <div className={`text-2xs font-medium ${isVibrant ? 'text-emerald-500' : 'text-slate-400'}`}>全新背词系统</div>
+                <div className={`text-xs font-semibold mt-0.5 ${isVibrant ? 'text-emerald-900' : 'text-slate-800'}`}>默写·随身巡航</div>
               </div>
             </div>
           </div>
 
           {/* Bottom Card Footer - 优化排版防挤压换行 */}
           <div className="pt-3 border-t border-slate-150/70 flex flex-col gap-2.5 mt-auto">
-            <div className={`text-xs truncate ${isVibrant ? 'text-emerald-800/80 font-medium' : 'text-slate-500'}`} title="作文四维评分与词汇升级替换">
-              作文四维评分与词汇升级替换
+            <div className={`text-xs truncate ${isVibrant ? 'text-emerald-800/80 font-medium' : 'text-slate-500'}`} title="整卷点词精读 · 20分制四维批改 · 默写巡航">
+              整卷点词精读 · 20分制四维批改 · 默写巡航
             </div>
             <div className="flex items-center gap-2">
               <Link
-                to="/english"
+                to="/vocabulary"
                 className="subframe-btn-secondary h-8 px-3 text-xs whitespace-nowrap shrink-0"
               >
-                看模板
+                去背词
               </Link>
               <Link
                 to="/english"
@@ -1231,62 +1188,87 @@ export default function Dashboard() {
               </Link>
             </div>
           </div>
-          {/* Quick Tools Grid */}
-          <div className="bento-card rounded-xl p-5">
-            <h2 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
-              <Compass className="h-4 w-4 text-slate-600" />
-              <span>研学效率工具箱</span>
-            </h2>
+          {/* Apple Bento 风格纯净高频导航矩阵 */}
+          <div className="bento-card rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-3.5">
+              <h2 className="text-sm font-semibold text-slate-900">快捷工作空间</h2>
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent('start-interactive-tour'))}
+                className="text-xs font-medium text-[#0066cc] hover:underline cursor-pointer"
+              >
+                实景导览 ›
+              </button>
+            </div>
 
             <div className="grid grid-cols-2 gap-2.5">
-              <Link
-                to="/study"
-                className="flex items-center gap-2.5 p-3 rounded-lg border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:border-slate-300 transition-all group"
-              >
-                <div className="w-8 h-8 rounded-md bg-white border border-slate-200/70 flex items-center justify-center text-slate-700 shrink-0">
-                  <GraduationCap className="h-4 w-4" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold text-slate-800 truncate">学习与闪卡</div>
-                  <div className="text-2xs text-slate-400 truncate">讲义精读与记忆</div>
-                </div>
-              </Link>
-              <Link
-                to="/graph"
-                className="flex items-center gap-2.5 p-3 rounded-lg border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:border-slate-300 transition-all group"
-              >
-                <div className="w-8 h-8 rounded-md bg-white border border-slate-200/70 flex items-center justify-center text-slate-700 shrink-0">
-                  <Link2 className="h-4 w-4" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold text-slate-800 truncate">知识图谱</div>
-                  <div className="text-2xs text-slate-400 truncate">考点拓扑可视化</div>
-                </div>
-              </Link>
-              <Link
-                to="/vocabulary"
-                className="flex items-center gap-2.5 p-3 rounded-lg border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:border-slate-300 transition-all group"
-              >
-                <div className="w-8 h-8 rounded-md bg-white border border-slate-200/70 flex items-center justify-center text-slate-700 shrink-0">
-                  <span className="text-xs font-serif font-bold">En</span>
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold text-slate-800 truncate">考研英语词汇</div>
-                  <div className="text-2xs text-slate-400 truncate">高频核心大纲词</div>
-                </div>
-              </Link>
-              <Link
-                to="/pomodoro"
-                className="flex items-center gap-2.5 p-3 rounded-lg border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:border-slate-300 transition-all group"
-              >
-                <div className="w-8 h-8 rounded-md bg-white border border-slate-200/70 flex items-center justify-center text-slate-700 shrink-0">
-                  <Clock className="h-4 w-4" />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-xs font-semibold text-slate-800 truncate">专注番茄钟</div>
-                  <div className="text-2xs text-slate-400 truncate">心流计时切片</div>
-                </div>
-              </Link>
+              {[
+                {
+                  to: '/study?tab=coursewares',
+                  icon: GraduationCap,
+                  title: '仿真与闪卡',
+                  sub: '22+ 动画 · SM-2',
+                },
+                {
+                  to: '/graph',
+                  icon: Flame,
+                  title: '掌握度星图',
+                  sub: '5 题靶向急救',
+                },
+                {
+                  to: '/vocabulary',
+                  icon: Headphones,
+                  title: '背词与巡航',
+                  sub: '默写检验 · 连播',
+                },
+                {
+                  to: '/quiz?tab=errors',
+                  icon: ClipboardList,
+                  title: '智能错题本',
+                  sub: '三维归因重练',
+                },
+                {
+                  to: '/editor',
+                  icon: FileText,
+                  title: '双链公式笔记',
+                  sub: 'Obsidian 同步',
+                },
+                {
+                  to: '/pomodoro',
+                  icon: Clock,
+                  title: '心流番茄钟',
+                  sub: '专注与白噪音',
+                },
+              ].map((navItem) => {
+                const NavIcon = navItem.icon
+                return (
+                  <Link
+                    key={navItem.to}
+                    to={navItem.to}
+                    className={`flex items-center gap-3 p-3 rounded-2xl transition-colors group ${
+                      isDark
+                        ? 'bg-slate-800/60 hover:bg-slate-800'
+                        : 'bg-[#f5f5f7] hover:bg-[#ececf0]'
+                    }`}
+                  >
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                        isDark
+                          ? 'bg-slate-900 text-slate-200'
+                          : 'bg-white text-[#1d1d1f] shadow-2xs'
+                      }`}
+                    >
+                      <NavIcon className="h-4 w-4 stroke-[1.75]" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-semibold text-slate-900 truncate group-hover:text-[#0066cc] transition-colors">
+                        {navItem.title}
+                      </div>
+                      <div className="text-[11px] text-slate-500 truncate mt-0.5">{navItem.sub}</div>
+                    </div>
+                  </Link>
+                )
+              })}
             </div>
           </div>
 

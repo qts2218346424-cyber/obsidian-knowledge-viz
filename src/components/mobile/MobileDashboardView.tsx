@@ -521,14 +521,14 @@ export default function MobileDashboardView({
                   <Landmark className="w-4 h-4" />
                 </span>
                 <span className={`text-2xs font-bold px-1.5 py-0.5 rounded-md ${themePalette.politicsBadge}`}>
-                  时空编年
+                  1839–2026
                 </span>
               </div>
               <h3 className={`text-xs font-bold ${themePalette.cardTitle}`}>考研政治</h3>
-              <p className={`text-2xs mt-0.5 truncate ${themePalette.cardDesc}`}>史纲时空轴·1000题</p>
+              <p className={`text-2xs mt-0.5 truncate ${themePalette.cardDesc}`}>史纲全景地图·千题</p>
             </div>
             <div className={`mt-2.5 pt-2 border-t flex items-center justify-between text-2xs font-semibold ${themePalette.cardBorderTop} ${themePalette.politicsActionText}`}>
-              <span>速记与背诵</span>
+              <span>漫游与刷题</span>
               <span className="font-mono">→</span>
             </div>
           </Link>
@@ -544,11 +544,11 @@ export default function MobileDashboardView({
                   <BookOpen className="w-4 h-4" />
                 </span>
                 <span className={`text-2xs font-bold px-1.5 py-0.5 rounded-md ${themePalette.englishBadge}`}>
-                  AI 批改
+                  20分精批
                 </span>
               </div>
               <h3 className={`text-xs font-bold ${themePalette.cardTitle}`}>考研英语</h3>
-              <p className={`text-2xs mt-0.5 truncate ${themePalette.cardDesc}`}>写作模板·真题研读</p>
+              <p className={`text-2xs mt-0.5 truncate ${themePalette.cardDesc}`}>点词·精批·默写巡航</p>
             </div>
             <div className={`mt-2.5 pt-2 border-t flex items-center justify-between text-2xs font-semibold ${themePalette.cardBorderTop} ${themePalette.englishActionText}`}>
               <span>作文批改舱</span>
@@ -595,7 +595,7 @@ export default function MobileDashboardView({
         </div>
 
         <p className={`text-2xs leading-relaxed ${themePalette.quickDesc}`}>
-          红点呼吸闪烁代表高频失分薄弱点（做对率&lt;50%）。点击直通仿真课件单步推演与 3 道真题急救特训。
+          红点呼吸闪烁代表高频失分薄弱点（做对率&lt;50%）。点击直通仿真课件单步推演与 5 题靶向急救特训。
         </p>
 
         <div className="flex items-center gap-2 pt-0.5">
