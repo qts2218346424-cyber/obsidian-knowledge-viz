@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
+import { Fragment, useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react'
 import { lazyWithRetry } from '../utils/lazyWithRetry'
 import ChunkErrorBoundary from '../components/ChunkErrorBoundary'
 import SuspenseTimeoutFallback from '../components/ui/SuspenseTimeoutFallback'
@@ -48,7 +48,7 @@ let cachedBooksList: BookItem[] | null = null
 
 
 
-type Tab = 'graph' | 'topology' | 'mastery' | 'flashcards' | 'handouts' | 'pdfs' | 'coursewares' | 'progress'
+type Tab = 'handouts' | 'flashcards' | 'coursewares' | 'pdfs' | 'topology' | 'mastery' | 'progress' | 'graph'
 
 
 
@@ -72,7 +72,7 @@ export default function Study() {
 
   const [tab, setTab] = useState<Tab>(
 
-    ['graph', 'topology', 'mastery', 'flashcards', 'handouts', 'pdfs', 'coursewares', 'progress'].includes(initialTab)
+    ['handouts', 'flashcards', 'coursewares', 'pdfs', 'topology', 'mastery', 'progress', 'graph'].includes(initialTab)
 
       ? initialTab
 
@@ -962,78 +962,66 @@ export default function Study() {
 
       <div className="bento-card rounded-xl px-3 py-2 sm:px-4 sm:py-2.5 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-2 sm:gap-3 shrink-0">
 
-        {/* Navigation tabs - 简洁矢量图标 + 统一4字规范 */}
+        {/* Navigation tabs - 按考研日常使用频率排序：高频研学输入 → 中频盲区诊断 → 低频进度与全景总览 */}
 
         <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5 scroll-smooth shrink-0">
 
           {[
 
-            { key: 'graph' as Tab, icon: Network, label: '全景图谱', shortLabel: '图谱', count: null },
+            /* 1. 每日高频研学核心区（精读 → 刷卡 → 课件推演 → 查阅教材） */
+            { key: 'handouts' as Tab, icon: BookOpen, label: '核心讲义', shortLabel: '讲义', count: filteredHandouts.length, tip: '高频必读 · 各科精编核心讲义与公式体系' },
 
-            { key: 'handouts' as Tab, icon: BookOpen, label: '核心讲义', shortLabel: '讲义', count: filteredHandouts.length },
+            { key: 'flashcards' as Tab, icon: Sparkles, label: '记忆闪卡', shortLabel: '闪卡', count: null, tip: '每日必刷 · 艾宾浩斯间隔记忆抽认卡' },
 
-            { key: 'topology' as Tab, icon: Flame, label: '掌握热力', shortLabel: '热力', count: null },
+            { key: 'coursewares' as Tab, icon: Code2, label: '仿真课件', shortLabel: '课件', count: INTERACTIVE_COURSEWARES.length, tip: '难点突破 · 算法与高数交互单步动画演示' },
 
-            { key: 'mastery' as Tab, icon: Layers, label: '考点色谱', shortLabel: '色谱', count: 22 },
+            { key: 'pdfs' as Tab, icon: FileText, label: '真题教材', shortLabel: '教材', count: filteredPdfs.length, dividerAfter: true, tip: '资料查阅 · 原版教材与历年真题 PDF 批注' },
 
-            { key: 'flashcards' as Tab, icon: Sparkles, label: '记忆闪卡', shortLabel: '闪卡', count: null },
+            /* 2. 阶段诊断与查漏补缺区（红黄绿盲区急救 → 11级模块攻坚） */
+            { key: 'topology' as Tab, icon: Flame, label: '掌握热力', shortLabel: '热力', count: null, tip: '盲区诊断 · 红黄绿掌握度热力图与急救舱' },
 
-            { key: 'pdfs' as Tab, icon: FileText, label: '真题教材', shortLabel: '教材', count: filteredPdfs.length },
+            { key: 'mastery' as Tab, icon: Layers, label: '考点色谱', shortLabel: '色谱', count: 22, dividerAfter: true, tip: '进阶规划 · 11 级灰阶/紫阶核心专题梯队' },
 
-            { key: 'coursewares' as Tab, icon: Code2, label: '仿真课件', shortLabel: '课件', count: INTERACTIVE_COURSEWARES.length },
+            /* 3. 全局统计与宏观俯瞰区（低频复盘） */
+            { key: 'progress' as Tab, icon: Target, label: '研学进度', shortLabel: '进度', count: null, tip: '复盘看板 · 整体学习进度与打卡统计' },
 
-            { key: 'progress' as Tab, icon: Target, label: '研学进度', shortLabel: '进度', count: null },
+            { key: 'graph' as Tab, icon: Network, label: '全景图谱', shortLabel: '图谱', count: null, tip: '全局脉络 · 知识库双链关系网络图谱' },
 
           ].map(t => {
             const TabIcon = t.icon
             return (
-              <button
-
-                key={t.key}
-
-                onClick={() => handleTabChange(t.key)}
-
-                onMouseEnter={() => {
-                  if (t.key === 'graph') loadKnowledgeGraph().catch(() => {})
-                }}
-
-                onFocus={() => {
-                  if (t.key === 'graph') loadKnowledgeGraph().catch(() => {})
-                }}
-
-                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap shrink-0 transition-all cursor-pointer active:scale-95 leading-normal ${
-
-                  tab === t.key
-
-                    ? 'bg-slate-900 text-white shadow-xs font-semibold'
-
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
-
-                }`}
-
-              >
-
-                <TabIcon className={`w-3.5 h-3.5 shrink-0 ${tab === t.key ? 'text-white' : 'text-slate-400'}`} />
-
-                <span className="hidden sm:inline">{t.label}</span>
-
-                <span className="sm:hidden">{t.shortLabel}</span>
-
-                {t.count !== null && (
-
-                  <span className={`text-2xs px-1.5 py-0.5 rounded-md font-mono leading-none inline-flex items-center justify-center shrink-0 ${
-
-                    tab === t.key ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-500 border border-slate-200/60'
-
-                  }`}>
-
-                    {t.count}
-
-                  </span>
-
+              <Fragment key={t.key}>
+                <button
+                  type="button"
+                  title={t.tip}
+                  onClick={() => handleTabChange(t.key)}
+                  onMouseEnter={() => {
+                    if (t.key === 'graph') loadKnowledgeGraph().catch(() => {})
+                  }}
+                  onFocus={() => {
+                    if (t.key === 'graph') loadKnowledgeGraph().catch(() => {})
+                  }}
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap shrink-0 transition-all cursor-pointer active:scale-95 leading-normal ${
+                    tab === t.key
+                      ? 'bg-slate-900 text-white shadow-xs font-semibold'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+                  }`}
+                >
+                  <TabIcon className={`w-3.5 h-3.5 shrink-0 ${tab === t.key ? 'text-white' : 'text-slate-400'}`} />
+                  <span className="hidden sm:inline">{t.label}</span>
+                  <span className="sm:hidden">{t.shortLabel}</span>
+                  {t.count !== null && (
+                    <span className={`text-2xs px-1.5 py-0.5 rounded-md font-mono leading-none inline-flex items-center justify-center shrink-0 ${
+                      tab === t.key ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-500 border border-slate-200/60'
+                    }`}>
+                      {t.count}
+                    </span>
+                  )}
+                </button>
+                {t.dividerAfter && (
+                  <span className="h-3.5 w-px bg-slate-200/80 mx-0.5 shrink-0 hidden sm:block" aria-hidden="true" />
                 )}
-
-              </button>
+              </Fragment>
             )
           })}
 
