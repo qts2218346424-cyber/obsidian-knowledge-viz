@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { updateTrialBridgeState } from '../../utils/trialStateBridge'
+import { LiveWorkspaceGalleryStage, type GallerySlideId } from './LiveWorkspaceGalleryStage'
 import {
   ClipboardList,
   GraduationCap,
@@ -168,52 +169,53 @@ const DEMO_FLASHCARDS = [
 
 const NAILONG_MOODS = [
   {
-    img: '/pets/nailong_wave.png',
+    img: '/pets/nailong_wave.webp',
     tag: '元气迎新模式',
     quote: '嗨！今天背完这一组闪卡，离上岸目标院校就又近了一大步哟！',
     voice: '/pets/voices/nailong_2.mp3',
   },
   {
-    img: '/pets/nailong_focus.png',
+    img: '/pets/nailong_focus.webp',
     tag: '深度心流模式',
     quote: '这道 408 大题虽然绕，但咱们拆成 3 个踩分点逐个击破，绝对稳拿！',
     voice: '/pets/voices/nailong_focus_start.mp3',
   },
   {
-    img: '/pets/nailong_happy.png',
+    img: '/pets/nailong_happy.webp',
     tag: '满分夸夸模式',
     quote: '太棒啦！连续答对真题陷阱，今晚奖励自己听首 Lofi 好好休息一下！',
     voice: '/pets/voices/nailong_focus_done.mp3',
   },
 ]
 
-const GALLERY_SLIDES = [
+const GALLERY_SLIDES: Array<{
+  id: GallerySlideId
+  title: string
+  subtitle: string
+  targetPath: string
+}> = [
   {
     id: 'graph',
     title: '双链知识网络与掌握度拓扑',
     subtitle: '哪些考点已经吃透、哪些还是薄弱孤岛，一张三维星图尽收眼底',
-    img: '/promo_assets/05_knowledge_graph.png',
     targetPath: '/study?tab=graph',
   },
   {
     id: 'editor',
     title: '出版级 LaTeX 公式与双栏笔记',
     subtitle: '原生兼容本地 Obsidian 语法，微积分矩阵推导与真题错因一键双链',
-    img: '/promo_assets/08_markdown_editor.png',
     targetPath: '/editor',
   },
   {
     id: 'quiz',
     title: '全真模考卷面与分步踩分导师',
     subtitle: '还原统考真实节奏，解答大题提供逐级启发提示与易错点预警',
-    img: '/promo_assets/03_quiz_real.png',
     targetPath: '/quiz',
   },
   {
     id: 'pomodoro',
     title: '沉浸式番茄钟与 Lofi 自习电台',
     subtitle: '隔绝外界信息焦虑，记录你每一个披星戴月的专注番茄与热力足迹',
-    img: '/promo_assets/09_pomodoro_clock.png',
     targetPath: '/pomodoro',
   },
 ]
@@ -579,6 +581,8 @@ export function InteractiveBentoShowcase({
                     alt={currentMood.tag}
                     width={96}
                     height={96}
+                    loading="lazy"
+                    decoding="async"
                     className="w-20 h-20 sm:w-24 sm:h-24 object-contain group-hover:scale-105 transition-transform"
                   />
                   <span className="absolute -bottom-2 px-2 py-0.5 rounded-full bg-slate-900 text-white text-[10px] font-bold shadow-xs whitespace-nowrap">
@@ -684,13 +688,8 @@ export function InteractiveBentoShowcase({
                     </div>
                     <span className="font-mono text-2xs text-emerald-400">研核实景视窗</span>
                   </div>
-                  <div className="aspect-[16/10] w-full rounded-xl overflow-hidden bg-slate-950 border border-white/10">
-                    <img
-                      src={currentSlide.img}
-                      alt={currentSlide.title}
-                      loading="lazy"
-                      className="w-full h-full object-cover object-top transition-opacity duration-300"
-                    />
+                  <div className="w-full rounded-xl overflow-hidden bg-slate-950 border border-white/10">
+                    <LiveWorkspaceGalleryStage slideId={currentSlide.id} />
                   </div>
                 </div>
               </div>
