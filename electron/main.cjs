@@ -222,13 +222,17 @@ function showDiagnosticPage(errorMessage) {
 }
 
 function createWindow(loadError = null) {
+  const appIcon = process.platform === 'win32' && fs.existsSync(path.join(__dirname, 'icon.ico'))
+    ? path.join(__dirname, 'icon.ico')
+    : path.join(__dirname, 'icon.png')
+
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     minWidth: 900,
     minHeight: 600,
     title: 'CoreForge 研核 · 408 & 考研数学智能研学工作台',
-    icon: path.join(__dirname, 'icon.png'),
+    icon: appIcon,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
