@@ -1555,11 +1555,6 @@ export default function Chat() {
 
               if (!res.ok) {
                 window.clearTimeout(firstEventTimer)
-                if (res.status === 402) {
-                  const errData = await res.json().catch(() => ({}))
-                  window.dispatchEvent(new CustomEvent('open-checkin-modal'))
-                  throw new Error(errData.message || '伴学积分不足（单次对话消耗 0.1 积分），请每日签到领取或联系管理员分配。')
-                }
                 if (res.status === 413) {
                   throw new Error('上传的图片或附件体积超出限制，已为您进行自动压缩，请重新尝试发送。')
                 }
@@ -2223,12 +2218,8 @@ export default function Chat() {
         })
 
         if (!res.ok) {
-          if (res.status === 402) {
-            const errData = await res.json().catch(() => ({}))
-            window.dispatchEvent(new CustomEvent('open-checkin-modal'))
-            throw new Error(errData.message || '伴学积分不足（单次对话消耗 0.1 积分），请每日签到领取或联系管理员分配。')
-          }
-          throw new Error(`服务响应异常: HTTP ${res.status}`)
+          const errData = await res.json().catch(() => ({}))
+          throw new Error(errData.error || errData.message || `服务响应异常: HTTP ${res.status}`)
         }
 
         const reader = res.body?.getReader()

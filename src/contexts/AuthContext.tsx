@@ -58,15 +58,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [canCheckinToday, setCanCheckinToday] = useState<boolean>(true)
 
   const refreshPoints = useCallback(async () => {
-    if (!authService.getStoredToken()) return
-    try {
-      const data = await authService.getUserPoints()
-      setPoints(data.points)
-      setLastCheckinAt(data.lastCheckinAt)
-      setCanCheckinToday(data.canCheckinToday)
-    } catch {
-      // ignore
-    }
+    // 开源单机纯净版：永久拥有无限研学算力，无需请求云端积分
+    setPoints(999999)
+    setCanCheckinToday(false)
   }, [])
 
   const refreshUser = useCallback(async () => {
@@ -184,32 +178,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const handleCheckin = useCallback(async (): Promise<CheckinResult> => {
-    const res = await authService.checkin()
-    if (res.success) {
-      setPoints(res.points)
-      setLastCheckinAt(res.lastCheckinAt)
-      setCanCheckinToday(false)
-    }
-    return res
+    return { success: true, points: 999999, earned: 0, message: '开源单机版无需打卡，拥有完整无限制特权', lastCheckinAt: new Date().toISOString() }
   }, [])
 
-  const handleRedeemCoupon = useCallback(async (code: string): Promise<RedeemCouponResult> => {
-    const res = await authService.redeemCoupon(code)
-    if (res.success) {
-      setPoints(res.points)
-      await refreshPoints()
-    }
-    return res
-  }, [refreshPoints])
+  const handleRedeemCoupon = useCallback(async (_code: string): Promise<RedeemCouponResult> => {
+    return { success: true, points: 999999, earned: 0, message: '开源单机版无需兑换码，已全量放行全部功能' }
+  }, [])
 
-  const handleRecharge = useCallback(async (amount: number, channel?: string): Promise<RechargeResult> => {
-    const res = await authService.rechargePoints(amount, channel)
-    if (res.success) {
-      setPoints(res.points)
-      await refreshPoints()
-    }
-    return res
-  }, [refreshPoints])
+  const handleRecharge = useCallback(async (_amount: number, _channel?: string): Promise<RechargeResult> => {
+    return { success: true, points: 999999, recharged: 0, message: '开源单机版完全免费无内购' }
+  }, [])
 
   const handleLogin = async (username: string, password: string) => {
     setIsLoading(true)

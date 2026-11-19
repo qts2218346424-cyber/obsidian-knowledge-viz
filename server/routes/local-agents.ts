@@ -396,19 +396,6 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
       return
     }
 
-    // 伴学积分资格预检：校验当前用户是否拥有至少 0.1 积分（管理员免受阻断）
-    if (req.user && req.user.role !== 'admin') {
-      const currentPoints = database.getUserPoints(req.user.id)?.points ?? req.user.points ?? 0
-      if (currentPoints < 0.1) {
-        res.status(402).json({
-          error: 'INSUFFICIENT_POINTS',
-          message: '伴学积分不足（当前单次对话需 0.1 积分），请每日签到领取或联系管理员分配。',
-          currentPoints,
-        })
-        return
-      }
-    }
-
     const userVaultPath = getRequestVaultPath(req)
     const requestedCwd = body.cwd || config.localAgents?.defaultCwd || userVaultPath
     const cwd = fs.existsSync(requestedCwd) && fs.statSync(requestedCwd).isDirectory()
@@ -528,39 +515,11 @@ localAgentsRouter.post('/local-agents/chat', async (req, res) => {
   }
 
   const settlePointsOnDone = () => {
-    if (hasSettledDeduction || hasStreamError || abortController.signal.aborted) return
-    if (req.user && hasProducedContent) {
-      hasSettledDeduction = true
-      const deductRes = database.deductUserPoints(
-        req.user.id,
-        0.1,
-        `AI 伴学提问 (${formatBillingModelLabel(body.provider, body.model)})`
-      )
-      if (deductRes.success) {
-        emitRawEvent({
-          type: 'points_updated',
-          points: deductRes.points,
-          deducted: deductRes.deducted,
-        })
-      }
-    }
+    // 开源单机纯净版：零积分扣除，完全免费畅享
   }
 
-  const safeRefundPointsIfNeeded = (reason: string) => {
-    if (hasSettledDeduction && req.user) {
-      try {
-        const refundRes = database.refundUserPoints(req.user.id, 0.1, `提问异常自动原路返还 (${reason})`)
-        emitRawEvent({
-          type: 'points_updated',
-          points: refundRes.points,
-          refunded: 0.1,
-          refundMessage: `💡 本次提问因服务响应异常未完成，已自动为您原路返还 0.1 伴学积分。`,
-        })
-        hasSettledDeduction = false
-      } catch (refundErr: any) {
-        console.warn('[AutoRefund Error]:', refundErr.message)
-      }
-    }
+  const safeRefundPointsIfNeeded = (_reason: string) => {
+    // 开源单机纯净版：无积分变动
   }
 
   const handleRunFailure = (errorMsg: string) => {

@@ -495,7 +495,7 @@ export default function LandingPage() {
         showToast(
           inheritRes.inherited
             ? '账号创建成功，已为您自动导入试玩问答与错题笔记'
-            : '账号创建成功，已为您发放新人 5.0 研学积分'
+            : '账号创建成功，欢迎开启纯净开源研学空间'
         )
       } else {
         await login(cleanUser, modalPassword)
@@ -1078,7 +1078,7 @@ export default function LandingPage() {
                     </span>
                   ) : (
                     <span>
-                      在上方产生的提问、演草与错题，注册后将<strong className="text-[#f5f5f7] font-medium">自动同步至个人知识库</strong>，并赠 5.0 初始积分。
+                      在上方产生的提问、演草与错题，注册后将<strong className="text-[#f5f5f7] font-medium">自动同步至个人知识库</strong>，永久保存在本地。
                     </span>
                   )}
                 </div>
@@ -1532,7 +1532,7 @@ export default function LandingPage() {
                     <span>{isAuthenticated ? '进入我的网页空间' : '免费开启网页空间'}</span>
                   </button>
                   <p className="mt-2.5 text-center text-[11px] text-[#86868b]">
-                    新人赠 5.0 初始积分 · 数据随时可导出
+                    完全开源 · 本地优先 · 数据随时可导出
                   </p>
                 </div>
               </div>
@@ -1551,7 +1551,7 @@ export default function LandingPage() {
               <p className="text-xs sm:text-sm text-[#a1a1a6] leading-relaxed landing-pretty-copy">
                 距离 {countdown.targetLabel} 还有 {countdown.days} 天。
                 {trialSummary.totalFootprints > 0
-                  ? `立即创建账号即可永久保存刚才产生的 ${trialSummary.totalFootprints} 项试玩成果，并获赠 5.0 初始积分。`
+                  ? `立即创建账号即可永久保存刚才产生的 ${trialSummary.totalFootprints} 项试玩成果，完全开源本地私密存储。`
                   : '用 10 秒钟创建专属账号，将零散的刷题与笔记收拢为清晰坚固的知识体系。'}
               </p>
             </div>
@@ -1756,13 +1756,13 @@ export default function LandingPage() {
 
                     <div className="p-4 rounded-2xl bg-[#f5f5f7] flex items-center justify-between">
                       <div>
-                        <div className="text-xs font-semibold text-[#1d1d1f]">新人初始积分已到账</div>
+                        <div className="text-xs font-semibold text-[#1d1d1f]">开源纯净特权已就绪</div>
                         <div className="text-[11px] text-[#6e6e73] mt-0.5">
-                          可用于 AI 导师深度答疑与英语作文精批
+                          纯本地优先 · 自由接入本地智能体与云端大模型
                         </div>
                       </div>
-                      <span className="text-lg font-semibold text-[#1d1d1f] tabular-nums">
-                        +{registeredWelcome.points.toFixed(1)}
+                      <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200">
+                        无限畅享
                       </span>
                     </div>
 
@@ -1891,7 +1891,7 @@ export default function LandingPage() {
                         {modalTab === 'forgot'
                           ? '支持安全密保问答或 8 位专属救援码自助重置'
                           : modalTab === 'register'
-                          ? '免手机号注册，试玩记录自动继承并赠 5.0 初始积分'
+                          ? '免手机号注册，试玩记录自动继承，无限制自由使用'
                           : '登录后自动同步您的刷题进度、错题本与闪卡队列'}
                       </p>
 
@@ -2248,8 +2248,8 @@ export default function LandingPage() {
                         desc: '无缝保留刚才的 AI 导师解答、高数判分与闪卡自评',
                       },
                       {
-                        title: '立赠 5.0 初始研学积分',
-                        desc: '畅享 408/数学大题逐级启发点拨与英语 20 分制智能精批',
+                        title: '纯净开源零门槛 · 本地优先',
+                        desc: '自由调用本地智能体（Claude Code / Antigravity）与离线大模型',
                       },
                       {
                         title: '1987–2024 统考真题库 + SM-2 记忆队列',

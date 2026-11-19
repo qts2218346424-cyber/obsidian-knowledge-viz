@@ -652,169 +652,31 @@ authRouter.delete('/auth/users/:id', requireAuth, requireRole('admin'), (req, re
 // ==========================================
 
 /**
- * 获取当前登录用户的积分资产信息与今日签到状态
+ * 获取当前登录用户的研学资产信息（开源纯净版永久无限）
  */
-authRouter.get('/user/points', requireAuth, (req, res) => {
-  const userId = req.user!.id
-  const pointInfo = database.getUserPoints(userId)
-  if (!pointInfo) {
-    res.status(404).json({ error: '用户不存在' })
-    return
-  }
-  const logs = database.listPointLogs(userId, 20)
+authRouter.get('/user/points', requireAuth, (_req, res) => {
   res.json({
-    points: pointInfo.points,
-    lastCheckinAt: pointInfo.lastCheckinAt,
-    canCheckinToday: pointInfo.canCheckinToday,
-    logs,
+    points: 999999,
+    lastCheckinAt: new Date().toISOString(),
+    canCheckinToday: false,
+    logs: [],
   })
 })
 
 /**
- * 每日签到接口：每天赠送 1.0 积分
+ * 每日签到接口（开源纯净版免登免打卡）
  */
-authRouter.post('/user/checkin', requireAuth, (req, res) => {
-  const userId = req.user!.id
-  const result = database.checkinUser(userId)
-  if (!result.success) {
-    res.status(400).json(result)
-    return
-  }
-  res.json(result)
+authRouter.post('/user/checkin', requireAuth, (_req, res) => {
+  res.json({ success: true, points: 999999, earned: 0, message: '开源单机版已全面放行全部特权', lastCheckinAt: new Date().toISOString() })
 })
 
 /**
- * 管理员为指定用户分配/增减积分
+ * 用户充值与兑换码桩接口
  */
-authRouter.post('/admin/users/:id/points', requireAuth, requireRole('admin'), (req, res) => {
-  const { id } = req.params
-  const { amount, remark } = req.body || {}
-
-  const numAmount = Number(amount)
-  if (isNaN(numAmount) || numAmount === 0) {
-    res.status(400).json({ error: '请提供有效的积分调整数值（可为正数或负数）' })
-    return
-  }
-
-  const result = database.grantUserPoints(
-    id,
-    numAmount,
-    req.user!.id,
-    typeof remark === 'string' ? remark.trim() : undefined
-  )
-
-  if (!result.success) {
-    res.status(400).json(result)
-    return
-  }
-
-  res.json(result)
+authRouter.post('/user/recharge', requireAuth, (_req, res) => {
+  res.json({ success: true, points: 999999, recharged: 0, message: '开源单机版完全免费，无需充值' })
 })
 
-/**
- * 管理员查看指定用户的积分流水
- */
-authRouter.get('/admin/users/:id/point-logs', requireAuth, requireRole('admin'), (req, res) => {
-  const { id } = req.params
-  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 30))
-  const logs = database.listPointLogs(id, limit)
-  res.json({ logs })
-})
-
-/**
- * 用户自主充值伴学积分接口（已对普通学员暂时关闭，仅管理员可作为调试使用）
- */
-authRouter.post('/user/recharge', requireAuth, (req, res) => {
-  const user = req.user!
-  if (user.role !== 'admin') {
-    res.status(403).json({
-      success: false,
-      error: '自主充值通道已暂时关闭。如需增加伴学积分，请参与每日签到打卡或联系管理员获取卡密兑换码。',
-    })
-    return
-  }
-
-  const userId = user.id
-  const { amount, channel } = req.body || {}
-  const numAmount = Number(amount)
-  if (isNaN(numAmount) || numAmount <= 0) {
-    res.status(400).json({ error: '请选择或输入有效的充值积分额度（大于 0）' })
-    return
-  }
-  const result = database.rechargeUserPoints(
-    userId,
-    numAmount,
-    typeof channel === 'string' ? channel.trim() : '研学充值(管理员调试)'
-  )
-  if (!result.success) {
-    res.status(400).json(result)
-    return
-  }
-  res.json(result)
-})
-
-/**
- * 用户使用优惠码/卡密兑换伴学积分
- */
-authRouter.post('/user/redeem-coupon', requireAuth, (req, res) => {
-  const userId = req.user!.id
-  const { code } = req.body || {}
-  if (!code || typeof code !== 'string' || !code.trim()) {
-    res.status(400).json({ error: '请输入优惠兑换码' })
-    return
-  }
-  const result = database.redeemCoupon(userId, code)
-  if (!result.success) {
-    res.status(400).json(result)
-    return
-  }
-  res.json(result)
-})
-
-/**
- * 管理员获取所有优惠码列表
- */
-authRouter.get('/admin/coupons', requireAuth, requireRole('admin'), (_req, res) => {
-  const coupons = database.listCoupons()
-  res.json({ coupons })
-})
-
-/**
- * 管理员批量/单个生成优惠码
- */
-authRouter.post('/admin/coupons', requireAuth, requireRole('admin'), (req, res) => {
-  const { points, count, maxUses, description, expiresAt, customCode } = req.body || {}
-  const numPoints = Number(points)
-  if (isNaN(numPoints) || numPoints <= 0) {
-    res.status(400).json({ error: '请输入有效的积分面额（大于 0）' })
-    return
-  }
-  const coupons = database.createCoupons(
-    {
-      points: numPoints,
-      count: Number(count) || 1,
-      maxUses: Number(maxUses) || 1,
-      description: typeof description === 'string' ? description.trim() : undefined,
-      expiresAt: typeof expiresAt === 'string' ? expiresAt.trim() : undefined,
-      customCode: typeof customCode === 'string' ? customCode.trim() : undefined,
-    },
-    req.user!.username || req.user!.id
-  )
-  res.status(201).json({
-    message: `成功生成 ${coupons.length} 张优惠兑换码`,
-    coupons,
-  })
-})
-
-/**
- * 管理员删除/作废优惠码
- */
-authRouter.delete('/admin/coupons/:code', requireAuth, requireRole('admin'), (req, res) => {
-  const { code } = req.params
-  const success = database.deleteCoupon(code)
-  if (!success) {
-    res.status(404).json({ error: '优惠码不存在或删除失败' })
-    return
-  }
-  res.json({ message: `优惠码 [${code.toUpperCase()}] 已成功作废删除` })
+authRouter.post('/user/redeem-coupon', requireAuth, (_req, res) => {
+  res.json({ success: true, points: 999999, earned: 0, message: '开源单机版已开启全部权限，无需兑换码' })
 })

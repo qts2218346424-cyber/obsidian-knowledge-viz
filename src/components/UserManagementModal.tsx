@@ -295,25 +295,10 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
         <div className="flex items-center gap-2 px-6 pt-3 border-b border-slate-200/80 bg-slate-50/50">
           <button
             onClick={() => setActiveTab('users')}
-            className={`px-4 py-2 text-xs font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
-              activeTab === 'users'
-                ? 'border-indigo-600 text-indigo-700 bg-white rounded-t-lg shadow-xs'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
+            className="px-4 py-2 text-xs font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer border-indigo-600 text-indigo-700 bg-white rounded-t-lg shadow-xs"
           >
             <Users className="h-4 w-4" />
-            <span>成员账号与积分分配 ({users.length})</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('coupons')}
-            className={`px-4 py-2 text-xs font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer ${
-              activeTab === 'coupons'
-                ? 'border-amber-600 text-amber-700 bg-white rounded-t-lg shadow-xs'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <Ticket className="h-4 w-4 text-amber-600" />
-            <span>优惠兑换码发行与管理 ({coupons.length})</span>
+            <span>成员账号与系统权限 ({users.length})</span>
           </button>
         </div>
 
@@ -462,9 +447,8 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
                             </div>
                             <div className="mt-1 flex items-center gap-2 flex-wrap">
                               {getRoleBadge(u.role)}
-                              <span className="inline-flex items-center gap-1 text-2xs font-bold font-mono px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
-                                <Coins className="h-3 w-3 text-amber-600" />
-                                {(u.points ?? 5.0).toFixed(1)} 积分
+                              <span className="inline-flex items-center gap-1 text-2xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                开源全权可用
                               </span>
                               <span className="text-2xs text-slate-400">
                                 创建于 {new Date(u.createdAt || '').toLocaleDateString()}
@@ -486,25 +470,6 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
                             <option value="editor">研学编辑</option>
                             <option value="admin">超级管理员</option>
                           </select>
-
-                          {/* 分配积分按钮 */}
-                          <button
-                            onClick={() => {
-                              setGrantingUserId(isGrantingThis ? null : u.id)
-                              setResettingUserId(null)
-                              setGrantAmountText('10')
-                              setGrantRemarkText('')
-                            }}
-                            title="为用户分配/充值伴学积分"
-                            className={`px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
-                              isGrantingThis
-                                ? 'bg-amber-600 text-white shadow-xs'
-                                : 'text-amber-800 bg-amber-50 border border-amber-200 hover:bg-amber-100'
-                            }`}
-                          >
-                            <Coins className="h-3.5 w-3.5 text-amber-600" />
-                            <span>分配积分</span>
-                          </button>
 
                           {/* 重置密码按钮 */}
                           <button

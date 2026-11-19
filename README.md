@@ -109,6 +109,10 @@
 | **AI 驱动模型** | 优先调用用户本机 **Ollama / LM Studio / Claude Code / Codex CLI** 或填入私有 Key | 托管云端模型直通网关 |
 | **移动端研学** | **电脑作为私有研学服务器**：手机在寝室 Wi-Fi 局域网或自习室 4G/5G 外网扫码即可随时刷题背词 | 手机浏览器直接打开云端网址 |
 
+> 📌 **双端仓库完全解耦与独立演进说明**：
+> - **开源客户端与单机研学版**：[qts2218346424-cyber/obsidian-knowledge-viz](https://github.com/qts2218346424-cyber/obsidian-knowledge-viz)（本仓库），彻底剥离了商业多租户与积分充值系统，代码 100% 聚焦个人本地知识库研学与本地 Agent 联动，自由无限制。
+> - **线上云端服务与网页运营端**：[qts2218346424-cyber/coreforge-web](https://github.com/qts2218346424-cyber/coreforge-web)，承载云端 Linux 生产环境 (`/opt/coreforge`)、多租户沙箱隔离、算力点数托管与 Web 端全量运维。
+
 ---
 
 `v1.5.0` 重构了全站视觉秩序：以纯净白瓷 `#FBFBFD`、浅钛灰 `#F5F5F7` 与深空黑 `#000000` 构筑呼吸留白，将十大核心学习空间与记忆陪伴能力熔铸为一触即达的无框 Bento 矩阵：

@@ -705,13 +705,8 @@ export default function Politics() {
       })
 
       if (!res.ok) {
-        if (res.status === 402) {
-          const errData = await res.json().catch(() => ({}))
-          window.dispatchEvent(new CustomEvent('open-checkin-modal'))
-          throw new Error(errData.message || '伴学积分不足（单次阅卷需 0.1 积分），请先签到领取积分。')
-        }
         const errBody = await res.json().catch(() => ({}))
-        throw new Error(errBody.error || `阅卷请求响应异常 (HTTP ${res.status})`)
+        throw new Error(errBody.error || errBody.message || `阅卷请求响应异常 (HTTP ${res.status})`)
       }
 
       const reader = res.body?.getReader()

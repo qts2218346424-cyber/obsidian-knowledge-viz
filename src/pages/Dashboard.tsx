@@ -383,7 +383,6 @@ export default function Dashboard() {
         politicsQuestionsCount={qCounts.politics}
         user={user}
         points={points}
-        onOpenCheckin={() => window.dispatchEvent(new CustomEvent('open-checkin-modal'))}
         onOpenQuickNote={() => window.dispatchEvent(new CustomEvent('open-quick-note'))}
       />
     )

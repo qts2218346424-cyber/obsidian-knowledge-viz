@@ -667,8 +667,8 @@ export default function Settings() {
                 </div>
               </div>
               <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
-                <span className="text-slate-400">伴学积分余额：</span>
-                <p className="font-bold text-emerald-700 text-sm">{typeof user?.points === 'number' ? user.points.toFixed(1) : '5.0'} <span className="text-xs text-slate-500 font-normal">积分 (每日签到可领 1 积分)</span></p>
+                <span className="text-slate-400">研学授权模式：</span>
+                <p className="font-bold text-emerald-700 text-sm">开源纯净单机版 <span className="text-xs text-slate-500 font-normal">(本地优先 · 免登免充 · 自由配置无限制)</span></p>
               </div>
             </div>
 

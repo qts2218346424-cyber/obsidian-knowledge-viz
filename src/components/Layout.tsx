@@ -25,7 +25,6 @@ import {
   Database,
   Smartphone,
   Sparkles,
-  Coins,
   Palette,
   Bot,
   Headphones,
@@ -51,7 +50,6 @@ import SearchModal from './SearchModal'
 // 低频弹窗改为按需加载 + 打开时才挂载，减少 Layout 首屏 JS 与常驻渲染开销
 const UserManagementModal = lazy(() => import('./UserManagementModal'))
 const UserGuideModal = lazy(() => import('./UserGuideModal'))
-const CheckinModal = lazy(() => import('./CheckinModal'))
 const ChangePasswordModal = lazy(() => import('./ChangePasswordModal'))
 const InteractiveTourGuide = lazy(() => import('./InteractiveTourGuide'))
 const AIAssistantModal = lazy(() => import('./AIAssistantModal'))
@@ -203,8 +201,6 @@ export default function Layout({ children }: LayoutProps) {
     featureId?: string
   }>({})
   const [interactiveTourOpen, setInteractiveTourOpen] = useState(false)
-  const [checkinOpen, setCheckinOpen] = useState(false)
-  const [checkinTab, setCheckinTab] = useState<'checkin' | 'redeem' | 'recharge' | 'logs'>('checkin')
 
   const noteCount = stats?.totalNotes ?? null
   const connected = apiHealthy === true
@@ -247,16 +243,6 @@ export default function Layout({ children }: LayoutProps) {
     window.addEventListener('start-interactive-tour', onStartTour)
     const onOpenChangePassword = () => setChangePasswordOpen(true)
     window.addEventListener('open-change-password-modal', onOpenChangePassword)
-    const onOpenCheckin = (e?: Event) => {
-      const custom = e as CustomEvent<{ tab?: 'checkin' | 'redeem' | 'recharge' | 'logs' }>
-      if (custom?.detail?.tab) {
-        setCheckinTab(custom.detail.tab)
-      } else {
-        setCheckinTab('checkin')
-      }
-      openModal('checkin')
-    }
-    window.addEventListener('open-checkin-modal', onOpenCheckin)
     const onOpenAiAssistant = (e: Event) => {
       const custom = e as CustomEvent<{ contextPrompt?: string; defaultInput?: string }>
       if (custom?.detail) {
@@ -324,7 +310,6 @@ export default function Layout({ children }: LayoutProps) {
       window.removeEventListener('open-user-guide', onOpenGuide)
       window.removeEventListener('start-interactive-tour', onStartTour)
       window.removeEventListener('open-change-password-modal', onOpenChangePassword)
-      window.removeEventListener('open-checkin-modal', onOpenCheckin)
       window.removeEventListener('open-ai-assistant', onOpenAiAssistant)
       window.removeEventListener('vault-notes-updated', onNotesUpdated)
       window.removeEventListener('vault-stats-updated', onNotesUpdated)
@@ -450,15 +435,11 @@ export default function Layout({ children }: LayoutProps) {
           </div>
           <div className="flex items-center gap-1.5">
             <span className="inline-flex items-center gap-1 text-2xs font-semibold px-2 py-0.5 rounded-full bg-white text-indigo-700 border border-slate-200/80 shadow-xs">
-              {isLocalMode ? '👑 本地单机特权' : (user.role === 'admin' ? '👑 超级管理员' : '🎓 考研研学者')}
+              👑 开源超级管理员
             </span>
-            {isLocalMode ? (
-              <span className="text-2xs font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-200/60">
-                无限制 · 免登录
-              </span>
-            ) : (
-              <span className="text-2xs font-mono text-amber-700">⚡ {points.toFixed(1)}分</span>
-            )}
+            <span className="text-2xs font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-200/60">
+              纯净单机 · 无限研学
+            </span>
           </div>
           <div className="pt-1 border-t border-slate-200/60">
             <div className="text-[10px] font-semibold text-slate-400 mb-1.5">团子头像颜色</div>
@@ -608,29 +589,6 @@ export default function Layout({ children }: LayoutProps) {
               aria-label="使用手册"
             >
               <BookOpen className="w-3.5 h-3.5" />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setCheckinTab('checkin')
-                setCheckinOpen(true)
-              }}
-              className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg border text-2xs font-bold shadow-xs active:scale-95 cursor-pointer shrink-0 transition-colors ${
-                isEyecare
-                  ? 'bg-emerald-50/90 border-emerald-200/80 text-emerald-900'
-                  : isMinimal
-                  ? 'bg-zinc-100 border-zinc-200 text-zinc-800'
-                  : isDark
-                  ? 'bg-slate-800/80 border-slate-700 text-sky-300'
-                  : 'bg-amber-50 border-amber-200/90 text-amber-800'
-              }`}
-              title="签到打卡领积分"
-            >
-              <Coins className={`w-3 h-3 ${
-                isEyecare ? 'text-emerald-700' : isMinimal ? 'text-zinc-700' : isDark ? 'text-sky-400' : 'text-amber-600'
-              }`} />
-              <span className="font-mono">{points.toFixed(1)}</span>
             </button>
 
             <button
@@ -932,32 +890,7 @@ export default function Layout({ children }: LayoutProps) {
               <span>手册</span>
             </button>
 
-            {/* 2. 算力伴学积分胶囊（仅商业云服务器展示，本地开源版本彻底隐藏） */}
-            {!isLocalMode && user && (
-              <button
-                type="button"
-                onClick={() => {
-                  setCheckinOpen(true)
-                  openModal('checkin')
-                }}
-                className="relative inline-flex h-8 items-center gap-1 xl:gap-1.5 rounded-xl border border-amber-200/70 bg-gradient-to-r from-amber-50/90 to-amber-100/50 px-2 xl:px-2.5 text-amber-900 shadow-xs hover:border-amber-300 hover:shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
-                title={`伴学算力中心：当前可用 ${points.toFixed(1)} 算力点数 · 点击签到打卡或查看消费明细`}
-              >
-                <Coins className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                <span className="text-xs font-bold font-mono text-amber-950">
-                  {points.toFixed(1)}
-                </span>
-                <span className="text-2xs text-amber-700 font-medium hidden xl:inline">算力</span>
-                {canCheckinToday && (
-                  <span className="relative flex h-2 w-2 shrink-0">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                  </span>
-                )}
-              </button>
-            )}
-
-            {/* 3. 更多功能下拉菜单集合 (研学快捷动作、导入、图谱、编辑器、工作流与新手指引) */}
+            {/* 2. 更多功能下拉菜单集合 (研学快捷动作、导入、图谱、编辑器、工作流与新手指引) */}
             <div
               ref={moreMenuRef}
               className="relative shrink-0"
@@ -1254,13 +1187,6 @@ export default function Layout({ children }: LayoutProps) {
             onClose={() => setInteractiveTourOpen(false)}
           />
         )}
-        {Boolean(checkinOpen || activeModals['checkin']) && (
-          <CheckinModal
-            isOpen={Boolean(checkinOpen || activeModals['checkin'])}
-            onClose={() => { setCheckinOpen(false); closeModal('checkin') }}
-            defaultTab={checkinTab}
-          />
-        )}
       </Suspense>
 
       {/* Mobile Full-Featured Bottom Sheet Navigation */}
@@ -1307,11 +1233,11 @@ export default function Layout({ children }: LayoutProps) {
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs font-bold text-slate-900 truncate">{user.displayName || user.username}</span>
                         <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-white text-indigo-700 border border-slate-200/80 shrink-0">
-                          {isLocalMode ? '开源版' : (user.role === 'admin' ? '管理员' : '研学者')}
+                          开源全权
                         </span>
                       </div>
                       <div className="text-2xs text-slate-400 font-mono truncate">
-                        {isLocalMode ? '💻 本地免登 · 无限权限' : `@${user.username} · ⚡ ${points.toFixed(1)}分`}
+                        💻 纯净单机开源 · 无限研学权限
                       </div>
                     </div>
                   </div>

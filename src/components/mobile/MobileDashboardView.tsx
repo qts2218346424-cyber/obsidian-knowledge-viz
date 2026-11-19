@@ -46,7 +46,6 @@ interface MobileDashboardViewProps {
   politicsQuestionsCount: number
   user: any
   points: number
-  onOpenCheckin: () => void
   onOpenQuickNote: () => void
 }
 
@@ -60,7 +59,6 @@ export default function MobileDashboardView({
   politicsQuestionsCount,
   user,
   points,
-  onOpenCheckin,
   onOpenQuickNote,
 }: MobileDashboardViewProps) {
   const navigate = useNavigate()
