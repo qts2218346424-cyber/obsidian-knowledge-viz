@@ -17,7 +17,7 @@
     <img src="https://img.shields.io/badge/🎮_免登录动手试玩-五大交互实验室-0071E3?style=for-the-badge" alt="免登录动手试玩" />
   </a>
   <a href="https://github.com/qts2218346424-cyber/obsidian-knowledge-viz/releases/latest">
-    <img src="https://img.shields.io/badge/🚀_最新发布版本-v1.5.0-248A3D?style=for-the-badge" alt="最新版本 v1.5.0" />
+    <img src="https://img.shields.io/badge/🚀_最新发布版本-v1.5.1-248A3D?style=for-the-badge" alt="最新版本 v1.5.1" />
   </a>
   <a href="https://qts2218346424-cyber.github.io/obsidian-knowledge-viz/">
     <img src="https://img.shields.io/badge/🎬_实机互动展厅-在线宣传站-515154?style=for-the-badge" alt="在线宣传站" />

@@ -1,5 +1,16 @@
 # 更新日志
 
+## v1.5.1 — 2026-11-19
+
+### 开源通用架构与多用户适配升级
+
+- **System Doctor 全链路环境体检舱**：新增 `GET /api/system/doctor` 诊断接口、跨平台命令行工具 `npm run doctor` / `npm run setup`，并在【设置 → 系统底座】上线可视化体检卡片，一键探测本机 Node.js、Obsidian 知识库、云端 API 及 Claude Code / Antigravity / Codex / Ollama / LM Studio 状态，附带一键复制修复命令。
+- **四级弹性 AI 驱动与零配置开箱即用**：新增 `.env.example` 与环境变量配置支持（`COREFORGE_PORT` / `COREFORGE_VAULT_PATH` / `COREFORGE_AI_*`），首次克隆在未配置自定义路径时自动回退至内置体验知识库，且完全兼容已有生产部署配置。
+- **跨平台隐私路径全面脱敏**：清理源码中残留的个人硬编码路径，全面适配 Windows / macOS / Linux 多用户复刻。
+- **开源工程治理与自动发包流水线**：引入 `.github/workflows/release.yml`（推送 `v*` 标签云端自动构建并发布桌面端安装包）、标准 Issue 模板、[`CONTRIBUTING.md`](CONTRIBUTING.md) 与 [`docs/OPEN_SOURCE_ARCHITECTURE.md`](docs/OPEN_SOURCE_ARCHITECTURE.md)。
+
+---
+
 ## v1.5.0 — 2026-11-18
 
 ### 全新特性与视觉升级

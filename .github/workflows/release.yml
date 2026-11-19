@@ -29,6 +29,13 @@ jobs:
       - name: Build Frontend & Server
         run: npm run build:all
 
+      - name: Prepare Sanitized Default Config for Open-Source Bundle
+        shell: pwsh
+        run: |
+          if (-not (Test-Path server/config.json)) {
+            Copy-Item server/config.example.json server/config.json
+          }
+
       - name: Build Electron Installer
         run: npx electron-builder --win nsis dir
         env:
