@@ -27,16 +27,14 @@ export function isCloudMultiTenant(): boolean {
 
 /**
  * 判断当前请求是否拥有本地全权管理员权限
- * 1. 显式拥有 admin 角色
- * 2. 在开源桌面版 / 本地单机环境下，用户作为宿主电脑主人，默认全权管辖（除非显式切换为 student 模拟账号）
+ * 1. 显式拥有 admin 角色，任何环境下都是最高管理员
+ * 2. 在开源桌面版 / 本地单机环境下（非云端多租户生产服务器），用户作为宿主电脑主人，默认全权管辖所有配置
  */
 export function isEffectiveAdmin(req?: Request): boolean {
   if (req?.user?.role === 'admin') return true
   if (!isCloudMultiTenant()) {
-    // 开源本地/桌面端单机运行：用户默认享有全部管理员特权
-    if (!req?.user || req.user.role === 'admin') {
-      return true
-    }
+    // 开源本地/桌面端单机运行：用户天然拥有本地宿主机的完全控制权
+    return true
   }
   return false
 }
