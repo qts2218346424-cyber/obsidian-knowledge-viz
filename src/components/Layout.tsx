@@ -243,6 +243,11 @@ export default function Layout({ children }: LayoutProps) {
     window.addEventListener('start-interactive-tour', onStartTour)
     const onOpenChangePassword = () => setChangePasswordOpen(true)
     window.addEventListener('open-change-password-modal', onOpenChangePassword)
+    const onOpenMobile = () => {
+      setMobileModalOpen(true)
+      openModal('mobile-device')
+    }
+    window.addEventListener('open-mobile-modal', onOpenMobile)
     const onOpenAiAssistant = (e: Event) => {
       const custom = e as CustomEvent<{ contextPrompt?: string; defaultInput?: string }>
       if (custom?.detail) {
@@ -310,6 +315,7 @@ export default function Layout({ children }: LayoutProps) {
       window.removeEventListener('open-user-guide', onOpenGuide)
       window.removeEventListener('start-interactive-tour', onStartTour)
       window.removeEventListener('open-change-password-modal', onOpenChangePassword)
+      window.removeEventListener('open-mobile-modal', onOpenMobile)
       window.removeEventListener('open-ai-assistant', onOpenAiAssistant)
       window.removeEventListener('vault-notes-updated', onNotesUpdated)
       window.removeEventListener('vault-stats-updated', onNotesUpdated)
@@ -890,7 +896,21 @@ export default function Layout({ children }: LayoutProps) {
               <span>手册</span>
             </button>
 
-            {/* 2. 更多功能下拉菜单集合 (研学快捷动作、导入、图谱、编辑器、工作流与新手指引) */}
+            {/* 2. 手机 / 平板跨端研学常驻胶囊 */}
+            <button
+              type="button"
+              onClick={() => {
+                setMobileModalOpen(true)
+                openModal('mobile-device')
+              }}
+              className="inline-flex items-center gap-1 xl:gap-1.5 h-8 px-2 xl:px-2.5 rounded-xl border border-emerald-200/90 bg-gradient-to-r from-emerald-50/90 to-teal-50/70 hover:from-emerald-100 hover:to-teal-100 text-emerald-950 text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
+              title="📱 手机 / 平板随时随地跨端研学：局域网秒连、自习室外网隧道与桌面 PWA 沉浸指引"
+            >
+              <Smartphone className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+              <span>手机互联</span>
+            </button>
+
+            {/* 3. 更多功能下拉菜单集合 (研学快捷动作、导入、图谱、编辑器、工作流与新手指引) */}
             <div
               ref={moreMenuRef}
               className="relative shrink-0"
@@ -988,6 +1008,19 @@ export default function Layout({ children }: LayoutProps) {
                         <Workflow className="h-3.5 w-3.5 text-indigo-600" />
                         <span className="font-medium">知识库整理工作流</span>
                       </Link>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMoreOpen(false)
+                          setMobileModalOpen(true)
+                          openModal('mobile-device')
+                        }}
+                        className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-teal-800 bg-teal-50/70 hover:bg-teal-100/70 transition-colors cursor-pointer font-bold"
+                      >
+                        <Smartphone className="h-3.5 w-3.5 text-teal-600" />
+                        <span>手机 / 平板跨端研学控制台</span>
+                      </button>
                     </div>
 
                     {/* 分组 2: 界面与偏好 */}
@@ -1746,7 +1779,7 @@ export default function Layout({ children }: LayoutProps) {
           />
         )}
         {(importModalOpen || activeModals['import-resource']) && <ImportResourceModal isOpen={true} onClose={() => { setImportModalOpen(false); closeModal('import-resource') }} />}
-        {isAdmin && (mobileModalOpen || activeModals['mobile-device']) && <MobileDeviceModal isOpen={true} onClose={() => { setMobileModalOpen(false); closeModal('mobile-device') }} />}
+        {(mobileModalOpen || activeModals['mobile-device']) && <MobileDeviceModal isOpen={true} onClose={() => { setMobileModalOpen(false); closeModal('mobile-device') }} />}
         {(quickNoteOpen || activeModals['quick-note']) && <QuickNoteDrawer isOpen={true} onClose={() => { setQuickNoteOpen(false); closeModal('quick-note') }} />}
       </Suspense>
     </div>

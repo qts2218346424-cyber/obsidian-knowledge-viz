@@ -5,6 +5,7 @@ import DangoAvatar, { DangoColorPicker } from '../components/DangoAvatar'
 import LuluAvatar, { PET_PERSONA_LIST, useActivePetPersona } from '../components/Pet/LuluAvatar'
 import SystemDoctorCard from '../components/SystemDoctorCard'
 import AutoDiscoveryCard from '../components/AutoDiscoveryCard'
+import MobileStudyGuideCard from '../components/MobileStudyGuideCard'
 import { useThemeStyle } from '../hooks/useThemeStyle'
 import { getSecuritySettings, updateSecuritySettings } from '../services/auth'
 import { api, type AppSettings, type CloudEndpoint } from '../services/api'
@@ -12,7 +13,7 @@ import {
   Save, RefreshCw, CheckCircle, AlertCircle, FolderOpen, Globe, Cpu, Palette,
   Eye, EyeOff, Folder, AlertTriangle, Zap, ChevronRight, ArrowUp,
   Loader2, X, HardDrive, Check, Download, Plug, Plus, Trash2, Star, KeyRound, ShieldCheck, Lock, Copy, ShieldAlert,
-  Moon, Leaf, LogOut, Sparkles
+  Moon, Leaf, LogOut, Sparkles, Smartphone, QrCode
 } from 'lucide-react'
 
 declare global {
@@ -107,7 +108,7 @@ export default function Settings() {
       return 'write'
     }
   })
-  const [activeTab, setActiveTab] = useState<'student' | 'doctor' | 'system'>('student')
+  const [activeTab, setActiveTab] = useState<'student' | 'doctor' | 'system' | 'mobile'>('student')
   const [showArchInGraph, setShowArchInGraph] = useState<boolean>(() => {
     try {
       return localStorage.getItem('coreforge_graph_show_arch') === 'true'
@@ -542,6 +543,16 @@ export default function Settings() {
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             <span>🩺 智能体与环境体检</span>
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('mobile')}
+            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'mobile' ? 'bg-white text-teal-700 shadow-xs font-bold' : 'text-slate-500 hover:text-slate-900'
+            }`}
+          >
+            <Smartphone className="w-3.5 h-3.5 text-teal-600" />
+            <span>📱 手机/平板跨端指南</span>
+          </button>
           {isAdmin && (
             <button
               type="button"
@@ -567,6 +578,41 @@ export default function Settings() {
       {/* 考生专属研学偏好面板（无任何服务器底层物理路径与端口噪音） */}
       {activeTab === 'student' && (
         <div className="space-y-5 animate-in fade-in">
+          {/* 手机/平板随时随地跨端刷题入口横幅 */}
+          <div className="rounded-xl border border-teal-200 bg-gradient-to-r from-teal-50 via-emerald-50 to-sky-50 p-4 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <Smartphone className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-800">📱 手机 / 平板跨端随时随地研学</span>
+                  <span className="text-[10px] bg-teal-100 text-teal-800 font-bold px-1.5 py-0.2 rounded border border-teal-200">免云服务器</span>
+                </div>
+                <p className="text-2xs text-slate-600 mt-0.5">
+                  电脑作为私人微服务器，自习室/寝室躺平刷题、背单词、做政治真题，笔记实时双向同步。
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-modal'))}
+                className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+              >
+                <QrCode className="w-3.5 h-3.5" />
+                <span>立即扫码互联</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('mobile')}
+                className="px-3 py-1.5 rounded-lg bg-white border border-teal-300 hover:bg-teal-50 text-teal-800 text-xs font-semibold shadow-xs flex items-center gap-1 transition-all cursor-pointer"
+              >
+                <span>查阅手把手教程 &rarr;</span>
+              </button>
+            </div>
+          </div>
+
           {/* 研学账号与知识库连接状态 */}
           <section className="bento-card bg-white border border-slate-200/80 rounded-xl shadow-xs p-5 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -1189,6 +1235,13 @@ export default function Settings() {
         <div className="space-y-5 animate-in fade-in">
           <AutoDiscoveryCard onApplied={() => { loadSettings() }} />
           <SystemDoctorCard />
+        </div>
+      )}
+
+      {/* 手机 / 平板随时随地跨端研学指南（独立 Tab 呈现） */}
+      {activeTab === 'mobile' && (
+        <div className="space-y-5 animate-in fade-in">
+          <MobileStudyGuideCard />
         </div>
       )}
 
@@ -1826,6 +1879,9 @@ export default function Settings() {
           </div>
         )}
       </section>
+
+      {/* 手机 / 平板随时随地跨端微服务器部署与放行指南 */}
+      <MobileStudyGuideCard />
 
       {/* 管理员保存按钮与配置文件受控信息 */}
       <div className="flex items-center justify-between pt-2">

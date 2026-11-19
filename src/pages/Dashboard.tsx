@@ -29,6 +29,8 @@ import {
   Play,
   Target,
   Zap,
+  Smartphone,
+  QrCode,
 } from 'lucide-react'
 import { api, type FileListItem, type StudyProgressOverview } from '../services/api'
 import { useVaultHealth, useVaultStats } from '../hooks/useVaultData'
@@ -447,6 +449,18 @@ export default function Dashboard() {
             >
               <Compass className="w-3.5 h-3.5 text-[#0071e3]" />
               <span>产品导览</span>
+            </button>
+
+            <span className="h-3 w-px bg-slate-200" aria-hidden="true" />
+
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-modal'))}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full hover:bg-teal-50 text-teal-700 text-xs font-medium transition-colors cursor-pointer"
+              title="手机/平板随时随地扫码跨端研学（局域网秒连 / 自习室穿透）"
+            >
+              <Smartphone className="w-3.5 h-3.5 text-teal-600" />
+              <span className="hidden sm:inline">手机互联</span>
             </button>
 
             <span className="h-3 w-px bg-slate-200" aria-hidden="true" />
@@ -1268,6 +1282,43 @@ export default function Dashboard() {
                   </Link>
                 )
               })}
+            </div>
+          </div>
+
+          {/* 📱 手机 / 平板随时随地跨端研学卡片 */}
+          <div className="bento-card rounded-2xl p-4 sm:p-5 border border-teal-200/80 bg-gradient-to-br from-teal-50/70 via-white to-emerald-50/40 relative overflow-hidden shadow-xs">
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <Smartphone className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                    <span>手机 / 平板随时随地刷题</span>
+                    <span className="text-[10px] bg-teal-100 text-teal-800 font-bold px-1.5 py-0.2 rounded border border-teal-200">免云服务器</span>
+                  </h3>
+                  <p className="text-2xs text-slate-500">电脑做微服务器 · 自习室/寝室扫码秒连</p>
+                </div>
+              </div>
+            </div>
+            <p className="text-2xs text-slate-600 leading-relaxed mb-3">
+              支持局域网同 Wi-Fi 直连与免费外网安全隧道穿透，手机添加到主屏幕即享全屏沉浸 PWA，真题错题实时同步。
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent('open-mobile-modal'))}
+                className="flex-1 py-1.5 px-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold shadow-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95"
+              >
+                <QrCode className="w-3.5 h-3.5" />
+                <span>立即扫码互联</span>
+              </button>
+              <Link
+                to="/settings?tab=mobile"
+                className="py-1.5 px-3 rounded-xl bg-white border border-teal-300 hover:bg-teal-50 text-teal-800 text-xs font-semibold shadow-xs flex items-center justify-center transition-all"
+              >
+                <span>跨端指南</span>
+              </Link>
             </div>
           </div>
 

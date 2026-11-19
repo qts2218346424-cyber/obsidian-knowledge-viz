@@ -96,8 +96,11 @@ export const MANUAL_CATEGORIES: Array<{
 ]
 
 export const HOT_SEARCH_TAGS: string[] = [
+  '手机跨端',
+  '平板刷题',
   '提分急救舱',
   '大肥鱼桌宠',
+  '外网穿透',
   '拼写默写',
   '史纲地图',
   '公式速插',
@@ -106,8 +109,17 @@ export const HOT_SEARCH_TAGS: string[] = [
   '错题重练',
 ]
 
-// 1 分钟快速上手：6 大高频备考意图罗盘
+// 1 分钟快速上手：7 大高频备考意图罗盘
 export const QUICK_SCENARIO_GUIDES: QuickScenarioItem[] = [
+  {
+    id: 'sc-mobile',
+    title: '我想用手机 / 平板随时随地刷题',
+    subtitle: '电脑作为私人微服务器，寝室/自习室躺平背词做题，免购买云服务器',
+    iconName: 'Smartphone',
+    color: 'teal',
+    featureId: 'mobile-study-guide',
+    actionLabel: '看跨端指南',
+  },
   {
     id: 'sc-quiz',
     title: '我想刷历年真题 / 限时模考',
@@ -609,29 +621,56 @@ export const FEATURE_MANUAL_DATA: FeatureManualItem[] = [
     routeText: '前往教材书架体验',
   },
   {
-    id: 'search-theme-multidevice',
-    name: '全站秒搜 (Ctrl+K) · 护眼四主题 · 知识体检 · 手机扫码接力',
+    id: 'mobile-study-guide',
+    name: '📱 手机 / 平板随时随地跨端研学指南（私人研学微服务器）',
     category: 'system_collab',
     categoryName: '笔记·PDF·多端同步',
-    badge: '全局基建 · 跨端无缝畅学',
-    color: 'slate',
+    badge: '重磅核心 · 跨端随时随地刷题',
+    color: 'teal',
     iconName: 'Smartphone',
-    tags: ['搜索', 'Ctrl+K', '护眼', '暗黑模式', '主题', '手机同步', 'PWA', '知识整理', '打卡积分'],
-    whereToFind: '顶栏右侧搜索框 / 风格主题胶囊 / 算力积分徽章 / 头像菜单 → 手机互联与系统设置',
-    summary: '按 Ctrl+K 一秒搜遍全站真题与笔记；一键切换极简/鲜艳/护眼/暗黑 4 大主题；支持笔记库健康体检与手机 PWA 扫码实时同步。',
-    problemSolved: '深夜刷题白底刺眼；笔记多了断链乱标；离开书桌去食堂、地铁想拿手机无缝接着刚才那套题往下刷。',
+    isNew: true,
+    tags: ['手机', '平板', 'iPad', '跨端', '局域网', '外网穿透', '自习室', '微服务器', 'PWA', '主屏幕', '防休眠', 'Keep-Awake', '3001端口'],
+    whereToFind: '桌面端顶部常驻「📱 手机互联」胶囊按钮、设置页【📱 手机/平板跨端指南】Tab、工作台多端互联卡片',
+    summary: '无需购买云服务器与域名，将本地电脑作为私人专属研学微服务器！支持寝室 Wi-Fi 局域网秒连、自习室 4G/5G 外网免费安全隧道穿透，以及 iOS / Android PWA 全屏沉浸式刷题。',
+    problemSolved: '不想整天被拴在电脑椅前，想在自习室、图书馆、床上用手机/平板随时刷题背单词，但又希望题库、错题与双链笔记完全落在自己本地电脑上，且免去购买和配置云服务器的高昂门槛。',
+    howToUse: [
+      '【场景 A：同寝室 / 同 Wi-Fi 局域网秒连】：确保手机与电脑连入同一 Wi-Fi 或手机热点；点击桌面端顶栏「📱 手机互联」，手机相机扫码即开。若手机提示无法访问，99% 为 Windows 防火墙阻断，在电脑终端执行一键放行脚本：`npm run lan:allow` 即可彻底放行。',
+      '【场景 B：自习室 / 图书馆异地外网远程刷题】：电脑开在宿舍/家中，在电脑端运行免费安全隧道命令：`npm run remote`；控制台秒级生成端到端加密专属 HTTPS 网址，手机在自习室用 4G/5G 流量也能随时秒连，免公网 IP、免买域名。',
+      '【场景 C：手机桌面全屏沉浸（PWA）】：iOS 手机在 Safari 浏览器中点击底部「分享」图标，选择「添加到主屏幕」；安卓手机在 Chrome/Edge 浏览器中点击右上角三点菜单，选择「添加到主屏幕」或「安装应用」；彻底消除浏览器地址栏，获得比肩原生 App 的极致全屏沉浸感！',
+      '【后台常驻与防休眠保护】：电脑作为微服务器时，去自习室前请确保电脑接通电源。系统内置 Keep-Awake 防休眠心跳守护；Windows 笔记本合盖前可在控制面板电源选项中将“合上盖子时的操作”设为“不采取任何操作”，人离开电脑手机依然随时在线。',
+    ],
+    proTips: [
+      '在局域网内无法连接时，直接在电脑端运行：npm run lan:allow （自动配置 Windows 防火墙入站规则放行 TCP 3001 端口）。',
+      '外出到自习室前，运行：npm run remote （启动免费安全穿透隧道，获取公网临时访问链接并生成终端二维码）。',
+    ],
+    shortcuts: ['顶栏「📱 手机互联」一键弹窗'],
+    route: '/settings?tab=mobile',
+    routeText: '打开手机跨端设置与二维码',
+  },
+  {
+    id: 'search-theme-multidevice',
+    name: '全站秒搜 (Ctrl+K) · 护眼四主题 · 知识库健康体检',
+    category: 'system_collab',
+    categoryName: '笔记·PDF·多端同步',
+    badge: '全局基建 · 极速专注',
+    color: 'slate',
+    iconName: 'Zap',
+    tags: ['搜索', 'Ctrl+K', '护眼', '暗黑模式', '主题', '知识整理', '体检'],
+    whereToFind: '顶栏右侧搜索框 / 风格主题胶囊 / 智能体与环境体检面板 / 系统设置',
+    summary: '按 Ctrl+K 一秒搜遍全站真题与笔记；一键切换极简/鲜艳/护眼/暗黑 4 大主题；支持笔记库健康体检与智能体环境一键诊断。',
+    problemSolved: '深夜刷题白底刺眼；笔记多了断链乱标；想快速了解本地环境与智能体状态。',
     howToUse: [
       '【全站极速搜索】：任何界面按 `Ctrl + K`（Mac 按 `⌘K`），输入关键词或 `#标签名` 秒速定位真题、公式与笔记。',
       '【全站护眼视觉统一】：点击顶栏风格按钮，在「极简白 / 鲜艳活力 / 暖调护眼 / 深邃暗黑」4 种精心调校的主题间一键切换。',
       '【知识整理工作流 (`/workflow`)】：定期给笔记库打健康分，一键清理空文件、修复断链并合并同义杂乱标签。',
-      '【手机扫码 & 添加主屏幕】：手机访问官网或扫描「手机互联」二维码，在浏览器菜单点「添加到主屏幕」，即刻拥有全屏原生级随身刷题 App！',
+      '【智能体与环境体检】：在设置页随时查看本地端口、知识库状态与 AI 接口连通度。',
     ],
     proTips: [
-      '别忘了每天点一下顶栏「算力积分」胶囊签到打卡，免费领取伴学积分用于 AI 深度答疑与英语精批！',
+      '使用快捷键 Ctrl+K 搜索时，输入以“#”开头可快速按考点标签检索，输入以“/”开头可快速查找命令。',
     ],
     shortcuts: ['Ctrl + K 全局秒搜', 'Esc 关闭浮层'],
     route: '/settings',
-    routeText: '打开系统与多端设置',
+    routeText: '打开系统与主题设置',
   },
 ]
 
