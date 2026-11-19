@@ -389,6 +389,87 @@ export async function deleteFile(
 }
 
 /**
+ * Delete a folder by moving it to the recycle bin (or .trash/).
+ */
+export async function deleteFolder(
+  vaultPath: string,
+  relativePath: string,
+): Promise<{ ok: boolean; deletedPath: string }> {
+  const cleaned = relativePath.trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '')
+  if (!cleaned) {
+    throw new Error('不能删除知识库根目录')
+  }
+
+  // 保护关键系统目录
+  const protectedFolders = ['.obsidian', '.obsidian-viz', '.trash', 'node_modules']
+  const firstSegment = cleaned.split('/')[0].toLowerCase()
+  if (protectedFolders.includes(firstSegment)) {
+    throw new Error(`受保护的系统目录不可删除: ${cleaned}`)
+  }
+
+  const fullPath = ensureInsideVault(vaultPath, cleaned)
+  if (!fs.existsSync(fullPath)) {
+    throw new Error(`目录不存在: ${cleaned}`)
+  }
+
+  const stat = fs.statSync(fullPath)
+  if (!stat.isDirectory()) {
+    throw new Error(`目标路径不是目录: ${cleaned}`)
+  }
+
+  // 清除 parsedFileCache 中以该目录开头的所有文件的缓存条目
+  const fullPathWithSep = fullPath.endsWith(path.sep) ? fullPath : fullPath + path.sep
+  for (const cachedPath of parsedFileCache.keys()) {
+    if (cachedPath.startsWith(fullPathWithSep) || cachedPath === fullPath) {
+      parsedFileCache.delete(cachedPath)
+    }
+  }
+
+  const absPath = fullPath.replace(/\//g, '\\')
+
+  // 1. Windows 下优先尝试移入系统回收站 (与 deleteFile 保持一致)
+  if (process.platform === 'win32') {
+    try {
+      const { execSync } = await import('child_process')
+      execSync(
+        `powershell.exe -Command "Add-Type -AssemblyName Microsoft.VisualBasic; [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteDirectory('${absPath}', 'OnlyErrorDialogs', 'SendToRecycleBin')"`,
+        { timeout: 10000 },
+      )
+      if (!fs.existsSync(fullPath)) {
+        return { ok: true, deletedPath: cleaned }
+      }
+    } catch {
+      // 回收站失败则走降级流程
+    }
+  }
+
+  // 2. 降级方案：移到知识库内部的 .trash/ 目录
+  const trashDir = path.join(vaultPath, '.trash')
+  if (!fs.existsSync(trashDir)) {
+    fs.mkdirSync(trashDir, { recursive: true })
+  }
+  const baseName = path.basename(fullPath)
+  let trashPath = path.join(trashDir, baseName)
+  if (fs.existsSync(trashPath)) {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+    trashPath = path.join(trashDir, `${baseName}_${timestamp}`)
+  }
+
+  try {
+    fs.renameSync(fullPath, trashPath)
+    return { ok: true, deletedPath: cleaned }
+  } catch (err: any) {
+    // 若跨卷或文件占用导致 renameSync 失败，且确实需要删除
+    try {
+      fs.rmSync(fullPath, { recursive: true, force: true })
+      return { ok: true, deletedPath: cleaned }
+    } catch (rmErr: any) {
+      throw new Error(`删除目录失败: ${rmErr.message || err.message}`)
+    }
+  }
+}
+
+/**
  * Rename / move a file, and update all [[oldName]] wikilinks across the vault.
  */
 export function renameFile(

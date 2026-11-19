@@ -16,6 +16,7 @@ import {
 import { getAiProvider, type AiConfig } from '../ai-client.js'
 import { detectAllLocalAgents } from '../local-agent-bridge.js'
 import { isEffectiveAdmin } from '../services/user-sandbox.js'
+import { runAutoDiscovery, applyAutoDiscoveredConfig } from '../services/auto-detector.js'
 
 export const systemRouter = Router()
 
@@ -103,6 +104,26 @@ systemRouter.get('/system/doctor', async (_req, res) => {
     })
   } catch (err: any) {
     res.status(500).json({ error: '环境体检失败: ' + (err?.message || String(err)) })
+  }
+})
+
+// 全自动智能检测用户电脑（自动寻找 Obsidian 知识库、本地 Agents、AI 密钥插件）
+systemRouter.get('/system/auto-discover', async (_req, res) => {
+  try {
+    const report = await runAutoDiscovery()
+    res.json(report)
+  } catch (err: any) {
+    res.status(500).json({ error: '自动检测失败: ' + (err?.message || String(err)) })
+  }
+})
+
+// 一键自动应用最佳推荐配置并即时热重载
+systemRouter.post('/system/auto-apply', async (req, res) => {
+  try {
+    const result = await applyAutoDiscoveredConfig(req.body)
+    res.json(result)
+  } catch (err: any) {
+    res.status(500).json({ error: '自动配置应用失败: ' + (err?.message || String(err)) })
   }
 })
 

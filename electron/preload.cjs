@@ -4,4 +4,6 @@ const { contextBridge, ipcRenderer } = require('electron')
 contextBridge.exposeInMainWorld('electronAPI', {
   platform: process.platform,
   selectFolder: () => ipcRenderer.invoke('select-folder'),
+  openLogs: () => ipcRenderer.invoke('open-logs'),
+  openExternal: (url) => ipcRenderer.invoke('open-external', url),
 })

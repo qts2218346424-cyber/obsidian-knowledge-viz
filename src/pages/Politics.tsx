@@ -238,7 +238,8 @@ export default function Politics() {
   const navigate = useNavigate()
   const { themeStyle } = useThemeStyle()
 
-  const [showMobileMap, setShowMobileMap] = useState(false)
+  const [showMobileMap, setShowMobileMap] = useState(true)
+  const [isScrubbingMobileRail, setIsScrubbingMobileRail] = useState(false)
   const [activeTab, setActiveTab] = useState<PoliticsTab>('timeline')
 
   useEffect(() => {
@@ -285,6 +286,7 @@ export default function Politics() {
   const [expandedContradiction, setExpandedContradiction] = useState(false)
   const [activeMatrixId, setActiveMatrixId] = useState<string>(COMPARISON_MATRICES[0].id)
   const yearRailRef = useRef<HTMLDivElement | null>(null)
+  const mobileYearRailRef = useRef<HTMLDivElement | null>(null)
   const pendingEventIdRef = useRef<string | null>(null)
 
   // 当切换年份时，若有指定待定位事件 ID 则对齐到该子事件，否则重置子事件索引与金句展开态
@@ -825,14 +827,22 @@ export default function Politics() {
     }
   }, [currentYearItems])
 
-  // 自动将当前选中的年份胶囊滚动入可视区域（遵循 modern-web-guidance tabs 规范）
+  // 自动将当前选中的年份胶囊在各自水平轨道内居中对齐（仅滚动轨道容器自身，避免触发整页垂直跳动）
   useEffect(() => {
-    if (activeTab !== 'timeline' || !yearRailRef.current) return
-    const activePill = yearRailRef.current.querySelector<HTMLButtonElement>(`[data-year-pill="${activeYear}"]`)
-    if (activePill) {
-      activePill.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+    if (activeTab !== 'timeline') return
+    const scrollRailToActive = (rail: HTMLDivElement | null) => {
+      if (!rail || rail.offsetParent === null) return
+      const activePill = rail.querySelector<HTMLButtonElement>(`[data-year-pill="${activeYear}"]`)
+      if (!activePill) return
+      const targetLeft = activePill.offsetLeft - rail.clientWidth / 2 + activePill.offsetWidth / 2
+      rail.scrollTo({
+        left: Math.max(0, targetLeft),
+        behavior: isScrubbingMobileRail ? 'auto' : 'smooth',
+      })
     }
-  }, [activeYear, activeTab])
+    scrollRailToActive(yearRailRef.current)
+    scrollRailToActive(mobileYearRailRef.current)
+  }, [activeYear, activeTab, isScrubbingMobileRail])
 
   const safeEventIdx = activeYearEventIdx < currentYearItems.length ? activeYearEventIdx : 0
   const activeItem = currentYearItems[safeEventIdx] || currentYearItems[0] || filteredItems[0]
@@ -1090,14 +1100,75 @@ export default function Politics() {
     return Math.min(100, Math.max(0, (sliderIndex / sliderMaxIdx) * 100))
   }, [availableYears.length, sliderIndex, sliderMaxIdx])
 
+  const sliderThemeClass = isCinemaTimeline
+    ? 'slider-cinema'
+    : isEyecareTheme
+    ? 'slider-eyecare'
+    : ''
+
   const sliderCustomStyle = useMemo((): CSSProperties => {
     return {
       '--attr-min': 0,
       '--attr-max': Math.max(1, sliderMaxIdx),
       '--control-value': sliderIndex,
-      '--slider-fill-color': isCinemaTimeline ? '#f59e0b' : currentEra.themeColor,
+      '--slider-fill-color': isCinemaTimeline
+        ? '#f59e0b'
+        : isEyecareTheme
+        ? '#2d6a4f'
+        : currentEra.themeColor,
     } as CSSProperties
-  }, [sliderMaxIdx, sliderIndex, isCinemaTimeline, currentEra.themeColor])
+  }, [sliderMaxIdx, sliderIndex, isCinemaTimeline, isEyecareTheme, currentEra.themeColor])
+
+  // 计算移动端地图旁侧竖向编年轴的等比例里程碑刻度（自动防重叠且与滑块物理位置严格对齐）
+  const mobileRailTicks = useMemo(() => {
+    const total = availableYears.length
+    if (total === 0) return []
+    if (total === 1) return [{ year: availableYears[0], percent: 0 }]
+
+    const maxIdx = total - 1
+    const preferredAnchors = [
+      availableYears[0],
+      1895,
+      1919,
+      1921,
+      1935,
+      1949,
+      1978,
+      2012,
+      availableYears[maxIdx],
+    ]
+    const chosen: Array<{ year: number; percent: number }> = []
+
+    for (const y of preferredAnchors) {
+      const idx = availableYears.indexOf(y)
+      if (idx < 0) continue
+      const percent = (idx / maxIdx) * 100
+      const prev = chosen[chosen.length - 1]
+      if (prev && percent - prev.percent < 15) {
+        if (idx === maxIdx) {
+          chosen[chosen.length - 1] = { year: y, percent }
+        }
+        continue
+      }
+      chosen.push({ year: y, percent })
+    }
+
+    if (chosen.length < Math.min(3, total)) {
+      const count = Math.min(5, total)
+      const fallback: Array<{ year: number; percent: number }> = []
+      for (let i = 0; i < count; i++) {
+        const idx = Math.round((i / (count - 1)) * maxIdx)
+        const yr = availableYears[idx]
+        const pct = (idx / maxIdx) * 100
+        if (!fallback.some((t) => t.year === yr)) {
+          fallback.push({ year: yr, percent: pct })
+        }
+      }
+      return fallback
+    }
+
+    return chosen
+  }, [availableYears])
 
   return (
     <div
@@ -1154,13 +1225,14 @@ export default function Politics() {
             <button
               type="button"
               onClick={toggleFullScreen}
+              aria-label={isFullscreen ? '退出全屏大屏' : '开启全屏沉浸研学'}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200/80 dark:hover:bg-slate-700 border border-slate-200/90 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 transition-all active:scale-95 cursor-pointer"
               title={isFullscreen ? '退出全屏大屏' : '全屏沉浸研学'}
             >
               {isFullscreen ? (
-                <Minimize2 className="w-4 h-4 text-amber-500" />
+                <Minimize2 className="w-4 h-4 text-amber-500" aria-hidden="true" />
               ) : (
-                <Maximize2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <Maximize2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" aria-hidden="true" />
               )}
               <span className="hidden sm:inline">{isFullscreen ? '退出全屏' : '全屏模式'}</span>
             </button>
@@ -1302,7 +1374,7 @@ export default function Politics() {
          ========================================================================= */}
       {activeTab === 'timeline' && (
         <div
-          className={`space-y-3.5 p-3.5 sm:p-5 rounded-3xl border transition-colors ${
+          className={`space-y-3.5 p-2.5 sm:p-5 rounded-3xl border transition-colors ${
             isCinemaTimeline
               ? 'cinema-dark-lock bg-[#070b14] border-amber-500/25 shadow-[0_12px_40px_rgba(0,0,0,0.45)] text-slate-100'
               : isEyecareTheme
@@ -1358,7 +1430,8 @@ export default function Politics() {
                     isCinemaTimeline ? 'text-slate-400' : 'text-slate-500'
                   }`}
                 >
-                  中国近现代史纲要历史地理联动视窗 · 支持键盘 ← / → 切换年份
+                  <span className="lg:hidden">中国近现代史纲要历史地理联动 · 上下拖动地图右侧编年轴切换年份</span>
+                  <span className="hidden lg:inline">中国近现代史纲要历史地理联动视窗 · 支持键盘 ← / → 切换年份</span>
                 </span>
               </div>
             </div>
@@ -1522,6 +1595,7 @@ export default function Politics() {
                 <button
                   type="button"
                   onClick={() => setIsPlaying((v) => !v)}
+                  aria-label={isPlaying ? '暂停自动巡航' : '自动播放历史演进'}
                   className={`p-1.5 rounded-xl text-xs font-bold border cursor-pointer transition-all ${
                     isPlaying
                       ? 'bg-amber-500 text-slate-950 border-amber-400'
@@ -1532,9 +1606,9 @@ export default function Politics() {
                   title={isPlaying ? '暂停自动巡航' : '自动播放历史演进'}
                 >
                   {isPlaying ? (
-                    <Pause className="w-4 h-4" />
+                    <Pause className="w-4 h-4" aria-hidden="true" />
                   ) : (
-                    <Play className={`w-4 h-4 ${isCinemaTimeline ? 'text-amber-400' : 'text-rose-600'}`} />
+                    <Play className={`w-4 h-4 ${isCinemaTimeline ? 'text-amber-400' : 'text-rose-600'}`} aria-hidden="true" />
                   )}
                 </button>
               </div>
@@ -1584,11 +1658,11 @@ export default function Politics() {
             </div>
           )}
 
-          {/* ── 核心三栏指挥视窗：左侧事件文献 + 中间中国矢量历史舆图 + 右侧考点排雷 ── */}
+          {/* ── 核心三栏指挥视窗：移动端优先呈现「地图 + 旁侧可拖动编年轴」，桌面端保持三栏并列 ── */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-stretch">
-            {/* 左侧：事件背景与核心决议文献 (4列) */}
+            {/* 左侧（移动端排第2）：事件背景与核心决议文献 (4列) */}
             <div
-              className={`lg:col-span-4 flex flex-col justify-between p-4 sm:p-5 rounded-2xl border relative overflow-hidden ${
+              className={`order-2 lg:order-1 lg:col-span-4 flex flex-col justify-between p-4 sm:p-5 rounded-2xl border relative overflow-hidden ${
                 isCinemaTimeline
                   ? 'bg-[#0c1220]/95 border-amber-500/20 shadow-xl'
                   : 'bg-slate-50/70 border-slate-200/80'
@@ -1608,7 +1682,7 @@ export default function Politics() {
                     <span>📍 {activeItem?.location || activeItem?.cityName || '中国'}</span>
                   </div>
                   <h2
-                    className={`text-lg sm:text-xl font-black leading-snug tracking-wide ${
+                    className={`text-lg sm:text-xl font-black leading-snug tracking-wide text-balance ${
                       isCinemaTimeline ? 'text-amber-300' : 'text-slate-900'
                     }`}
                   >
@@ -1825,9 +1899,9 @@ export default function Politics() {
               </div>
             </div>
 
-            {/* 中间：中国历史地理矢量舆图（自适应沉浸暗屏 / 温润护眼宣纸 / 清爽讲义纸白） (5列) */}
+            {/* 中间（移动端置顶排第1）：中国历史地理矢量舆图 + 手机端右侧紧邻竖向编年轴 (5列) */}
             <div
-              className={`lg:col-span-5 flex flex-col justify-between p-3.5 sm:p-4 rounded-2xl border relative overflow-hidden min-h-[370px] sm:min-h-[410px] transition-colors ${
+              className={`order-1 lg:order-2 lg:col-span-5 flex flex-col justify-between p-2.5 sm:p-4 rounded-2xl border relative overflow-hidden lg:min-h-[410px] transition-colors ${
                 isCinemaTimeline
                   ? 'bg-[#090e1a] border-amber-500/30 shadow-[inset_0_0_40px_rgba(0,0,0,0.8)] text-slate-100'
                   : isEyecareTheme
@@ -1836,9 +1910,9 @@ export default function Politics() {
               }`}
             >
               {/* 地图顶部状态栏 */}
-              <div className="flex items-center justify-between z-10 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-2.5 w-2.5 relative">
+              <div className="flex items-center justify-between gap-2 z-10 text-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="flex h-2.5 w-2.5 relative shrink-0">
                     <span
                       className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
                         isCinemaTimeline ? 'bg-amber-400' : isEyecareTheme ? 'bg-[#52b788]' : 'bg-rose-500'
@@ -1851,15 +1925,17 @@ export default function Politics() {
                     />
                   </span>
                   <span
-                    className={`font-extrabold ${
+                    className={`font-extrabold truncate ${
                       isCinemaTimeline ? 'text-amber-300' : isEyecareTheme ? 'text-[#1b4332]' : 'text-slate-800'
                     }`}
                   >
                     时空地理标绘：{activeItem?.cityName || '中国全域'} · {activeYear}年
                   </span>
                 </div>
+
+                {/* 桌面端提示徽章 */}
                 <span
-                  className={`text-2xs font-mono px-2 py-0.5 rounded-full border ${
+                  className={`hidden lg:inline-flex text-2xs font-mono px-2 py-0.5 rounded-full border shrink-0 ${
                     isCinemaTimeline
                       ? 'bg-slate-800/90 text-amber-200/90 border-slate-700'
                       : isEyecareTheme
@@ -1869,61 +1945,272 @@ export default function Politics() {
                 >
                   点击名城瞬时联动
                 </span>
-              </div>
 
-              {/* 移动端地图折叠/展开按钮 */}
-              <div className="sm:hidden py-1.5">
+                {/* 移动端精巧展开/收起舆图切换按钮 */}
                 <button
                   type="button"
+                  aria-expanded={showMobileMap}
                   onClick={() => setShowMobileMap((prev) => !prev)}
-                  className={`w-full py-1.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 cursor-pointer ${
+                  className={`lg:hidden inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-2xs font-bold shrink-0 cursor-pointer transition-colors ${
                     isCinemaTimeline
-                      ? 'bg-slate-900 border-amber-500/30 text-amber-300'
+                      ? 'bg-slate-900/90 border-amber-500/35 text-amber-300'
                       : isEyecareTheme
                       ? 'bg-[#f6faf4] border-[#c7dbc0] text-[#1b4332]'
-                      : 'bg-white border-slate-200 text-slate-800'
+                      : 'bg-white border-slate-200 text-slate-700'
                   }`}
                 >
                   <MapPin
-                    className={`w-3.5 h-3.5 ${
+                    className={`w-3 h-3 ${
                       isCinemaTimeline ? 'text-amber-400' : isEyecareTheme ? 'text-[#2d6a4f]' : 'text-rose-600'
                     }`}
+                    aria-hidden="true"
                   />
-                  <span>{showMobileMap ? '收起历史地理舆图' : '展开中国历史地理舆图 (名城联动)'}</span>
+                  <span>{showMobileMap ? '收起舆图' : '展开舆图'}</span>
                 </button>
               </div>
 
-              {/* 高精矢量中国历史地图 */}
+              {/* 核心视区：左侧高精矢量中国历史地图 + 右侧紧邻可拖动竖向编年轴（移动端并排同框） */}
               <div
-                className={`relative my-1 flex-1 flex items-center justify-center ${
-                  !showMobileMap ? 'hidden sm:flex min-h-[290px] sm:min-h-[320px]' : 'flex min-h-[250px]'
+                className={`${
+                  showMobileMap ? 'flex' : 'hidden lg:flex'
+                } items-stretch gap-1.5 sm:gap-2.5 my-1.5 flex-1 min-w-0`}
+              >
+                {/* 左：中国历史地图画布 */}
+                <div className="relative flex-1 min-w-0 flex items-center justify-center min-h-[240px] sm:min-h-[300px] lg:min-h-[320px]">
+                  <ChunkErrorBoundary title="历史地图加载失败" className="h-56 sm:h-64 w-full">
+                    <Suspense
+                      fallback={
+                        <SuspenseTimeoutFallback
+                          label="正在渲染高精矢量历史舆图..."
+                          className={`h-56 sm:h-64 ${isCinemaTimeline ? 'text-amber-400' : 'text-slate-600'}`}
+                        />
+                      }
+                    >
+                      <ChinaHistoricalMap
+                        activeCoordinates={activeItem?.coordinates}
+                        activeCityName={activeItem?.cityName}
+                        activeDate={activeItem?.date}
+                        activeBadgeTag={
+                          activeItem?.isHistoricalFirst
+                            ? '🥇 史上第一必考锚点'
+                            : activeItem?.isRecentCivicCurrent
+                            ? '🌟 近两年思政与时政'
+                            : undefined
+                        }
+                        onCityClick={handleMapCityClick}
+                        mapTone={isCinemaTimeline ? 'cinema' : isEyecareTheme ? 'eyecare' : 'paper'}
+                      />
+                    </Suspense>
+                  </ChunkErrorBoundary>
+                </div>
+
+                {/* 右（仅手机/平板单列视口 < lg 呈现）：紧挨在地图旁边的竖向可拖动编年轴 */}
+                <aside
+                  aria-label="史纲编年时间轴侧栏（上下拖动切换年份）"
+                  className={`lg:hidden w-[74px] sm:w-[84px] shrink-0 rounded-xl border px-1 py-1.5 flex flex-col items-center justify-between select-none relative z-20 ${
+                    isCinemaTimeline
+                      ? 'bg-[#060a14]/95 border-amber-500/35 shadow-md'
+                      : isEyecareTheme
+                      ? 'bg-[#f4f9f1]/95 border-[#bdd6b4] shadow-2xs'
+                      : 'bg-white/95 border-slate-200/95 shadow-2xs'
+                  }`}
+                >
+                  {/* 顶部：上一节点微调按钮 + 当前年份数字铭牌 */}
+                  <div className="w-full flex flex-col items-center gap-0.5">
+                    <button
+                      type="button"
+                      disabled={prevKeyYear === null}
+                      aria-label={prevKeyYear !== null ? `切换至上一年份 ${prevKeyYear} 年` : '已是首个年份节点'}
+                      onClick={() => prevKeyYear !== null && setActiveYear(prevKeyYear)}
+                      className={`w-full min-h-[28px] rounded-lg flex items-center justify-center transition-colors disabled:opacity-30 cursor-pointer ${
+                        isCinemaTimeline
+                          ? 'bg-slate-800/90 hover:bg-slate-700 text-amber-300'
+                          : isEyecareTheme
+                          ? 'bg-[#e3eee0] hover:bg-[#d3e4ce] text-[#1b4332]'
+                          : 'bg-slate-100 hover:bg-rose-50 text-rose-700'
+                      }`}
+                    >
+                      <ChevronUp className="w-4 h-4" aria-hidden="true" />
+                    </button>
+                    <span
+                      className={`font-mono text-[11px] font-black leading-tight px-1.5 py-0.5 rounded-md ${
+                        isCinemaTimeline
+                          ? 'bg-amber-500/20 text-amber-300'
+                          : isEyecareTheme
+                          ? 'bg-[#2d6a4f] text-white'
+                          : 'bg-rose-600 text-white'
+                      }`}
+                    >
+                      {activeYear}
+                    </span>
+                  </div>
+
+                  {/* 中部：左侧等比例里程碑刻度 + 右侧 44px 原生竖向无冲突滑轨 + 拖动跟手左向气泡 */}
+                  <div className="relative w-full flex items-stretch justify-between my-1">
+                    {isScrubbingMobileRail && (
+                      <div
+                        className="absolute right-[calc(100%+8px)] pointer-events-none z-30 -translate-y-1/2 transition-[top] duration-75"
+                        style={{
+                          top: `calc(11px + (100% - 22px) * ${sliderPercent / 100})`,
+                        }}
+                      >
+                        <div
+                          className={`px-2.5 py-1 rounded-xl border text-2xs font-black whitespace-nowrap flex items-center gap-1.5 shadow-lg max-w-[185px] sm:max-w-[240px] ${
+                            isCinemaTimeline
+                              ? 'bg-[#080d1a]/95 border-amber-400 text-amber-300'
+                              : isEyecareTheme
+                              ? 'bg-[#1b4332] border-[#52b788] text-white'
+                              : 'bg-rose-600 border-rose-400 text-white'
+                          }`}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-300 animate-pulse shrink-0" />
+                          <span className="truncate">
+                            {activeYear} · {activeItem?.title || '历史节点'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 左半列：等比例里程碑年份刻度（点击可直接跳转） */}
+                    <div className="relative flex-1 min-w-[26px]">
+                      {mobileRailTicks.map((tick) => {
+                        const isNear = Math.abs(tick.year - activeYear) <= 2
+                        return (
+                          <button
+                            key={tick.year}
+                            type="button"
+                            onClick={() => setActiveYear(tick.year)}
+                            style={{
+                              top: `calc(11px + (100% - 22px) * ${tick.percent / 100})`,
+                            }}
+                            className={`absolute right-0 -translate-y-1/2 font-mono text-[9.5px] leading-none px-0.5 py-0.5 rounded cursor-pointer transition-colors ${
+                              tick.year === activeYear
+                                ? isCinemaTimeline
+                                  ? 'text-amber-300 font-black'
+                                  : isEyecareTheme
+                                  ? 'text-[#1b4332] font-black'
+                                  : 'text-rose-600 font-black'
+                                : isNear
+                                ? isCinemaTimeline
+                                  ? 'text-slate-200 font-bold'
+                                  : 'text-slate-700 font-bold'
+                                : isCinemaTimeline
+                                ? 'text-slate-400 hover:text-amber-300'
+                                : 'text-slate-500 hover:text-rose-600'
+                            }`}
+                          >
+                            {tick.year}
+                          </button>
+                        )
+                      })}
+                    </div>
+
+                    {/* 右半列：44px 宽原生竖向滑轨槽（touch-action: none 避免网页伴随上下滑动） */}
+                    <div className="politics-vertical-rail-slot -mr-1">
+                      <input
+                        type="range"
+                        aria-label="移动端地图旁侧史纲编年时间轴滑块"
+                        aria-valuetext={`${activeYear}年：${activeItem?.title || '历史节点'}`}
+                        min={0}
+                        max={sliderMaxIdx}
+                        step={1}
+                        value={sliderIndex}
+                        style={sliderCustomStyle}
+                        onPointerDown={() => setIsScrubbingMobileRail(true)}
+                        onPointerUp={() => setIsScrubbingMobileRail(false)}
+                        onPointerCancel={() => setIsScrubbingMobileRail(false)}
+                        onBlur={() => setIsScrubbingMobileRail(false)}
+                        onChange={(e) => {
+                          const target = availableYears[Number(e.target.value)]
+                          if (target !== undefined) setActiveYear(target)
+                        }}
+                        className={`politics-timeline-slider politics-timeline-slider-vertical ${sliderThemeClass}`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* 底部：下一节点微调按钮 + 拖动提示 */}
+                  <div className="w-full flex flex-col items-center gap-0.5">
+                    <button
+                      type="button"
+                      disabled={nextKeyYear === null}
+                      aria-label={nextKeyYear !== null ? `切换至下一年份 ${nextKeyYear} 年` : '已是末个年份节点'}
+                      onClick={() => nextKeyYear !== null && setActiveYear(nextKeyYear)}
+                      className={`w-full min-h-[28px] rounded-lg flex items-center justify-center transition-colors disabled:opacity-30 cursor-pointer ${
+                        isCinemaTimeline
+                          ? 'bg-slate-800/90 hover:bg-slate-700 text-amber-300'
+                          : isEyecareTheme
+                          ? 'bg-[#e3eee0] hover:bg-[#d3e4ce] text-[#1b4332]'
+                          : 'bg-slate-100 hover:bg-rose-50 text-rose-700'
+                      }`}
+                    >
+                      <ChevronDown className="w-4 h-4" aria-hidden="true" />
+                    </button>
+                    <span
+                      className={`text-[9px] font-bold tracking-tight ${
+                        isCinemaTimeline ? 'text-amber-400/80' : 'text-slate-500'
+                      }`}
+                    >
+                      上下拖轴
+                    </span>
+                  </div>
+                </aside>
+              </div>
+
+              {/* 移动端当用户主动收起地图时，提供紧凑兜底编年滑轨 */}
+              {!showMobileMap && (
+                <div className="lg:hidden my-2 px-1">
+                  <input
+                    type="range"
+                    aria-label="史纲编年时间轴紧凑滑块"
+                    aria-valuetext={`${activeYear}年：${activeItem?.title || '历史节点'}`}
+                    min={0}
+                    max={sliderMaxIdx}
+                    step={1}
+                    value={sliderIndex}
+                    style={sliderCustomStyle}
+                    onChange={(e) => {
+                      const target = availableYears[Number(e.target.value)]
+                      if (target !== undefined) setActiveYear(target)
+                    }}
+                    className={`politics-timeline-slider ${sliderThemeClass}`}
+                  />
+                </div>
+              )}
+
+              {/* 移动端专属：紧贴地图与编年轴下方的当前焦点史实即时联动条 */}
+              <div
+                className={`lg:hidden z-10 mb-1.5 px-2.5 py-1.5 rounded-xl border text-xs flex items-center justify-between gap-2 ${
+                  isCinemaTimeline
+                    ? 'bg-[#0c1424]/95 border-amber-500/25 text-slate-100'
+                    : isEyecareTheme
+                    ? 'bg-[#f6faf4]/95 border-[#c8dcc2] text-[#1b4332]'
+                    : 'bg-white/95 border-rose-200/80 text-slate-800'
                 }`}
               >
-                <ChunkErrorBoundary title="历史地图加载失败" className="h-64 w-full">
-                  <Suspense
-                    fallback={
-                      <SuspenseTimeoutFallback
-                        label="正在渲染高精矢量历史舆图..."
-                        className={`h-64 ${isCinemaTimeline ? 'text-amber-400' : 'text-slate-600'}`}
-                      />
-                    }
+                <div className="min-w-0 flex-1">
+                  <div className="font-extrabold truncate">
+                    {activeYear} · {activeItem?.title || '历史节点'}
+                  </div>
+                  <div
+                    className={`text-2xs truncate mt-0.5 ${
+                      isCinemaTimeline ? 'text-amber-300/90' : isEyecareTheme ? 'text-[#2d6a4f]' : 'text-rose-700'
+                    }`}
                   >
-                    <ChinaHistoricalMap
-                      activeCoordinates={activeItem?.coordinates}
-                      activeCityName={activeItem?.cityName}
-                      activeDate={activeItem?.date}
-                      activeBadgeTag={
-                        activeItem?.isHistoricalFirst
-                          ? '🥇 史上第一必考锚点'
-                          : activeItem?.isRecentCivicCurrent
-                          ? '🌟 近两年思政与时政'
-                          : undefined
-                      }
-                      onCityClick={handleMapCityClick}
-                      mapTone={isCinemaTimeline ? 'cinema' : isEyecareTheme ? 'eyecare' : 'paper'}
-                    />
-                  </Suspense>
-                </ChunkErrorBoundary>
+                    🔑 {activeItem?.keyTag || '历史转折与战略新开端'}
+                  </div>
+                </div>
+                <span
+                  className={`text-2xs font-mono px-1.5 py-0.5 rounded border shrink-0 ${
+                    isCinemaTimeline
+                      ? 'bg-slate-800 text-amber-200 border-slate-700'
+                      : isEyecareTheme
+                      ? 'bg-[#e6efe2] text-[#244333] border-[#c8dcc2]'
+                      : 'bg-rose-50 text-rose-700 border-rose-200'
+                  }`}
+                >
+                  📍 {activeItem?.cityName || '中国'}
+                </span>
               </div>
 
               {/* 地图底栏：简洁坐标定位与热点名城快跳（支持多次点击循环浏览同城史实） */}
@@ -1966,7 +2253,7 @@ export default function Politics() {
                     )
                   })}
                 </div>
-                <span className={`font-mono ${isCinemaTimeline ? 'text-slate-400' : 'text-slate-500'}`}>
+                <span className={`hidden sm:inline font-mono ${isCinemaTimeline ? 'text-slate-400' : 'text-slate-500'}`}>
                   当前：
                   <strong
                     className={
@@ -1977,11 +2264,68 @@ export default function Politics() {
                   </strong>
                 </span>
               </div>
+
+              {/* 移动端专属：紧随地图卡片底部的紧凑年份热力胶囊微调尺 */}
+              <div
+                ref={mobileYearRailRef}
+                className={`lg:hidden flex items-end gap-1 overflow-x-auto no-scrollbar pt-2 mt-1.5 border-t ${
+                  isCinemaTimeline ? 'border-slate-800/80' : 'border-slate-200/80'
+                }`}
+              >
+                {availableYears.map((yr) => {
+                  const isCurr = yr === activeYear
+                  const yrItems = filteredItems.filter((i) => i.year === yr)
+                  const yrCount = yrItems.length
+                  const hasFirst = yrItems.some((i) => i.isHistoricalFirst)
+                  const hasRecent = yrItems.some((i) => i.isRecentCivicCurrent)
+                  const anniv = getAnniversaryInfo(yr, anniversaryMode)
+                  const barHeight = Math.min(18, 5 + yrCount * 5)
+
+                  return (
+                    <button
+                      key={yr}
+                      type="button"
+                      data-year-pill={yr}
+                      aria-pressed={isCurr}
+                      onClick={() => setActiveYear(yr)}
+                      className={`flex flex-col items-center px-1.5 py-0.5 rounded-lg border transition-all shrink-0 cursor-pointer ${
+                        isCurr
+                          ? isCinemaTimeline
+                            ? 'bg-amber-500 text-slate-950 font-black border-amber-400'
+                            : isEyecareTheme
+                            ? 'bg-[#2d6a4f] text-white font-black border-[#2d6a4f]'
+                            : 'bg-rose-600 text-white font-black border-rose-600'
+                          : isCinemaTimeline
+                          ? 'bg-[#0c1220] text-slate-400 border-slate-800'
+                          : 'bg-white/90 text-slate-600 border-slate-200'
+                      }`}
+                    >
+                      <span
+                        className={`w-1.5 rounded-full mb-0.5 transition-all ${
+                          isCurr
+                            ? isCinemaTimeline
+                              ? 'bg-slate-950'
+                              : 'bg-white'
+                            : hasRecent
+                            ? 'bg-sky-500'
+                            : hasFirst || anniv.matched
+                            ? 'bg-amber-500'
+                            : isCinemaTimeline
+                            ? 'bg-slate-600'
+                            : 'bg-slate-300'
+                        }`}
+                        style={{ height: `${barHeight}px` }}
+                      />
+                      <span className="font-mono text-[10px] font-bold">{yr}</span>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
 
-            {/* 右侧：考点速览与命题陷阱排雷 (3列) */}
+            {/* 右侧（移动端排第3）：考点速览与命题陷阱排雷 (3列) */}
             <div
-              className={`lg:col-span-3 flex flex-col justify-between p-4 sm:p-5 rounded-2xl border relative overflow-hidden ${
+              className={`order-3 lg:order-3 lg:col-span-3 flex flex-col justify-between p-4 sm:p-5 rounded-2xl border relative overflow-hidden ${
                 isCinemaTimeline
                   ? 'bg-[#0c1220]/95 border-amber-500/20 shadow-xl'
                   : 'bg-slate-50/70 border-slate-200/80'
@@ -2122,9 +2466,9 @@ export default function Politics() {
             </div>
           </div>
 
-          {/* ── 唯一高响应度编年时间轴底座（1839–2026 合并单轨 + 悬浮气泡 + 热力胶囊尺） ── */}
+          {/* ── 桌面端唯一高响应度编年时间轴底座（1839–2026 合并单轨 + 悬浮气泡 + 热力胶囊尺，移动端已移至地图右侧） ── */}
           <div
-            className={`p-3.5 sm:p-4 rounded-2xl border relative ${
+            className={`hidden lg:block p-3.5 sm:p-4 rounded-2xl border relative ${
               isCinemaTimeline
                 ? 'bg-[#090e1a] border-amber-500/20 shadow-xl'
                 : 'bg-slate-50/90 border-slate-200/80'
@@ -2189,7 +2533,7 @@ export default function Politics() {
                   const target = availableYears[Number(e.target.value)]
                   if (target !== undefined) setActiveYear(target)
                 }}
-                className={`politics-timeline-slider ${isCinemaTimeline ? 'slider-cinema' : ''}`}
+                className={`politics-timeline-slider ${sliderThemeClass}`}
               />
             </div>
 

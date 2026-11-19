@@ -2908,7 +2908,7 @@ input[type="range"].politics-timeline-slider {
   --slider-thumb-size: 1.25rem;
   --slider-track-radius: 999px;
   --slider-thumb-radius: 50%;
-  --slider-track-color: #cbd5e1;
+  --slider-track-color: #7c8ba1;
   --slider-fill-color: #e11d48;
   --slider-thumb-color: var(--slider-fill-color);
   --slider-direction: to right;
@@ -2921,7 +2921,7 @@ input[type="range"].politics-timeline-slider {
 
   appearance: none;
   inline-size: 100%;
-  block-size: 2.25rem;
+  block-size: 2.5rem;
   margin: 0;
   padding: 0;
   border: 0 !important;
@@ -2929,6 +2929,13 @@ input[type="range"].politics-timeline-slider {
   background-color: transparent !important;
   background-image: none !important;
   cursor: pointer;
+}
+
+@media (pointer: coarse) {
+  input[type="range"].politics-timeline-slider {
+    --slider-thumb-size: 1.375rem;
+    block-size: 2.75rem;
+  }
 }
 
 input[type="range"].politics-timeline-slider:dir(rtl) {
@@ -2945,8 +2952,43 @@ input[type="range"].politics-timeline-slider:dir(rtl) {
 }
 
 input[type="range"].politics-timeline-slider.slider-cinema {
-  --slider-track-color: #1e293b;
+  --slider-track-color: #52637a;
   --slider-fill-color: #f59e0b;
+}
+
+input[type="range"].politics-timeline-slider.slider-eyecare {
+  --slider-track-color: #6b8774;
+  --slider-fill-color: #2d6a4f;
+}
+
+/* 移动端地图旁侧竖向编年轴滑轨槽与原生滑块（44px 触控宽度 + 零滚动冲突） */
+.politics-vertical-rail-slot {
+  --vertical-rail-height: 214px;
+  position: relative;
+  inline-size: 2.75rem;
+  block-size: var(--vertical-rail-height);
+  flex-shrink: 0;
+}
+
+@media (min-width: 640px) {
+  .politics-vertical-rail-slot {
+    --vertical-rail-height: 268px;
+  }
+}
+
+input[type="range"].politics-timeline-slider.politics-timeline-slider-vertical {
+  --slider-track-size: 0.425rem;
+  --slider-thumb-size: 1.375rem;
+  --slider-direction: to right;
+  direction: ltr;
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  inline-size: var(--vertical-rail-height, 214px);
+  block-size: 2.75rem;
+  transform: translate(-50%, -50%) rotate(90deg);
+  touch-action: none;
+  cursor: ns-resize;
 }
 
 input[type="range"].politics-timeline-slider::-webkit-slider-runnable-track {

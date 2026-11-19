@@ -16,6 +16,8 @@ export interface AuthStatusResponse {
   initialized: boolean
   userCount: number
   currentUser: UserProfile | null
+  isLocalMode?: boolean
+  authRequired?: boolean
 }
 
 export interface LoginResponse {

@@ -7,27 +7,33 @@ import {
   generateUserId,
   generateRecoveryCode,
 } from '../utils/auth-crypto.js'
-import { requireAuth, requireRole } from '../middleware/auth.js'
+import { requireAuth, requireRole, LOCAL_OPENSOURCE_USER } from '../middleware/auth.js'
 import { ensureUserSandboxSync } from '../services/user-sandbox.js'
+import { isLocalOpenSourceMode } from '../context.js'
 
 export const authRouter = Router()
 
 /**
- * 探查认证系统状态：系统是否已初始化管理员、当前会话用户
+ * 探查认证系统状态：系统是否已初始化管理员、当前会话用户、是否为本地开源免登模式
  */
 authRouter.get('/auth/status', (req, res) => {
+  const isLocalMode = isLocalOpenSourceMode()
   const userCount = database.getUserCount()
+  const activeUser = req.user || (isLocalMode ? LOCAL_OPENSOURCE_USER : undefined)
+
   res.json({
-    initialized: userCount > 0,
-    userCount,
-    currentUser: req.user
+    initialized: isLocalMode ? true : userCount > 0,
+    userCount: isLocalMode ? 1 : userCount,
+    isLocalMode,
+    authRequired: !isLocalMode,
+    currentUser: activeUser
       ? {
-          id: req.user.id,
-          username: req.user.username,
-          displayName: req.user.displayName,
-          role: req.user.role,
-          points: req.user.points ?? 5.0,
-          lastCheckinAt: req.user.lastCheckinAt,
+          id: activeUser.id,
+          username: activeUser.username,
+          displayName: activeUser.displayName,
+          role: activeUser.role,
+          points: isLocalMode ? 999999 : (activeUser.points ?? 5.0),
+          lastCheckinAt: activeUser.lastCheckinAt,
         }
       : null,
   })

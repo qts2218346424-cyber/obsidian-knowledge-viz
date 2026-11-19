@@ -22,14 +22,15 @@ const Pomodoro = safeLazy(routeLoaders.pomodoro, 'pomodoro')
 const English = safeLazy(routeLoaders.english, 'english')
 
 export default function ProtectedRoutes() {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading, isLocalMode } = useAuth()
   const location = useLocation()
 
   if (isLoading) {
     return <PageFallback />
   }
 
-  if (!isAuthenticated) {
+  // 本地开源单机模式免登直接放行；仅线上云端商业推广站未登录时重定向至登录页
+  if (!isAuthenticated && !isLocalMode) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 

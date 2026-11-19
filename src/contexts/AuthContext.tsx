@@ -23,6 +23,7 @@ export interface AuthContextValue {
   isLoading: boolean
   initialized: boolean
   isAuthenticated: boolean
+  isLocalMode: boolean
   isAdmin: boolean
   isEditor: boolean
   isStudent: boolean
@@ -51,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(authService.getStoredToken())
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const [initialized, setInitialized] = useState<boolean>(true)
+  const [isLocalMode, setIsLocalMode] = useState<boolean>(false)
   const [points, setPoints] = useState<number>(5.0)
   const [lastCheckinAt, setLastCheckinAt] = useState<string | undefined>(undefined)
   const [canCheckinToday, setCanCheckinToday] = useState<boolean>(true)
@@ -98,6 +100,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const status = await authService.getAuthStatus()
       setInitialized(status.initialized)
 
+      const isElectron = typeof window !== 'undefined' && Boolean((window as any).electronAPI || (window as any).electron)
+      const isLocalHost = typeof window !== 'undefined' && Boolean(
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1' ||
+        /^192\.168\./.test(window.location.hostname) ||
+        /^10\./.test(window.location.hostname) ||
+        /^172\.(1[6-9]|2\d|3[0-1])\./.test(window.location.hostname) ||
+        window.location.protocol === 'file:'
+      )
+      const isLocalEnv = status.isLocalMode || status.authRequired === false || isElectron || isLocalHost
+
+      if (isLocalEnv) {
+        setIsLocalMode(true)
+        setInitialized(true)
+        const localUser: UserProfile = status.currentUser || {
+          id: 'local-master',
+          username: 'admin',
+          displayName: '本地研学者',
+          role: 'admin',
+          points: 999999,
+        }
+        setUser(localUser)
+        setToken('local-open-source-token')
+        authService.setStoredToken('local-open-source-token')
+        authService.setStoredUser(localUser)
+        setPoints(999999)
+        return
+      }
+
       if (authService.getStoredToken()) {
         await refreshUser()
       } else {
@@ -105,7 +136,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(null)
       }
     } catch (err) {
-      console.error('[Auth] 检查状态异常:', err)
+      console.warn('[Auth] 离线或本地单机检测，自动启用本地开源免登模式:', err)
+      setIsLocalMode(true)
+      setInitialized(true)
+      const offlineUser: UserProfile = {
+        id: 'local-master',
+        username: 'admin',
+        displayName: '本地研学者',
+        role: 'admin',
+        points: 999999,
+      }
+      setUser(offlineUser)
+      setToken('local-open-source-token')
+      setPoints(999999)
     } finally {
       setIsLoading(false)
     }
@@ -229,7 +272,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const isAuthenticated = Boolean(user && token)
   const role: UserRole | undefined = user?.role
 
   // 区分「开源桌面端/本地单机运行」与「线上多租户云端生产站」
@@ -239,10 +281,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.location.hostname === '127.0.0.1' ||
     window.location.protocol === 'file:'
   )
-  const isLocalStandalone = isElectron || isLocalHost
+  const isLocalStandalone = isLocalMode || isElectron || isLocalHost
 
   // 在发布的开源桌面端与本地运行环境下，用户就是自己机器的主人，默认全权赋予超级管理员权限
-  const isAdmin = isLocalStandalone ? (role !== 'student') : (role === 'admin')
+  const isAuthenticated = Boolean((user && token) || isLocalStandalone)
+  const isAdmin = isLocalStandalone ? true : (role === 'admin')
   const isEditor = isLocalStandalone || role === 'editor'
   const isStudent = !isLocalStandalone && role === 'student'
   const canWriteVault = isLocalStandalone || isAdmin || isEditor
@@ -256,6 +299,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         initialized,
         isAuthenticated,
+        isLocalMode: isLocalStandalone,
         isAdmin,
         isEditor,
         isStudent,

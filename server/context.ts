@@ -96,6 +96,18 @@ if (!config.ai?.apiKey && (process.env.COREFORGE_AI_API_KEY || process.env.AI_AP
   }
 }
 
+/**
+ * 本地开源模式判定：
+ * 1. 若显式设置 COREFORGE_AUTH_REQUIRED='true'，则开启严格登录鉴权与云端积分系统；
+ * 2. 若显式设置 COREFORGE_DEPLOYMENT_MODE='cloud'，则标定为商业云端模式；
+ * 3. 否则在本地、桌面端 Electron 或开源部署环境下，默认全面开启开源单机免登录模式（isLocalOpenSourceMode = true）。
+ */
+export function isLocalOpenSourceMode(): boolean {
+  if (process.env.COREFORGE_AUTH_REQUIRED === 'true') return false
+  if (process.env.COREFORGE_DEPLOYMENT_MODE === 'cloud') return false
+  return true
+}
+
 // 初始化本地 SQLite 关系型数据库持久层
 database.init(path.join(runtimeDataDir, 'data'))
 export { database }

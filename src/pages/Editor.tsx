@@ -419,6 +419,10 @@ export default function Editor() {
   const [newFolderName, setNewFolderName] = useState('')
   const [creatingFolder, setCreatingFolder] = useState(false)
   const [folderError, setFolderError] = useState('')
+  // Folder deletion states
+  const [folderToDelete, setFolderToDelete] = useState<string | null>(null)
+  const [deletingFolder, setDeletingFolder] = useState(false)
+  const [deleteFolderError, setDeleteFolderError] = useState('')
 
   // AI Edit state
   const [showAiMenu, setShowAiMenu] = useState(false)
@@ -826,6 +830,54 @@ export default function Editor() {
     }
   }
 
+  const openDeleteFolderModal = (folderPath: string) => {
+    const clean = folderPath.trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '')
+    if (!clean) return
+    setFolderToDelete(clean)
+    setDeleteFolderError('')
+  }
+
+  const handleConfirmDeleteFolder = async () => {
+    if (!folderToDelete) return
+    setDeletingFolder(true)
+    setDeleteFolderError('')
+    try {
+      const res = await api.deleteFolder(folderToDelete)
+      await reloadTree()
+      api.getStats().then(s => setVaultStats({ totalNotes: s.totalNotes, vaultPath: s.vaultPath })).catch(() => {})
+
+      // 若当前打开的文件位于该被删除目录下，清空当前编辑态
+      if (currentFile && (currentFile.path === folderToDelete || currentFile.path.startsWith(`${folderToDelete}/`))) {
+        richSyncSourceRef.current = 'external'
+        setCurrentFile(null)
+        setContent('')
+        if (richEditorRef.current) richEditorRef.current.replaceChildren()
+        setOriginalContent('')
+        setTags('')
+        setTitle('')
+        setDirty(false)
+      }
+
+      // 若当前选中的目录为该被删除目录或其子孙目录，退回到根目录
+      if (selectedFolder === folderToDelete || selectedFolder.startsWith(`${folderToDelete}/`)) {
+        setSelectedFolder('')
+      }
+      if (newFileFolder === folderToDelete || newFileFolder.startsWith(`${folderToDelete}/`)) {
+        setNewFileFolder('')
+        const activeName = (newFileName.trim() || title.trim() || '未命名笔记').replace(/[\\/:*?"<>|]/g, '_')
+        setNewFilePath(`${activeName}.md`)
+      }
+
+      setSaveMsg(`🗑️ 目录「${res.deletedPath}」已安全移入回收站`)
+      setTimeout(() => setSaveMsg(''), 3500)
+      setFolderToDelete(null)
+    } catch (err: any) {
+      setDeleteFolderError(err?.message || '删除目录失败')
+    } finally {
+      setDeletingFolder(false)
+    }
+  }
+
   const applyNewTemplate = (key: NoteTemplateKey, nextTitle = newFileName) => {
     const template = noteTemplates.find(item => item.key === key) || noteTemplates[0]
     richSyncSourceRef.current = 'external'
@@ -1125,6 +1177,7 @@ export default function Editor() {
             onSelectFolder={setSelectedFolder}
             onCreateNoteInFolder={(folderPath) => handleNewFile(false, folderPath)}
             onCreateFolder={(parentPath) => openNewFolderModal(parentPath)}
+            onDeleteFolder={(folderPath) => openDeleteFolderModal(folderPath)}
           />
         </div>
       </div>
@@ -1153,6 +1206,14 @@ export default function Editor() {
                 <FolderPlus className="w-3.5 h-3.5 text-amber-600" />
                 <span className="hidden sm:inline">新建目录</span>
               </button>
+              {selectedFolder && (
+                <button onClick={() => openDeleteFolderModal(selectedFolder)}
+                  className="flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg text-[11px] sm:text-xs bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 transition-all shrink-0 cursor-pointer shadow-xs"
+                  title={`删除当前选中的「${selectedFolder}」目录`}>
+                  <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                  <span className="hidden sm:inline">删除目录</span>
+                </button>
+              )}
               <button onClick={() => handleNewFile(true)}
                 className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-all shrink-0 cursor-pointer shadow-xs"
                 title="选择学习卡片、错题复盘或灵感模板并指定目录">
@@ -1609,6 +1670,16 @@ export default function Editor() {
                     </button>
                   </>
                 )}
+
+                {selectedFolder && (
+                  <button
+                    onClick={() => { setMobileActionsOpen(false); openDeleteFolderModal(selectedFolder) }}
+                    className="flex items-center gap-2 p-2.5 rounded-xl bg-rose-50 border border-rose-200/80 text-[11px] sm:text-xs font-bold text-rose-600 active:scale-95"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                    <span>删除当前目录 ({selectedFolder})</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -1700,6 +1771,17 @@ export default function Editor() {
                         <FolderPlus className="w-3 h-3 text-amber-600" />
                         <span>新建目录</span>
                       </button>
+                      {newFileFolder && (
+                        <button
+                          type="button"
+                          onClick={() => openDeleteFolderModal(newFileFolder)}
+                          className="inline-flex items-center gap-0.5 rounded-md border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[11px] font-medium text-rose-600 hover:bg-rose-100 cursor-pointer shrink-0"
+                          title={`删除当前选中的「${newFileFolder}」目录`}
+                        >
+                          <Trash2 className="w-3 h-3 text-rose-500" />
+                          <span>删除目录</span>
+                        </button>
+                      )}
                       <span className="hidden sm:inline text-slate-400 font-mono truncate max-w-[240px]">
                         → {newFileFolder ? `${newFileFolder}/` : ''}{(newFileName.trim() || title.trim() || '未命名笔记')}.md
                       </span>
@@ -2172,6 +2254,49 @@ export default function Editor() {
             <div className="flex gap-2.5">
               <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-cream-200 text-warm-600 hover:bg-cream-300 transition-colors cursor-pointer">取消</button>
               <button onClick={handleDelete} className="flex-1 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-rose-600 text-white hover:bg-rose-500 shadow-xs transition-colors cursor-pointer">删除</button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Delete Folder Confirm */}
+      {folderToDelete && createPortal(
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-surface border border-cream-300 rounded-2xl p-5 sm:p-6 w-full max-w-sm shadow-xl animate-scale-up space-y-3">
+            <h3 className="text-sm font-semibold text-rose-500 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" /> 确认删除笔记目录
+            </h3>
+            <p className="text-xs text-warm-500">将把该目录及其包含的全部笔记、子目录移入回收站：</p>
+            <p className="text-xs text-warm-800 font-mono bg-cream-200 rounded-xl px-2.5 py-2 break-all font-semibold">
+              📁 {folderToDelete}
+            </p>
+            <p className="text-2xs text-warm-400 leading-relaxed">
+              提示：目录将安全移入系统回收站或知识库 .trash 文件夹，可随时找回。
+            </p>
+            {deleteFolderError && (
+              <div className="text-2xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg p-2">
+                {deleteFolderError}
+              </div>
+            )}
+            <div className="flex gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => { setFolderToDelete(null); setDeleteFolderError('') }}
+                disabled={deletingFolder}
+                className="flex-1 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-cream-200 text-warm-600 hover:bg-cream-300 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteFolder}
+                disabled={deletingFolder}
+                className="flex-1 px-3.5 py-2.5 rounded-xl text-xs font-bold bg-rose-600 text-white hover:bg-rose-500 shadow-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                {deletingFolder ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                <span>{deletingFolder ? '删除中…' : '确认删除'}</span>
+              </button>
             </div>
           </div>
         </div>,

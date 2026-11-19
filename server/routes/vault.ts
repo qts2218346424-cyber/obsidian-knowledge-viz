@@ -17,6 +17,7 @@ import {
 import {
   createFile,
   createFolder,
+  deleteFolder,
   updateFile,
   deleteFile,
   renameFile,
@@ -188,6 +189,25 @@ vaultRouter.post('/vault/folder', (req, res) => {
       resolveSafeUserVaultPath(req.user, String(folderPath))
     }
     const result = createFolder(vaultPath, String(folderPath))
+    invalidateCache(req.user?.id)
+    res.json(result)
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
+vaultRouter.delete('/vault/folder', async (req, res) => {
+  try {
+    const folderPath = (req.body?.path || req.query?.path) as string | undefined
+    if (!folderPath || !String(folderPath).trim()) {
+      res.status(400).json({ error: '缺少目录路径' })
+      return
+    }
+    const vaultPath = getRequestVaultPath(req)
+    if (req.user?.id) {
+      resolveSafeUserVaultPath(req.user, String(folderPath))
+    }
+    const result = await deleteFolder(vaultPath, String(folderPath))
     invalidateCache(req.user?.id)
     res.json(result)
   } catch (err: any) {

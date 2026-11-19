@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell, ipcMain, dialog } = require('electron')
+const { app, BrowserWindow, shell, ipcMain, dialog, powerSaveBlocker } = require('electron')
 const path = require('path')
 const http = require('http')
 const fs = require('fs')
@@ -6,6 +6,18 @@ const { pathToFileURL } = require('url')
 
 let mainWindow = null
 let startupFailureReason = null
+let powerSaveBlockerId = null
+
+function preventSleepForRemoteAccess() {
+  try {
+    if (powerSaveBlockerId === null || !powerSaveBlocker.isStarted(powerSaveBlockerId)) {
+      powerSaveBlockerId = powerSaveBlocker.start('prevent-app-suspension')
+      writeStartupLog(`Enabled system keep-awake (id: ${powerSaveBlockerId}) to prevent laptop sleep during mobile access`)
+    }
+  } catch (err) {
+    writeStartupLog('Keep-awake error: ' + err)
+  }
+}
 
 function getLogPath() {
   return path.join(app.getPath('userData'), 'startup.log')
@@ -332,6 +344,7 @@ async function startEmbeddedServer() {
 app.whenReady().then(async () => {
   writeStartupLog(`Application ready (packaged=${app.isPackaged})`)
   preparePackagedRuntime()
+  preventSleepForRemoteAccess()
 
   try {
     writeStartupLog('Starting embedded server')

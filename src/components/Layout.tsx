@@ -191,7 +191,7 @@ export default function Layout({ children }: LayoutProps) {
   const [mobileModalOpen, setMobileModalOpen] = useState(false)
   const [syncNotice, setSyncNotice] = useState<string | null>(null)
   const [quickNoteOpen, setQuickNoteOpen] = useState(false)
-  const { user, isAdmin, isStudent, logout, points, canCheckinToday } = useAuth()
+  const { user, isAdmin, isStudent, logout, points, canCheckinToday, isLocalMode } = useAuth()
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [mobileUserMenuOpen, setMobileUserMenuOpen] = useState(false)
   const [userManagementOpen, setUserManagementOpen] = useState(false)
@@ -450,9 +450,15 @@ export default function Layout({ children }: LayoutProps) {
           </div>
           <div className="flex items-center gap-1.5">
             <span className="inline-flex items-center gap-1 text-2xs font-semibold px-2 py-0.5 rounded-full bg-white text-indigo-700 border border-slate-200/80 shadow-xs">
-              {user.role === 'admin' ? '👑 超级管理员' : '🎓 考研研学者'}
+              {isLocalMode ? '👑 本地单机特权' : (user.role === 'admin' ? '👑 超级管理员' : '🎓 考研研学者')}
             </span>
-            <span className="text-2xs font-mono text-amber-700">⚡ {points.toFixed(1)}分</span>
+            {isLocalMode ? (
+              <span className="text-2xs font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full border border-emerald-200/60">
+                无限制 · 免登录
+              </span>
+            ) : (
+              <span className="text-2xs font-mono text-amber-700">⚡ {points.toFixed(1)}分</span>
+            )}
           </div>
           <div className="pt-1 border-t border-slate-200/60">
             <div className="text-[10px] font-semibold text-slate-400 mb-1.5">团子头像颜色</div>
@@ -461,7 +467,7 @@ export default function Layout({ children }: LayoutProps) {
         </div>
 
         <div className="px-2.5 pt-1.5 pb-0.5 text-2xs font-bold text-slate-400 uppercase tracking-wider">
-          账号与系统
+          {isLocalMode ? '本地研学底座' : '账号与系统'}
         </div>
         <div className="space-y-0.5">
           <Link
@@ -473,19 +479,21 @@ export default function Layout({ children }: LayoutProps) {
             <span className="font-medium">全局系统设置</span>
           </Link>
 
-          <button
-            type="button"
-            onClick={() => {
-              closeMenu()
-              setChangePasswordOpen(true)
-            }}
-            className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-          >
-            <KeyRound className="h-3.5 w-3.5 text-slate-500" />
-            <span className="font-medium">修改登录密码</span>
-          </button>
+          {!isLocalMode && (
+            <button
+              type="button"
+              onClick={() => {
+                closeMenu()
+                setChangePasswordOpen(true)
+              }}
+              className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            >
+              <KeyRound className="h-3.5 w-3.5 text-slate-500" />
+              <span className="font-medium">修改登录密码</span>
+            </button>
+          )}
 
-          {isAdmin && (
+          {!isLocalMode && isAdmin && (
             <button
               type="button"
               onClick={() => {
@@ -499,17 +507,19 @@ export default function Layout({ children }: LayoutProps) {
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={() => {
-              closeMenu()
-              logout()
-            }}
-            className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            <span>退出登录</span>
-          </button>
+          {!isLocalMode && (
+            <button
+              type="button"
+              onClick={() => {
+                closeMenu()
+                logout()
+              }}
+              className="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              <span>退出登录</span>
+            </button>
+          )}
         </div>
       </>
     )
@@ -922,8 +932,8 @@ export default function Layout({ children }: LayoutProps) {
               <span>手册</span>
             </button>
 
-            {/* 2. 算力伴学积分胶囊 */}
-            {user && (
+            {/* 2. 算力伴学积分胶囊（仅商业云服务器展示，本地开源版本彻底隐藏） */}
+            {!isLocalMode && user && (
               <button
                 type="button"
                 onClick={() => {
@@ -1297,35 +1307,39 @@ export default function Layout({ children }: LayoutProps) {
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs font-bold text-slate-900 truncate">{user.displayName || user.username}</span>
                         <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-white text-indigo-700 border border-slate-200/80 shrink-0">
-                          {user.role === 'admin' ? '管理员' : '研学者'}
+                          {isLocalMode ? '开源版' : (user.role === 'admin' ? '管理员' : '研学者')}
                         </span>
                       </div>
-                      <div className="text-2xs text-slate-400 font-mono truncate">@{user.username} · ⚡ {points.toFixed(1)}分</div>
+                      <div className="text-2xs text-slate-400 font-mono truncate">
+                        {isLocalMode ? '💻 本地免登 · 无限权限' : `@${user.username} · ⚡ ${points.toFixed(1)}分`}
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMobileNavOpen(false)
-                        setChangePasswordOpen(true)
-                      }}
-                      className="px-2.5 py-1.5 rounded-xl bg-white border border-slate-200/90 text-2xs font-semibold text-slate-700 active:scale-95 transition-transform cursor-pointer"
-                    >
-                      改密
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMobileNavOpen(false)
-                        logout()
-                      }}
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-50 border border-rose-200/80 text-2xs font-bold text-rose-600 active:scale-95 transition-transform cursor-pointer"
-                    >
-                      <LogOut className="h-3 w-3" />
-                      <span>退出登录</span>
-                    </button>
-                  </div>
+                  {!isLocalMode && (
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMobileNavOpen(false)
+                          setChangePasswordOpen(true)
+                        }}
+                        className="px-2.5 py-1.5 rounded-xl bg-white border border-slate-200/90 text-2xs font-semibold text-slate-700 active:scale-95 transition-transform cursor-pointer"
+                      >
+                        改密
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMobileNavOpen(false)
+                          logout()
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-50 border border-rose-200/80 text-2xs font-bold text-rose-600 active:scale-95 transition-transform cursor-pointer"
+                      >
+                        <LogOut className="h-3 w-3" />
+                        <span>退出登录</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 

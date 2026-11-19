@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronRight, ChevronDown, FileText, Folder, FolderOpen, Search, X, BookOpen, FileCode, FolderPlus, FilePlus } from 'lucide-react'
+import { ChevronRight, ChevronDown, FileText, Folder, FolderOpen, Search, X, BookOpen, FileCode, FolderPlus, FilePlus, Trash2 } from 'lucide-react'
 import { api, type TreeNode } from '../services/api'
 
 interface FileExplorerProps {
@@ -10,6 +10,7 @@ interface FileExplorerProps {
   onSelectFolder?: (folderPath: string) => void
   onCreateNoteInFolder?: (folderPath: string) => void
   onCreateFolder?: (parentFolderPath: string) => void
+  onDeleteFolder?: (folderPath: string) => void
 }
 
 export default function FileExplorer({
@@ -20,6 +21,7 @@ export default function FileExplorer({
   onSelectFolder,
   onCreateNoteInFolder,
   onCreateFolder,
+  onDeleteFolder,
 }: FileExplorerProps) {
   const [query, setQuery] = useState('')
   const [remoteMatchedPaths, setRemoteMatchedPaths] = useState<Set<string> | null>(null)
@@ -128,14 +130,27 @@ export default function FileExplorer({
             <span className="truncate font-mono bg-cream-100 px-1.5 py-0.5 rounded border border-cream-200" title={`当前选中目录：${selectedFolder}`}>
               📁 {selectedFolder}
             </span>
-            <button
-              type="button"
-              onClick={() => onSelectFolder('')}
-              className="shrink-0 text-warm-400 hover:text-warm-700 px-1 cursor-pointer"
-              title="切回根目录"
-            >
-              根目录
-            </button>
+            <div className="flex items-center gap-1 shrink-0">
+              {onDeleteFolder && (
+                <button
+                  type="button"
+                  onClick={() => onDeleteFolder(selectedFolder)}
+                  className="inline-flex items-center gap-0.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 px-1.5 py-0.5 rounded transition-colors cursor-pointer"
+                  title={`删除当前选中的「${selectedFolder}」目录`}
+                >
+                  <Trash2 className="w-2.5 h-2.5" />
+                  <span>删除目录</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => onSelectFolder('')}
+                className="shrink-0 text-warm-400 hover:text-warm-700 px-1 cursor-pointer"
+                title="切回根目录"
+              >
+                根目录
+              </button>
+            </div>
           </div>
         )}
         <div className="px-2 pb-2">
@@ -168,6 +183,7 @@ export default function FileExplorer({
             onSelectFolder={onSelectFolder}
             onCreateNoteInFolder={onCreateNoteInFolder}
             onCreateFolder={onCreateFolder}
+            onDeleteFolder={onDeleteFolder}
             isSearching={Boolean(query.trim())}
           />
         )) : (
@@ -212,6 +228,7 @@ function TreeNodeItem({
   onSelectFolder,
   onCreateNoteInFolder,
   onCreateFolder,
+  onDeleteFolder,
   isSearching,
 }: {
   node: TreeNode
@@ -222,6 +239,7 @@ function TreeNodeItem({
   onSelectFolder?: (folderPath: string) => void
   onCreateNoteInFolder?: (folderPath: string) => void
   onCreateFolder?: (parentFolderPath: string) => void
+  onDeleteFolder?: (folderPath: string) => void
   isSearching?: boolean
 }) {
   const [expanded, setExpanded] = useState(depth < 1)
@@ -308,7 +326,7 @@ function TreeNodeItem({
           )}
           <span className="truncate">{node.name}</span>
         </button>
-        {(onCreateNoteInFolder || onCreateFolder) && (
+        {(onCreateNoteInFolder || onCreateFolder || onDeleteFolder) && (
           <div className={`flex items-center gap-0.5 pr-1 shrink-0 transition-opacity ${
             isFolderSelected ? 'opacity-100' : 'opacity-80 sm:opacity-0 sm:group-hover:opacity-100'
           }`}>
@@ -344,6 +362,20 @@ function TreeNodeItem({
                 <FolderPlus className="w-3 h-3" />
               </button>
             )}
+            {onDeleteFolder && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDeleteFolder(node.path)
+                }}
+                title={`删除目录「${node.name}」`}
+                aria-label={`删除 ${node.name} 目录`}
+                className="p-1 rounded text-warm-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -360,6 +392,7 @@ function TreeNodeItem({
               onSelectFolder={onSelectFolder}
               onCreateNoteInFolder={onCreateNoteInFolder}
               onCreateFolder={onCreateFolder}
+              onDeleteFolder={onDeleteFolder}
               isSearching={isSearching}
             />
           ))}

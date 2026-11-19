@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express'
 import { database, type DbUser, type UserRole } from '../db/database.js'
+import { isLocalOpenSourceMode } from '../context.js'
 
 // 扩展 Express Request 类型定义
 declare global {
@@ -11,23 +12,41 @@ declare global {
   }
 }
 
+export const LOCAL_OPENSOURCE_USER: DbUser = {
+  id: 'local-master',
+  username: 'admin',
+  displayName: '本地研学者',
+  passwordHash: '',
+  salt: '',
+  role: 'admin',
+  points: 999999,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+}
+
 /**
  * 提取并验证 Authorization 请求头中的 Bearer Token
+ * 本地开源单机模式下无 Token 时自动注入本地免登特权身份
  */
 export function authenticate(req: Request, _res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return next()
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.slice(7).trim()
+    if (token) {
+      const record = database.findSessionByToken(token)
+      if (record) {
+        req.user = record.user
+        req.token = token
+      }
+    }
   }
 
-  const token = authHeader.slice(7).trim()
-  if (!token) return next()
-
-  const record = database.findSessionByToken(token)
-  if (record) {
-    req.user = record.user
-    req.token = token
+  // 本地开源单机模式：彻底免除强制登录拦截，开箱立享全功能
+  if (!req.user && isLocalOpenSourceMode()) {
+    req.user = LOCAL_OPENSOURCE_USER
+    req.token = 'local-open-source-token'
   }
+
   next()
 }
 

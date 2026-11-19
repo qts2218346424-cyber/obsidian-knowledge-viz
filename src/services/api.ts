@@ -868,6 +868,9 @@ export const api = {
   createFolder: (folderPath: string) =>
     postJSON<{ ok: boolean; path: string; name: string }>('/vault/folder', { path: folderPath }),
 
+  deleteFolder: (folderPath: string) =>
+    delJSON<{ ok: boolean; deletedPath: string }>('/vault/folder', { path: folderPath }),
+
   createFile: (filePath: string, content: string, frontmatter?: Record<string, unknown>) =>
     postJSON<FileDetail>('/vault/file', { path: filePath, content, frontmatter }),
 
@@ -938,6 +941,51 @@ export const api = {
       fixCommand?: string
     }>
   }>('/system/doctor'),
+
+  autoDiscover: () => fetchJSON<{
+    vaults: Array<{
+      id: string
+      name: string
+      path: string
+      isOpen: boolean
+      lastUsedTimestamp?: number
+      noteCount?: number
+      isRecommended?: boolean
+    }>
+    recommendedVault?: {
+      id: string
+      name: string
+      path: string
+      isOpen: boolean
+      isRecommended?: boolean
+    }
+    agents: Array<{
+      provider: string
+      available: boolean
+      version?: string
+      detail?: string
+      models?: string[]
+      defaultModel?: string
+    }>
+    recommendedAgent?: any
+    extractedCredentials?: {
+      sourcePlugin: string
+      vaultPath: string
+      apiKey: string
+      baseURL?: string
+      model?: string
+      provider?: string
+    }
+    currentConfig: {
+      vaultPath: string
+      aiModel?: string
+      aiProvider?: string
+      hasApiKey: boolean
+    }
+  }>('/system/auto-discover'),
+
+  autoApplyDiscovered: (params?: { vaultPath?: string; applyExtractedAi?: boolean; selectedAgent?: string }) =>
+    postJSON<{ ok: boolean; appliedConfig: any; message: string }>('/system/auto-apply', params || {}),
 
   updateSettings: (settings: Partial<AppSettings> & {
     ai?: {

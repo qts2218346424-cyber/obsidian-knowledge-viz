@@ -17,7 +17,7 @@
     <img src="https://img.shields.io/badge/🎮_免登录动手试玩-五大交互实验室-0071E3?style=for-the-badge" alt="免登录动手试玩" />
   </a>
   <a href="https://github.com/qts2218346424-cyber/obsidian-knowledge-viz/releases/latest">
-    <img src="https://img.shields.io/badge/🚀_最新发布版本-v1.5.1-248A3D?style=for-the-badge" alt="最新版本 v1.5.1" />
+    <img src="https://img.shields.io/badge/🚀_最新发布版本-v1.5.2-248A3D?style=for-the-badge" alt="最新版本 v1.5.2" />
   </a>
   <a href="https://qts2218346424-cyber.github.io/obsidian-knowledge-viz/">
     <img src="https://img.shields.io/badge/🎬_实机互动展厅-在线宣传站-515154?style=for-the-badge" alt="在线宣传站" />
@@ -329,10 +329,13 @@ cd obsidian-knowledge-viz
 npm install
 ```
 
-### 3. 一键初始化配置与环境自检 (System Doctor)
+### 3. 一键初始化配置与电脑全自动智能装配 (Auto-Discovery)
 ```bash
-# 自动生成初始 server/config.json（绝不覆盖已有配置）并扫描本机智能体与知识库状态
-npm run setup
+# 【小白一键神器】全盘自动检测本机已有的所有 Obsidian 知识库、本地智能体与插件 AI 密钥并自动完成装配
+npm run autoconfig
+
+# 或运行基础环境健康体检
+npm run doctor
 ```
 
 本项目采用 **四级弹性 AI 驱动架构**，无论你的电脑配置如何均可开箱即用：
@@ -341,7 +344,7 @@ npm run setup
 - **本地离线推理**：自动探测本机运行中的 **Ollama** (`:11434`) 或 **LM Studio** (`:1234`)，实现 0 Token 费用纯离线答疑。
 - **纯离线无 AI 模式**：即使暂不配置任何模型，历年真题库、22+ 交互实验室、SM-2 闪卡与知识图谱仍可 100% 本地离线运行。
 
-> 💡 也可随时在软件的 **【设置 → 系统底座】** 中使用可视化 **System Doctor 环境体检卡片**，一键查看各项智能体就绪状态与复制配置命令。
+> 💡 也可直接在软件界面的 **【设置 → 系统底座 / 环境体检】** 中点击 **「智能探测我的电脑」**，前端即可自动列出电脑上所有知识库，支持一键点击切换绑定！
 
 按需编辑 `server/config.json`（已纳入 `.gitignore` 安全保护，绝不上传泄露密钥）：
 ```json
@@ -379,10 +382,27 @@ npm run dev:all
 | `npm run setup` | **(首次复刻推荐)** 一键生成初始配置模板（不覆盖已有配置）并执行本机环境健康体检 |
 | `npm run doctor` | 自动诊断本机 Node.js、Obsidian 知识库、Claude Code / Antigravity / Ollama 与云端 API 状态 |
 | `npm run dev:all` | **(推荐)** 并行启动前端开发服务器 (`:5173`) 与后端 API 微内核 (`:3001`) |
-| `npm run dev` | 单独启动前端 Vite 开发服务器 |
-| `npm run server:dev` | 单独启动后端 Express 服务并监听源码热重载 |
+| `npm run lan:allow` | **(移动端互联)** 一键放行 Windows 防火墙 TCP 3001 端口，解决手机 Wi-Fi 扫码打不开的问题 |
+| `npm run remote` | **(异地远程访问)** 一键启动 Cloudflare 免费公网安全隧道，生成专属 HTTPS 访问链接与终端二维码 |
 | `npm run build:all` | 执行严格 TypeScript 类型校验并完成前后端生产级构建 |
 | `npm run pack` | 基于 Electron Builder 打包生成桌面端独立安装包（输出至 `release/`） |
+
+### 6. 📱 手机 / 平板随时随地跨端研学指南（无需购买服务器）
+
+CoreForge 研核支持以你的电脑为“私有研学服务器”，手机随时连接背单词、刷真题、复习艾宾浩斯闪卡，所有数据完全保存在你的本地电脑中：
+
+- **场景 A：同寝室 / 同 Wi-Fi 局域网秒连**
+  1. 电脑启动程序后，点击软件顶栏右上角的 **【📱 手机互联】** 图标；
+  2. 手机打开自带相机或浏览器直接扫描弹出的二维码即可；
+  3. *若手机打不开*：通常是 Windows 防火墙拦截，在电脑端运行 `npm run lan:allow` 或双击 `scripts/allow-lan-port.bat` 即可一键放行。
+- **场景 B：自习室 / 图书馆异地外网远程刷题（手机 4G/5G 流量）**
+  1. 在电脑端执行 `npm run remote`，将自动建立端对端加密的免费 Cloudflare Tunnel；
+  2. 控制台与软件【手机互联】弹窗将自动同步生成公网安全的 HTTPS 二维码；
+  3. 手机扫码直达，完全不受局域网限制，在外随时随地刷题复习。
+- **场景 C：手机桌面全屏沉浸（PWA 体验）**
+  - **iPhone (Safari)**：点击底部中间「分享」➔ 选择「添加到主屏幕」；
+  - **安卓 (Chrome/系统浏览器)**：点击右上角「三点菜单」➔ 选择「添加到主屏幕」或「安装应用」；
+  - 手机桌面将生成原生 App 图标，全屏运行消除浏览器地址栏与控制栏，享受纯粹沉浸研学。
 
 > 📐 **开源通用架构与多用户复刻深度指南**：请参阅 [docs/OPEN_SOURCE_ARCHITECTURE.md](docs/OPEN_SOURCE_ARCHITECTURE.md) 与 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
