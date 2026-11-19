@@ -561,7 +561,9 @@ export async function* runLocalAgent(options: LocalAgentRunOptions): AsyncGenera
     if (exitCode !== 0 && !options.signal?.aborted) {
       let errText = stderr.trim()
       if (errText.includes('models_cache.json') || errText.includes('model_catalog_json')) {
-        errText = `Codex 运行时缓存文件损坏 (缺少新版字段)。\n\n💡 **解决指引**：\n1. **直接聊天**：请点击页面顶部的【☁️ 云端双核】标签；\n2. **修复 Codex**：请删除或重命名 \`C:\\Users\\QTS的天选\\.codex\\models_cache.json\` 缓存文件，让 Codex 自动重新同步。`
+        const userHome = process.env.USERPROFILE || process.env.HOME || '~'
+        const codexCachePath = path.join(userHome, '.codex', 'models_cache.json')
+        errText = `Codex 运行时缓存文件损坏 (缺少新版字段)。\n\n💡 **解决指引**：\n1. **直接聊天**：请点击页面顶部的【☁️ 云端双核】标签；\n2. **修复 Codex**：请删除或重命名 \`${codexCachePath}\` 缓存文件，让 Codex 自动重新同步。`
       } else if (/not logged in/i.test(errText) || /please run \/login/i.test(errText)) {
         errText = `Claude Code 尚未登录。\n\n💡 **解决指引**：请在终端中运行 \`claude login\` 完成认证，或直接使用顶部的云端大模型进行伴学。`
       }

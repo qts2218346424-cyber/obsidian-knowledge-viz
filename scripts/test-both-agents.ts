@@ -6,7 +6,7 @@ async function testAgent(provider: 'claude-code' | 'codex', prompt: string) {
   const events = runLocalAgent({
     provider,
     prompt,
-    cwd: 'E:\\考研\\408考研学习',
+    cwd: config.vaultPath || process.env.VAULT_PATH || process.cwd(),
     config: config.localAgents,
   })
 

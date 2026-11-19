@@ -2033,7 +2033,7 @@ export default function Editor() {
                   <span>{isAdmin ? '落盘保存至本地 Obsidian：' : '保存至专属研学沙盒：'}</span>
                 </div>
                 <div className="font-mono text-2xs sm:text-2xs text-purple-700 break-all select-all font-semibold">
-                  {isAdmin ? `${vaultStats?.vaultPath || 'E:\\考研\\408考研学习'}\\` : '专属沙盒 / '}
+                  {isAdmin ? `${vaultStats?.vaultPath || '本地知识库'}/` : '专属沙盒 / '}
                   {`${newFileFolder.trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '') ? `${newFileFolder.trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '')}/` : ''}${newFileName.trim() || '未命名笔记'}.md`}
                 </div>
               </div>

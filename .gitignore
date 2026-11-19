@@ -48,6 +48,11 @@ server/config*.json
 
 # OS temp files
 Thumbs.db
+
+# Local maintenance scripts & archive bundles (never commit)
+*.tar.gz
+*.zip
+fix-installed-client.bat
 desktop.ini
 
 # Package lock (optional, include if using npm)

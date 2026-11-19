@@ -922,6 +922,23 @@ export const api = {
   // Settings
   getSettings: () => fetchJSON<AppSettings>('/settings'),
 
+  getSystemDoctor: () => fetchJSON<{
+    status: 'healthy' | 'partial'
+    summary: {
+      passed: number
+      total: number
+      hasAnyAi: boolean
+      vaultReady: boolean
+    }
+    checks: Array<{
+      key: string
+      title: string
+      status: 'passed' | 'warning' | 'failed'
+      detail: string
+      fixCommand?: string
+    }>
+  }>('/system/doctor'),
+
   updateSettings: (settings: Partial<AppSettings> & {
     ai?: {
       apiKey: string

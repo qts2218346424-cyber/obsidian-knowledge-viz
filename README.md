@@ -329,30 +329,39 @@ cd obsidian-knowledge-viz
 npm install
 ```
 
-### 3. 初始化本地配置
+### 3. 一键初始化配置与环境自检 (System Doctor)
 ```bash
-# Windows (PowerShell / CMD)
-copy server\config.example.json server\config.json
-
-# macOS / Linux
-cp server/config.example.json server/config.json
+# 自动生成初始 server/config.json（绝不覆盖已有配置）并扫描本机智能体与知识库状态
+npm run setup
 ```
+
+本项目采用 **四级弹性 AI 驱动架构**，无论你的电脑配置如何均可开箱即用：
+- **极客满血版（推荐）**：本机已安装并登录 `Claude Code CLI`、`Google Antigravity` 或 `Codex CLI`，系统将自动桥接宿主全权智能体，直接联动你的本地 Obsidian 知识库进行深度伴读与重构。
+- **轻量云端兜底**：支持 `.env`（参考 `.env.example`）或在软件【设置】页一键填写 **DeepSeek / 硅基流动 / OpenAI / Anthropic** API Key，无需独立显卡即可极速响应。
+- **本地离线推理**：自动探测本机运行中的 **Ollama** (`:11434`) 或 **LM Studio** (`:1234`)，实现 0 Token 费用纯离线答疑。
+- **纯离线无 AI 模式**：即使暂不配置任何模型，历年真题库、22+ 交互实验室、SM-2 闪卡与知识图谱仍可 100% 本地离线运行。
+
+> 💡 也可随时在软件的 **【设置 → 系统底座】** 中使用可视化 **System Doctor 环境体检卡片**，一键查看各项智能体就绪状态与复制配置命令。
 
 按需编辑 `server/config.json`（已纳入 `.gitignore` 安全保护，绝不上传泄露密钥）：
 ```json
 {
-  "vaultPath": "C:\\Users\\YourName\\Documents\\ObsidianVault",
+  "vaultPath": "./sample-vault",
   "port": 3001,
   "host": "127.0.0.1",
-  "ai": {
-    "provider": "openai-compatible",
-    "baseURL": "https://api.deepseek.com/v1",
-    "apiKey": "your-api-key",
-    "model": "deepseek-chat"
-  },
   "localAgents": {
+    "antigravityCommand": "antigravity",
     "claudeCommand": "claude",
-    "codexCommand": "codex"
+    "codexCommand": "codex",
+    "ollamaBaseURL": "http://127.0.0.1:11434",
+    "lmStudioBaseURL": "http://127.0.0.1:1234"
+  },
+  "ai": {
+    "provider": "openai",
+    "apiFormat": "openai",
+    "baseURL": "https://api.deepseek.com/v1",
+    "apiKey": "",
+    "model": "deepseek-chat"
   }
 }
 ```
@@ -364,14 +373,18 @@ npm run dev:all
 ```
 打开浏览器访问 **`http://localhost:5173`**（新用户首次进入将自动唤起新版视觉手册与聚光灯实景导览），或直接访问线上官方云端站 **[https://claudexxb.online](https://claudexxb.online)** 即刻开启高效备考！
 
-### 5. 常用工程与桌面打包脚本
+### 5. 常用工程、环境体检与桌面打包脚本
 | 命令 | 功能说明 |
 | :--- | :--- |
+| `npm run setup` | **(首次复刻推荐)** 一键生成初始配置模板（不覆盖已有配置）并执行本机环境健康体检 |
+| `npm run doctor` | 自动诊断本机 Node.js、Obsidian 知识库、Claude Code / Antigravity / Ollama 与云端 API 状态 |
 | `npm run dev:all` | **(推荐)** 并行启动前端开发服务器 (`:5173`) 与后端 API 微内核 (`:3001`) |
 | `npm run dev` | 单独启动前端 Vite 开发服务器 |
 | `npm run server:dev` | 单独启动后端 Express 服务并监听源码热重载 |
 | `npm run build:all` | 执行严格 TypeScript 类型校验并完成前后端生产级构建 |
 | `npm run pack` | 基于 Electron Builder 打包生成桌面端独立安装包（输出至 `release/`） |
+
+> 📐 **开源通用架构与多用户复刻深度指南**：请参阅 [docs/OPEN_SOURCE_ARCHITECTURE.md](docs/OPEN_SOURCE_ARCHITECTURE.md) 与 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ---
 

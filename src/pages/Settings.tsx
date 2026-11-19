@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useAuth } from '../contexts/AuthContext'
 import DangoAvatar, { DangoColorPicker } from '../components/DangoAvatar'
 import LuluAvatar, { PET_PERSONA_LIST, useActivePetPersona } from '../components/Pet/LuluAvatar'
+import SystemDoctorCard from '../components/SystemDoctorCard'
 import { useThemeStyle } from '../hooks/useThemeStyle'
 import { getSecuritySettings, updateSecuritySettings } from '../services/auth'
 import { api, type AppSettings, type CloudEndpoint } from '../services/api'
@@ -1277,6 +1278,9 @@ export default function Settings() {
               </button>
             </div>
           </section>
+
+          {/* 开源本地智能体与环境一键体检卡片 */}
+          <SystemDoctorCard />
 
       {/* Restart hint */}
       {showRestartHint && (

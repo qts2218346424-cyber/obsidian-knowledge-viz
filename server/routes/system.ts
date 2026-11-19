@@ -14,6 +14,7 @@ import {
   __dirname,
 } from '../context.js'
 import { getAiProvider, type AiConfig } from '../ai-client.js'
+import { detectAllLocalAgents } from '../local-agent-bridge.js'
 
 export const systemRouter = Router()
 
@@ -26,6 +27,82 @@ systemRouter.get('/health', (_req, res) => {
     aiConfigured: Boolean(anthropic),
     aiProvider: getAiProvider(config.ai),
   })
+})
+
+// 开源通用环境健康体检 (System Doctor)：一键诊断本地 Agent、知识库与云端 API 状态
+systemRouter.get('/system/doctor', async (_req, res) => {
+  try {
+    const nodeVersion = process.version
+    const nodeMajor = Number(nodeVersion.replace(/^v/, '').split('.')[0]) || 0
+    const vaultExists = Boolean(config.vaultPath && fs.existsSync(config.vaultPath))
+    const localAgents = await detectAllLocalAgents(config.localAgents)
+
+    const checks: Array<{
+      key: string
+      title: string
+      status: 'passed' | 'warning' | 'failed'
+      detail: string
+      fixCommand?: string
+    }> = [
+      {
+        key: 'node',
+        title: 'Node.js 运行时',
+        status: nodeMajor >= 20 ? 'passed' : 'warning',
+        detail: `${nodeVersion} (${os.platform()} ${os.arch()})`,
+        fixCommand: nodeMajor >= 20 ? undefined : '推荐升级至 Node.js 20 LTS 及以上版本',
+      },
+      {
+        key: 'vault',
+        title: 'Obsidian 本地知识库',
+        status: vaultExists ? 'passed' : 'warning',
+        detail: vaultExists ? `已挂载：${config.vaultPath}` : '尚未绑定有效的本地 Markdown 目录（离线题库与实验室仍可正常使用）',
+        fixCommand: vaultExists ? undefined : '请在【设置】页选择你的 Obsidian Vault 目录，或在 .env 中设置 COREFORGE_VAULT_PATH',
+      },
+      {
+        key: 'cloud_ai',
+        title: '云端大模型 API 兜底',
+        status: anthropic ? 'passed' : 'warning',
+        detail: anthropic ? `已就绪 (${getAiProvider(config.ai)} · ${config.ai?.model || '默认模型'})` : '未配置云端 API Key（可使用本地智能体，或填入 DeepSeek / OpenAI 兼容密钥）',
+        fixCommand: anthropic ? undefined : '可在【设置】页填写 DeepSeek API Key，或在 .env 中设置 COREFORGE_AI_API_KEY',
+      },
+    ]
+
+    const fixHintMap: Record<string, string> = {
+      'claude-code': 'npm install -g @anthropic-ai/claude-code && claude login',
+      antigravity: '安装 Google Antigravity 桌面端或全局 agy CLI 工具',
+      codex: 'npm install -g @openai/codex',
+      ollama: '安装并启动 Ollama (https://ollama.com)，然后执行 ollama pull deepseek-r1',
+      'lm-studio': '启动 LM Studio 并开启 Local Server (默认端口 1234)',
+    }
+
+    for (const agent of localAgents) {
+      checks.push({
+        key: `agent_${agent.provider}`,
+        title: `本地智能体 · ${agent.provider}`,
+        status: agent.available ? 'passed' : 'warning',
+        detail: agent.available
+          ? `${agent.version || '已就绪'}${agent.detail ? ` · ${agent.detail}` : ''}`
+          : agent.detail || '未检测到本地运行时（可选增强）',
+        fixCommand: agent.available ? undefined : fixHintMap[agent.provider],
+      })
+    }
+
+    const passedCount = checks.filter(c => c.status === 'passed').length
+    const hasAnyAi = Boolean(anthropic) || localAgents.some(a => a.available)
+
+    res.json({
+      status: hasAnyAi && vaultExists ? 'healthy' : 'partial',
+      summary: {
+        passed: passedCount,
+        total: checks.length,
+        hasAnyAi,
+        vaultReady: vaultExists,
+      },
+      checks,
+    })
+  } catch (err: any) {
+    res.status(500).json({ error: '环境体检失败: ' + (err?.message || String(err)) })
+  }
 })
 
 // System Network Interfaces for Mobile & Cloud connection

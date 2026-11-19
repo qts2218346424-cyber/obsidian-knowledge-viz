@@ -59,6 +59,43 @@ for (const cp of configPaths) {
   }
 }
 
+// 开源通用化适配：支持标准环境变量配置（仅在显式设置或配置文件缺失时生效，不破坏现有部署配置）
+if (process.env.COREFORGE_PORT || process.env.PORT) {
+  const envPort = Number(process.env.COREFORGE_PORT || process.env.PORT)
+  if (Number.isFinite(envPort) && envPort > 0) config.port = envPort
+}
+if (process.env.COREFORGE_HOST || process.env.HOST) {
+  config.host = process.env.COREFORGE_HOST || process.env.HOST
+}
+if (!config.vaultPath && (process.env.COREFORGE_VAULT_PATH || process.env.VAULT_PATH)) {
+  config.vaultPath = process.env.COREFORGE_VAULT_PATH || process.env.VAULT_PATH || ''
+}
+if (!config.vaultPath) {
+  // 新用户首次克隆项目零配置兜底：自动探测自带样例知识库 sample-vault
+  const fallbackVaultCandidates = [
+    path.join(runtimeDataDir, 'sample-vault'),
+    path.join(runtimeDataDir, '..', 'sample-vault'),
+  ]
+  for (const candidate of fallbackVaultCandidates) {
+    if (fs.existsSync(candidate)) {
+      config.vaultPath = candidate
+      console.log(`Using bundled sample vault: ${candidate}`)
+      break
+    }
+  }
+}
+if (!config.ai?.apiKey && (process.env.COREFORGE_AI_API_KEY || process.env.AI_API_KEY)) {
+  const envFormat = (process.env.COREFORGE_AI_FORMAT || process.env.AI_API_FORMAT || 'openai') as 'openai' | 'anthropic'
+  config.ai = {
+    ...config.ai,
+    apiKey: process.env.COREFORGE_AI_API_KEY || process.env.AI_API_KEY || '',
+    baseURL: process.env.COREFORGE_AI_BASE_URL || process.env.AI_BASE_URL || 'https://api.deepseek.com/v1',
+    model: process.env.COREFORGE_AI_MODEL || process.env.AI_MODEL || 'deepseek-chat',
+    apiFormat: envFormat,
+    provider: envFormat === 'anthropic' ? 'anthropic' : 'openai',
+  }
+}
+
 // 初始化本地 SQLite 关系型数据库持久层
 database.init(path.join(runtimeDataDir, 'data'))
 export { database }

@@ -53,7 +53,7 @@ export default function ObsidianSyncModal({
   if (!isOpen) return null
 
   // 对普通用户展示虚拟安全沙盒，对管理员回显系统路径
-  const displayVaultPath = isAdmin ? (stats?.vaultPath || 'E:\\考研\\408考研学习') : '【个人加密专属研学沙盒】'
+  const displayVaultPath = isAdmin ? (stats?.vaultPath || '尚未绑定本地 Obsidian 知识库（请在设置中配置）') : '【个人加密专属研学沙盒】'
 
   const handleCopyPath = () => {
     navigator.clipboard.writeText(displayVaultPath)
