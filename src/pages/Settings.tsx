@@ -1272,7 +1272,7 @@ export default function Settings() {
       {/* 智能体与环境体检独立面板（面向所有用户开放，支持随时一键体检与复制指令） */}
       {activeTab === 'doctor' && (
         <div className="space-y-5 animate-in fade-in">
-          <AutoDiscoveryCard onApplied={() => { loadStats(); }} />
+          <AutoDiscoveryCard onApplied={() => { loadSettings() }} />
           <SystemDoctorCard />
         </div>
       )}
@@ -1280,7 +1280,7 @@ export default function Settings() {
       {/* 仅在管理员身份且激活「系统底座」Tab 时渲染底层复杂配置 */}
       {isAdmin && activeTab === 'system' && (
         <div className="space-y-6 animate-in fade-in">
-          <AutoDiscoveryCard onApplied={() => { loadStats(); }} />
+          <AutoDiscoveryCard onApplied={() => { loadSettings() }} />
           <section className="bento-card bg-white border border-slate-200/80 rounded-xl shadow-xs p-5">
             <div className="flex items-center gap-2 text-sm font-medium text-warm-700 mb-4">
               <Zap className="w-4 h-4 text-accent-amber" />
