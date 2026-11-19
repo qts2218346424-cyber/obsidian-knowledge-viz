@@ -96,7 +96,7 @@ export default function Settings() {
       return 'write'
     }
   })
-  const [adminTab, setAdminTab] = useState<'student' | 'system'>('student')
+  const [activeTab, setActiveTab] = useState<'student' | 'doctor' | 'system'>('student')
   const [showArchInGraph, setShowArchInGraph] = useState<boolean>(() => {
     try {
       return localStorage.getItem('coreforge_graph_show_arch') === 'true'
@@ -541,28 +541,38 @@ export default function Settings() {
           </p>
         </div>
 
-        {isAdmin && (
-          <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 text-xs font-semibold">
+        <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 text-xs font-semibold">
+          <button
+            type="button"
+            onClick={() => setActiveTab('student')}
+            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+              activeTab === 'student' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-500 hover:text-slate-900'
+            }`}
+          >
+            🎓 备考偏好
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('doctor')}
+            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeTab === 'doctor' ? 'bg-white text-emerald-700 shadow-xs font-bold' : 'text-slate-500 hover:text-slate-900'
+            }`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span>🩺 智能体与环境体检</span>
+          </button>
+          {isAdmin && (
             <button
               type="button"
-              onClick={() => setAdminTab('student')}
+              onClick={() => setActiveTab('system')}
               className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                adminTab === 'student' ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              🎓 备考偏好
-            </button>
-            <button
-              type="button"
-              onClick={() => setAdminTab('system')}
-              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                adminTab === 'system' ? 'bg-white text-indigo-700 shadow-xs font-bold' : 'text-slate-500 hover:text-slate-900'
+                activeTab === 'system' ? 'bg-white text-indigo-700 shadow-xs font-bold' : 'text-slate-500 hover:text-slate-900'
               }`}
             >
               ⚙️ 系统底座 (管理员)
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {loading ? (
@@ -574,7 +584,7 @@ export default function Settings() {
         <>
 
       {/* 考生专属研学偏好面板（无任何服务器底层物理路径与端口噪音） */}
-      {(!isAdmin || adminTab === 'student') && (
+      {activeTab === 'student' && (
         <div className="space-y-5 animate-in fade-in">
           {/* 研学账号与知识库连接状态 */}
           <section className="bento-card bg-white border border-slate-200/80 rounded-xl shadow-xs p-5 space-y-3">
@@ -649,6 +659,30 @@ export default function Settings() {
                 <span className="text-slate-400">伴学积分余额：</span>
                 <p className="font-bold text-emerald-700 text-sm">{typeof user?.points === 'number' ? user.points.toFixed(1) : '5.0'} <span className="text-xs text-slate-500 font-normal">积分 (每日签到可领 1 积分)</span></p>
               </div>
+            </div>
+
+            {/* 智能体与环境体检快速入口横幅 */}
+            <div className="p-3 rounded-xl bg-gradient-to-r from-emerald-50/90 via-teal-50/80 to-slate-50 border border-emerald-200/80 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
+              <div className="flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <div>
+                  <div className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                    <span>本地智能体与研学环境一键体检 (System Doctor)</span>
+                    <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-semibold">已就绪</span>
+                  </div>
+                  <p className="text-[11px] text-emerald-700 mt-0.5">
+                    自动诊断 Claude Code / Antigravity / Codex / Ollama / 本地 Obsidian 知识库及云端 API 连通状态
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('doctor')}
+                className="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all cursor-pointer flex items-center gap-1 shrink-0"
+              >
+                <span>进入体检舱</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
             </div>
             <p className="text-2xs text-slate-400 leading-relaxed">
               🔒 隐私保证：您的自建笔记、错题本复盘记录以及每日模考成绩均已独立加密保存，仅您个人账号可见。
@@ -1224,8 +1258,15 @@ export default function Settings() {
         </div>
       )}
 
+      {/* 智能体与环境体检独立面板（面向所有用户开放，支持随时一键体检与复制指令） */}
+      {activeTab === 'doctor' && (
+        <div className="space-y-5 animate-in fade-in">
+          <SystemDoctorCard />
+        </div>
+      )}
+
       {/* 仅在管理员身份且激活「系统底座」Tab 时渲染底层复杂配置 */}
-      {isAdmin && adminTab === 'system' && (
+      {isAdmin && activeTab === 'system' && (
         <div className="space-y-6 animate-in fade-in">
           <section className="bento-card bg-white border border-slate-200/80 rounded-xl shadow-xs p-5">
             <div className="flex items-center gap-2 text-sm font-medium text-warm-700 mb-4">
