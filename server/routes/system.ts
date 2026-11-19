@@ -15,6 +15,7 @@ import {
 } from '../context.js'
 import { getAiProvider, type AiConfig } from '../ai-client.js'
 import { detectAllLocalAgents } from '../local-agent-bridge.js'
+import { isEffectiveAdmin } from '../services/user-sandbox.js'
 
 export const systemRouter = Router()
 
@@ -186,7 +187,7 @@ systemRouter.get('/system/network', getNetworkHandler)
 // Settings
 systemRouter.get('/settings', (req, res) => {
   try {
-    const isAdmin = req.user?.role === 'admin'
+    const isAdmin = isEffectiveAdmin(req)
     const masked = JSON.parse(JSON.stringify(config))
 
     // 安全隔离：非管理员隐藏云服务器物理真实路径、配置文件路径与底层端口
@@ -218,7 +219,7 @@ systemRouter.get('/settings', (req, res) => {
 
 systemRouter.put('/settings', (req, res) => {
   try {
-    const isAdmin = req.user?.role === 'admin'
+    const isAdmin = isEffectiveAdmin(req)
     const { vaultPath, port, proxy, ai, localAgents } = req.body as {
       vaultPath?: string
       port?: number
@@ -326,7 +327,7 @@ systemRouter.post('/test-proxy', async (req, res) => {
 // Filesystem browse (folder picker) - 严格超级管理员权限门禁，严禁向普通学生暴露云服务器宿主机目录
 systemRouter.get('/fs/browse', async (req, res) => {
   try {
-    const isAdmin = req.user?.role === 'admin'
+    const isAdmin = isEffectiveAdmin(req)
     if (!isAdmin) {
       res.status(403).json({ error: '安全拦截：云服务器磁盘目录已受沙箱隔离保护，普通用户仅能查看个人沙盒文件夹' })
       return
@@ -371,7 +372,7 @@ systemRouter.get('/fs/browse', async (req, res) => {
 })
 
 systemRouter.get('/fs/exists', async (req, res) => {
-  const isAdmin = req.user?.role === 'admin'
+  const isAdmin = isEffectiveAdmin(req)
   if (!isAdmin) {
     res.json({ exists: false })
     return

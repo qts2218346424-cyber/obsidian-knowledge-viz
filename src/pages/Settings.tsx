@@ -24,9 +24,19 @@ declare global {
 }
 
 export default function Settings() {
-  const { user, logout } = useAuth()
+  const { user, logout, isAdmin: authIsAdmin } = useAuth()
   const [activePetPersona, setActivePetPersona] = useActivePetPersona()
-  const isAdmin = user?.role === 'admin'
+
+  // 判别「开源桌面端/本地单机」与「线上多租户云端站」
+  const isElectron = typeof window !== 'undefined' && Boolean((window as any).electronAPI || (window as any).electron)
+  const isLocalHost = typeof window !== 'undefined' && Boolean(
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.protocol === 'file:'
+  )
+  const isStandalone = isElectron || isLocalHost
+  // 开源桌面/本地单机用户默认直接享有超级管理员权限
+  const isAdmin = isStandalone ? (user?.role !== 'student') : (user?.role === 'admin' || authIsAdmin)
   const [settings, setSettings] = useState<AppSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -626,7 +636,7 @@ export default function Settings() {
                   <DangoAvatar seed={user?.username || user?.displayName} size="xl" className="shadow-xs" />
                   <div className="space-y-1 min-w-0">
                     <span className="text-slate-400">当前备考登录身份：</span>
-                    <p className="font-bold text-slate-900 text-sm truncate">{user?.username || '未登录备考者'} <span className="text-xs text-slate-400 font-normal">({user?.role === 'admin' ? '系统管理员' : '考研学员'})</span></p>
+                    <p className="font-bold text-slate-900 text-sm truncate">{user?.username || (isStandalone ? '本地宿主管理员' : '未登录备考者')} <span className="text-xs text-slate-400 font-normal">({isAdmin ? '系统管理员 · 全权控制' : '考研学员'})</span></p>
                     <div className="pt-0.5">
                       <DangoColorPicker seed={user?.username || user?.displayName} compact />
                     </div>

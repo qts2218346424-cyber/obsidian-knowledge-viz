@@ -20,9 +20,16 @@ export default function ObsidianSyncModal({
   onClose,
   onRefresh,
 }: ObsidianSyncModalProps) {
-  const { user } = useAuth()
+  const { user, isAdmin: authIsAdmin } = useAuth()
   const { isDark } = useThemeStyle()
-  const isAdmin = user?.role === 'admin'
+  const isElectron = typeof window !== 'undefined' && Boolean((window as any).electronAPI || (window as any).electron)
+  const isLocalHost = typeof window !== 'undefined' && Boolean(
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.protocol === 'file:'
+  )
+  const isStandalone = isElectron || isLocalHost
+  const isAdmin = isStandalone ? (user?.role !== 'student') : (user?.role === 'admin' || authIsAdmin)
   const [stats, setStats] = useState<VaultStats | null>(null)
   const [, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)

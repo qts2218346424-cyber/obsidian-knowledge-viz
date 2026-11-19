@@ -17,6 +17,31 @@ if (!fs.existsSync(USERS_ROOT_DIR)) {
 }
 
 /**
+ * 判断当前是否处于多租户云端生产服务模式
+ * 线上云服务器部署在 /opt/coreforge 或配置了 COREFORGE_CLOUD_MODE=1
+ */
+export function isCloudMultiTenant(): boolean {
+  return process.env.COREFORGE_CLOUD_MODE === '1' ||
+    Boolean(process.platform === 'linux' && fs.existsSync('/opt/coreforge'))
+}
+
+/**
+ * 判断当前请求是否拥有本地全权管理员权限
+ * 1. 显式拥有 admin 角色
+ * 2. 在开源桌面版 / 本地单机环境下，用户作为宿主电脑主人，默认全权管辖（除非显式切换为 student 模拟账号）
+ */
+export function isEffectiveAdmin(req?: Request): boolean {
+  if (req?.user?.role === 'admin') return true
+  if (!isCloudMultiTenant()) {
+    // 开源本地/桌面端单机运行：用户默认享有全部管理员特权
+    if (!req?.user || req.user.role === 'admin') {
+      return true
+    }
+  }
+  return false
+}
+
+/**
  * 过滤文件名安全字符，具备强大的类型防御
  */
 export function sanitizeId(rawId: any): string {
@@ -75,7 +100,7 @@ export function getUserChatConversationsPath(userOrId: any): string {
  * 4. 若未登录访客，分配隔离的访客只读沙箱或回退至安全受限目录
  */
 export function getRequestVaultPath(req: Request): string {
-  if (req.user?.role === 'admin') {
+  if (isEffectiveAdmin(req)) {
     return config.vaultPath
   }
 
@@ -101,7 +126,7 @@ export function getRequestVaultPath(req: Request): string {
  * 普通用户只能看到属于自己的沙盒文件夹，仅超级管理员可查看真实底层物理路径
  */
 export function virtualizeVaultPath(realPath: string, role?: string): string {
-  if (role === 'admin') {
+  if (role === 'admin' || !isCloudMultiTenant()) {
     return realPath
   }
   return '我的专属研学沙盒'
@@ -113,7 +138,7 @@ export function virtualizeVaultPath(realPath: string, role?: string): string {
  * 2. 普通学生访问其独立沙箱内的 agent.md (个性化目标院校、薄弱点与指令)
  */
 export function getRequestAgentMemoryPath(req: Request): string {
-  if (req.user?.role === 'admin') {
+  if (isEffectiveAdmin(req)) {
     return path.join(config.vaultPath, 'agent.md')
   }
 

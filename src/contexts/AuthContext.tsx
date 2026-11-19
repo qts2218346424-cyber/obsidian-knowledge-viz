@@ -231,10 +231,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isAuthenticated = Boolean(user && token)
   const role: UserRole | undefined = user?.role
-  const isAdmin = role === 'admin'
-  const isEditor = role === 'editor'
-  const isStudent = role === 'student'
-  const canWriteVault = isAdmin || isEditor
+
+  // 区分「开源桌面端/本地单机运行」与「线上多租户云端生产站」
+  const isElectron = typeof window !== 'undefined' && Boolean((window as any).electronAPI || (window as any).electron)
+  const isLocalHost = typeof window !== 'undefined' && Boolean(
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.protocol === 'file:'
+  )
+  const isLocalStandalone = isElectron || isLocalHost
+
+  // 在发布的开源桌面端与本地运行环境下，用户就是自己机器的主人，默认全权赋予超级管理员权限
+  const isAdmin = isLocalStandalone ? (role !== 'student') : (role === 'admin')
+  const isEditor = isLocalStandalone || role === 'editor'
+  const isStudent = !isLocalStandalone && role === 'student'
+  const canWriteVault = isLocalStandalone || isAdmin || isEditor
+  const effectivePoints = isLocalStandalone ? 999999 : points
 
   return (
     <AuthContext.Provider
@@ -248,7 +260,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isEditor,
         isStudent,
         canWriteVault,
-        points,
+        points: effectivePoints,
         canCheckinToday,
         lastCheckinAt,
         checkin: handleCheckin,
