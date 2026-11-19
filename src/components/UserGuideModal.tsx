@@ -1497,7 +1497,7 @@ export default function UserGuideModal({
           ) : (
             <div className="text-slate-500 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" aria-hidden="true" />
-              <span>免费注册后即可进入工作台开启「手把手实景交互导览」并获赠 5.0 积分</span>
+              <span>进入工作台开启「手把手实景交互导览」</span>
             </div>
           )}
 

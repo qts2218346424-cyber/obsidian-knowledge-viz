@@ -78,12 +78,12 @@ export const TOUR_STEPS: TourStep[] = [
     badge: '必看核心 · 每日总览',
     highlightColor: 'text-indigo-700 bg-indigo-50 border-indigo-200',
     summary:
-      '每天打开研核先看一眼这里：初试精准倒计时、408/数学/英语/政治四核直达舱、薄弱盲区预警与每日积分打卡全部就绪。',
+      '每天打开研核先看一眼这里：初试精准倒计时、408/数学/英语/政治四核直达舱、薄弱盲区预警全部就绪。',
     whereHint: '点击顶部导航栏「总览」（手机端底部第 1 个「首页」图标）',
     checklist: [
       '确认页面顶部的考研初试倒计时与今日学习概览',
       '浏览 408 / 数学 / 政治 / 英语四张主力学科直达卡',
-      '点击顶栏右上角「算力积分」徽章可每日签到领免费积分',
+      '纯净单机开源架构，全站功能无限制自由使用',
     ],
     tips: ['顶栏右侧风格胶囊支持一键切换「极简 / 鲜艳 / 护眼 / 暗黑」四种舒适主题'],
     targetSelectors: ['[data-tour="nav-dashboard"]', '[data-tour="nav-mobile-home"]'],

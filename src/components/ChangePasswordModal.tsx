@@ -298,7 +298,7 @@ export default function ChangePasswordModal({ isOpen, onClose }: ChangePasswordM
 
               <div className="pt-2 text-center border-t border-slate-100 mt-2">
                 <span className="text-2xs text-slate-400">
-                  💡 忘记当前旧密码？可在退出后于登录界面点击「忘记密码」，通过安全密保或专属救援码直接重置。
+                  💡 提示：本地开源单机版拥有完全管理员权限，可自由配置与管理本机账号。
                 </span>
               </div>
             </form>

@@ -441,9 +441,6 @@ ${essayInput.trim()}
       })
 
       if (!res.ok) {
-        if (res.status === 402) {
-          throw new Error('伴学积分不足（单次批改消耗 0.1 积分），请签到领积分或联系管理员。')
-        }
         throw new Error(`服务连接异常 (HTTP ${res.status})`)
       }
 
@@ -469,14 +466,6 @@ ${essayInput.trim()}
             if (data.type === 'delta' && data.text) {
               accumulated += data.text
               setMojuanStreamingText(accumulated)
-            } else if (data.type === 'points_updated') {
-              if (data.deducted > 0) {
-                setMojuanStatusNotice(
-                  `批改完成，已扣除 ${data.deducted} 伴学积分 (剩余 ${data.remainingPoints?.toFixed(1)} 分)`
-                )
-              } else {
-                setMojuanStatusNotice('由于本次返回未达标或超时，系统已自动保留您的伴学积分，未扣除费用。')
-              }
             } else if (data.type === 'error') {
               setMojuanError(data.message || '批改过程遇到异常')
             }
@@ -486,7 +475,7 @@ ${essayInput.trim()}
         }
       }
     } catch (err: any) {
-      setMojuanError(err.message || '网络连接超时，已为您免除积分扣除，请重试。')
+      setMojuanError(err.message || '网络连接超时，请重试。')
     } finally {
       setIsMojuanGrading(false)
     }
@@ -1351,7 +1340,7 @@ ${essayInput.trim()}
                       disabled={anyGradingBusy || !essayInput.trim()}
                       onClick={handleStartLocalGrading}
                       className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer active:scale-98"
-                      title="离线零积分毫秒级检测词数、复合句比、平庸词升级与常见语法缺陷"
+                      title="离线毫秒级检测词数、复合句比、平庸词升级与常见语法缺陷"
                     >
                       {isLocalGrading ? (
                         <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-500" />

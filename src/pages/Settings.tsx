@@ -135,8 +135,6 @@ export default function Settings() {
   const [secAnswerInput, setSecAnswerInput] = useState('')
   const [savingSec, setSavingSec] = useState(false)
   const [secMessage, setSecMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [copiedCode, setCopiedCode] = useState(false)
-  const [showRecoveryCode, setShowRecoveryCode] = useState(false)
   const isDemoAccount = Boolean(
     (securityInfo as any)?.isDemo ||
     user?.username?.toLowerCase() === 'demo' ||
@@ -191,34 +189,6 @@ export default function Settings() {
       setSavingSec(false)
     }
   }
-
-  const handleCopyRecoveryCode = () => {
-    if (isDemoAccount || !securityInfo?.recoveryCode) return
-    navigator.clipboard.writeText(securityInfo.recoveryCode).then(() => {
-      setCopiedCode(true)
-      setTimeout(() => setCopiedCode(false), 2000)
-    }).catch(() => {})
-  }
-
-  const handleRegenerateRecoveryCode = async () => {
-    if (isDemoAccount) return
-    if (!window.confirm('重新换发专属救援码后，旧救援码将立即失效。确认换发新的安全救援码吗？')) return
-    setSavingSec(true)
-    try {
-      const res = await updateSecuritySettings({ refreshRecoveryCode: true })
-      setSecurityInfo(prev => prev ? {
-        ...prev,
-        recoveryCode: res.recoveryCode,
-      } : null)
-      setShowRecoveryCode(true)
-      setSecMessage({ type: 'success', text: '已为您成功换发新的专属救援码，请妥善记录并抄写备份！' })
-    } catch (err: any) {
-      setSecMessage({ type: 'error', text: err.message || '换发救援码失败' })
-    } finally {
-      setSavingSec(false)
-    }
-  }
-
 
   useEffect(() => {
     loadSettings()
@@ -700,12 +670,12 @@ export default function Settings() {
             </p>
           </section>
 
-          {/* 账号安全与密码找回（密保与专属救援码） */}
+          {/* 账号安全与密码设置 */}
           <section className="bento-card bg-white border border-slate-200/80 rounded-xl shadow-xs p-5 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2 text-sm font-bold text-slate-800">
                 <ShieldCheck className="w-4 h-4 text-indigo-600" />
-                <span>账号安全与密码找回凭证</span>
+                <span>账号安全与密码管理</span>
               </div>
               <span className={`text-2xs font-semibold px-2.5 py-0.5 rounded-full border ${
                 securityInfo?.hasSecurityQuestion
@@ -737,62 +707,7 @@ export default function Settings() {
                   当前账号为公共演示体验环境，系统已开启凭证隔离保护。专属恢复码与密保凭证已安全锁定隐藏，禁止公开查看或重置。如需管理个人专属安全凭据，请退出后注册属于您的独立考生账号。
                 </p>
               </div>
-            ) : (
-              <>
-                {/* 专属 8 位安全救援码卡片（默认密文脱敏，防偷窥与公开泄露） */}
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                      <KeyRound className="w-3.5 h-3.5 text-indigo-600" />
-                      <span>专属安全救援码 (Recovery Code)</span>
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => setShowRecoveryCode(prev => !prev)}
-                        className="px-2 py-1 rounded-lg bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-semibold shadow-xs transition-all flex items-center gap-1 cursor-pointer"
-                        title={showRecoveryCode ? '隐藏救援码' : '显示救援码'}
-                      >
-                        {showRecoveryCode ? <EyeOff className="w-3 h-3 text-slate-500" /> : <Eye className="w-3 h-3 text-slate-500" />}
-                        <span>{showRecoveryCode ? '隐藏' : '查看'}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleRegenerateRecoveryCode}
-                        className="px-2 py-1 rounded-lg bg-white border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-semibold shadow-xs transition-all flex items-center gap-1 cursor-pointer"
-                        title="换发新的救援码"
-                      >
-                        <RefreshCw className="w-3 h-3 text-slate-500" />
-                        <span>换发</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleCopyRecoveryCode}
-                        disabled={!securityInfo?.recoveryCode}
-                        className="px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold shadow-xs transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                        title="点击复制救援码"
-                      >
-                        <Copy className="w-3 h-3 text-indigo-600" />
-                        <span>{copiedCode ? '已复制！' : '复制救援码'}</span>
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200 font-mono text-sm font-bold text-slate-900 tracking-wider">
-                    <span>
-                      {showRecoveryCode
-                        ? (securityInfo?.recoveryCode || '未绑定救援码')
-                        : 'CF-••••-••••'}
-                    </span>
-                    <span className="text-2xs text-emerald-600 font-sans font-medium bg-emerald-50 px-1.5 py-0.5 rounded">
-                      {showRecoveryCode ? '一键应急重置' : '密文防护中'}
-                    </span>
-                  </div>
-                  <p className="text-2xs text-slate-400 leading-relaxed">
-                    📌 提示：救援码是忘记密码时的终极应急凭据。默认脱敏显示，请点击「查看」或「换发」并在安全环境下抄写备份，切勿截图公开发布！
-                  </p>
-                </div>
-              </>
-            )}
+            ) : null}
 
             {/* 安全密保问答设置 */}
             <form onSubmit={handleSaveSecuritySettings} className="space-y-3 pt-1">

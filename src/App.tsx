@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AudioProvider } from './contexts/AudioContext'
 import { AuthProvider } from './contexts/AuthContext'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -9,8 +9,7 @@ import { routeLoaders, safeLazy } from './app/routes'
 // 向后兼容：路由预取工具已迁移至 app/routes
 export { routeLoaders, prefetchRoute } from './app/routes'
 
-// 公开页面与受保护工作台全部按需加载：落地页访客不再下载 Layout / Chat / Dashboard / Markdown 渲染引擎
-const LandingPage = safeLazy(() => import('./pages/LandingPage'), 'landing')
+// 开源单机纯净版：彻底移除面向访客的网络宣传 Landing 落地页，根路径直接进入备考工作台
 const Login = safeLazy(() => import('./pages/Login'), 'login')
 const PdfReaderPage = safeLazy(routeLoaders.pdfReader, 'pdfReader')
 const ProtectedRoutes = safeLazy(() => import('./app/ProtectedRoutes'), 'protected-routes')
@@ -23,8 +22,8 @@ function App() {
           <BrowserRouter>
             <Suspense fallback={<PageFallback />}>
               <Routes>
-                <Route path="/" element={<LandingPage />} />
-                <Route path="/home" element={<LandingPage />} />
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/home" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/pdf-reader" element={<PdfReaderPage />} />
                 <Route path="/*" element={<ProtectedRoutes />} />

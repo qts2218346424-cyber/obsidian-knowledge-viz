@@ -2,7 +2,6 @@ import { createPortal } from 'react-dom'
 import { useState, useEffect } from 'react'
 import {
   X,
-  Coins,
   Ticket,
   Users,
   UserPlus,
@@ -50,12 +49,6 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
   const [resettingUserId, setResettingUserId] = useState<string | null>(null)
   const [resetPasswordText, setResetPasswordText] = useState('')
 
-  // 伴学积分分配状态
-  const [grantingUserId, setGrantingUserId] = useState<string | null>(null)
-  const [grantAmountText, setGrantAmountText] = useState('10')
-  const [grantRemarkText, setGrantRemarkText] = useState('')
-  const [isGranting, setIsGranting] = useState(false)
-
   // 优惠码管理状态
   const [coupons, setCoupons] = useState<CouponCodeItem[]>([])
   const [loadingCoupons, setLoadingCoupons] = useState(false)
@@ -96,7 +89,6 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
       setError(null)
       setSuccess(null)
       setIsAdding(false)
-      setGrantingUserId(null)
       setResettingUserId(null)
       fetchUsers()
       fetchCoupons()
@@ -135,34 +127,6 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
       fetchUsers()
     } catch (err: any) {
       setError(err.message || '更新角色失败')
-    }
-  }
-
-  const handleGrantPoints = async (userId: string) => {
-    const amount = Number(grantAmountText)
-    if (isNaN(amount) || amount === 0) {
-      setError('请输入有效的积分调整数值（如 +10、+50 或 -5）')
-      return
-    }
-    setError(null)
-    setIsGranting(true)
-    try {
-      const res = await authService.adminGrantPoints(
-        userId,
-        amount,
-        grantRemarkText.trim() || undefined
-      )
-      if (res.success) {
-        setSuccess(`成功为用户分配积分 (${amount > 0 ? '+' : ''}${amount})，最新余额: ${res.points.toFixed(1)}`)
-        setGrantingUserId(null)
-        setGrantAmountText('10')
-        setGrantRemarkText('')
-        fetchUsers()
-      }
-    } catch (err: any) {
-      setError(err.message || '分配积分失败')
-    } finally {
-      setIsGranting(false)
     }
   }
 
@@ -277,9 +241,9 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
               <Users className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900">系统用户与积分总控中心</h2>
+              <h2 className="text-base font-bold text-slate-900">系统用户与权限总控中心</h2>
               <p className="text-xs text-slate-500">
-                管理考生账号角色、权限沙箱、伴学积分分配与优惠兑换码发行
+                管理成员账号角色、本地权限与密码安全
               </p>
             </div>
           </div>
@@ -419,7 +383,6 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
                 users.map((u) => {
                   const isSelf = currentUser?.id === u.id
                   const isResetting = resettingUserId === u.id
-                  const isGrantingThis = grantingUserId === u.id
 
                   return (
                     <div
@@ -475,7 +438,6 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
                           <button
                             onClick={() => {
                               setResettingUserId(isResetting ? null : u.id)
-                              setGrantingUserId(null)
                               setResetPasswordText('')
                             }}
                             title="重置密码"
@@ -496,74 +458,6 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
                           )}
                         </div>
                       </div>
-
-                      {/* 修复：分配积分内联面板 */}
-                      {isGrantingThis && (
-                        <div className="w-full pt-3 mt-1 border-t border-amber-200 bg-amber-50/70 p-3 rounded-xl space-y-2.5 animate-fade-in">
-                          <div className="flex items-center justify-between text-xs font-bold text-amber-950">
-                            <span className="flex items-center gap-1.5">
-                              <Coins className="h-4 w-4 text-amber-600" />
-                              为「{u.displayName || u.username}」分配伴学积分
-                            </span>
-                            <span className="text-2xs font-mono font-bold text-amber-800">
-                              当前剩余: {(u.points ?? 5.0).toFixed(1)} 积分
-                            </span>
-                          </div>
-
-                          {/* 快捷增减数值 */}
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-2xs text-amber-800 font-medium">快捷调整:</span>
-                            {[10, 20, 50, 100, -10, -50].map((num) => (
-                              <button
-                                key={num}
-                                type="button"
-                                onClick={() => setGrantAmountText(String(num))}
-                                className="px-2 py-0.5 rounded-md text-2xs font-mono font-bold bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 cursor-pointer transition-colors shadow-xs"
-                              >
-                                {num > 0 ? `+${num}` : num}
-                              </button>
-                            ))}
-                          </div>
-
-                          <div className="flex flex-col sm:flex-row items-center gap-2">
-                            <div className="w-full sm:w-36 flex items-center rounded-lg border border-amber-300 bg-white px-2 py-1 shadow-xs">
-                              <span className="text-xs text-amber-700 font-bold mr-1">额度:</span>
-                              <input
-                                type="number"
-                                step="0.1"
-                                placeholder="如 +10"
-                                value={grantAmountText}
-                                onChange={(e) => setGrantAmountText(e.target.value)}
-                                className="w-full text-xs font-mono font-bold text-slate-800 focus:outline-none"
-                              />
-                            </div>
-
-                            <input
-                              type="text"
-                              placeholder="调整原因/充值备注 (例如: 模拟考优秀赠送)"
-                              value={grantRemarkText}
-                              onChange={(e) => setGrantRemarkText(e.target.value)}
-                              className="flex-1 w-full rounded-lg border border-amber-300 bg-white px-3 py-1 text-xs text-slate-800 focus:outline-none focus:border-amber-500 shadow-xs"
-                            />
-
-                            <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
-                              <button
-                                onClick={() => handleGrantPoints(u.id)}
-                                disabled={isGranting}
-                                className="px-4 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-xs cursor-pointer disabled:opacity-50 transition-all active:scale-95"
-                              >
-                                {isGranting ? '提交中...' : '确认分配'}
-                              </button>
-                              <button
-                                onClick={() => setGrantingUserId(null)}
-                                className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-xs hover:bg-slate-50 cursor-pointer"
-                              >
-                                取消
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
 
                       {/* 重置密码内联面板 */}
                       {isResetting && (
